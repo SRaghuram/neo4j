@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.function.LongConsumer;
 
@@ -30,15 +30,15 @@ public class StateMachineCommitHelper
     private final CommandIndexTracker commandIndexTracker;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final VersionContextSupplier versionContextSupplier;
-    private final TransactionCommitNotifier commitNotifier;
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
 
     public StateMachineCommitHelper( CommandIndexTracker commandIndexTracker, PageCursorTracerSupplier pageCursorTracerSupplier,
-            VersionContextSupplier versionContextSupplier, TransactionCommitNotifier commitNotifier )
+            VersionContextSupplier versionContextSupplier, ReplicatedDatabaseEventDispatch databaseEventDispatch )
     {
         this.commandIndexTracker = commandIndexTracker;
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.versionContextSupplier = versionContextSupplier;
-        this.commitNotifier = commitNotifier;
+        this.databaseEventDispatch = databaseEventDispatch;
     }
 
     public void updateLastAppliedCommandIndex( long commandIndex )
@@ -71,7 +71,7 @@ public class StateMachineCommitHelper
             }
 
             txCommittedCallback.accept( committedTxId );
-            commitNotifier.fireTransactionCommitted( committedTxId );
+            databaseEventDispatch.fireTransactionCommitted( committedTxId );
             updateLastAppliedCommandIndex( commandIndex );
         } );
         return txToApply;

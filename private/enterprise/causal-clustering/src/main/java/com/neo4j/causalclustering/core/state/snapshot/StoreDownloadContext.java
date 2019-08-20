@@ -83,4 +83,9 @@ public class StoreDownloadContext
     {
         return internalOperator.stopForStoreCopy( database.getDatabaseId() );
     }
+
+    public Database database()
+    {
+        return database;
+    }
 }

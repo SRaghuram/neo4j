@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise;
 
 import com.github.benmanes.caffeine.cache.Ticker;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
@@ -55,8 +55,6 @@ import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -149,21 +147,17 @@ public class CommercialSecurityModule extends SecurityModule
         authManager = newAuthManager( config, logProvider, securityLog, fileSystem, databaseManager.databaseIdRepository() );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
+        AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
+
         if ( isClustered )
         {
-            var txEventListeners = platformDependencies.resolveDependency( ReplicatedTransactionEventListeners.class );
-            txEventListeners.registerListener( SYSTEM_DATABASE_ID, txId -> authManager.clearAuthCache() );
+            var replicatedDatabaseEventService = platformDependencies.resolveDependency( ReplicatedDatabaseEventService.class );
+            replicatedDatabaseEventService.registerListener( SYSTEM_DATABASE_ID, databaseEventListener );
         }
         else
         {
-            dependencies.transactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME, new TransactionEventListenerAdapter()
-            {
-                @Override
-                public void afterCommit( TransactionData txData, Object state, GraphDatabaseService systemDatabase )
-                {
-                    authManager.clearAuthCache();
-                }
-            } );
+            var standaloneTxEventListeners = dependencies.transactionEventListeners();
+            standaloneTxEventListeners.registerTransactionEventListener( SYSTEM_DATABASE_NAME, databaseEventListener );
         }
 
         // Register procedures

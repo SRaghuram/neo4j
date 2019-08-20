@@ -165,7 +165,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
         return currentRole;
     }
 
-    public MemberId identity()
+    public MemberId memberId()
     {
         return myself;
     }

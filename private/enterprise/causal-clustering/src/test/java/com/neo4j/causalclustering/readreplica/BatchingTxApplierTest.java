@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,7 +23,6 @@ import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
@@ -34,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 public class BatchingTxApplierTest
@@ -45,14 +45,16 @@ public class BatchingTxApplierTest
     private final long startTxId = 31L;
     private final int maxBatchSize = 16;
 
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private final BatchingTxApplier txApplier = new BatchingTxApplier( maxBatchSize, () -> idStore, () -> commitProcess,
             new Monitors(), PageCursorTracerSupplier.NULL, () -> EmptyVersionContextSupplier.EMPTY, commandIndexTracker,
-            NullLogProvider.getInstance(), mock( TransactionCommitNotifier.class ) );
+            nullLogProvider(), databaseEventDispatch );
 
     @Before
     public void before()
     {
         when( idStore.getLastCommittedTransactionId() ).thenReturn( startTxId );
+        when( idStore.getLastClosedTransactionId() ).thenReturn( startTxId );
         txApplier.start();
     }
 
@@ -69,7 +71,7 @@ public class BatchingTxApplierTest
     }
 
     @Test
-    public void shouldApplyBatch() throws Exception
+    public void shouldApplyBatchAndDispatchEvents() throws Exception
     {
         // given
         txApplier.queue( createTxWithId( startTxId + 1 ) );

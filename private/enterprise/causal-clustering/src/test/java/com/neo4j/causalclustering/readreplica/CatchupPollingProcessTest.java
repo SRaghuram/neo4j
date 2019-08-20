@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -63,6 +64,7 @@ class CatchupPollingProcessTest
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
     private final Executor executor = new CallingThreadExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final ClusterInternalDbmsOperator.StoreCopyHandle storeCopyHandle = mock( ClusterInternalDbmsOperator.StoreCopyHandle.class );
@@ -103,7 +105,7 @@ class CatchupPollingProcessTest
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier,
+        txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier, databaseEventDispatch,
                 storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
     }
 
@@ -193,8 +195,9 @@ class CatchupPollingProcessTest
         // then
         verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( storeCopyHandle ).restart();
+        verify( storeCopyHandle ).release();
         verify( txApplier ).refreshFromNewStore();
+        verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // then
         assertEquals( TX_PULLING, txPuller.state() );
@@ -217,8 +220,9 @@ class CatchupPollingProcessTest
         // then
         verify( databaseContext ).stopForStoreCopy();
         verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( storeCopyHandle ).restart();
+        verify( storeCopyHandle ).release();
         verify( txApplier ).refreshFromNewStore();
+        verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
 
         // then
         assertEquals( TX_PULLING, txPuller.state() );

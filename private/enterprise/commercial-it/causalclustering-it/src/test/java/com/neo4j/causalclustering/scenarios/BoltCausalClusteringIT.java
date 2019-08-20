@@ -506,7 +506,8 @@ class BoltCausalClusteringIT
         CoreClusterMember leader = cluster.awaitLeader();
         ReadReplica readReplica = cluster.getReadReplicaById( 0 );
 
-        readReplica.txPollingClient().stop();
+        CatchupPollingProcess catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
+        catchupPollingProcess.stop();
 
         try ( Driver driver1 = makeDriver( leader.directURI() ) )
         {
@@ -526,7 +527,7 @@ class BoltCausalClusteringIT
             } );
 
             assertNotNull( bookmark );
-            readReplica.txPollingClient().start();
+            catchupPollingProcess.start();
 
             try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
             {

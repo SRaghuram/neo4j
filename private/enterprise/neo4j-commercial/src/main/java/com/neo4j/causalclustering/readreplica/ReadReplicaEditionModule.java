@@ -27,8 +27,8 @@ import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners;
-import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
+import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -172,16 +172,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig, clusterStateLayout );
 
-        ReplicatedTransactionEventListeners txEventListeners = new SystemDbOnlyReplicatedTransactionEventListeners();
-        createDatabaseManagerDependentModules( databaseManager, txEventListeners );
+        ReplicatedDatabaseEventService databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
+        createDatabaseManagerDependentModules( databaseManager, databaseEventService );
 
         var dependencies = globalModule.getGlobalDependencies();
-        dependencies.satisfyDependencies( txEventListeners );
+        dependencies.satisfyDependencies( databaseEventService );
 
         globalModule.getGlobalLife().add( databaseManager );
         dependencies.satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator,
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, internalOperator,
                 storageFactory, reconciledTxTracker, panicService );
         globalModule.getGlobalLife().add( reconcilerModule );
         dependencies.satisfyDependency( reconciledTxTracker );
@@ -189,7 +189,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( ReadReplicaDatabaseManager databaseManager, ReplicatedTransactionEventListeners txEventService )
+    private void createDatabaseManagerDependentModules( ReadReplicaDatabaseManager databaseManager, ReplicatedDatabaseEventService databaseEventService )
     {
         var globalLife = globalModule.getGlobalLife();
         var globalDependencies = globalModule.getGlobalDependencies();
@@ -214,7 +214,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
                 topologyService, myIdentity, catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(),
-                catchupClientFactory, txEventService, storageFactory, panicService );
+                catchupClientFactory, databaseEventService, storageFactory, panicService );
     }
 
     @Override

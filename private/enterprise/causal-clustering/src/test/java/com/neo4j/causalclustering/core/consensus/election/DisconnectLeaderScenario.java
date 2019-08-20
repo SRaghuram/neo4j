@@ -62,7 +62,7 @@ public class DisconnectLeaderScenario
 
         fixture.net.disconnect( oldLeader );
         MemberId newLeader = ElectionUtil.waitForLeaderAgreement(
-                new FilteringIterable<>( rafts, raft -> !raft.identity().equals( oldLeader ) ),
+                new FilteringIterable<>( rafts, raft -> !raft.memberId().equals( oldLeader ) ),
                 leaderStabilityMaxTimeMillis );
         assert !newLeader.equals( oldLeader ); // this should be guaranteed by the waitForLeaderAgreement call
 

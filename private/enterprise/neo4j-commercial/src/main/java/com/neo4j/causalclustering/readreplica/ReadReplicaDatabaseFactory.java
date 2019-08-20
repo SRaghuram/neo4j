@@ -22,8 +22,8 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;
@@ -54,14 +54,14 @@ class ReadReplicaDatabaseFactory
     private final CatchupComponentsRepository catchupComponentsRepository;
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final CatchupClientFactory catchupClientFactory;
-    private final ReplicatedTransactionEventListeners txEventService;
+    private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterStateStorageFactory clusterStateFactory;
     private final PanicService panicService;
 
-    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService,
-            MemberId myIdentity, CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier,
-            CatchupClientFactory catchupClientFactory, ReplicatedTransactionEventListeners txEventService,
-            ClusterStateStorageFactory clusterStateFactory, PanicService panicService )
+    ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService, MemberId myIdentity,
+            CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier,
+            CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
+            PanicService panicService )
     {
         this.config = config;
         this.clock = clock;
@@ -71,7 +71,7 @@ class ReadReplicaDatabaseFactory
         this.catchupComponentsRepository = catchupComponentsRepository;
         this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.catchupClientFactory = catchupClientFactory;
-        this.txEventService = txEventService;
+        this.databaseEventService = databaseEventService;
         this.panicService = panicService;
         this.clusterStateFactory = clusterStateFactory;
     }
@@ -95,10 +95,10 @@ class ReadReplicaDatabaseFactory
                 myIdentity, config, internalLogProvider, topologyService, defaultStrategy );
 
         DatabasePanicker panicker = panicService.panickerFor( databaseId );
-        TransactionCommitNotifier txCommitNotifier = txEventService.getCommitNotifier( databaseId );
+        ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( databaseId );
         CatchupProcessManager catchupProcessManager = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
-                pageCursorTracerSupplier, config, txCommitNotifier );
+                pageCursorTracerSupplier, config, databaseEventDispatch );
 
         var raftIdStorage = clusterStateFactory.createRaftIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 

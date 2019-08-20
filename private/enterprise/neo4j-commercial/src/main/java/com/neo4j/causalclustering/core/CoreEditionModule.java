@@ -53,8 +53,8 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.commercial.edition.AbstractCommercialEditionModule;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners;
-import com.neo4j.dbms.SystemDbOnlyReplicatedTransactionEventListeners;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
+import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
@@ -269,7 +269,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return raftMessageLogger;
     }
 
-    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager, ReplicatedTransactionEventListeners txEventService )
+    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager, ReplicatedDatabaseEventService databaseEventService )
     {
         final LifeSupport globalLife = globalModule.getGlobalLife();
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
@@ -291,7 +291,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
                 temporaryDatabaseFactory, databaseInitializerMap, myIdentity, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
-                recoveryFacade, raftLogger, raftSender, txEventService );
+                recoveryFacade, raftLogger, raftSender, databaseEventService );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols );
@@ -314,16 +314,16 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig(), clusterStateLayout );
 
-        ReplicatedTransactionEventListeners txEventListeners = new SystemDbOnlyReplicatedTransactionEventListeners();
-        createDatabaseManagerDependentModules( databaseManager, txEventListeners );
+        ReplicatedDatabaseEventService databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
+        createDatabaseManagerDependentModules( databaseManager, databaseEventService );
 
         var dependencies = globalModule.getGlobalDependencies();
-        dependencies.satisfyDependencies( txEventListeners );
+        dependencies.satisfyDependencies( databaseEventService );
 
         globalModule.getGlobalLife().add( databaseManager );
         dependencies.satisfyDependency( databaseManager );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, txEventListeners, internalOperator,
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, internalOperator,
                 storageFactory, reconciledTxTracker, panicService );
         globalModule.getGlobalLife().add( reconcilerModule );
         dependencies.satisfyDependency( reconciledTxTracker );

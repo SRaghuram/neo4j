@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,7 +74,7 @@ class CatchupProcessManagerTest
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
                 databasePanicker, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults(), mock( TransactionCommitNotifier.class ) ) );
+                NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults(), mock( ReplicatedDatabaseEventDispatch.class ) ) );
     }
 
     private ClusteredDatabaseContext getMockDatabase( DatabaseId databaseId )

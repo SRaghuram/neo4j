@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -72,7 +72,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
     private final DatabasePanicker panicker;
-    private final TransactionCommitNotifier txCommitNotifier;
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
 
     private CatchupPollingProcess catchupProcess;
     private volatile boolean isPanicked;
@@ -81,7 +81,7 @@ public class CatchupProcessManager extends SafeLifecycle
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext,
             DatabasePanicker panicker, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, Config config, TransactionCommitNotifier txCommitNotifier )
+            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
@@ -97,13 +97,13 @@ public class CatchupProcessManager extends SafeLifecycle
         this.catchupClient = catchUpClient;
         this.selectionStrategyPipeline = selectionStrategyPipeline;
         this.txPullIntervalMillis = config.get( CausalClusteringSettings.pull_interval ).toMillis();
-        this.txCommitNotifier = txCommitNotifier;
+        this.databaseEventDispatch = databaseEventDispatch;
         this.txPulling = new LifeSupport();
         this.isPanicked = false;
     }
 
     @Override
-    public void start0() throws Exception
+    public void start0()
     {
         log.info( "Starting " + this.getClass().getSimpleName() );
         catchupProcess = createCatchupProcess( databaseContext );
@@ -160,10 +160,10 @@ public class CatchupProcessManager extends SafeLifecycle
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
                 databaseContext.monitors(), pageCursorTracerSupplier, () -> databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
-                logProvider, txCommitNotifier );
+                logProvider, databaseEventDispatch );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,
-                batchingTxApplier, dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
+                batchingTxApplier, databaseEventDispatch, dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
                 new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
         databaseContext.dependencies().satisfyDependencies( catchupProcess );

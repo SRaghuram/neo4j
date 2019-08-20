@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.function.Supplier;
 
@@ -41,7 +41,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final CommandIndexTracker commandIndexTracker;
     private final Log log;
-    private final TransactionCommitNotifier txCommitNotifier;
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
 
     private TransactionQueue txQueue;
     private TransactionCommitProcess commitProcess;
@@ -51,7 +51,7 @@ public class BatchingTxApplier extends LifecycleAdapter
 
     BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
             Monitors monitors, PageCursorTracerSupplier pageCursorTracerSupplier, Supplier<VersionContextSupplier> versionContextSupplier,
-            CommandIndexTracker commandIndexTracker, LogProvider logProvider, TransactionCommitNotifier txCommitNotifier )
+            CommandIndexTracker commandIndexTracker, LogProvider logProvider, ReplicatedDatabaseEventDispatch databaseEventDispatch )
     {
         this.maxBatchSize = maxBatchSize;
         this.txIdStoreSupplier = txIdStoreSupplier;
@@ -62,7 +62,7 @@ public class BatchingTxApplier extends LifecycleAdapter
         //TODO: Does this have to be a supplier supplier?
         this.versionContextSupplier = versionContextSupplier;
         this.commandIndexTracker = commandIndexTracker;
-        this.txCommitNotifier = txCommitNotifier;
+        this.databaseEventDispatch = databaseEventDispatch;
     }
 
     @Override
@@ -89,6 +89,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     {
         assert txQueue == null || txQueue.isEmpty();
         lastQueuedTxId = txIdStoreSupplier.get().getLastCommittedTransactionId();
+        assert lastQueuedTxId == txIdStoreSupplier.get().getLastClosedTransactionId();
         commitProcess = commitProcessSupplier.get();
     }
 
@@ -109,7 +110,7 @@ public class BatchingTxApplier extends LifecycleAdapter
         }
 
         var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.get().getVersionContext() );
-        toApply.onClose( txCommitNotifier::fireTransactionCommitted );
+        toApply.onClose( databaseEventDispatch::fireTransactionCommitted );
         txQueue.queue( toApply );
 
         if ( !stopped )

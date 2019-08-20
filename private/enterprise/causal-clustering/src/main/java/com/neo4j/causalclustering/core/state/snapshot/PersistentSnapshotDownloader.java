@@ -10,14 +10,18 @@ import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
 import java.io.IOException;
 import java.util.Optional;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.internal.helpers.TimeoutStrategy;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 public class PersistentSnapshotDownloader implements Runnable
 {
@@ -35,6 +39,7 @@ public class PersistentSnapshotDownloader implements Runnable
     private final CatchupAddressProvider addressProvider;
     private final CoreDownloader downloader;
     private final CoreSnapshotService snapshotService;
+    private final ReplicatedDatabaseEventService databaseEventService;
     private final Log log;
     private final TimeoutStrategy backoffStrategy;
     private final DatabasePanicker panicker;
@@ -42,14 +47,15 @@ public class PersistentSnapshotDownloader implements Runnable
     private volatile State state;
     private volatile boolean stopped;
 
-    PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess,
-            CoreDownloader downloader, CoreSnapshotService snapshotService, StoreDownloadContext context,
-            Log log, TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors )
+    PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, CoreDownloader downloader,
+            CoreSnapshotService snapshotService, ReplicatedDatabaseEventService databaseEventService, StoreDownloadContext context, Log log,
+            TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors )
     {
         this.applicationProcess = applicationProcess;
         this.addressProvider = addressProvider;
         this.downloader = downloader;
         this.snapshotService = snapshotService;
+        this.databaseEventService = databaseEventService;
         this.context = context;
         this.log = log;
         this.backoffStrategy = backoffStrategy;
@@ -79,7 +85,7 @@ public class PersistentSnapshotDownloader implements Runnable
             monitor.startedDownloadingSnapshot( databaseId );
             applicationProcess.pauseApplier( OPERATION_NAME );
 
-            var restart = context.stopForStoreCopy();
+            var stoppedDatabase = context.stopForStoreCopy();
 
             boolean incomplete = false;
             Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( context );
@@ -106,9 +112,13 @@ public class PersistentSnapshotDownloader implements Runnable
             {
                 snapshotService.installSnapshot( snapshot.get() );
 
-                /* Starting the databases will invoke the commit process factory in the CoreEditionModule, which has important side-effects. */
-                log.info( "Starting local databases" );
-                restart.restart();
+                /* Starting the database will invoke the CoreCommitProcessFactory which has important side-effects. */
+                log.info( "Releasing temporarily stopped database" );
+                if ( stoppedDatabase.release() )
+                {
+                    log.info( "Started database" );
+                    notifyStoreCopied( context.database() );
+                }
             }
         }
         catch ( InterruptedException e )
@@ -131,6 +141,15 @@ public class PersistentSnapshotDownloader implements Runnable
             monitor.downloadSnapshotComplete( databaseId );
             state = State.COMPLETED;
         }
+    }
+
+    private void notifyStoreCopied( Database database )
+    {
+        Dependencies dependencyResolver = database.getDependencyResolver();
+        TransactionIdStore txIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
+        long lastCommittedTransactionId = txIdStore.getLastCommittedTransactionId();
+        assert lastCommittedTransactionId == txIdStore.getLastClosedTransactionId();
+        databaseEventService.getDatabaseEventDispatch( context.databaseId() ).fireStoreReplaced( lastCommittedTransactionId );
     }
 
     /**

@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
@@ -37,9 +38,13 @@ import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
+import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.LogProvider;
@@ -62,6 +67,9 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public final class CausalClusteringTestHelpers
@@ -211,7 +219,7 @@ public final class CausalClusteringTestHelpers
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertDatabaseEventuallyStarted( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
                 () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), is( true ), 1, MINUTES );
@@ -246,7 +254,7 @@ public final class CausalClusteringTestHelpers
         return membersHaveDatabaseState( expected, cluster.allMembers(), databaseName );
     }
 
-    private static boolean membersHaveDatabaseState( DatabaseAvailability expected, Set<ClusterMember> members, String databaseName )
+    private static boolean membersHaveDatabaseState( DatabaseAvailability expected, Set<? extends ClusterMember> members, String databaseName )
     {
         return members.stream()
                 .map( member -> memberDatabaseState( member, databaseName ) )
@@ -258,7 +266,7 @@ public final class CausalClusteringTestHelpers
         return memberDatabaseStates( databaseName, cluster.allMembers() );
     }
 
-    private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Set<ClusterMember> members )
+    private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Set<? extends ClusterMember> members )
     {
         return members.stream()
                 .collect( toMap( identity(), member -> memberDatabaseState( member, databaseName ) ) );
@@ -297,6 +305,33 @@ public final class CausalClusteringTestHelpers
         }
 
         return DatabaseAvailability.AVAILABLE;
+    }
+
+    public static void stopDiscoveryService( ClusterMember member ) throws Exception
+    {
+        TopologyService topologyService = member.resolveDependency( SYSTEM_DATABASE_NAME, TopologyService.class );
+        topologyService.stop();
+    }
+
+    public static void startDiscoveryService( ClusterMember member ) throws Exception
+    {
+        TopologyService topologyService = member.resolveDependency( SYSTEM_DATABASE_NAME, TopologyService.class );
+        topologyService.start();
+    }
+
+    /**
+     * Remember to update keep_logical_logs configuration if you want the files to be pruned.
+     */
+    public static void forceTxLogRotationAndCheckpoint( GraphDatabaseAPI db ) throws IOException
+    {
+        // a nicety check, which can be removed if tests ever do anything different
+        var config = db.getDependencyResolver().resolveDependency( Config.class );
+        assertEquals( "false", config.get( keep_logical_logs ) );
+
+        DependencyResolver dependencyResolver = db.getDependencyResolver();
+        dependencyResolver.resolveDependency( LogRotation.class ).rotateLogFile( LogAppendEvent.NULL );
+        SimpleTriggerInfo info = new SimpleTriggerInfo( "test" );
+        dependencyResolver.resolveDependency( CheckPointer.class ).forceCheckPoint( info );
     }
 
     private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs ) throws IOException

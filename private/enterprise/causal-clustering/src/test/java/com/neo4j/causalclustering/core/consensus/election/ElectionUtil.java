@@ -65,12 +65,12 @@ public class ElectionUtil
         {
             synchronized ( leaderViews )
             {
-                leaderViews.put( raft.identity(), newLeader.memberId() );
+                leaderViews.put( raft.memberId(), newLeader.memberId() );
 
                 boolean leaderIsValid = false;
                 for ( RaftMachine validRaft : validRafts )
                 {
-                    if ( validRaft.identity().equals( newLeader.memberId() ) )
+                    if ( validRaft.memberId().equals( newLeader.memberId() ) )
                     {
                         leaderIsValid = true;
                     }

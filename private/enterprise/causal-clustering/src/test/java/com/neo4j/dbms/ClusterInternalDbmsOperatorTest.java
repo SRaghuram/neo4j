@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -58,7 +59,7 @@ class ClusterInternalDbmsOperatorTest
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.simple() );
 
         // when
-        stoppedDatabase.restart();
+        stoppedDatabase.release();
 
         // then
         verify( connector, times( 2 ) ).trigger( ReconcilerRequest.simple() );
@@ -100,28 +101,28 @@ class ClusterInternalDbmsOperatorTest
         assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
-        stopA1.restart();
+        stopA1.release();
 
         // then
         assertEquals( STORE_COPYING, operatorState( databaseA ) );
         assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
-        stopA2.restart();
+        stopA2.release();
 
         // then
         assertNull( operatorState( databaseA ) );
         assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
-        stopB1.restart();
+        stopB1.release();
 
         // then
         assertNull( operatorState( databaseA ) );
         assertEquals( STORE_COPYING, operatorState( databaseB ) );
 
         // when
-        stopB2.restart();
+        stopB2.release();
 
         // then
         assertEquals( operator.desired(), Collections.emptyMap() );
@@ -133,10 +134,10 @@ class ClusterInternalDbmsOperatorTest
         // given
         var someDb = randomDatabaseId();
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
-        stoppedDatabase.restart();
+        stoppedDatabase.release();
 
         // when/then
-        assertThrows( IllegalStateException.class, stoppedDatabase::restart );
+        assertThrows( IllegalStateException.class, stoppedDatabase::release );
     }
 
     @Test
@@ -159,7 +160,7 @@ class ClusterInternalDbmsOperatorTest
         assertEquals( STORE_COPYING, operatorState( someDb ) );
 
         // when
-        storeCopying.restart();
+        storeCopying.release();
 
         // then
         assertNull( operator.desired().get( someDb.name() ) );
@@ -213,7 +214,7 @@ class ClusterInternalDbmsOperatorTest
         // when
         operator.stopOnPanic( someDb );
         var storeCopyHandle = operator.stopForStoreCopy( someDb );
-        storeCopyHandle.restart();
+        assertTrue( storeCopyHandle.release() );
 
         // then
         verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb ) );

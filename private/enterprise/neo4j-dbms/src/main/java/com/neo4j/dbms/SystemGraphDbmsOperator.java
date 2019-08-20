@@ -21,7 +21,7 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 /**
  * Operator driving database management operations in response to changes in the system database
  */
-public final class SystemGraphDbmsOperator extends DbmsOperator
+class SystemGraphDbmsOperator extends DbmsOperator
 {
     private final SystemGraphDbmsModel dbmsModel;
     private final ThreadToStatementContextBridge txBridge;
@@ -44,15 +44,25 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
         {
             // Still in a transaction. This method was most likely invoked after a nested transaction was committed.
             // For example, such transaction could be a token-introducing internal transaction. No need to reconcile.
-            updateLastReconciledTransactionId( txId );
+            updateLastReconciledTransactionId( txId, false );
             return;
         }
 
+        reconcile( txId, transactionData, false );
+    }
+
+    void storeReplaced( long txId )
+    {
+        reconcile( txId, null, true );
+    }
+
+    private void reconcile( long txId, TransactionData transactionData, boolean asPartOfStoreCopy )
+    {
         var databasesToAwait = extractUpdatedDatabases( transactionData );
 
         updateDesiredStates(); // TODO: Handle exceptions from this!
         ReconcilerResult reconcilerResult = trigger( ReconcilerRequest.simple() );
-        reconcilerResult.whenComplete( () -> updateLastReconciledTransactionId( txId ) );
+        reconcilerResult.whenComplete( () -> updateLastReconciledTransactionId( txId, asPartOfStoreCopy ) );
 
         // TODO: Remove below when Standalone tests( e.g.SystemDatabaseDatabaseManagementIT ) no longer depend on blocking behaviour of create.
         // Clustered version of this listener does *not * block
@@ -80,11 +90,18 @@ public final class SystemGraphDbmsOperator extends DbmsOperator
         return dbmsModel.updatedDatabases( transactionData );
     }
 
-    private void updateLastReconciledTransactionId( long txId )
+    private void updateLastReconciledTransactionId( long txId, boolean asPartOfStoreCopy )
     {
         try
         {
-            reconciledTxTracker.setLastReconciledTransactionId( txId );
+            if ( asPartOfStoreCopy )
+            {
+                reconciledTxTracker.initialize( txId );
+            }
+            else
+            {
+                reconciledTxTracker.setLastReconciledTransactionId( txId );
+            }
         }
         catch ( Throwable t )
         {

@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,24 +18,20 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
-import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
-import org.neo4j.kernel.impl.transaction.tracing.LogAppendEvent;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceTxLogRotationAndCheckpoint;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -65,13 +62,14 @@ class ReadReplicaStoreCopyIT
     {
         ReadReplica readReplica = cluster.findAnyReadReplica();
 
-        readReplica.txPollingClient().stop();
+        CatchupPollingProcess catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
+        catchupPollingProcess.stop();
 
         writeSomeDataAndForceLogRotations( cluster );
         Semaphore storeCopyBlockingSemaphore = addStoreCopyBlockingMonitor( readReplica );
         try
         {
-            readReplica.txPollingClient().start();
+            catchupPollingProcess.start();
             waitForStoreCopyToStartAndBlock( storeCopyBlockingSemaphore );
 
             GraphDatabaseFacade replicaGraphDatabase = readReplica.defaultDatabase();
@@ -98,26 +96,11 @@ class ReadReplicaStoreCopyIT
         }
     }
 
-    private static void forceLogRotationOnAllCores( Cluster cluster )
+    private static void forceLogRotationOnAllCores( Cluster cluster ) throws IOException
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            forceLogRotationAndPruning( core );
-        }
-    }
-
-    private static void forceLogRotationAndPruning( CoreClusterMember core )
-    {
-        try
-        {
-            DependencyResolver dependencyResolver = core.defaultDatabase().getDependencyResolver();
-            dependencyResolver.resolveDependency( LogRotation.class ).rotateLogFile( LogAppendEvent.NULL );
-            SimpleTriggerInfo info = new SimpleTriggerInfo( "test" );
-            dependencyResolver.resolveDependency( CheckPointer.class ).forceCheckPoint( info );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
+            forceTxLogRotationAndCheckpoint( core.defaultDatabase() );
         }
     }
 

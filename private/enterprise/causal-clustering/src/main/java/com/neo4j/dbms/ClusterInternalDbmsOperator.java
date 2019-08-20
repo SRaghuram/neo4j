@@ -96,12 +96,14 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
         reconcilerResult.whenComplete( () -> panicked.remove( databaseId ) );
     }
 
-    private synchronized void triggerReconcilerOnStoreCopy( DatabaseId databaseId )
+    private synchronized boolean triggerReconcilerOnStoreCopy( DatabaseId databaseId )
     {
         if ( !bootstrapping.contains( databaseId ) && !panicked.contains( databaseId ) )
         {
             trigger( ReconcilerRequest.simple() ).await( databaseId.name() );
+            return true;
         }
+        return false;
     }
 
     /**
@@ -129,7 +131,12 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
             this.databaseId = databaseId;
         }
 
-        public void restart()
+        /**
+         * Starts the database again, unless we're currently in the bootstrapping phase.
+         *
+         * @return true if the database was started, otherwise false.
+         */
+        public boolean release()
         {
             boolean exists = operator.storeCopying.remove( this );
             if ( !exists )
@@ -137,7 +144,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
                 throw new IllegalStateException( "Restart was already called for " + databaseId );
             }
 
-            operator.triggerReconcilerOnStoreCopy( databaseId );
+            return operator.triggerReconcilerOnStoreCopy( databaseId );
         }
 
         public DatabaseId databaseId()

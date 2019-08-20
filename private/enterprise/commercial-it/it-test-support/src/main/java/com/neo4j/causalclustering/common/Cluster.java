@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -419,7 +420,12 @@ public class Cluster
 
     private static Role getCurrentDatabaseRole( GraphDatabaseFacade database )
     {
-        return database.getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
+        DependencyResolver dependencyResolver = database.getDependencyResolver();
+        if ( dependencyResolver == null )
+        {
+            return null;
+        }
+        return dependencyResolver.resolveDependency( RoleProvider.class ).currentRole();
     }
 
     public CoreClusterMember awaitLeader() throws TimeoutException

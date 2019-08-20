@@ -17,6 +17,9 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.Monitors;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+
 public interface ClusterMember
 {
     MemberId id();
@@ -29,11 +32,20 @@ public interface ClusterMember
 
     DatabaseManagementService managementService();
 
-    GraphDatabaseFacade defaultDatabase();
+    default GraphDatabaseFacade defaultDatabase()
+    {
+        return database( config().get( default_database ) );
+    }
 
-    GraphDatabaseFacade systemDatabase();
+    default GraphDatabaseFacade systemDatabase()
+    {
+        return database( SYSTEM_DATABASE_NAME );
+    }
 
-    GraphDatabaseFacade database( String databaseName );
+    default GraphDatabaseFacade database( String databaseName )
+    {
+        return (GraphDatabaseFacade) managementService().database( databaseName );
+    }
 
     ClientConnectorAddresses clientConnectorAddresses();
 
@@ -66,5 +78,10 @@ public interface ClusterMember
     default <T> void updateConfig( Setting<T> setting, T value )
     {
         config().set( setting, value );
+    }
+
+    default <T> T resolveDependency( String databaseName, Class<T> type )
+    {
+        return database( databaseName ).getDependencyResolver().resolveDependency( type );
     }
 }

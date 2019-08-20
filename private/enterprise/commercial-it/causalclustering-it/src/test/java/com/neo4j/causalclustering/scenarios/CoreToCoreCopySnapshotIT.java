@@ -187,12 +187,12 @@ class CoreToCoreCopySnapshotIT
 
     private static int getOldestLogIdOn( CoreClusterMember clusterMember ) throws IOException
     {
-        return clusterMember.getLogFileNames().firstKey().intValue();
+        return clusterMember.getRaftLogFileNames( DEFAULT_DATABASE_NAME ).firstKey().intValue();
     }
 
     private static int getMostRecentLogIdOn( CoreClusterMember clusterMember ) throws IOException
     {
-        return clusterMember.getLogFileNames().lastKey().intValue();
+        return clusterMember.getRaftLogFileNames( DEFAULT_DATABASE_NAME ).lastKey().intValue();
     }
 
     private static CoreClusterMember doSomeTransactions( Cluster cluster, int count )

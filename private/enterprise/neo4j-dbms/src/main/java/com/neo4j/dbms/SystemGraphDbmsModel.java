@@ -35,7 +35,6 @@ import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LA
  */
 public class SystemGraphDbmsModel
 {
-
     private GraphDatabaseService systemDatabase;
 
     public void setSystemDatabase( GraphDatabaseService systemDatabase )

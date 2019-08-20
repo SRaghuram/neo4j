@@ -172,7 +172,7 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public MemberId id()
     {
-        return defaultDatabase.getDependencyResolver().resolveDependency( RaftMachine.class ).identity();
+        return systemDatabase.getDependencyResolver().resolveDependency( RaftMachine.class ).memberId();
     }
 
     @Override
@@ -219,39 +219,16 @@ public class CoreClusterMember implements ClusterMember
     }
 
     @Override
-    public GraphDatabaseFacade defaultDatabase()
-    {
-        return defaultDatabase;
-    }
-
-    @Override
-    public GraphDatabaseFacade systemDatabase()
-    {
-        return systemDatabase;
-    }
-
-    @Override
-    public GraphDatabaseFacade database( String databaseName )
-    {
-        return (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( databaseName );
-    }
-
-    @Override
     public DatabaseLayout databaseLayout()
     {
         return defaultDatabaseLayout;
     }
 
-    public <T> T resolveDependency( String databaseName, Class<T> type )
-    {
-        return ((GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( databaseName )).getDependencyResolver().resolveDependency( type );
-    }
-
-    public SortedMap<Long, File> getLogFileNames() throws IOException
+    public SortedMap<Long, File> getRaftLogFileNames( String databaseName ) throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            return new FileNames( raftLogDirectory() ).getAllFiles( fileSystem, null );
+            return new FileNames( raftLogDirectory( databaseName ) ).getAllFiles( fileSystem, null );
         }
     }
 
@@ -318,10 +295,9 @@ public class CoreClusterMember implements ClusterMember
         return clusterStateLayout.getClusterStateDirectory();
     }
 
-    public File raftLogDirectory()
+    public File raftLogDirectory( String databaseName )
     {
-        var defaultDatabase = config().get( GraphDatabaseSettings.default_database );
-        return clusterStateLayout.raftLogDirectory( defaultDatabase );
+        return clusterStateLayout.raftLogDirectory( databaseName );
     }
 
     public int discoveryPort()

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines;
 
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -35,10 +35,10 @@ class StateMachineCommitHelperTest
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
     private final PageCursorTracer pageCursorTracer = mock( PageCursorTracer.class );
     private final VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
-    private final TransactionCommitNotifier commitNotifier = mock( TransactionCommitNotifier.class );
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
 
-    private final StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( commandIndexTracker, () -> pageCursorTracer,
-            versionContextSupplier, commitNotifier );
+    private final StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( commandIndexTracker, () -> pageCursorTracer, versionContextSupplier,
+            databaseEventDispatch );
 
     @Test
     void shouldUpdateLastAppliedCommandIndex()
@@ -91,7 +91,7 @@ class StateMachineCommitHelperTest
         assertEquals( txId, committedTxId.longValue() );
         assertEquals( 15, commandIndexTracker.getAppliedCommandIndex() );
         verify( pageCursorTracer ).reportEvents();
-        verify( commitNotifier ).fireTransactionCommitted( txId );
+        verify( databaseEventDispatch ).fireTransactionCommitted( txId );
     }
 
     private static TransactionCommitProcess newCommitProcessMock( long transactionId ) throws TransactionFailureException

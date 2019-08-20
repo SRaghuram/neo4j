@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 
-import static com.neo4j.dbms.ReplicatedTransactionEventListeners.TransactionCommitNotifier;
+import static com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import static org.mockito.Mockito.mock;
 
 public class DummyStateMachineCommitHelper extends StateMachineCommitHelper
@@ -22,6 +22,6 @@ public class DummyStateMachineCommitHelper extends StateMachineCommitHelper
 
     public DummyStateMachineCommitHelper( CommandIndexTracker commandIndexTracker, PageCursorTracer pageCursorTracer )
     {
-        super( commandIndexTracker, () -> pageCursorTracer, EmptyVersionContextSupplier.EMPTY, mock( TransactionCommitNotifier.class ) );
+        super( commandIndexTracker, () -> pageCursorTracer, EmptyVersionContextSupplier.EMPTY, mock( ReplicatedDatabaseEventDispatch.class ) );
     }
 }

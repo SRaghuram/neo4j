@@ -18,17 +18,17 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule<ClusteredMultiDatabaseManager>
 {
-    private final ReplicatedTransactionEventListeners txEventService;
+    private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
     private final ClusterStateStorageFactory stateStorageFactory;
     private final PanicService panicService;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ReplicatedTransactionEventListeners txEventService, ClusterInternalDbmsOperator internalOperator,
+            ReplicatedDatabaseEventService databaseEventService, ClusterInternalDbmsOperator internalOperator,
             ClusterStateStorageFactory stateStorageFactory, ReconciledTransactionTracker reconciledTxTracker, PanicService panicService )
     {
         super( globalModule, databaseManager, reconciledTxTracker );
-        this.txEventService = txEventService;
+        this.databaseEventService = databaseEventService;
         this.internalOperator = internalOperator;
         this.stateStorageFactory = stateStorageFactory;
         this.panicService = panicService;
@@ -45,7 +45,7 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     @Override
     protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
     {
-        txEventService.registerListener( SYSTEM_DATABASE_ID, txId -> systemOperator.transactionCommitted( txId, null ) );
+        databaseEventService.registerListener( SYSTEM_DATABASE_ID, new SystemOperatingDatabaseEventListener( systemOperator ) );
     }
 
     @Override

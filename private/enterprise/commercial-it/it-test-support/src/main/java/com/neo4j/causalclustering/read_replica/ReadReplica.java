@@ -6,12 +6,10 @@
 package com.neo4j.causalclustering.read_replica;
 
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -23,36 +21,30 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
+import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 
 public class ReadReplica implements ClusterMember
 {
     public interface ReadReplicaGraphDatabaseFactory
     {
-
-        ReadReplicaGraphDatabase create( File databaseDirectory, Config memberConfig,
-                GraphDatabaseDependencies databaseDependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
+        ReadReplicaGraphDatabase create( File databaseDirectory, Config memberConfig, GraphDatabaseDependencies databaseDependencies,
+                DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
     }
 
     private final DiscoveryServiceFactory discoveryServiceFactory;
@@ -62,14 +54,12 @@ public class ReadReplica implements ClusterMember
     private final MemberId memberId;
     private final String boltSocketAddress;
     private final Config memberConfig;
-    private ReadReplicaGraphDatabase readReplicaGraphDatabase;
-    private GraphDatabaseFacade defaultDatabase;
-    private GraphDatabaseFacade systemDatabase;
-    private DatabaseManager<ClusteredDatabaseContext> databaseManager;
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
     private final File databasesDirectory;
     private final ReadReplicaGraphDatabaseFactory dbFactory;
+
+    private ReadReplicaGraphDatabase readReplicaGraphDatabase;
 
     public ReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort,
             int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
@@ -139,30 +129,26 @@ public class ReadReplica implements ClusterMember
     @Override
     public void start()
     {
-        readReplicaGraphDatabase =  dbFactory.create( databasesDirectory, memberConfig,
-                GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory, memberId );
-        defaultDatabase = (GraphDatabaseFacade) readReplicaGraphDatabase.getManagementService().database( DEFAULT_DATABASE_NAME );
-        systemDatabase = (GraphDatabaseFacade) readReplicaGraphDatabase.getManagementService().database( SYSTEM_DATABASE_NAME );
-        DependencyResolver dependencyResolver = systemDatabase.getDependencyResolver();
-
-        //noinspection unchecked
-        databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
+        readReplicaGraphDatabase = dbFactory.create( databasesDirectory, memberConfig, newDependencies().monitors( monitors ), discoveryServiceFactory,
+                memberId );
     }
 
     @Override
     public void shutdown()
     {
-        if ( readReplicaGraphDatabase != null )
+        if ( readReplicaGraphDatabase == null )
         {
-            try
-            {
-                readReplicaGraphDatabase.getManagementService().shutdown();
-            }
-            finally
-            {
-                readReplicaGraphDatabase = null;
-                defaultDatabase = null;
-            }
+            // already shutdown
+            return;
+        }
+
+        try
+        {
+            readReplicaGraphDatabase.getManagementService().shutdown();
+        }
+        finally
+        {
+            readReplicaGraphDatabase = null;
         }
     }
 
@@ -176,36 +162,6 @@ public class ReadReplica implements ClusterMember
     public DatabaseManagementService managementService()
     {
         return readReplicaGraphDatabase.getManagementService();
-    }
-
-    public CatchupPollingProcess txPollingClient()
-    {
-        return defaultDatabase.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
-    }
-
-    public DatabaseManager<ClusteredDatabaseContext> databaseManager()
-    {
-        return databaseManager;
-    }
-
-    @Override
-    public GraphDatabaseFacade defaultDatabase()
-    {
-        return defaultDatabase;
-    }
-
-    @Override
-    public GraphDatabaseFacade systemDatabase()
-    {
-        return systemDatabase;
-    }
-
-    @Override
-    public GraphDatabaseFacade database( String databaseName )
-    {
-        return databaseManager.getDatabaseContext( databaseName )
-                .map( DatabaseContext::databaseFacade )
-                .orElseThrow( DatabaseNotFoundException::new );
     }
 
     @Override

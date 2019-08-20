@@ -16,7 +16,8 @@ import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
-import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -57,6 +58,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final CatchupClientFactory catchUpClient;
     private final DatabasePanicker panicker;
     private final BatchingTxApplier applier;
+    private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
     private final PullRequestMonitor pullRequestMonitor;
     private final Executor executor;
 
@@ -64,15 +66,15 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext,
-            CatchupClientFactory catchUpClient, BatchingTxApplier applier, StoreCopyProcess storeCopyProcess,
-            LogProvider logProvider, DatabasePanicker panicker, CatchupAddressProvider catchupAddressProvider )
-
+    CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
+            ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, DatabasePanicker panicker,
+            CatchupAddressProvider catchupAddressProvider )
     {
         this.databaseContext = databaseContext;
         this.catchupAddressProvider = catchupAddressProvider;
         this.catchUpClient = catchUpClient;
         this.applier = applier;
+        this.databaseEventDispatch = databaseEventDispatch;
         this.pullRequestMonitor = databaseContext.monitors().newMonitor( PullRequestMonitor.class );
         this.storeCopyProcess = storeCopyProcess;
         this.log = logProvider.getLog( getClass() );
@@ -292,6 +294,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, databaseContext.storeId() );
             transitionToTxPulling();
             restartDatabase( stoppedDb );
+            databaseEventDispatch.fireStoreReplaced( applier.lastQueuedTxId() );
         }
         catch ( IOException | StoreCopyFailedException e )
         {
@@ -303,17 +306,9 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private void restartDatabase( ClusterInternalDbmsOperator.StoreCopyHandle stoppedDb )
+    private void restartDatabase( StoreCopyHandle stoppedDb )
     {
-        try
-        {
-            stoppedDb.restart();
-        }
-        catch ( Throwable throwable )
-        {
-            throw new RuntimeException( throwable );
-        }
-
+        stoppedDb.release();
         latestTxIdOfUpStream = 0; // we will find out on the next pull request response
         applier.refreshFromNewStore();
     }

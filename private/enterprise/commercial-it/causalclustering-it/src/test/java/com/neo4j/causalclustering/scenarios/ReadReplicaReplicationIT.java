@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.ReadReplicaDatabaseManager;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -83,6 +84,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
@@ -474,7 +476,7 @@ class ReadReplicaReplicationIT
             tx.commit();
         } );
 
-        var baseVersion = versionBy( cluster.awaitLeader().raftLogDirectory(), Math::max );
+        var baseVersion = versionBy( cluster.awaitLeader().raftLogDirectory( DEFAULT_DATABASE_NAME ), Math::max );
 
         CoreClusterMember coreGraphDatabase = null;
         for ( var j = 0; j < 2; j++ )
@@ -490,7 +492,7 @@ class ReadReplicaReplicationIT
             } );
         }
 
-        var raftLogDir = coreGraphDatabase.raftLogDirectory();
+        var raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
         assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), greaterThan( baseVersion ), 5, SECONDS );
 
         // when
@@ -550,10 +552,8 @@ class ReadReplicaReplicationIT
     @SuppressWarnings( "SameParameterValue" )
     private static void assertFailedToStart( ReadReplica readReplica, String databaseName )
     {
-        var defaultDatabase = readReplica
-                .databaseManager().getDatabaseContext( databaseName )
-                .orElseThrow();
-
+        ReadReplicaDatabaseManager databaseManager = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, ReadReplicaDatabaseManager.class );
+        var defaultDatabase = databaseManager.getDatabaseContext( databaseName ).orElseThrow();
         assertTrue( defaultDatabase.isFailed() );
     }
 

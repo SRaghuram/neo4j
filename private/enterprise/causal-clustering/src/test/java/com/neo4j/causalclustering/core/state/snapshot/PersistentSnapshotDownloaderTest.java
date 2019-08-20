@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.dbms.ClusterInternalDbmsOperator.StoreCopyHandle;
+import com.neo4j.dbms.ReplicatedDatabaseEventService;
+import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -20,9 +22,13 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -48,22 +54,39 @@ class PersistentSnapshotDownloaderTest
 
     private CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
+    private ReplicatedDatabaseEventService databaseEventService = mock( ReplicatedDatabaseEventService.class );
 
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
     private StoreCopyHandle storeCopyHandle;
 
+    private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+
+    private ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
+    private SimpleTransactionIdStore txIdStore = new SimpleTransactionIdStore();
+
     private PersistentSnapshotDownloader createDownloader()
     {
-        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess,
-                coreDownloader, snapshotService, downloadContext, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
+        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, coreDownloader, snapshotService, databaseEventService,
+                downloadContext, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
     }
 
     @BeforeEach
     void setUp()
     {
-        when( downloadContext.databaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
+        when( downloadContext.databaseId() ).thenReturn( databaseId );
+
         storeCopyHandle = mock( StoreCopyHandle.class );
         when( downloadContext.stopForStoreCopy() ).thenReturn( storeCopyHandle );
+
+        when( databaseEventService.getDatabaseEventDispatch( databaseId ) ).thenReturn( databaseEventDispatch );
+
+        Database database = mock( Database.class );
+        when( downloadContext.database() ).thenReturn( database );
+
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( txIdStore );
+
+        when( database.getDependencyResolver() ).thenReturn( dependencies );
     }
 
     @Test
@@ -77,6 +100,8 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
+        verify( panicker, never() ).panic( any() );
+
         InOrder inOrder = inOrder( applicationProcess, downloadContext, coreDownloader, storeCopyHandle );
 
         inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
@@ -84,10 +109,33 @@ class PersistentSnapshotDownloaderTest
 
         inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
-        inOrder.verify( storeCopyHandle ).restart();
+        inOrder.verify( storeCopyHandle ).release();
         inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
 
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
+    }
+
+    @Test
+    void shouldDispatchDatabaseEventAfterStoreCopy() throws Throwable
+    {
+        // given
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( storeCopyHandle.release() ).thenReturn( true );
+
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+        long txIdAfterDownload = 79;
+        txIdStore.setLastCommittedAndClosedTransactionId( txIdAfterDownload, 0, 0, 0, 0 );
+
+        // when
+        persistentSnapshotDownloader.run();
+
+        // then
+        verify( panicker, never() ).panic( any() );
+
+        InOrder inOrder = inOrder( storeCopyHandle, databaseEventDispatch );
+
+        inOrder.verify( storeCopyHandle ).release();
+        inOrder.verify( databaseEventDispatch ).fireStoreReplaced( txIdAfterDownload );
     }
 
     @Test
@@ -105,6 +153,7 @@ class PersistentSnapshotDownloaderTest
         thread.join();
 
         // then
+        verify( panicker, never() ).panic( any() );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
@@ -125,6 +174,7 @@ class PersistentSnapshotDownloaderTest
         thread.join();
 
         // then
+        verify( panicker, never() ).panic( any() );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
@@ -141,6 +191,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
+        verify( panicker, never() ).panic( any() );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
         assertEquals( 3, backoffStrategy.invocationCount() );
@@ -160,6 +211,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
+        verify( panicker, never() ).panic( any() );
         verify( coreDownloader ).downloadSnapshotAndStore( downloadContext, catchupAddressProvider );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
@@ -181,6 +233,7 @@ class PersistentSnapshotDownloaderTest
         thread.join();
 
         // then
+        verify( panicker, never() ).panic( any() );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
     }
@@ -192,6 +245,7 @@ class PersistentSnapshotDownloaderTest
         RuntimeException runtimeException = new RuntimeException();
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( runtimeException );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+
         // when
         persistentSnapshotDownloader.run();
 
@@ -211,8 +265,9 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.stop();
         thread.join();
 
+        verify( panicker, never() ).panic( any() );
         verify( downloadContext ).stopForStoreCopy();
-        verify( storeCopyHandle, never() ).restart();
+        verify( storeCopyHandle, never() ).release();
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException
