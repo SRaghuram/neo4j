@@ -57,7 +57,7 @@ public class DumpGBPTree
     {
         SingleFilePageSwapperFactory swapper = new SingleFilePageSwapperFactory();
         DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        swapper.open( fs, EMPTY );
+        swapper.open( fs );
         PageCursorTracerSupplier cursorTracerSupplier = PageCursorTracerSupplier.NULL;
         return new MuninnPageCache( swapper, 100, NULL, cursorTracerSupplier, EmptyVersionContextSupplier.EMPTY, jobScheduler );
     }
