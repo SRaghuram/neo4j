@@ -104,7 +104,7 @@ public class PathModelTest
         }
         for ( Long size : smaller )
         {
-            verifyDiff( editionModuleBackedAbstractBenchmark, db, size, 0.6f );
+            verifyDiff( editionModuleBackedAbstractBenchmark, db, size, 0.61f );
         }
     }
 
