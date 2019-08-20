@@ -17,7 +17,7 @@
 
     <properties>
         <prometheus.client.version>0.6.0</prometheus.client.version>
-        <moduleName>org.neo4j.metrics</moduleName>
+        <moduleName>com.neo4j.metrics</moduleName>
     </properties>
 
     <dependencies>

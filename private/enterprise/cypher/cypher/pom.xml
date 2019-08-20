@@ -24,7 +24,7 @@
     </scm>
 
     <properties>
-        <moduleName>org.neo4j.cypher.enterprise</moduleName>
+        <moduleName>com.neo4j.cypher.enterprise</moduleName>
     </properties>
 
     <dependencies>

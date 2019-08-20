@@ -16,7 +16,7 @@
     <description>Neo4j Commercial Edition Causal Clustering Integration Tests.</description>
 
     <properties>
-        <moduleName>org.neo4j.commercial.causalclustering.it</moduleName>
+        <moduleName>com.neo4j.commercial.causalclustering.it</moduleName>
     </properties>
 
     <scm>

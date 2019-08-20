@@ -24,7 +24,7 @@
     </scm>
 
     <properties>
-        <moduleName>org.neo4j.internal.enterprise.cypher.acceptance.spec.suite</moduleName>
+        <moduleName>com.neo4j.internal.enterprise.cypher.acceptance.spec.suite</moduleName>
     </properties>
 
     <dependencies>

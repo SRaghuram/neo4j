@@ -18,7 +18,7 @@
     <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
     <properties>
-        <moduleName>org.neo4j.cypher.internal.runtime.morsel</moduleName>
+        <moduleName>com.neo4j.cypher.internal.runtime.morsel</moduleName>
     </properties>
 
     <scm>

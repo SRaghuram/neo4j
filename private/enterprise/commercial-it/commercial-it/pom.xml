@@ -16,7 +16,7 @@
     <description>Neo4j Commercial Generic Integration Tests.</description>
 
     <properties>
-        <moduleName>org.neo4j.commercial.commercial.it</moduleName>
+        <moduleName>com.neo4j.commercial.commercial.it</moduleName>
     </properties>
 
     <scm>

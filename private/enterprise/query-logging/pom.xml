@@ -23,7 +23,7 @@
     </scm>
 
     <properties>
-        <moduleName>org.neo4j.kernel.impl.query</moduleName>
+        <moduleName>com.neo4j.kernel.impl.query</moduleName>
     </properties>
 
     <dependencies>

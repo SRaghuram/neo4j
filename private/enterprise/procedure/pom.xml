@@ -9,7 +9,7 @@
   </parent>
 
   <properties>
-    <moduleName>org.neo4j.procedure.commercial</moduleName>
+    <moduleName>com.neo4j.procedure.commercial</moduleName>
   </properties>
 
   <modelVersion>4.0.0</modelVersion>

@@ -16,7 +16,7 @@
     <description>Neo4j Commercial Edition Kernel Integration Tests.</description>
 
     <properties>
-        <moduleName>org.neo4j.commercial.kernel.it</moduleName>
+        <moduleName>com.neo4j.commercial.kernel.it</moduleName>
     </properties>
 
     <scm>

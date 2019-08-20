@@ -17,7 +17,7 @@
     <description>Neo4j Commercial Edition Cypher Integration Tests.</description>
 
     <properties>
-        <moduleName>org.neo4j.commercial.cypher.it</moduleName>
+        <moduleName>com.neo4j.commercial.cypher.it</moduleName>
     </properties>
 
     <scm>

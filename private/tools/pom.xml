@@ -18,7 +18,7 @@
     <packaging>jar</packaging>
     <description>A package for low level tools.</description>
     <properties>
-        <moduleName>org.neo4j.tools</moduleName>
+        <moduleName>com.neo4j.tools</moduleName>
         <default.jupiter.test.mode>concurrent</default.jupiter.test.mode>
     </properties>
 

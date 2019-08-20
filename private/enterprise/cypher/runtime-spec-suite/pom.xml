@@ -24,7 +24,7 @@
   </scm>
 
   <properties>
-    <moduleName>org.neo4j.cypher.internal.enterprise.runtime.spec</moduleName>
+    <moduleName>com.neo4j.cypher.internal.enterprise.runtime.spec</moduleName>
   </properties>
 
   <licenses>

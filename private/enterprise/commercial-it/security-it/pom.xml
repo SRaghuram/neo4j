@@ -16,7 +16,7 @@
     <description>Neo4j Commercial Edition Security Integration Tests.</description>
 
     <properties>
-        <moduleName>org.neo4j.commercial.security.it</moduleName>
+        <moduleName>com.neo4j.commercial.security.it</moduleName>
     </properties>
 
     <scm>
