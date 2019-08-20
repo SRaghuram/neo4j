@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.harness.junit.rule.Neo4jRule;
@@ -43,7 +44,7 @@ public class BoltQueryLoggingIT
             .withConfig( ServerSettings.http_logging_enabled, true )
             .withConfig( GraphDatabaseSettings.auth_enabled, false )
             .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )
-            .withConfig( GraphDatabaseSettings.log_queries, true)
+            .withConfig( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
             .withConfig( BoltConnector.enabled, true )
             .withConfig( BoltConnector.advertised_address, new SocketAddress( "localhost", 0 ) )
             .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED )

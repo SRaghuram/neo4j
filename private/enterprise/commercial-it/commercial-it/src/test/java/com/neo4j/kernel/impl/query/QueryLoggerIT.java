@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -129,7 +131,7 @@ public class QueryLoggerIT
         // turn on query logging
         databaseBuilder.setConfig( auth_enabled, true )
                        .setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                       .setConfig( log_queries, true );
+                       .setConfig( log_queries, LogQueryLevel.INFO );
         dbManagementService = databaseBuilder.build();
         db = (GraphDatabaseFacade) dbManagementService.database( DEFAULT_DATABASE_NAME );
         EnterpriseUserManager userManager = getUserManager();
@@ -165,7 +167,7 @@ public class QueryLoggerIT
     {
         // turn on query logging
         databaseBuilder.setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() );
-        databaseBuilder.setConfig( log_queries, true );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO );
         databaseBuilder.setConfig( auth_enabled, true );
         dbManagementService = databaseBuilder.build();
         db = (GraphDatabaseFacade) dbManagementService.database( DEFAULT_DATABASE_NAME );
@@ -215,7 +217,7 @@ public class QueryLoggerIT
     @Test
     public void shouldLogQuerySlowerThanThreshold() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, true )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
@@ -229,9 +231,59 @@ public class QueryLoggerIT
     }
 
     @Test
+    public void shouldLogQueryStart() throws Exception
+    {
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
+                .build();
+        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+
+        executeQueryAndShutdown( database );
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 2, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+    }
+
+    @Test
+    public void shouldIgnoreThreshold() throws Exception
+    {
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
+                .setConfig( GraphDatabaseSettings.log_queries_threshold, Duration.ofSeconds( 6 ) )
+                .build();
+        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+
+        executeQueryAndShutdown( database );
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 2, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+    }
+
+    @Test
+    public void shouldObeyLevelChangeDuringRuntime() throws Exception
+    {
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
+                .build();
+        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+
+        executeQueryAndShutdown( database );
+        executeQueryAndShutdown( database, "call dbms.setConfigValue('" + GraphDatabaseSettings.log_queries.name() + "', 'verbose')", emptyMap() );
+        executeQueryAndShutdown( database );
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 1, logLines.stream().filter( line -> line.contains( "Query started:" ) ).count() );
+    }
+
+    @Test
     public void shouldLogParametersWhenNestedMap() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, true )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
@@ -260,7 +312,7 @@ public class QueryLoggerIT
     @Test
     public void shouldLogRuntime() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, true )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
@@ -279,7 +331,7 @@ public class QueryLoggerIT
     @Test
     public void shouldLogParametersWhenList() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, true )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
 
@@ -298,7 +350,7 @@ public class QueryLoggerIT
     @Test
     public void disabledQueryLogging()
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, false )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
                 .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
 
@@ -313,7 +365,7 @@ public class QueryLoggerIT
         final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
         final File logFilename = new File( logsDirectory, "query.log" );
         final File shiftedLogFilename1 = new File( logsDirectory, "query.log.1" );
-        databaseManagementService = databaseBuilder.setConfig( log_queries, true )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 0L ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
@@ -341,7 +393,7 @@ public class QueryLoggerIT
     public void queryLogRotation()
     {
         final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
-        databaseBuilder.setConfig( log_queries, true )
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )
                 .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 1L );
@@ -401,7 +453,7 @@ public class QueryLoggerIT
     public void shouldNotLogPassword() throws Exception
     {
         databaseManagementService = databaseBuilder
-                .setConfig( log_queries, true )
+                .setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
@@ -433,7 +485,7 @@ public class QueryLoggerIT
     @Test
     public void canBeEnabledAndDisabledAtRuntime() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, false )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
                 .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
         List<String> strings;
@@ -447,14 +499,14 @@ public class QueryLoggerIT
                 // File will not be created until query logService is enabled.
                 assertFalse( fileSystem.fileExists( logFilename ) );
 
-                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" ).close();
+                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" ).close();
                 database.execute( QUERY ).close();
 
                 // Both config change and query should exist
                 strings = readAllLines( logFilename );
                 assertEquals( 2, strings.size() );
 
-                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" ).close();
+                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" ).close();
                 database.execute( QUERY ).close();
                 transaction.commit();
             }
@@ -491,7 +543,7 @@ public class QueryLoggerIT
 
     private void executeSingleQueryWithTimeZoneLog()
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, true )
+        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() ).build();
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
@@ -600,5 +652,4 @@ public class QueryLoggerIT
     {
         return getAuthManager().login( authToken( username, password ) );
     }
-
 }

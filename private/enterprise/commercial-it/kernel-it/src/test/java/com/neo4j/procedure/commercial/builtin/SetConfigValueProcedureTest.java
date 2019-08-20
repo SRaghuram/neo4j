@@ -8,17 +8,22 @@ package com.neo4j.procedure.commercial.builtin;
 import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.EnumSet;
+
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 
 @CommercialDbmsExtension
@@ -32,11 +37,26 @@ class SetConfigValueProcedureTest
     {
         Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'false')" );
-        assertFalse( config.get( log_queries ) );
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" );
+        assertEquals( LogQueryLevel.OFF, config.get( log_queries ) );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" );
-        assertTrue( config.get( log_queries ) );
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" );
+        assertEquals( LogQueryLevel.INFO, config.get( log_queries ) );
+
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'verbose')" );
+        assertEquals( LogQueryLevel.VERBOSE, config.get( log_queries ) );
+    }
+
+    @Test
+    void getDefaultValueOnEmptyArg()
+    {
+        Config config = db.getDependencyResolver().resolveDependency( Config.class );
+
+        db.execute( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '11s')" );
+        assertEquals( Duration.ofSeconds( 11 ), config.get( log_queries_threshold ) );
+
+        db.execute( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '')" );
+        assertEquals( log_queries_threshold.defaultValue(), config.get( log_queries_threshold ) );
     }
 
     @Test
@@ -64,7 +84,7 @@ class SetConfigValueProcedureTest
         Throwable rootCause = Exceptions.rootCause(
                 assertThrows( RuntimeException.class, () -> executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
-        assertEquals( "'invalid' is not a valid boolean value, must be 'true' or 'false'", rootCause.getMessage() );
+        assertEquals( "'invalid' not one of " + EnumSet.allOf( GraphDatabaseSettings.LogQueryLevel.class ), rootCause.getMessage() );
     }
 
     private void executeTransactionally( String query )

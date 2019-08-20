@@ -265,7 +265,7 @@ class ProcedureResourcesIT
             break;
         case "dbms.setConfigValue":
             proc.withParam( "'dbms.logs.query.enabled'" );
-            proc.withParam( "'false'" );
+            proc.withParam( "'off'" );
             break;
         case "db.createIndex":
             proc.withParam( "':Person(name)'" );

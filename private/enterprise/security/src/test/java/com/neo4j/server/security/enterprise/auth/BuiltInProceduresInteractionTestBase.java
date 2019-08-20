@@ -1044,7 +1044,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void setConfigValueShouldBeAccessibleOnlyToAdmins()
     {
-        String call = "CALL dbms.setConfigValue('dbms.logs.query.enabled', 'false')";
+        String call = "CALL dbms.setConfigValue('dbms.logs.query.enabled', 'off')";
         assertFail( writeSubject, call, PERMISSION_DENIED );
         assertFail( schemaSubject, call, PERMISSION_DENIED );
         assertFail( readSubject, call, PERMISSION_DENIED );

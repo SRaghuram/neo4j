@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.DatabaseId;
@@ -25,6 +26,7 @@ class ConfiguredQueryLogger implements QueryLogger
     private final boolean logAllocatedBytes;
     private final boolean logPageDetails;
     private final boolean logRuntime;
+    private final boolean verboseLogging;
 
     ConfiguredQueryLogger( Log log, Config config )
     {
@@ -35,6 +37,16 @@ class ConfiguredQueryLogger implements QueryLogger
         this.logAllocatedBytes = config.get( GraphDatabaseSettings.log_queries_allocation_logging_enabled );
         this.logPageDetails = config.get( GraphDatabaseSettings.log_queries_page_detail_logging_enabled );
         this.logRuntime = config.get( GraphDatabaseSettings.log_queries_runtime_logging_enabled );
+        this.verboseLogging = config.get( GraphDatabaseSettings.log_queries ) == LogQueryLevel.VERBOSE;
+    }
+
+    @Override
+    public void start( ExecutingQuery query )
+    {
+        if ( verboseLogging )
+        {
+            log.info( "Query started: " + logEntry( query.snapshot() ) );
+        }
     }
 
     @Override
@@ -46,10 +58,9 @@ class ConfiguredQueryLogger implements QueryLogger
     @Override
     public void success( ExecutingQuery query )
     {
-        if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis )
+        if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis || verboseLogging )
         {
-            QuerySnapshot snapshot = query.snapshot();
-            log.info( logEntry( snapshot ) );
+            log.info( logEntry( query.snapshot() ) );
         }
     }
 

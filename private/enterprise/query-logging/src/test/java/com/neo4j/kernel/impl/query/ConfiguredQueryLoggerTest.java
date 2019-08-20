@@ -536,6 +536,7 @@ class ConfiguredQueryLoggerTest
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider, Config config )
     {
         config.set( GraphDatabaseSettings.log_queries_threshold, Duration.ofMillis( thresholdInMillis ) );
+        config.set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.INFO );
         return new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
     }
 

@@ -24,6 +24,7 @@ import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -69,7 +70,7 @@ public class BatchInsertEnterpriseIT
         // GIVEN
         BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get(),
                 Config.newBuilder()
-                        .set( GraphDatabaseSettings.log_queries, true )
+                        .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
                         .set( GraphDatabaseSettings.record_format, recordFormat )
                         .set( GraphDatabaseSettings.log_queries_filename, directory.file( "query.log" ).toPath().toAbsolutePath() ).build() );
         long node1Id;

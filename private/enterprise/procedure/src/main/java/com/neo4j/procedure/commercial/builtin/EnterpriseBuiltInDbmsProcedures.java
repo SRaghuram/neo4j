@@ -5,6 +5,8 @@
  */
 package com.neo4j.procedure.commercial.builtin;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.IOException;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -301,7 +303,7 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         Config config = resolver.resolveDependency( Config.class );
         SettingImpl<Object> settingObj = (SettingImpl<Object>) config.getSetting( setting );
-        config.setDynamic( settingObj, settingObj.parse( value ), "dbms.setConfigValue" );
+        config.setDynamic( settingObj, settingObj.parse( StringUtils.isNotEmpty( value ) ? value : null ), "dbms.setConfigValue" );
     }
 
     /*

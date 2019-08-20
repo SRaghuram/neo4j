@@ -13,6 +13,7 @@ import java.time.ZoneId;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.query.ExecutingQuery;
@@ -49,8 +50,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     private Log log;
     private Closeable closable;
 
-    DynamicLoggingQueryExecutionMonitor( Config config, FileSystemAbstraction fileSystem, JobScheduler scheduler,
-                                         Log debugLog )
+    DynamicLoggingQueryExecutionMonitor( Config config, FileSystemAbstraction fileSystem, JobScheduler scheduler, Log debugLog )
     {
         this.config = config;
         this.fileSystem = fileSystem;
@@ -93,10 +93,10 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     private void updateQueryLoggerSettings()
     {
         // This method depends on any log settings having been updated before hand, via updateLogSettings.
-        // The only dynamic settings here are log_queries, and log_queries_threshold which is read by the
-        // ConfiguredQueryLogger constructor. We can add more in the future, though. The various content settings
+        // The only dynamic settings here are log_queries and log_queries_threshold
+        // which are read by the ConfiguredQueryLogger constructor. We can add more in the future, though. The various content settings
         // are prime candidates.
-        if ( config.get( GraphDatabaseSettings.log_queries ) )
+        if ( config.get( GraphDatabaseSettings.log_queries ) != LogQueryLevel.OFF )
         {
             currentLog = new ConfiguredQueryLogger( log, config );
         }
@@ -111,7 +111,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         // The dynamic setting here is log_queries, log_queries_rotation_threshold, and log_queries_max_archives.
         // NOTE: We can't register this method as a settings update callback, because we don't update the `currentLog`
         // field in this method. Settings updates must always go via the `updateQueryLoggerSettings` method.
-        if ( config.get( GraphDatabaseSettings.log_queries ) )
+        if ( config.get( GraphDatabaseSettings.log_queries ) != LogQueryLevel.OFF )
         {
             long rotationThreshold = config.get( GraphDatabaseSettings.log_queries_rotation_threshold );
             int maxArchives = config.get( GraphDatabaseSettings.log_queries_max_archives );
@@ -192,6 +192,12 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     public synchronized void shutdown()
     {
         closeCurrentLogIfAny();
+    }
+
+    @Override
+    public void start( ExecutingQuery query )
+    {
+        currentLog.start( query );
     }
 
     @Override
