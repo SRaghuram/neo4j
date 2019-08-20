@@ -81,7 +81,7 @@ object getChildren {
       case RelationshipPattern(variable, types, length, properties, _, _, maybeBaseRel) =>
         ofOption(variable) ++  types ++ ofOption(length.flatten) ++ ofOption(properties) ++ ofOption(maybeBaseRel)
 
-      case FunctionInvocation(namespace, functionName, _, args) =>
+      case FunctionInvocation(namespace, functionName, _, args, _) =>
         Seq(namespace, functionName) ++ args
 
       case Namespace(_) =>

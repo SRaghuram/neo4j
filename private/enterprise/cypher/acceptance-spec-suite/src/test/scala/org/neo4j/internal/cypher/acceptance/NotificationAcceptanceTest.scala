@@ -630,6 +630,47 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                                        deprecatedName("rels", "relationships")))
   }
 
+  test("cache should warn for use of deprecated toInt properly") {
+    // even though we rewrite the AST to use the new version, we should not get the cached plan with the warning when asking for the "same" thing
+    val result = executeSingle("EXPLAIN RETURN toInt('1') AS one", Map.empty)
+    result.notifications should contain(DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(15, 1, 16),
+      deprecatedName("toInt", "toInteger")))
+
+    val noWarningResult = executeSingle("EXPLAIN RETURN toInteger('1') AS one", Map.empty)
+    noWarningResult.notifications shouldBe empty
+  }
+
+  test("cache should warn for use of deprecated upper properly") {
+    // even though we rewrite the AST to use the new version, we should not get the cached plan with the warning when asking for the "same" thing
+    val warningResult = executeSingle("EXPLAIN RETURN upper('BAR') AS one", Map.empty)
+    warningResult.notifications should contain(DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(15, 1, 16),
+      deprecatedName("upper", "toUpper")))
+
+    val noWarningResult = executeSingle("EXPLAIN RETURN toUpper('BAR') AS one", Map.empty)
+    noWarningResult.notifications shouldBe empty
+  }
+
+  test("cache should warn for use of deprecated lower properly") {
+    // even though we rewrite the AST to use the new version, we should not get the cached plan with the warning when asking for the "same" thing
+    val warningResult = executeSingle("EXPLAIN RETURN lower('BAR') AS one", Map.empty)
+    warningResult.notifications should contain(DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(15, 1, 16),
+      deprecatedName("lower", "toLower")))
+
+    val noWarningResult = executeSingle("EXPLAIN RETURN toLower('BAR') AS one", Map.empty)
+    noWarningResult.notifications shouldBe empty
+  }
+
+  test("cache should warn for use of deprecated rels properly") {
+    // even though we rewrite the AST to use the new version, we should not get the cached plan with the warning when asking for the "same" thing
+    val result = executeSingle("EXPLAIN MATCH p = ()-->() RETURN rels(p) AS r", Map.empty)
+    result.notifications should contain(
+      DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(33, 1, 34),
+        deprecatedName("rels", "relationships")))
+
+    val noWarningResult = executeSingle("EXPLAIN MATCH p = ()-->() RETURN relationships(p) AS r", Map.empty)
+    noWarningResult.notifications shouldBe empty
+  }
+
   test("should warn when using START in newer runtimes") {
     createNode()
     val query = "EXPLAIN CYPHER runtime=slotted START n=node(0) RETURN n"
