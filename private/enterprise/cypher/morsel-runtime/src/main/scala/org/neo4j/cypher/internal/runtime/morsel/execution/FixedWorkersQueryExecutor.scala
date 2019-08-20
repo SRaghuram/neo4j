@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.morsel.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManagement, WorkerManager, WorkerResourceProvider}
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManagement, WorkerResourceProvider}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.result.QueryProfile

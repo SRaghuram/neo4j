@@ -5,8 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
+import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, TopLevelArgument}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers._
@@ -33,7 +32,7 @@ class StandardStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
-    if (argumentSlotOffset == TOP_LEVEL_ARGUMENT_SLOT) {
+    if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else {
       new StandardArgumentStateMap[S](argumentStateMapId, argumentSlotOffset, factory)

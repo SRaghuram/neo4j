@@ -207,8 +207,15 @@ object ArgumentStateMap {
     */
   case class ArgumentStateWithCompleted[S <: ArgumentState](argumentState: S, isCompleted: Boolean)
 
-  def filter1[FILTER_STATE](morsel: MorselExecutionContext,
-                            predicate: MorselExecutionContext => Boolean): Unit = {
+  /**
+    * Filter the rows of a morsel using a predicate, and redirect the morsel current row to
+    * the rows new position.
+    *
+    * @param morsel the morsel to filter
+    * @param predicate the predicate
+    */
+  def filter(morsel: MorselExecutionContext,
+             predicate: MorselExecutionContext => Boolean): Unit = {
 
     val readingRow = morsel.shallowCopy()
     readingRow.resetToFirstRow()

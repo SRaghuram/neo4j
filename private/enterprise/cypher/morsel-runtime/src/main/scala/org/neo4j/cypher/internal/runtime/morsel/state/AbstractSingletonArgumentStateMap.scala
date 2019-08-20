@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.TOP_LEVEL_ARGUMENT_SLOT
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
 abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
   extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
 
-  override def argumentSlotOffset: Int = TOP_LEVEL_ARGUMENT_SLOT
+  override def argumentSlotOffset: Int = TopLevelArgument.SLOT_OFFSET
 
   // ABSTRACT STUFF
 
@@ -40,7 +40,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   // ARGUMENT STATE MAP FUNCTIONALITY
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
-    assert(argumentRowId == 0L)
+    TopLevelArgument.assertTopLevelArgument(argumentRowId)
     onState(controller.state)
   }
 
@@ -56,7 +56,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
                          onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {
     val filterState = onArgument(controller.state, morsel.getValidRows)
-    ArgumentStateMap.filter1(morsel,
+    ArgumentStateMap.filter(morsel,
                             row => onRow(filterState, row))
   }
 
@@ -65,7 +65,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     if (isCancelled(controller.state)) {
       morsel.moveToRow(morsel.getFirstRow)
       morsel.finishedWriting()
-      IndexedSeq(0L)
+      IndexedSeq(TopLevelArgument.VALUE)
     } else {
       IndexedSeq.empty
     }
@@ -83,7 +83,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
   override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
     if (controller != null && controller.tryTake()) {
-      lastCompletedArgumentId = 0L
+      lastCompletedArgumentId = TopLevelArgument.VALUE
       val completedState = controller.state
       controller = null.asInstanceOf[CONTROLLER]
       ArgumentStateWithCompleted(completedState, isCompleted = true)
@@ -106,7 +106,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def peek(argumentId: Long): STATE = {
-    if (argumentId == 0) {
+    if (argumentId == TopLevelArgument.VALUE) {
       controller.state
     } else {
       null.asInstanceOf[STATE]
@@ -118,13 +118,12 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def hasCompleted(argument: Long): Boolean = {
-    assert(argument == 0)
-    controller != null && controller.isZero
+    argument == TopLevelArgument.VALUE && controller != null && controller.isZero
   }
 
   override def remove(argument: Long): Boolean = {
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
-    if (argument == 0) {
+    if (argument == TopLevelArgument.VALUE) {
       controller == null
       true
     } else {
@@ -133,19 +132,19 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
+    TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    assert(argument == 0)
     controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
   }
 
   override def increment(argument: Long): Unit = {
-    assert(argument == 0)
+    TopLevelArgument.assertTopLevelArgument(argument)
     val newCount = controller.increment()
     DebugSupport.ASM.log("ASM %s incr %03d to %d", argumentStateMapId, argument, newCount)
   }
 
   override def decrement(argument: Long): Boolean = {
-    assert(argument == 0)
+    TopLevelArgument.assertTopLevelArgument(argument)
     val newCount = controller.decrement()
     DebugSupport.ASM.log("ASM %s decr %03d to %d", argumentStateMapId, argument, newCount)
     newCount == 0

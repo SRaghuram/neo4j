@@ -93,13 +93,19 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   class StartSequence {
 
-    def applyBuffer(id: Int, argumentSlotOffset: Int = -2): ApplyBufferSequence = {
-      val bd = buffers.getOrElseUpdate(id,
-                                       BufferDefinition(BufferId(id),
-                                                        IndexedSeq.empty,
-                                                        IndexedSeq.empty,
-                                                        IndexedSeq.empty,
-                                                        ApplyBufferVariant(argumentSlotOffset, IndexedSeq.empty, IndexedSeq.empty))(SlotConfiguration.empty))
+    private val UNKNOWN_ARG_SLOT_OFFSET = -2
+
+    def applyBuffer(id: Int, argumentSlotOffset: Int = UNKNOWN_ARG_SLOT_OFFSET): ApplyBufferSequence = {
+      val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id),
+                                                            IndexedSeq.empty,
+                                                            IndexedSeq.empty,
+                                                            IndexedSeq.empty,
+                                                            ApplyBufferVariant(
+                                                              if (argumentSlotOffset == UNKNOWN_ARG_SLOT_OFFSET)
+                                                                throw new IllegalArgumentException("You have to specify the argumentSlotOffset for new apply buffers")
+                                                              else argumentSlotOffset,
+                                                              IndexedSeq.empty,
+                                                              IndexedSeq.empty))(SlotConfiguration.empty))
       new ApplyBufferSequence(bd)
     }
 

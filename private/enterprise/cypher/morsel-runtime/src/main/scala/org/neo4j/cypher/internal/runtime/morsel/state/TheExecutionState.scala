@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, Buffers, Sink}
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.util.Preconditions
 
 /**
@@ -315,16 +316,18 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def toString: String = "TheExecutionState"
 
   private def verifyThatIdsAndOffsetsMatch(): Unit = {
-    var i = 0
-    while (i < pipelines.length) {
-      Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
-      i += 1
-    }
+    if (AssertionRunner.isAssertionsEnabled) {
+      var i = 0
+      while (i < pipelines.length) {
+        Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
+        i += 1
+      }
 
-    i = 0
-    while (i < executionGraphDefinition.buffers.size) {
-      Preconditions.checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
-      i += 1
+      i = 0
+      while (i < executionGraphDefinition.buffers.size) {
+        Preconditions.checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
+        i += 1
+      }
     }
   }
 }
