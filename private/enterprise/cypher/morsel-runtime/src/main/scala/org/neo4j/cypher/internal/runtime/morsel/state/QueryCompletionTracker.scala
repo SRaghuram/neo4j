@@ -262,12 +262,6 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(newCount: Long): Unit = {
     if (newCount == 0) {
       try {
-        // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
-        _hasEnded = true
-
-        waiters.forEach(waitState => waitState.latch.countDown())
-        waiters.clear()
-
         if (!errors.isEmpty) {
           subscriber.onError(allErrors())
         } else if (_cancelledOrFailed) {
@@ -275,6 +269,12 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         } else {
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         }
+
+        // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
+        _hasEnded = true
+
+        waiters.forEach(waitState => waitState.latch.countDown())
+        waiters.clear()
       } finally {
         tracer.stopQuery()
         queryContext.transactionalContext.transaction.thawLocks()
