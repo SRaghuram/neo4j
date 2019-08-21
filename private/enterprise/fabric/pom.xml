@@ -129,6 +129,7 @@
                                 </relocation>
                             </relocations>
                             <createSourcesJar>true</createSourcesJar>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                         </configuration>
                     </execution>
                 </executions>
