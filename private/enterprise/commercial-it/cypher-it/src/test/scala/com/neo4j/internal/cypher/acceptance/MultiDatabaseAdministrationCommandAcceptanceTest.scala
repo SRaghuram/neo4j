@@ -421,9 +421,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    the[RuntimeException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message s"No such database: $DEFAULT_DATABASE_NAME"
+    } should have message s"$DEFAULT_DATABASE_NAME"
 
     // WHEN
     initSystemGraph(defaultConfig)
@@ -484,9 +484,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("DROP DATABASE foo")
 
     // THEN
-    the[RuntimeException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "No such database: foo"
+    } should have message "foo"
 
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -529,9 +529,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    the[RuntimeException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message s"No such database: $DEFAULT_DATABASE_NAME"
+    } should have message s"$DEFAULT_DATABASE_NAME"
 
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -690,9 +690,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // THEN
-    the[RuntimeException] thrownBy {
+    the[DatabaseNotFoundException] thrownBy {
       executeOn("baz", "foo", "bar", "MATCH (n) RETURN n")
-    } should have message "No such database: baz"
+    } should have message "baz"
   }
 
   test("should fail when dropping a non-existing database") {

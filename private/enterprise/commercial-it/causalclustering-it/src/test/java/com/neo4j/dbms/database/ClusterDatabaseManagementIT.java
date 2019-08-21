@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -412,7 +413,7 @@ class ClusterDatabaseManagementIT
             result = (long) results.next().get( field );
             tx.commit();
         }
-        catch ( DatabaseShutdownException e )
+        catch ( DatabaseNotFoundException | DatabaseShutdownException e )
         {
             return -1;
         }

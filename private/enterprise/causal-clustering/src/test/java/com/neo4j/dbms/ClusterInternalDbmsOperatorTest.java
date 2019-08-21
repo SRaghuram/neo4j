@@ -13,12 +13,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.Optional;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static com.neo4j.dbms.OperatorState.STORE_COPYING;
-import static com.neo4j.dbms.OperatorState.UNKNOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -172,7 +169,7 @@ class ClusterInternalDbmsOperatorTest
     {
         return Optional.ofNullable( operator.desired().get( databaseId.name() ) )
                 .map( DatabaseState::operationalState )
-                .orElse( UNKNOWN );
+                .orElse( null );
     }
 
     @Test
