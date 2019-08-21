@@ -10,7 +10,7 @@ import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.internal.ir.{PlannerQuery, ProvidedOrder}
+import org.neo4j.cypher.internal.ir.{SinglePlannerQuery, ProvidedOrder}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
@@ -89,7 +89,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     new GraphDatabaseCypherService(db).beginTransaction(Transaction.Type.explicit, SecurityContext.AUTH_DISABLED)
 
   private def solve(logicalPlan: LogicalPlan) {
-    solveds.set(logicalPlan.id, PlannerQuery.empty)
+    solveds.set(logicalPlan.id, SinglePlannerQuery.empty)
     cardinalities.set(logicalPlan.id, 0.0)
     logicalPlan.lhs.foreach(solve)
     logicalPlan.rhs.foreach(solve)
