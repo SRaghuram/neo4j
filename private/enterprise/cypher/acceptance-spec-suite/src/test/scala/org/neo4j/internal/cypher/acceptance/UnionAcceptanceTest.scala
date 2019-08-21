@@ -115,6 +115,23 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
     result.toList should equal(expected)
   }
 
+  test("Should not work when doing union of differently names columns") {
+    createLabeledNode("A")
+    createLabeledNode("B")
+
+    val query =
+      """
+        |MATCH (a:A),(b:B)
+        |RETURN
+        |a, b
+        |UNION
+        |MATCH (N:B), (M:A) RETURN
+        |M, N
+      """.stripMargin
+
+    failWithError(Configs.All, query, message = Seq("All sub queries in an UNION must have the same column names"))
+  }
+
   test("Should work when doing union with permutated return variables") {
     createLabeledNode(Map("a" -> "a", "b" -> "b"), "A")
     createLabeledNode(Map("a" -> "b", "b" -> "a"), "B")

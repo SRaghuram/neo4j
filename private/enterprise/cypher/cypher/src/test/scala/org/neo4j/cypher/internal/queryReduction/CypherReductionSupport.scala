@@ -198,7 +198,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
     val logicalQuery = LogicalQuery(logicalPlanState.logicalPlan,
                                     logicalPlanState.queryText,
                                     readOnly,
-                                    logicalPlanState.statement().returnColumns.toArray,
+                                    logicalPlanState.statement().returnColumns.map(_.name).toArray,
                                     logicalPlanState.semanticTable(),
                                     logicalPlanState.planningAttributes.cardinalities,
                                     logicalPlanState.hasLoadCSV,
