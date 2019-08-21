@@ -10,7 +10,6 @@ import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
 import static java.lang.String.format;
 
@@ -18,7 +17,7 @@ public class StackCollapseWriter
 {
     public static void write( StackCollapse stackCollapse, Path file )
     {
-        try ( PrintWriter printWriter = new PrintWriter( Files.newOutputStream( file, StandardOpenOption.SYNC ), true /*auto flush*/ ) )
+        try ( PrintWriter printWriter = new PrintWriter( Files.newOutputStream( file ), true /*auto flush*/ ) )
         {
             stackCollapse.forEachStackTrace( ( stackTrace, sum ) -> printWriter.println( format( "%s %d", stackTrace, sum ) ) );
         }
