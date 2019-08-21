@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #login
+# shellcheck disable=SC2091
 $(aws ecr get-login --no-include-email --region eu-west-1)
 #build
 docker build -f profilers/Dockerfile .  -t profile:latest
