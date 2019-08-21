@@ -149,28 +149,4 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
             throw new RuntimeException( e );
         }
     }
-
-    protected void tryForceDirectory( File directory ) throws IOException
-    {
-        if ( !directory.exists() )
-        {
-            throw new NoSuchFileException( format( "The directory %s does not exist!", directory.getAbsolutePath() ) );
-        }
-        else if ( !directory.isDirectory() )
-        {
-            throw new IllegalArgumentException( format( "The path %s must refer to a directory!", directory.getAbsolutePath() ) );
-        }
-
-        if ( SystemUtils.IS_OS_WINDOWS )
-        {
-            // Windows doesn't allow us to open a FileChannel against a directory for reading, so we can't attempt to "fsync" there
-            return;
-        }
-
-        // Attempts to fsync the directory, guaranting e.g. file creation/deletion/rename events are durable
-        // See http://mail.openjdk.java.net/pipermail/nio-dev/2015-May/003140.html
-        // See also https://github.com/apache/lucene-solr/blob/master/lucene/core/src/java/org/apache/lucene/util/IOUtils.java#L452-L484
-        var raftGroupChannel = fs.open( directory, singleton( READ ) );
-        raftGroupChannel.force( true );
-    }
 }

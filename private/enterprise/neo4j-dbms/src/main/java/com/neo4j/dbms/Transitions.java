@@ -55,7 +55,7 @@ final class Transitions
         if ( !Objects.equals( lookup.current.databaseId(), lookup.desired.databaseId() ) )
         {
             // If the current and desired databases states have different ids
-            //    then the database must have been dropped and needs recreating with its new id.
+            //    then the database must have been dropped and needs recreating with it's new id.
             //    This is essentially two lookups for two sets of transition steps, which are then stitched together and returned.
             var dropCurrent = prepareTransitionFunctions( lookup.current.operationalState(), DROPPED, lookup.current.databaseId() );
             var createNext = prepareTransitionFunctions( INITIAL, lookup.desired.operationalState(), lookup.desired.databaseId() );

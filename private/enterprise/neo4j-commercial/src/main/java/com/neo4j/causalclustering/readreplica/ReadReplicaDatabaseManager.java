@@ -19,6 +19,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
@@ -100,7 +101,7 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
             throw new IOException( format( "Unable to delete file %s when dropping database %s", raftIdState.getAbsolutePath(), databaseName ) );
         }
 
-        tryForceDirectory( raftIdStateDir );
+        FileUtils.tryForceDirectory( raftIdStateDir );
 
         fs.deleteRecursively( raftGroupDir );
     }

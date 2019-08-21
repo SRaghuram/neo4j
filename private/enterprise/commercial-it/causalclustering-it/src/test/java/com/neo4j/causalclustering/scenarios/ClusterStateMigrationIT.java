@@ -80,11 +80,6 @@ class ClusterStateMigrationIT
     @Test
     void shouldRecreateClusterStateWhenVersionIsAbsent() throws Exception
     {
-        // memorize current raft IDs
-        var serverIdToRaftIdMap = cluster.coreMembers()
-                .stream()
-                .collect( toMap( CoreClusterMember::serverId, ClusterStateMigrationIT::readRaftId ) );
-
         // collect all version files
         var clusterStateVersionFiles = cluster.coreMembers()
                 .stream()

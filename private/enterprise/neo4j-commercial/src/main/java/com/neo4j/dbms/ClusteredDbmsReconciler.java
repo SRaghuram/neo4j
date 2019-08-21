@@ -90,6 +90,8 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     {
         Transitions standaloneTransitions = super.prepareLifecycleTransitionSteps();
         Transitions clusteredTransitions = Transitions.builder()
+                // All transitions from UNKNOWN to $X get deconstructed into UNKNOWN -> DROPPED -> $X
+                //     inside Transitions so only actions for this from/to pair need to be specified
                 .from( UNKNOWN ).to( DROPPED ).doTransitions( this::logCleanupAndDrop )
                 // No prepareDrop step needed here as the database will be stopped for store copying anyway
                 .from( STORE_COPYING ).to( DROPPED ).doTransitions( this::stop, this::drop )
@@ -98,7 +100,6 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
                 .from( STORE_COPYING ).to( STOPPED ).doTransitions( this::stop )
                 .from( STORE_COPYING ).to( STARTED ).doTransitions( this::startAfterStoreCopy )
                 .from( STARTED ).to( STORE_COPYING ).doTransitions( this::stopBeforeStoreCopy )
-                .from( STOPPED ).to( STORE_COPYING ).doTransitions( this::start, this::stopBeforeStoreCopy )
                 .build();
 
         return standaloneTransitions.extendWith( clusteredTransitions );

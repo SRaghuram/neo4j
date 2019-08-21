@@ -116,7 +116,7 @@ public class ClusterStateStorageFactory
     public void clearFor( DatabaseId id, DatabaseLogProvider logProvider ) throws IOException
     {
         File clusterStateForDb = layout.raftGroupDir( id.name() );
-        if ( !clusterStateForDb.exists() )
+        if ( !fs.fileExists( clusterStateForDb ) )
         {
             return;
         }
@@ -131,7 +131,7 @@ public class ClusterStateStorageFactory
             {
                 DatabaseLog log = logProvider.getLog( getClass() );
                 log.warn( format( "There was orphan cluster state belonging to a previous database %s with a different id {Old:%s New:%s} " +
-                        "This likely means a previous DROP did not complete successfully, you can find the old state here",
+                        "This likely means a previous DROP did not complete successfully.",
                         id.name(), raftId.uuid(), id.uuid() ) );
                 FileSystemUtils.deleteFile( fs, clusterStateForDb );
             }

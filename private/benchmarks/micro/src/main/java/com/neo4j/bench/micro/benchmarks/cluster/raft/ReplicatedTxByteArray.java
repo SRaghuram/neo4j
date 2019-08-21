@@ -57,7 +57,7 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     {
         byte[] bytes = new byte[nbrOfBytes( ReplicatedTxByteArray_txSize )];
         return RaftMessages.RaftIdAwareMessage.of(
-                RaftId.from( databaseId ),
+                RaftId.from( DATABASE_ID ),
                 new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,
                                                    ReplicatedTransaction.from( bytes, DATABASE_ID ) ) );
     }

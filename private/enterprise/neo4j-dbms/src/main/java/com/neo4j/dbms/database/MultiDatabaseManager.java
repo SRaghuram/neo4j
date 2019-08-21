@@ -66,7 +66,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             catch ( Exception e )
             {
                 throw new DatabaseManagementException(
-                        format( "An error occured: %s. Fail to create new database `%s`.", e.getMessage(), databaseId.name() ), e );
+                        format( "An error occured! Fail to create new database `%s`.", databaseId.name() ), e );
             }
             // TODO: Autostart only used in tests, update tests to create -> start
             if ( autoStart && databaseManagerStarted )

@@ -260,5 +260,4 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         return readReplicaDatabaseFactory;
     }
-
 }

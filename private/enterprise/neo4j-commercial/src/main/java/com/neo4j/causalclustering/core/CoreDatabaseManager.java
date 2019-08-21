@@ -26,6 +26,7 @@ import org.neo4j.dbms.database.DatabaseConfig;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
@@ -138,6 +139,11 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         File raftIdState = clusterStateLayout.raftIdStateFile( databaseName );
         File raftIdStateDir = raftIdState.getParentFile();
         File raftGroupDir = clusterStateLayout.raftGroupDir( databaseName );
+
+        if ( !fs.fileExists( raftGroupDir ) )
+        {
+            return;
+        }
         assert raftIdStateDir.getParentFile().equals( raftGroupDir );
 
         File[] files = fs.listFiles( raftGroupDir, ( ignored, name ) -> !raftIdStateDir.getName().equals( name ) );
@@ -154,7 +160,13 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
             }
         }
 
-        tryForceDirectory( raftGroupDir );
+        FileUtils.tryForceDirectory( raftGroupDir );
+
+        if ( files.length != 0 && !fs.fileExists( raftIdState ) )
+        {
+            log.warn( format( "The cluster state directory for %s is non-empty but does not contain a raftId. " +
+                    "Cleanup has still been attempted.", databaseName ) );
+        }
 
         if ( !fs.deleteFile( raftIdState ) )
         {
@@ -163,5 +175,4 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         fs.deleteRecursively( raftGroupDir );
     }
-
 }

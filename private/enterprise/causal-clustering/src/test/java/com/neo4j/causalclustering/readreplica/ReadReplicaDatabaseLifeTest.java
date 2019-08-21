@@ -150,7 +150,7 @@ class ReadReplicaDatabaseLifeTest
         var exception = IllegalStateException.class;
 
         // when / then
-        assertThrows( exception, readReplicaDatabaseLife::init );
+        assertThrows( exception, readReplicaDatabaseLife::start );
         assertNeverStarted( databaseContext.database(), catchupProcess );
     }
 

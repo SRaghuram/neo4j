@@ -326,12 +326,10 @@ class CoreDatabaseFactory
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, ClusterStateStorageFactory storageFactory,
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
-            DatabaseLogProvider debugLog ) throws Exception
+            DatabaseLogProvider debugLog )
     {
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem,
                 debugLog, storageEngineFactory, config );
-
-        storageFactory.clearFor( databaseId, debugLog );
 
         SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId.name(), debugLog );
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
