@@ -36,7 +36,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class EmbeddedDatabase implements Database
 {
@@ -126,7 +126,7 @@ public class EmbeddedDatabase implements Database
 
     private boolean isRunning()
     {
-        return db != null && db.isAvailable( SECONDS.toMillis( 10 ) );
+        return db != null && db.isAvailable( MINUTES.toMillis( 5 ) );
     }
 
     private static DatabaseManagementService newDb( Store store, Edition edition, Path neo4jConfig )
@@ -325,6 +325,17 @@ public class EmbeddedDatabase implements Database
         if ( isRunning() )
         {
             managementService.shutdown();
+        }
+        else
+        {
+            String warningMessage = "----------------------------------------------------------------------------------------------------------------\n" +
+                                    "----------------------------------------  WARNING: Unclean Shutdown!  ------------------------------------------\n" +
+                                    "----------------------------------------------------------------------------------------------------------------\n" +
+                                    "Neo4j was not 'running' when database was closed.\n" +
+                                    "It either [a] crashed (shutdown already), or [b] did not become available in time (in process of shutting down).\n" +
+                                    "If [b], the next process may fail, due to not being able to acquire store lock." +
+                                    "----------------------------------------------------------------------------------------------------------------\n";
+            System.err.println( warningMessage );
         }
     }
 }
