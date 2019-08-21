@@ -5,11 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state
 
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent._
+import java.util.concurrent.atomic.AtomicBoolean
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.morsel.state.ConcurrentQueryCompletionTrackerStressTest.POISON_PILL
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -26,10 +27,10 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
 
     val threads =
       for {
-        i <- 0 until THREAD_PAIRS
+        _ <- 0 until THREAD_PAIRS
         ongoingWork = new ArrayBlockingQueue[QueryCompletionTracker](8)
         runnable <- List(new QueryRunner(ongoingWork, stopSignal),
-                         new Worker(ongoingWork, stopSignal))
+                         new Worker(ongoingWork))
       } yield {
         val thread = new Thread(runnable)
         thread.setName(runnable.getClass.getSimpleName)
@@ -101,19 +102,24 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
       } catch {
         case e: InterruptedException =>
           fail(s"QueryRunner hung after starting $totalQueriesStarted queries and consuming $totalRequestsServed rows", e)
+      } finally {
+        ongoingWork.put(POISON_PILL)
       }
     }
   }
 
-  class Worker(ongoingWork: ArrayBlockingQueue[QueryCompletionTracker],
-               stopSignal: AtomicBoolean) extends Runnable {
+  class Worker(ongoingWork: ArrayBlockingQueue[QueryCompletionTracker]) extends Runnable {
 
     private val random = ThreadLocalRandom.current()
 
     override def run(): Unit = {
-      while (!stopSignal.get()) {
+      var break = false
+      while (!break) {
         val query = ongoingWork.take()
-        emulateQuery(query)
+        break = query eq POISON_PILL
+        if (!break) {
+          emulateQuery(query)
+        }
       }
 
       val finalQuery = ongoingWork.poll()
@@ -136,5 +142,25 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
       }
       query.decrement() // final decrement
     }
+  }
+}
+
+object ConcurrentQueryCompletionTrackerStressTest {
+  private val POISON_PILL = new QueryCompletionTracker {
+    override def increment(): Unit = fail()
+    override def incrementBy(n: Long): Unit = fail()
+    override def decrement(): Unit = fail()
+    override def decrementBy(n: Long): Unit = fail()
+    override def error(throwable: Throwable): Unit = fail()
+    override def hasEnded: Boolean = fail()
+    override def getDemand: Long = fail()
+    override def hasDemand: Boolean = fail()
+    override def addServed(newlyServed: Long): Unit = fail()
+    override def request(numberOfRecords: Long): Unit = fail()
+    override def cancel(): Unit = fail()
+    override def await(): Boolean = fail()
+
+    private def fail() =
+      throw new AssertionError("This is not the QueryCompletionTracker you are looking for")
   }
 }
