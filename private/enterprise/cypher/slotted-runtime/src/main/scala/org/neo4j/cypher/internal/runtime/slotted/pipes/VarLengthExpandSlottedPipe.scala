@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.eclipse.collections.impl.factory.Stacks
+import org.eclipse.collections.impl.factory.primitive.LongStacks
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -66,12 +68,15 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
   private def varLengthExpand(node: LNode,
                               state: QueryState,
                               row: ExecutionContext): Iterator[(LNode, RelationshipContainer)] = {
-    val stack = new mutable.Stack[(LNode, RelationshipContainer)]
-    stack.push((node, RelationshipContainer.EMPTY))
+    val stackOfNodes = LongStacks.mutable.empty()
+    val stackOfRelContainers = Stacks.mutable.empty[RelationshipContainer]()
+    stackOfNodes.push(node)
+    stackOfRelContainers.push(RelationshipContainer.EMPTY)
 
     new Iterator[(LNode, RelationshipContainer)] {
       override def next(): (LNode, RelationshipContainer) = {
-        val (fromNode, rels) = stack.pop()
+        val fromNode = stackOfNodes.pop()
+        val rels = stackOfRelContainers.pop()
         if (rels.size < maxDepth.getOrElse(Int.MaxValue)) {
           val relationships: RelationshipIterator = state.query.getRelationshipsForIdsPrimitive(fromNode, dir, types.types(state.query))
 
@@ -95,7 +100,8 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                   predicateIsTrue(row, state, tempNodeOffset, nodePredicate, state.query.nodeById(relationship.otherNodeId(fromNode)))
               ) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
-                stack.push((relationship.otherNodeId(fromNode), rels.append(relationship)))
+                stackOfNodes.push(relationship.otherNodeId(fromNode))
+                stackOfRelContainers.push(rels.append(relationship))
               }
             }
           }
@@ -113,7 +119,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         (fromNode, projectedRels)
       }
 
-      override def hasNext: Boolean = stack.nonEmpty
+      override def hasNext: Boolean = !stackOfNodes.isEmpty
     }
   }
 
