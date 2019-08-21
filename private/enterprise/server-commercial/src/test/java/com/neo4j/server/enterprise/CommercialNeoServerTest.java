@@ -38,7 +38,8 @@ class CommercialNeoServerTest
     @Test
     void checkExpectedDatabaseDirectory()
     {
-        Config config = Config.newBuilder().set( GraphDatabaseSettings.SERVER_DEFAULTS )
+        Config config = Config.newBuilder()
+                .setDefaults( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, Mode.SINGLE )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().toPath().toAbsolutePath() )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
