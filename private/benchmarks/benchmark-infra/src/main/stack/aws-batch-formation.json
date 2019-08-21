@@ -31,6 +31,37 @@
 				"ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
 			}
 		},
+		"M5DLargeComputeEnvironment": {
+			"Type": "AWS::Batch::ComputeEnvironment",
+			"Properties": {
+				"ComputeEnvironmentName": "benchmarking_m5d_large",
+				"Type": "MANAGED",
+				"ComputeResources": {
+					"Type": "EC2",
+					"ImageId": "ami-054a4336b77edd10e",
+					"Ec2KeyPair" : "jpalka",
+					"MinvCpus": 0,
+					"DesiredvCpus": 0,
+					"MaxvCpus": 256,
+					"InstanceTypes": [
+						"m5d.large"
+					],
+					"Subnets": [
+						"subnet-ff6f40b5",
+						"subnet-3a8c6e53",
+						"subnet-553c312d"
+					],
+					"SecurityGroupIds": [
+						"sg-bcab66d5"
+					],
+					"InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
+					"Tags": {
+						"role": "benchmarking run worker"
+					}
+				},
+				"ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
+			}
+		},
 		"MacroBenchmarkRunQueue": {
 			"Type": "AWS::Batch::JobQueue",
 			"Properties": {
