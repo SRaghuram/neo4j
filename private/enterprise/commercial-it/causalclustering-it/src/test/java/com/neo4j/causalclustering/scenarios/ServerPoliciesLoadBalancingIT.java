@@ -9,17 +9,17 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.LoadBalancingServerPoliciesGroup;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.eclipse.collections.impl.factory.Sets;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
@@ -38,60 +38,55 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
-import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.Result;
+import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.ParameterNames;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.RoutingResultFormat;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.values.virtual.MapValueBuilder;
 
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 
-@ExtendWith( TestDirectoryExtension.class )
+@ExtendWith( SuppressOutputExtension.class )
+@ClusterExtension
+@TestInstance( PER_METHOD )
 class ServerPoliciesLoadBalancingIT
 {
     @Inject
-    private TestDirectory testDir;
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
 
-    @AfterEach
-    void AfterEach()
-    {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
-    }
-
     @Test
-    void defaultBehaviour() throws Exception
+    void defaultBehaviourWithoutAllowReadsOnFollowers() throws Exception
     {
-        cluster = startCluster( 3, 3, emptyMap(), emptyMap(), emptyMap() );
+        var coreParams = Map.of( CausalClusteringSettings.cluster_allow_reads_on_followers.name(), FALSE );
 
-        assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 2, 3 ) );
+        cluster = startCluster( 3, 3, coreParams, emptyMap(), emptyMap() );
+
+        assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 0, 3 ) );
     }
 
     @Test
     void defaultBehaviourWithAllowReadsOnFollowers() throws Exception
     {
-        cluster = startCluster( 3, 3, emptyMap(), emptyMap(), emptyMap() );
+        var coreParams = Map.of( CausalClusteringSettings.cluster_allow_reads_on_followers.name(), TRUE );
+
+        cluster = startCluster( 3, 3, coreParams, emptyMap(), emptyMap() );
 
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 2, 3 ) );
     }
@@ -170,10 +165,10 @@ class ServerPoliciesLoadBalancingIT
         {
             GraphDatabaseFacade db = core.defaultDatabase();
 
-            assertThat( getServers( db, policyContext( "default" ) ), new SpecificReplicasMatcher( 0, 1 ) );
-            assertThat( getServers( db, policyContext( "policy_one_two" ) ), new SpecificReplicasMatcher( 1, 2 ) );
-            assertThat( getServers( db, policyContext( "policy_zero_two" ) ), new SpecificReplicasMatcher( 0, 2 ) );
-            assertThat( getServers( db, policyContext( "policy_all_replicas" ) ), new SpecificReplicasMatcher( 0, 1, 2 ) );
+            assertThat( getRoutingTable( db, policyContext( "default" ) ), new SpecificReplicasMatcher( 0, 1 ) );
+            assertThat( getRoutingTable( db, policyContext( "policy_one_two" ) ), new SpecificReplicasMatcher( 1, 2 ) );
+            assertThat( getRoutingTable( db, policyContext( "policy_zero_two" ) ), new SpecificReplicasMatcher( 0, 2 ) );
+            assertThat( getRoutingTable( db, policyContext( "policy_all_replicas" ) ), new SpecificReplicasMatcher( 0, 1, 2 ) );
         }
     }
 
@@ -208,15 +203,15 @@ class ServerPoliciesLoadBalancingIT
         {
             GraphDatabaseFacade db = core.defaultDatabase();
 
-            assertThat( getServers( db, policyContext( "evens" ) ),
+            assertThat( getRoutingTable( db, policyContext( "evens" ) ),
                     new RouterPartialOrderMatcher( false, asSet( 2 ), asSet( 1, 3 ) ) );
-            assertThat( getServers( db, policyContext( "odds" ) ),
+            assertThat( getRoutingTable( db, policyContext( "odds" ) ),
                     new RouterPartialOrderMatcher( false, asSet( 1, 3 ), asSet( 0, 2 ) ) );
-            assertThat( getServers( db, policyContext( "evens" ) ),
+            assertThat( getRoutingTable( db, policyContext( "evens" ) ),
                     new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
-            assertThat( getServers( db, policyContext( "evensHalt" ) ),
+            assertThat( getRoutingTable( db, policyContext( "evensHalt" ) ),
                     new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
-            assertThat( getServers( db, policyContext( "oddsMin" ) ),
+            assertThat( getRoutingTable( db, policyContext( "oddsMin" ) ),
                     new RouterPartialOrderMatcher( true, asSet( 0, 2, 4 ), asSet( 1, 3 ) ) );
         }
     }
@@ -224,10 +219,14 @@ class ServerPoliciesLoadBalancingIT
     private Cluster startCluster( int cores, int readReplicas, Map<String,String> sharedCoreParams, Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,IntFunction<String>> instanceReplicaParams ) throws Exception
     {
-        Cluster cluster = new Cluster( testDir.directory( "cluster" ), cores, readReplicas,
-                new AkkaDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
-                emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( cores )
+                .withNumberOfReadReplicas( readReplicas )
+                .withSharedCoreParams( sharedCoreParams )
+                .withInstanceCoreParams( instanceCoreParams )
+                .withInstanceReadReplicaParams( instanceReplicaParams );
 
+        var cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
 
         return cluster;
@@ -238,13 +237,12 @@ class ServerPoliciesLoadBalancingIT
         return stringMap( Policies.POLICY_KEY, policyName );
     }
 
-    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher ) throws InterruptedException
+    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher ) throws Exception
     {
         assertGetServersEventuallyMatchesOnAllCores( matcher, emptyMap() );
     }
 
-    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher,
-            Map<String,String> context ) throws InterruptedException
+    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher, Map<String,String> context ) throws Exception
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
@@ -253,37 +251,30 @@ class ServerPoliciesLoadBalancingIT
                 continue;
             }
 
-            assertEventually( matcher, () -> getServers( core.defaultDatabase(), context ) );
+            assertEventually( matcher, () -> getRoutingTable( core.defaultDatabase(), context ) );
         }
     }
 
-    private static RoutingResult getServers( GraphDatabaseFacade db, Map<String,String> context )
+    private static RoutingResult getRoutingTable( GraphDatabaseFacade db, Map<String,String> context )
     {
-        RoutingResult lbResult = null;
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
+        try ( var tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
         {
-            Map<String,Object> parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
-            try ( Result result = db.execute( tx, "CALL dbms.routing.getRoutingTable", ValueUtils.asMapValue( parameters ) ) )
+            var parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
+            try ( var result = db.execute( tx, "CALL dbms.routing.getRoutingTable", ValueUtils.asMapValue( parameters ) ) )
             {
-                while ( result.hasNext() )
-                {
-                    Map<String,Object> next = result.next();
-                    MapValueBuilder builder = new MapValueBuilder();
-                    next.forEach( ( k, v ) -> builder.add( k, ValueUtils.of( v ) ) );
-
-                    lbResult = RoutingResultFormat.parse( builder.build() );
-                }
-            }
-            catch ( QueryExecutionException e )
-            {
-                // ignore database not found errors because this cluster member might have not yet started the default database
-                if ( !DatabaseNotFound.code().serialize().equals( e.getStatusCode() ) )
-                {
-                    throw e;
-                }
+                var record = Iterators.single( result );
+                var mapValueBuilder = new MapValueBuilder();
+                record.forEach( ( k, v ) -> mapValueBuilder.add( k, ValueUtils.of( v ) ) );
+                return RoutingResultFormat.parse( mapValueBuilder.build() );
             }
         }
-        return lbResult;
+        catch ( Exception e )
+        {
+            // ignore errors because this cluster member might have not yet started the default database
+            // stacktrace will only be printed when a test fails
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private static <T, E extends Exception> void assertEventually( Matcher<? super T> matcher,

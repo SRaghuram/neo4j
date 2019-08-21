@@ -33,7 +33,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -248,16 +247,21 @@ public final class CausalClusteringTestHelpers
     {
         GraphDatabaseService db;
 
+        var managementService = member.managementService();
+        if ( managementService == null )
+        {
+            return DatabaseAvailability.ABSENT;
+        }
         try
         {
-            db = member.managementService().database( databaseName );
+            db = managementService.database( databaseName );
         }
         catch ( DatabaseNotFoundException ignored )
         {
             return DatabaseAvailability.ABSENT;
         }
 
-        try ( Transaction tx = db.beginTx() )
+        try ( var tx = db.beginTx() )
         {
             tx.commit();
         }
