@@ -877,6 +877,22 @@ class BackupIT
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
 
+    @Test
+    void shouldFailToBackupUnknownDatabase()
+    {
+        var unknownDbName = "unknown_db";
+
+        var db = startDb( serverStorePath );
+        createInitialDataSet( db );
+
+        var context = defaultBackupContextBuilder( backupAddress( db ) )
+                .withDatabaseName( unknownDbName )
+                .build();
+
+        var error = assertThrows( BackupExecutionException.class, () -> executeBackup( context ) );
+        assertThat( error.getMessage(), containsString( "Database '" + unknownDbName + "' does not exist" ) );
+    }
+
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
     {
         Node node;

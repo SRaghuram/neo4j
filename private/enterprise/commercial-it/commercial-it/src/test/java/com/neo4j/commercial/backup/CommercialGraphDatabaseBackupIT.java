@@ -5,7 +5,6 @@
  */
 package com.neo4j.commercial.backup;
 
-import com.neo4j.backup.BackupTestUtil;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -14,21 +13,25 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 import java.io.File;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
+import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.backupAddress;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -40,14 +43,16 @@ class CommercialGraphDatabaseBackupIT
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private SuppressOutput suppressOutput;
 
     private GraphDatabaseAPI db;
-    private static DatabaseManagementService managementService;
+    private DatabaseManagementService managementService;
 
     @AfterEach
     void tearDown()
     {
-        if ( db != null )
+        if ( managementService != null )
         {
             managementService.shutdown();
         }
@@ -56,11 +61,11 @@ class CommercialGraphDatabaseBackupIT
     @Test
     void shouldDoBackup() throws Exception
     {
-        int nodeCount = 999;
+        var nodeCount = 999;
         db = newCommercialDb( testDirectory.storeDir(), true );
         createNodes( db, nodeCount );
 
-        File backupDir = performBackup( testDirectory.databaseDir() );
+        var backupDir = performBackup();
         managementService.shutdown();
 
         db = newCommercialBackupDb( backupDir, false );
@@ -69,11 +74,28 @@ class CommercialGraphDatabaseBackupIT
         managementService.shutdown();
     }
 
-    private File performBackup( File storeDir ) throws Exception
+    @Test
+    void shouldFailWithErrorMessageForUnknownDatabase() throws Exception
     {
-        File backupsDir = testDirectory.directory( "backups" );
+        var unknownDbName = "unknown_db";
+        db = newCommercialDb( testDirectory.storeDir(), true );
 
-        int exitCode = BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode( storeDir,
+        var exitCode = runBackupToolFromSameJvm( testDirectory.databaseDir(),
+                "--from=" + backupAddress( db ),
+                "--backup-dir=" + testDirectory.directory( "backups" ),
+                "--database=" + unknownDbName );
+
+        assertEquals( 1, exitCode );
+
+        assertThat( suppressOutput.getErrorVoice().lines(), hasItem( containsString( "Database '" + unknownDbName + "' does not exist" ) ) );
+    }
+
+    private File performBackup() throws Exception
+    {
+        var storeDir = testDirectory.databaseDir();
+        var backupsDir = testDirectory.directory( "backups" );
+
+        var exitCode = runBackupToolFromOtherJvmToGetExitCode( storeDir,
                 "--from=" + backupAddress( db ),
                 "--backup-dir=" + backupsDir,
                 "--database=" + DEFAULT_DATABASE_NAME );
@@ -83,15 +105,15 @@ class CommercialGraphDatabaseBackupIT
         return new File( backupsDir, DEFAULT_DATABASE_NAME );
     }
 
-    private static GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
+    private GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
     {
         managementService = defaultCommercialBuilder( storeDir, backupEnabled ).build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private static GraphDatabaseAPI newCommercialBackupDb( File databaseDirectory, boolean backupEnabled )
+    private GraphDatabaseAPI newCommercialBackupDb( File databaseDirectory, boolean backupEnabled )
     {
-        File storeDir = databaseDirectory.getParentFile();
+        var storeDir = databaseDirectory.getParentFile();
         managementService = defaultCommercialBuilder( storeDir, backupEnabled )
                 .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() ).build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
@@ -104,9 +126,9 @@ class CommercialGraphDatabaseBackupIT
 
     private static void createNodes( GraphDatabaseService db, int count )
     {
-        try ( Transaction tx = db.beginTx() )
+        try ( var tx = db.beginTx() )
         {
-            for ( int i = 0; i < count; i++ )
+            for ( var i = 0; i < count; i++ )
             {
                 db.createNode( label( "Person" ) ).setProperty( "id", i );
             }
@@ -116,9 +138,9 @@ class CommercialGraphDatabaseBackupIT
 
     private void verifyNodes( int count )
     {
-        try ( Transaction tx = db.beginTx() )
+        try ( var tx = db.beginTx() )
         {
-            List<Integer> ids = db.findNodes( label( "Person" ) )
+            var ids = db.findNodes( label( "Person" ) )
                     .stream()
                     .map( node -> node.getProperty( "id" ) )
                     .map( value -> (int) value )
@@ -127,7 +149,7 @@ class CommercialGraphDatabaseBackupIT
 
             assertEquals( count, ids.size() );
 
-            for ( int i = 0; i < ids.size(); i++ )
+            for ( var i = 0; i < ids.size(); i++ )
             {
                 assertEquals( i, ids.get( i ).intValue() );
             }

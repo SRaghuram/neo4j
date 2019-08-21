@@ -32,6 +32,7 @@ import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
+import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 
@@ -125,7 +126,7 @@ public class OnlineBackupCommand extends AbstractCommand
         }
         catch ( Exception e )
         {
-            throw new CommandFailedException( "Execution of backup failed", e );
+            throw new CommandFailedException( "Execution of backup failed. " + rootCause( e ).getMessage(), e );
         }
 
         ctx.out().println( "Backup complete." );
