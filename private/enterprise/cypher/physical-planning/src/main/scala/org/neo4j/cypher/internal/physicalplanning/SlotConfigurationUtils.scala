@@ -63,13 +63,13 @@ object SlotConfigurationUtils {
     * Use this to make a specialized getter function for a slot and a primitive return type (i.e. CTNode or CTRelationship),
     * that given an ExecutionContext returns a long.
     */
-  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType): ToLongFunction[ExecutionContext] =
-    (slot, returnType) match {
-      case (LongSlot(offset, _, _), CTNode | CTRelationship) =>
+  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+    (slot, returnType, throwOfTypeError) match {
+      case (LongSlot(offset, _, _), CTNode | CTRelationship, _) =>
         (context: ExecutionContext) =>
           context.getLongAt(offset)
 
-      case (RefSlot(offset, false, _), CTNode) =>
+      case (RefSlot(offset, false, _), CTNode, true) =>
         (context: ExecutionContext) =>
           val value = context.getRefAt(offset)
           try {
@@ -79,7 +79,7 @@ object SlotConfigurationUtils {
               throw new ParameterWrongTypeException(s"Expected to find a node at ref slot $offset but found $value instead")
           }
 
-      case (RefSlot(offset, false, _), CTRelationship) =>
+      case (RefSlot(offset, false, _), CTRelationship, true) =>
         (context: ExecutionContext) =>
           val value = context.getRefAt(offset)
           try {
@@ -89,7 +89,7 @@ object SlotConfigurationUtils {
               throw new ParameterWrongTypeException(s"Expected to find a relationship at ref slot $offset but found $value instead")
           }
 
-      case (RefSlot(offset, true, _), CTNode) =>
+      case (RefSlot(offset, true, _), CTNode, true) =>
         (context: ExecutionContext) =>
           val value = context.getRefAt(offset)
           try {
@@ -102,7 +102,7 @@ object SlotConfigurationUtils {
               throw new ParameterWrongTypeException(s"Expected to find a node at ref slot $offset but found $value instead")
           }
 
-      case (RefSlot(offset, true, _), CTRelationship) =>
+      case (RefSlot(offset, true, _), CTRelationship, true) =>
         (context: ExecutionContext) =>
           val value = context.getRefAt(offset)
           try {
@@ -115,6 +115,20 @@ object SlotConfigurationUtils {
               throw new ParameterWrongTypeException(s"Expected to find a relationship at ref slot $offset but found $value instead")
           }
 
+      case (RefSlot(offset, _, _), CTNode, false) =>
+        (context: ExecutionContext) =>
+          context.getRefAt(offset) match {
+            case n: VirtualNodeValue => n.id()
+            case _ => PRIMITIVE_NULL
+          }
+
+      case (RefSlot(offset, _, _), CTRelationship, false) =>
+        (context: ExecutionContext) =>
+          context.getRefAt(offset) match {
+            case r: VirtualRelationshipValue => r.id()
+            case _ => PRIMITIVE_NULL
+          }
+
       case _ =>
         throw new InternalException(s"Do not know how to make a primitive getter for slot $slot with type $returnType")
     }
@@ -123,15 +137,15 @@ object SlotConfigurationUtils {
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the node id.
     */
-  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot): ToLongFunction[ExecutionContext] =
-    makeGetPrimitiveFromSlotFunctionFor(slot, CTNode)
+  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+    makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOfTypeError)
 
   /**
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the relationship id.
     */
-  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot): ToLongFunction[ExecutionContext] =
-    makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship)
+  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+    makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship, throwOfTypeError)
 
   /**
     * Use this to make a specialized setter function for a slot,

@@ -388,11 +388,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)
 
-      case VarExpand(_, _, _, _, _, to, relationship, _, expansionMode, _, _) =>
+      case VarExpand(_, from, _, _, _, to, relationship, _, expansionMode, _, _) =>
+        val nullableNewSlots = nullable || slots(from).nullable
         if (expansionMode == ExpandAll) {
-          slots.newLong(to, nullable, CTNode)
+          slots.newLong(to, nullableNewSlots, CTNode)
         }
-        slots.newReference(relationship, nullable, CTList(CTRelationship))
+        slots.newReference(relationship, nullableNewSlots, CTList(CTRelationship))
 
       case PruningVarExpand(_, from, _, _, to, _, _, _, _) =>
         slots.newLong(from, nullable, CTNode)

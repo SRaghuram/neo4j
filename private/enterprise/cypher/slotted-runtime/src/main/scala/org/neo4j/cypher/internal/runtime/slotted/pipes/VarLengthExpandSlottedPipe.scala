@@ -49,10 +49,10 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
+  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot, throwOfTypeError = false)
   private val getToNodeFunction =
     if (shouldExpandAll) null // We only need this getter in the ExpandInto case
-    else makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
+    else makeGetPrimitiveNodeFromSlotFunctionFor(toSlot, throwOfTypeError = false)
   private val toOffset = toSlot.offset
 
   nodePredicate.registerOwningPipe(this)
