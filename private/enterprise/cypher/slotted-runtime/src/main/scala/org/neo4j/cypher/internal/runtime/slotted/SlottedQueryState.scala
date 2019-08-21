@@ -8,12 +8,10 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InCheckContainer, SingleThreadedLRUCache}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, MutableMaps, QueryContext, _}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, QueryContext, _}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
-
-import scala.collection.mutable
 
 class SlottedQueryState(query: QueryContext,
                         resources: ExternalCSVResource,

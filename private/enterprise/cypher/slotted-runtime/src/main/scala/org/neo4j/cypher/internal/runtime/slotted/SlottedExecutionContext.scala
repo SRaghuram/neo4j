@@ -293,7 +293,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   // if the slot offset is less than the current size.
   // This is also the only way that we could detect if a LongSlot was not initialized
   override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = {
-    var entities = mutable.Map.empty[String, AnyValue]
+    val entities = mutable.Map.empty[String, AnyValue]
     slots.foreachSlot({
       case (key, RefSlot(offset, _, _)) =>
         if (isRefInitialized(offset)) {

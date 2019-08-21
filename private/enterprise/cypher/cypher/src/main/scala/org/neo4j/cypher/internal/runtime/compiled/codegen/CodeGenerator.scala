@@ -78,14 +78,6 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
     generateCode(structure)(instructions, context.operatorIds.toMap, columns, conf)
   }
 
-  private def asJavaHashMap(params: scala.collection.Map[String, Any]) = {
-    val jMap = new util.HashMap[String, Object]()
-    params.foreach {
-      case (key, value) => jMap.put(key, javaValue(value))
-    }
-    jMap
-  }
-
   import scala.collection.JavaConverters._
   private def javaValue(value: Any): Object = value match {
     case null => null

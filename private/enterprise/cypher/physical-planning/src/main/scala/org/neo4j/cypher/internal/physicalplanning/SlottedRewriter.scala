@@ -156,8 +156,6 @@ class SlottedRewriter(tokenContext: TokenContext) {
               case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
               case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
             }
-          case slot@RefSlot(_, _, _) =>
-            throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")
         }
 
       case e@Equals(Variable(k1), Variable(k2)) =>

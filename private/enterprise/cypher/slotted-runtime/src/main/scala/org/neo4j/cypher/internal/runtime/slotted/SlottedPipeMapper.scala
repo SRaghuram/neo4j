@@ -37,7 +37,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
                         physicalPlan: PhysicalPlan,
                         readOnly: Boolean,
                         indexRegistrator: QueryIndexRegistrator)
-                       (implicit semanticTable: SemanticTable, tokenContext: TokenContext)
+                       (implicit semanticTable: SemanticTable)
   extends PipeMapper {
 
   override def onLeaf(plan: LogicalPlan): Pipe = {
