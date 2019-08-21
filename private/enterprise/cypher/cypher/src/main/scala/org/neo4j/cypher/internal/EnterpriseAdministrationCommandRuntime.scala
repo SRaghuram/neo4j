@@ -24,9 +24,10 @@ import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
-import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException}
+import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
@@ -88,7 +89,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               Values.booleanValue(suspended))),
           QueryHandler
             .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create the specified user '$userName'.")))
-            .handleError(e => new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", e))
+            .handleError(e => e.getCause match {
+              case _: UniquePropertyValueValidationException =>
+                new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", e)
+              case _ => new InvalidArgumentsException(s"Failed to create the specified user '$userName'.", e)
+            })
         )
       } finally {
         // Clear password
@@ -177,7 +182,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create the specified role '$roleName'.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", e)),
+          .handleError(e => e.getCause match {
+            case _: UniquePropertyValueValidationException =>
+              new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", e)
+            case _ => new InvalidArgumentsException(s"Failed to create the specified role '$roleName'.", e)
+          }),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -225,8 +234,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler
-          .handleNoResult(() =>  Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)),
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
+          .handleError {
+            case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
+              new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)
+            case e => new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName'.", e)
+          },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -247,41 +260,41 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName'")
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName'")
 
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE WRITE {*} ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName'")
 
     case DenyWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName'")
 
     case RevokeWrite(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
       makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName':")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(scope) => (_, _, _) =>
@@ -392,7 +405,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))),
         QueryHandler
           .handleNoResult(() => Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName': ")))
-          .handleError(e => new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", e))
+          .handleError(e => e.getCause match {
+            case _: UniquePropertyValueValidationException =>
+              new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", e)
+            case _ => new InvalidArgumentsException(s"Failed to create the specified database '$dbName'.", e)
+          })
       )
 
     // DROP DATABASE foo
@@ -494,19 +511,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MERGE (res:Resource {type: $resource, arg1: $property})")
       case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MERGE (res:Resource {type: $resource})")
       case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MERGE (res:Resource {type: $resource})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage Invalid privilege ${grant.name} resource type $resource")
+      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} resource type $resource")
     }
     val (label: Value, qualifierMerge: String) = qualifier match {
       case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {type: 'node', label: $label})")
       case ast.LabelAllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
       case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MERGE (q:RelationshipQualifier {type: 'relationship', label: $label})")
       case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MERGE (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage Invalid privilege ${grant.name} qualifier $qualifier")
+      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} qualifier $qualifier")
     }
     val (dbName, db, databaseMerge, scopeMerge) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage Invalid privilege ${grant.name} scope database $database")
+      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
       s"""
@@ -534,8 +551,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |RETURN '${grant.prefix}' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
-        .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage Database '$db' does not exist.")))
-        .handleError(t => new InvalidArgumentsException(s"$startOfErrorMessage Role '$roleName' does not exist.", t)),
+        .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist.")))
+        .handleError {
+          case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
+            new InvalidArgumentsException(s"$startOfErrorMessage: Role '$roleName' does not exist.", e)
+          case e => new InvalidArgumentsException(s"$startOfErrorMessage.", e)
+        },
       source
     )
   }
@@ -550,19 +571,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MATCH (res:Resource {type: $resource, arg1: $property})")
       case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MATCH (res:Resource {type: $resource})")
       case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MATCH (res:Resource {type: $resource})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage Invalid privilege revoke resource type $resource")
+      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke resource type $resource")
     }
     val (label: Value, qualifierMatch: String) = qualifier match {
       case ast.LabelQualifier(name) => (Values.stringValue(name), "MATCH (q:LabelQualifier {type: 'node', label: $label})")
       case ast.LabelAllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
       case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MATCH (q:RelationshipQualifier {type: 'relationship', label: $label})")
       case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MATCH (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage Invalid privilege revoke qualifier $qualifier")
+      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke qualifier $qualifier")
     }
     val (dbName, _, scopeMatch) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage Invalid privilege revoke scope database $database")
+      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke scope database $database")
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
       s"""
