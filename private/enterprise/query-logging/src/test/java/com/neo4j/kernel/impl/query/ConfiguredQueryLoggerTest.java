@@ -37,6 +37,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.Is.is;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -491,7 +492,7 @@ class ConfiguredQueryLoggerTest
 
         // when
         clock.forward( 11, TimeUnit.MILLISECONDS );
-        query.compilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ), null );
+        query.compilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ), READ_ONLY, null );
         queryLogger.success( query );
 
         // then
