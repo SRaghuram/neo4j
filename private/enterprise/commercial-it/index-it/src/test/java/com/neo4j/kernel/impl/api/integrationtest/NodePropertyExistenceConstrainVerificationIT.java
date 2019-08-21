@@ -16,7 +16,7 @@ import org.neo4j.kernel.impl.newapi.Operations;
 
 import static org.neo4j.graphdb.Label.label;
 
-class NodePropertyExistenceExistenceConstrainVerificationIT extends PropertyExistenceConstraintVerificationIT
+class NodePropertyExistenceConstrainVerificationIT extends PropertyExistenceConstraintVerificationIT
 {
     @Override
     void createConstraint( SchemaHelper helper, GraphDatabaseService db, String label, String property )
