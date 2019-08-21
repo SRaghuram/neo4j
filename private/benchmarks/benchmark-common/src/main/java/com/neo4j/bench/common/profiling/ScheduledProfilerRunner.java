@@ -3,20 +3,18 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.macro.execution.process;
+package com.neo4j.bench.common.profiling;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
-import com.neo4j.bench.common.profiling.ExternalProfiler;
-import com.neo4j.bench.common.profiling.ScheduledProfiler;
 import com.neo4j.bench.common.profiling.ScheduledProfiler.FixedRate;
-import com.neo4j.bench.common.profiling.Tick;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,34 +23,39 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
-public class ScheduledProfilers
+public class ScheduledProfilerRunner
 {
-    public static ScheduledProfilers from( List<ExternalProfiler> externalProfilers )
+    public static ScheduledProfilerRunner from( List<ExternalProfiler> externalProfilers )
     {
         List<ScheduledProfiler> schedulerProfilers =
                 externalProfilers.stream().filter( k -> k instanceof ScheduledProfiler )
                         .map( ScheduledProfiler.class::cast ).collect( Collectors.toList() );
-        return new ScheduledProfilers( schedulerProfilers );
+        return new ScheduledProfilerRunner( schedulerProfilers );
     }
 
     private final List<ScheduledProfiler> scheduledProfilers;
     private final ScheduledExecutorService scheduledThreadPool;
 
-    public ScheduledProfilers( List<ScheduledProfiler> scheduledProfilers )
+    private ScheduledProfilerRunner( List<ScheduledProfiler> scheduledProfilers )
     {
         this.scheduledProfilers = scheduledProfilers;
         scheduledThreadPool = Executors.newScheduledThreadPool( Runtime.getRuntime().availableProcessors() );
     }
 
-    public void start( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
-            Parameters clientParameters, Jvm jvm, Pid pid )
+    public void start(
+            ForkDirectory forkDirectory,
+            BenchmarkGroup benchmarkGroup,
+            Benchmark benchmark,
+            Parameters parameters,
+            Jvm jvm,
+            Pid pid )
     {
         scheduledProfilers.forEach( scheduledProfiler -> scheduleProfiler(
                 scheduledProfiler,
                 forkDirectory,
                 benchmarkGroup,
                 benchmark,
-                clientParameters,
+                parameters,
                 jvm,
                 pid ) );
     }
@@ -75,8 +78,14 @@ public class ScheduledProfilers
         return !scheduledThreadPool.isTerminated();
     }
 
-    private void scheduleProfiler( ScheduledProfiler scheduledProfiler, ForkDirectory forkDirectory,
-            BenchmarkGroup benchmarkGroup, Benchmark benchmark, Parameters additionalParameters, Jvm jvm, Pid pid )
+    private void scheduleProfiler(
+            ScheduledProfiler scheduledProfiler,
+            ForkDirectory forkDirectory,
+            BenchmarkGroup benchmarkGroup,
+            Benchmark benchmark,
+            Parameters additionalParameters,
+            Jvm jvm,
+            Pid pid )
     {
         FixedRateValue fixedRate = getFixedRate( scheduledProfiler );
         scheduledThreadPool.scheduleAtFixedRate(
@@ -90,6 +99,7 @@ public class ScheduledProfilers
     private FixedRateValue getFixedRate( ScheduledProfiler scheduledProfiler )
     {
         Method intfMethod = findIntfMethod();
+        FixedRate defaultFixedRate = intfMethod.getAnnotation( FixedRate.class );
         try
         {
             Method method =
@@ -97,7 +107,7 @@ public class ScheduledProfilers
             FixedRate fixedRate = method.getAnnotation( ScheduledProfiler.FixedRate.class );
             if ( fixedRate == null )
             {
-                return new FixedRateValue( 5, TimeUnit.SECONDS );
+                return new FixedRateValue( defaultFixedRate.period(), defaultFixedRate.timeUnit() );
             }
             else
             {
@@ -113,13 +123,15 @@ public class ScheduledProfilers
     private Method findIntfMethod()
     {
         Class<ScheduledProfiler> intf = ScheduledProfiler.class;
-        Method[] intfMethods = intf.getMethods();
-        if ( intfMethods.length > 1 )
+        List<Method> intfMethods = Arrays.stream( intf.getMethods() )
+                .filter( method -> method.getAnnotation( FixedRate.class ) != null )
+                .collect( Collectors.toList() );
+
+        if ( intfMethods.size() > 1 )
         {
             throw new RuntimeException( format( "%s has to many methods", intf ) );
         }
-        Method intfMethod = intfMethods[0];
-        return intfMethod;
+        return intfMethods.get( 0 );
     }
 
     static class FixedRateValue

@@ -53,6 +53,7 @@ public interface ScheduledProfiler extends ExternalProfiler
      * @param jvm
      * @param pid
      */
+    @FixedRate
     void onSchedule(
             Tick tick,
             ForkDirectory forkDirectory,

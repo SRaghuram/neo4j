@@ -12,6 +12,7 @@ import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ScheduledProfilerRunner;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
@@ -113,7 +114,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                           errorRedirect );
 
         // if any, schedule runs of scheduled profilers
-        ScheduledProfilers schedulerProfilers = ScheduledProfilers.from(externalProfilers);
+        ScheduledProfilerRunner schedulerProfilers = ScheduledProfilerRunner.from(externalProfilers);
         schedulerProfilers.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvm, jvmProcess.pid() );
 
         try
