@@ -2,7 +2,7 @@ FROM "065531048259.dkr.ecr.eu-west-1.amazonaws.com/benchmarks-oraclejdk-8:0.0.1"
 RUN ln -s /usr/lib/jvm/java-8-oracle /usr/lib/jvm/oracle-jdk-8 && \
     rm -rf /var/cache/oracle-jdk8-installer/
 
-FROM profile:latest AS PROFILERSETUP
+FROM "065531048259.dkr.ecr.eu-west-1.amazonaws.com/benchmarks-worker:profile" AS PROFILERSETUP
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
 ENV JAVA_HOME=/usr/lib/jvm/java-8-oracle
