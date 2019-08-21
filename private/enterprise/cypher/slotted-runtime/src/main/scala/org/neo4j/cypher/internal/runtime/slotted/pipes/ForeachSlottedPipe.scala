@@ -12,8 +12,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
-import scala.collection.JavaConverters._
-
 case class ForeachSlottedPipe(lhs: Pipe, rhs: Pipe, innerVariableSlot: Slot, expression: Expression)
                              (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) with Pipe with ListSupport {
@@ -31,9 +29,9 @@ case class ForeachSlottedPipe(lhs: Pipe, rhs: Pipe, innerVariableSlot: Slot, exp
   override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.map {
       outerContext =>
-        val values = makeTraversable(expression(outerContext, state))
-        values.iterator().asScala.foreach { v =>
-          setVariableFun(outerContext, v) // A slot for the variable has been allocated on the outer context
+        val values = makeTraversable(expression(outerContext, state)).iterator()
+        while (values.hasNext) {
+          setVariableFun(outerContext, values.next()) // A slot for the variable has been allocated on the outer context
           val innerState = state.withInitialContext(outerContext)
           rhs.createResults(innerState).length // exhaust the iterator, in case there's a merge read increasing cardinality inside the foreach
         }

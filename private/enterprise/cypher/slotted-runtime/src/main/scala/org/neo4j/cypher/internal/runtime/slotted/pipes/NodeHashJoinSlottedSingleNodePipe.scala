@@ -93,14 +93,25 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     }
 
   private def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit = {
-    longsToCopy foreach {
-      case (from, to) => newRow.setLongAt(to, rhs.getLongAt(from))
+    var i = 0
+    var len = longsToCopy.length
+    while (i < len) {
+      val longs = longsToCopy(i)
+      newRow.setLongAt(longs._2, rhs.getLongAt(longs._1))
+      i += 1
     }
-    refsToCopy foreach {
-      case (from, to) => newRow.setRefAt(to, rhs.getRefAt(from))
+    i = 0
+    len = refsToCopy.length
+    while (i < len) {
+      val refs = refsToCopy(i)
+      newRow.setRefAt(refs._2, rhs.getRefAt(refs._1))
+      i += 1
     }
-    cachedPropertiesToCopy foreach {
-      case (from, to) => newRow.setCachedPropertyAt(to, rhs.getCachedPropertyAt(from))
+    i = 0
+    len = cachedPropertiesToCopy.length
+    while (i < len) {
+      val cached = cachedPropertiesToCopy(i)
+      newRow.setCachedPropertyAt(cached._2, rhs.getCachedPropertyAt(cached._1))
     }
   }
 }
