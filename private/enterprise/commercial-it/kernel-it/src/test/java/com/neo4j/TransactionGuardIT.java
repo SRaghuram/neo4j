@@ -610,6 +610,12 @@ class TransactionGuardIT
         {
             delegate.visit( visitor );
         }
+
+        @Override
+        public void clearCache()
+        {
+            delegate.clearCache();
+        }
     }
 
     private final class TerminationIdGenerator extends IdGenerator.Delegate

@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
+import org.neo4j.kernel.impl.api.EpochSupplier;
 import org.neo4j.kernel.impl.factory.AccessCapabilityFactory;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.token.TokenHolders;
@@ -21,9 +22,10 @@ public class CoreEditionKernelComponents
     private final DatabaseIdContext idContext;
     private final CoreStateMachines stateMachines;
     private final AccessCapabilityFactory accessCapabilityFactory;
+    private final EpochSupplier epochSupplier;
 
     public CoreEditionKernelComponents( CommitProcessFactory commitProcessFactory, Locks lockManager, TokenHolders tokenHolders, DatabaseIdContext idContext,
-            CoreStateMachines stateMachines, AccessCapabilityFactory accessCapabilityFactory )
+            CoreStateMachines stateMachines, AccessCapabilityFactory accessCapabilityFactory, EpochSupplier epochSupplier )
     {
         this.commitProcessFactory = commitProcessFactory;
         this.lockManager = lockManager;
@@ -31,6 +33,7 @@ public class CoreEditionKernelComponents
         this.idContext = idContext;
         this.stateMachines = stateMachines;
         this.accessCapabilityFactory = accessCapabilityFactory;
+        this.epochSupplier = epochSupplier;
     }
 
     public DatabaseIdContext idContext()
@@ -61,5 +64,10 @@ public class CoreEditionKernelComponents
     public AccessCapabilityFactory accessCapabilityFactory()
     {
         return accessCapabilityFactory;
+    }
+
+    public EpochSupplier epoch()
+    {
+        return epochSupplier;
     }
 }

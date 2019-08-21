@@ -32,6 +32,7 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.api.EpochSupplier;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -245,7 +246,8 @@ class TransactionStatusResultTest
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
-                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ), new TestDatabaseIdRepository().defaultDatabase() )
+                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ), new TestDatabaseIdRepository().defaultDatabase(),
+                        EpochSupplier.NO_EPOCHS )
             {
                 @Override
                 public Statistics getStatistics()

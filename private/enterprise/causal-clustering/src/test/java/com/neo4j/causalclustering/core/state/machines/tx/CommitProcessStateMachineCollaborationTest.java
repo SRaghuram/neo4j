@@ -54,7 +54,7 @@ class CommitProcessStateMachineCollaborationTest
     private static PhysicalTransactionRepresentation physicalTx( int lockSessionId )
     {
         PhysicalTransactionRepresentation physicalTx = mock( PhysicalTransactionRepresentation.class );
-        when( physicalTx.getLockSessionId() ).thenReturn( lockSessionId );
+        when( physicalTx.getEpochTokenId() ).thenReturn( lockSessionId );
         return physicalTx;
     }
 

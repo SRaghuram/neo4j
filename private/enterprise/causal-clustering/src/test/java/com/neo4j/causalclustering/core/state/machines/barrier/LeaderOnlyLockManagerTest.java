@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.barrier;
 
 import org.junit.Test;
 
+import org.neo4j.kernel.impl.api.EpochException;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
@@ -20,7 +21,7 @@ import static org.mockito.Mockito.when;
 public class LeaderOnlyLockManagerTest
 {
     @Test
-    public void shouldIssueLocksOnBarrierHolder()
+    public void shouldIssueLocksOnLeader()
     {
         // given
         Locks locks = mock( Locks.class );
@@ -28,28 +29,29 @@ public class LeaderOnlyLockManagerTest
         when( locks.newClient() ).thenReturn( client );
         BarrierState barrierState = mock( BarrierState.class );
 
-        LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( locks, barrierState );
+        LeaderOnlyLockManager lockManager = new LeaderOnlyLockManager( locks );
 
         // when
-        lockManager.newClient().acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
+        Locks.Client leaderLockClient = lockManager.newClient();
+        leaderLockClient.initialize( barrierState );
+        leaderLockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
     }
 
     @Test
-    public void shouldNotIssueLocksOnNonBarrierHolder() throws BarrierException
+    public void shouldNotIssueLocksOnNonLeader() throws EpochException
     {
         // given
         Locks locks = mock( Locks.class );
         Locks.Client client = mock( Locks.Client.class );
         when( locks.newClient() ).thenReturn( client );
         BarrierState barrierState = mock( BarrierState.class );
-        doThrow( BarrierException.class ).when( barrierState ).ensureHoldingToken();
+        doThrow( EpochException.class ).when( barrierState ).ensureHoldingToken();
 
-        LeaderOnlyLockManager lockManager =
-                new LeaderOnlyLockManager( locks, barrierState );
+        LeaderOnlyLockManager lockManager = new LeaderOnlyLockManager( locks );
 
         // when
         Locks.Client lockClient = lockManager.newClient();
+        lockClient.initialize( barrierState );
         try
         {
             lockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );

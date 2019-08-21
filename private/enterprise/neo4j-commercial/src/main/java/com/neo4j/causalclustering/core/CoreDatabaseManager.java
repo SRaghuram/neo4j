@@ -103,7 +103,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         var globalProcedures = edition.getGlobalProcedures();
         return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors,
-                                                   coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig );
+                coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig, kernelComponents.epoch() );
     }
 
     @Override

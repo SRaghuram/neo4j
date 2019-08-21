@@ -9,6 +9,8 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionSt
 
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.EpochException;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
@@ -41,12 +43,10 @@ import org.neo4j.lock.ResourceType;
 public class LeaderOnlyLockManager implements Locks
 {
     private final Locks localLocks;
-    private final BarrierState barrierState;
 
-    public LeaderOnlyLockManager( Locks localLocks, BarrierState barrierState )
+    public LeaderOnlyLockManager( Locks localLocks )
     {
         this.localLocks = localLocks;
-        this.barrierState = barrierState;
     }
 
     @Override
@@ -76,10 +76,17 @@ public class LeaderOnlyLockManager implements Locks
     private class LeaderOnlyLockClient implements Locks.Client
     {
         private final Client localClient;
+        private Epoch epoch;
 
         LeaderOnlyLockClient( Client localClient )
         {
             this.localClient = localClient;
+        }
+
+        @Override
+        public void initialize( Epoch epoch )
+        {
+            this.epoch = epoch;
         }
 
         @Override
@@ -154,7 +161,7 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public int getLockSessionId()
         {
-            return barrierState.getCurrentToken();
+            return epoch.tokenId();
         }
 
         @Override
@@ -173,9 +180,9 @@ public class LeaderOnlyLockManager implements Locks
         {
             try
             {
-                barrierState.ensureHoldingToken();
+                epoch.ensureHoldingToken();
             }
-            catch ( BarrierException e )
+            catch ( EpochException e )
             {
                 throw new AcquireLockTimeoutException( "This instance is no longer able to acquire exclusive locks because of leader re-election",
                         e, e.status() );

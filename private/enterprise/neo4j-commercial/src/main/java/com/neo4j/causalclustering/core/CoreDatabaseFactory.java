@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
@@ -29,7 +30,6 @@ import com.neo4j.causalclustering.core.state.CoreDatabaseLife;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
@@ -39,7 +39,6 @@ import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockMana
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
-import com.neo4j.causalclustering.core.state.machines.id.BarrierAwareIdGeneratorFactory;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedLabelTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKeyTokenHolder;
@@ -233,10 +232,9 @@ class CoreDatabaseFactory
         Replicator replicator = raftContext.replicator();
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog );
-        BarrierState barrierState = new BarrierState( myIdentity, replicator, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId );
+        ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog, kernelResolvers );
 
-        DatabaseIdContext idContext = createIdContext( databaseId, barrierState );
+        DatabaseIdContext idContext = createIdContext( databaseId );
 
         Supplier<StorageEngine> storageEngineSupplier = kernelResolvers.storageEngine();
 
@@ -263,7 +261,7 @@ class CoreDatabaseFactory
         ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedBarrierTokenStateMachine,
                 config.get( state_machine_apply_max_batch_size ), debugLog );
 
-        Locks lockManager = createLockManager( config, clock, barrierState );
+        Locks lockManager = createLockManager( config, clock );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
@@ -277,7 +275,8 @@ class CoreDatabaseFactory
 
         AccessCapabilityFactory accessCapabilityFactory = AccessCapabilityFactory.fixed( new LeaderCanWrite( raftGroup.raftMachine() ) );
 
-        return new CoreEditionKernelComponents( commitProcessFactory, lockManager, tokenHolders, idContext, stateMachines, accessCapabilityFactory );
+        return new CoreEditionKernelComponents( commitProcessFactory, lockManager, tokenHolders, idContext, stateMachines, accessCapabilityFactory,
+                () -> new BarrierState( myIdentity, replicator, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId ) );
     }
 
     CoreDatabaseLife createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -409,9 +408,9 @@ class CoreDatabaseFactory
                 backoffStrategy, panicker, monitors );
     }
 
-    private DatabaseIdContext createIdContext( DatabaseId databaseId, BarrierState barrierTokenState )
+    private DatabaseIdContext createIdContext( DatabaseId databaseId )
     {
-        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory( barrierTokenState );
+        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory();
         IdContextFactory idContextFactory = IdContextFactoryBuilder
                 .of( jobScheduler )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
@@ -421,24 +420,23 @@ class CoreDatabaseFactory
     }
 
     private ReplicatedBarrierTokenStateMachine createBarrierTokenStateMachine( DatabaseId databaseId, LifeSupport life,
-            DatabaseLogProvider databaseLogProvider )
+            DatabaseLogProvider databaseLogProvider, CoreKernelResolvers resolvers )
     {
         StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createBarrierTokenStorage(
                 databaseId.name(), life, databaseLogProvider );
-        return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage );
+        return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage, () -> resolvers.idGeneratorFactory().get().clearCache() );
     }
 
-    private IdGeneratorFactory createIdGeneratorFactory( BarrierState barrierTokenState )
+    private IdGeneratorFactory createIdGeneratorFactory()
     {
-        DefaultIdGeneratorFactory real = new DefaultIdGeneratorFactory( fileSystem, RecoveryCleanupWorkCollector.immediate() );
-        return new BarrierAwareIdGeneratorFactory( real, barrierTokenState );
+        return new DefaultIdGeneratorFactory( fileSystem, RecoveryCleanupWorkCollector.immediate() );
     }
 
-    private Locks createLockManager( final Config config, Clock clock, BarrierState barrierTokenState )
+    private Locks createLockManager( final Config config, Clock clock )
     {
         LocksFactory lockFactory = createLockFactory( config );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
-        return new LeaderOnlyLockManager( localLocks, barrierTokenState );
+        return new LeaderOnlyLockManager( localLocks );
     }
 
     private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life,

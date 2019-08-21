@@ -13,14 +13,15 @@ import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.EpochException;
 
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
 
-public class BarrierState
+public class BarrierState implements Epoch
 {
-    private static final Runnable NO_ACTION = () -> {};
     public static final String TOKEN_NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to take token when leader.";
 
     private volatile int barrierTokenId = BarrierToken.INVALID_BARRIER_TOKEN_ID;
@@ -45,30 +46,21 @@ public class BarrierState
      * exception if it was held but was later lost or never could be taken to
      * begin with.
      */
-    public void ensureHoldingToken() throws BarrierException
-    {
-        ensureHoldingToken( NO_ACTION );
-    }
-
-    /**
-     * This ensures that a valid token was held at some point in time. It throws an
-     * exception if it was held but was later lost or never could be taken to
-     * begin with.
-     * @param actionOnTokenAcquisition {@link Runnable} to run inside the critical section if a new token is acquired.
-     */
-    public void ensureHoldingToken( Runnable actionOnTokenAcquisition ) throws BarrierException
+    @Override
+    public void ensureHoldingToken() throws EpochException
     {
         if ( barrierTokenId == BarrierToken.INVALID_BARRIER_TOKEN_ID )
         {
-            barrierTokenId = acquireTokenOrThrow( actionOnTokenAcquisition );
+            barrierTokenId = acquireTokenOrThrow();
         }
-        else if ( barrierTokenId != currentToken().id() )
+        else if ( barrierTokenId != barrierTokenStateMachine.candidateId() )
         {
-            throw new BarrierException( "Local instance lost barrier token.", NotALeader );
+            throw new EpochException( "Local instance lost barrier token.", NotALeader );
         }
     }
 
-    int getCurrentToken()
+    @Override
+    public int tokenId()
     {
         return barrierTokenId;
     }
@@ -81,9 +73,8 @@ public class BarrierState
 
     /**
      * Acquires a valid token id owned by us or throws.
-     * @param actionOnTokenAcquisition {@link Runnable} to run inside the critical section if a new token is acquired.
      */
-    private synchronized int acquireTokenOrThrow( Runnable actionOnTokenAcquisition ) throws BarrierException
+    private synchronized int acquireTokenOrThrow() throws EpochException
     {
         BarrierToken currentToken = currentToken();
         if ( myself.equals( currentToken.owner() ) )
@@ -104,7 +95,7 @@ public class BarrierState
         }
         catch ( ReplicationFailureException e )
         {
-            throw new BarrierException( "Replication failure acquiring barrier token.", e, ReplicationFailure );
+            throw new EpochException( "Replication failure acquiring barrier token.", e, ReplicationFailure );
         }
 
         try
@@ -112,19 +103,18 @@ public class BarrierState
             boolean success = (boolean) result.consume();
             if ( success )
             {
-                actionOnTokenAcquisition.run();
                 return barrierTokenRequest.id();
             }
         }
         catch ( Exception e )
         {
-            throw new BarrierException( "Failed to acquire barrier token.", e, NotALeader );
+            throw new EpochException( "Failed to acquire barrier token.", e, NotALeader );
         }
 
-        throw new BarrierException( "Failed to acquire barrier token. Was taken by another candidate.", NotALeader );
+        throw new EpochException( "Failed to acquire barrier token. Was taken by another candidate.", NotALeader );
     }
 
-    private void ensureLeader() throws BarrierException
+    private void ensureLeader() throws EpochException
     {
         MemberId leader;
 
@@ -134,12 +124,12 @@ public class BarrierState
         }
         catch ( NoLeaderFoundException e )
         {
-            throw new BarrierException( "Could not acquire barrier token.", e, NoLeaderAvailable );
+            throw new EpochException( "Could not acquire barrier token.", e, NoLeaderAvailable );
         }
 
         if ( !leader.equals( myself ) )
         {
-            throw new BarrierException( TOKEN_NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );
+            throw new EpochException( TOKEN_NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );
         }
     }
 }

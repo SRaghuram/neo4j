@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state;
 
 import java.util.function.Supplier;
 
+import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -41,5 +42,10 @@ public class CoreKernelResolvers
     public Supplier<LogicalTransactionStore> txStore()
     {
         return () -> database.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
+    }
+
+    public Supplier<IdGeneratorFactory> idGeneratorFactory()
+    {
+        return () -> database.getDependencyResolver().resolveDependency( IdGeneratorFactory.class );
     }
 }

@@ -127,7 +127,7 @@ public class ReplicatedTransactionFactory
                 channel.putLong( tx.getLatestCommittedTxWhenStarted() );
                 channel.putLong( tx.getTimeStarted() );
                 channel.putLong( tx.getTimeCommitted() );
-                channel.putInt( tx.getLockSessionId() );
+                channel.putInt( tx.getEpochTokenId() );
 
                 byte[] additionalHeader = tx.additionalHeader();
                 if ( additionalHeader != null )

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.impl.api.Epoch;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.LockClientStoppedException;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -28,6 +29,12 @@ public class DeferringLockClient implements Locks.Client
     public DeferringLockClient( Locks.Client clientDelegate )
     {
         this.clientDelegate = clientDelegate;
+    }
+
+    @Override
+    public void initialize( Epoch epoch )
+    {
+        // we don't need epoch here
     }
 
     @Override

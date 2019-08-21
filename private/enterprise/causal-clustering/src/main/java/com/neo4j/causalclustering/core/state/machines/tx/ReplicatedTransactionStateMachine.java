@@ -14,10 +14,10 @@ import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.impl.api.Epoch;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
-import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -66,13 +66,13 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
         TransactionRepresentation tx = ReplicatedTransactionFactory.extractTransactionRepresentation( replicatedTx, extraHeader );
 
         int currentTokenId = lockTokenStateMachine.snapshot().candidateId();
-        int txLockSessionId = tx.getLockSessionId();
+        int txTokenId = tx.getEpochTokenId();
 
-        if ( currentTokenId != txLockSessionId && txLockSessionId != Locks.Client.NO_LOCK_SESSION_ID )
+        if ( currentTokenId != txTokenId && txTokenId != Epoch.NO_EPOCH )
         {
             callback.accept( Result.of( new TransactionFailureException( LockSessionExpired,
-                    "The lock session in the cluster has changed: [current lock session id:%d, tx lock session id:%d]",
-                    currentTokenId, txLockSessionId ) ) );
+                    "The epoch token in the cluster has changed: [current token id:%d, tx token id:%d]",
+                    currentTokenId, txTokenId ) ) );
         }
         else
         {

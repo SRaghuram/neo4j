@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.impl.api.Epoch;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.LockClientStoppedException;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -337,6 +338,11 @@ class DeferringLockClientTest
     private static class TestLocksClient implements Locks.Client
     {
         private final Set<LockUnit> actualLockUnits = new LinkedHashSet<>();
+
+        @Override
+        public void initialize( Epoch epoch )
+        {
+        }
 
         @Override
         public void acquireShared( LockTracer tracer, ResourceType resourceType, long... resourceIds ) throws AcquireLockTimeoutException

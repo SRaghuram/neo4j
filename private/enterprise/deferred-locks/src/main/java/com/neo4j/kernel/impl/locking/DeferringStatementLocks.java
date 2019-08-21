@@ -7,6 +7,7 @@ package com.neo4j.kernel.impl.locking;
 
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.impl.api.Epoch;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocks;
@@ -25,6 +26,12 @@ public class DeferringStatementLocks implements StatementLocks
     {
         this.explicit = explicit;
         this.implicit = new DeferringLockClient( this.explicit );
+    }
+
+    @Override
+    public void initialize( Epoch epoch )
+    {
+        explicit.initialize( epoch );
     }
 
     @Override
