@@ -40,6 +40,9 @@ public class JvmProcess implements BaseProcess, HasPid
 
     private static RuntimeException failedToStartExceptionFor( JvmProcessArgs jvmProcessArgs, ProcessWrapper process, JpsPid jpsPid )
     {
+        // It may be that the process started, but could not be discovered via JPS
+        // Make every effort to ensure it is not running
+        process.stop();
         return new RuntimeException( "Failed to start process, and was not reported by 'jps'\n" +
                                      "Process '-Dname' : '" + jvmProcessArgs.processName() + "'\n" +
                                      "------------------  JPS Output  ----------------\n" +
