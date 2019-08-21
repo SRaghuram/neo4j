@@ -89,8 +89,7 @@ public class ScheduledProfilerRunner
     {
         FixedRateValue fixedRate = getFixedRate( scheduledProfiler );
         scheduledThreadPool.scheduleAtFixedRate(
-                new ScheduledProfilerRun( scheduledProfiler, forkDirectory, benchmarkGroup, benchmark, additionalParameters, jvm, pid )
-                ,
+                new ScheduledProfilerRun( scheduledProfiler, forkDirectory, benchmarkGroup, benchmark, additionalParameters, jvm, pid ),
                 0,
                 fixedRate.period,
                 fixedRate.timeUnit );

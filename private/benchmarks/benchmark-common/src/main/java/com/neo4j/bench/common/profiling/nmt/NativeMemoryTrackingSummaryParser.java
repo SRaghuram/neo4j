@@ -22,7 +22,7 @@ public class NativeMemoryTrackingSummaryParser
     private static final Pattern CATEGORY_PATTERN =
             Pattern.compile( "([A-Z].*)\\s\\(reserved=(\\d*)KB,\\scommitted=(\\d*)KB\\)" );
 
-    public NativeMemoryTrackingSummary parse( Path path )
+    public static NativeMemoryTrackingSummary parse( Path path )
     {
         try ( Stream<String> stream = Files.lines( path ) )
         {

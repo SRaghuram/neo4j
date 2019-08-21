@@ -33,11 +33,7 @@ public class NativeMemoryTrackingSummaryReport
 
     public static NativeMemoryTrackingSummaryReport create( ForkDirectory forkDirectory ) throws IOException
     {
-
         // list NMT summary files, sort by snapshot
-
-        NativeMemoryTrackingSummaryParser parser = new NativeMemoryTrackingSummaryParser();
-
         try ( Stream<Path> files = Files.find(
                 Paths.get( forkDirectory.toAbsolutePath() ),
                 1,
@@ -46,7 +42,7 @@ public class NativeMemoryTrackingSummaryReport
 
             List<NativeMemoryTrackingSummary> snapshots = files
             .sorted( comparingLong( path -> NativeMemoryTrackingSnapshot.counter( path.getFileName().toString() ) ) )
-            .map( parser::parse )
+            .map( NativeMemoryTrackingSummaryParser::parse )
             .collect( toList() );
 
             return new NativeMemoryTrackingSummaryReport( snapshots );
