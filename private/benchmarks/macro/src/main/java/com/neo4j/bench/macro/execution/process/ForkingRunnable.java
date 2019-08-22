@@ -109,13 +109,14 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         Redirect outputRedirect = Redirect.INHERIT;
         // redirect error to file
         Redirect errorRedirect = Redirect.to( forkDirectory.newErrorLog().toFile() );
-        JvmProcess jvmProcess = JvmProcess.start( jvmProcessArgs,
-                          outputRedirect,
-                          errorRedirect );
+        JvmProcess jvmProcess = JvmProcess.start(
+                                                jvmProcessArgs,
+                                                outputRedirect,
+                                                errorRedirect );
 
         // if any, schedule runs of scheduled profilers
-        ScheduledProfilerRunner schedulerProfilers = ScheduledProfilerRunner.from(externalProfilers);
-        schedulerProfilers.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvm, jvmProcess.pid() );
+        ScheduledProfilerRunner scheduledProfilersRunner = ScheduledProfilerRunner.from(externalProfilers);
+        scheduledProfilersRunner.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvm, jvmProcess.pid() );
 
         try
         {
@@ -124,7 +125,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         finally
         {
             // stop scheduled profilers
-            schedulerProfilers.stop();
+            scheduledProfilersRunner.stop();
         }
 
         externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Profilers implementing this interface will be invoked periodically, during benchmark run.
  * By default, every 5 seconds. This can by change. You can add {@link FixedRate} annotation
- * to overwritten {@link ScheduledProfiler#onSchedule(ForkDirectory, BenchmarkGroup, Benchmark, Parameters, Pid)} method.
+ * to overwritten {@link ScheduledProfiler#onSchedule(Tick, ForkDirectory, BenchmarkGroup, Benchmark, Parameters, Jvm, Pid)} method.
  *
  */
 public interface ScheduledProfiler extends ExternalProfiler
@@ -46,12 +46,12 @@ public interface ScheduledProfiler extends ExternalProfiler
      * such cases, gracefully.
      *
      * @param tick incremented with every invocation of scheduler profiler
-     * @param forkDirectory
-     * @param benchmarkGroup
-     * @param benchmark
-     * @param additionalParameters
-     * @param jvm
-     * @param pid
+     * @param forkDirectory forkDirectory directory to write files into
+     * @param benchmarkGroup benchmark group
+     * @param benchmark benchmark
+     * @param additionalParameters additional parameters
+     * @param jvm Java to use
+     * @param pid ID of the process to be profiled
      */
     @FixedRate
     void onSchedule(

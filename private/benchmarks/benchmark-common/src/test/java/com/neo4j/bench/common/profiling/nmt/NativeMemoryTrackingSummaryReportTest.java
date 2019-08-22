@@ -5,25 +5,30 @@
  */
 package com.neo4j.bench.common.profiling.nmt;
 
-import com.neo4j.bench.common.results.ForkDirectory;
-import org.junit.jupiter.api.Test;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
-class NativeMemoryTrackingSummaryReportTest
+public class NativeMemoryTrackingSummaryReportTest
 {
 
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     @Test
-    void createSummaryReport() throws IOException
+    public void createSummaryReport() throws IOException
     {
         // given
-        ForkDirectory forkDirectory = ForkDirectory.openAt( Paths.get( "src/test/resources/NativeMemoryTrackingSummaryReportTest" ) );
+        Path forkDirectory = Paths.get( "src/test/resources/nmt" );
 
         // when
         NativeMemoryTrackingSummaryReport report =
@@ -59,11 +64,11 @@ class NativeMemoryTrackingSummaryReportTest
                 report.getCommittedKBInCategory( "Code" ) );
 
         // when
-        Path path = Files.createTempFile( "test", "csv" );
-        report.toCSV( path );
+        File tmpfile = temporaryFolder.newFile();
+        report.toCSV( tmpfile.toPath() );
 
         // then
-        assertEquals( 7, Files.readAllLines( path ).stream().count() );
+        assertEquals( 7, Files.readAllLines( tmpfile.toPath() ).stream().count() );
     }
 
 }

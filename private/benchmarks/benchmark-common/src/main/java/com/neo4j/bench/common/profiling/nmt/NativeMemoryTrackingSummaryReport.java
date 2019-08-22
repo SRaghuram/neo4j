@@ -5,13 +5,10 @@
  */
 package com.neo4j.bench.common.profiling.nmt;
 
-import com.neo4j.bench.common.results.ForkDirectory;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.stream.Stream;
@@ -31,11 +28,11 @@ public class NativeMemoryTrackingSummaryReport
         this.snapshots = snapshots;
     }
 
-    public static NativeMemoryTrackingSummaryReport create( ForkDirectory forkDirectory ) throws IOException
+    public static NativeMemoryTrackingSummaryReport create( Path forkDirectory ) throws IOException
     {
         // list NMT summary files, sort by snapshot
         try ( Stream<Path> files = Files.find(
-                Paths.get( forkDirectory.toAbsolutePath() ),
+                forkDirectory,
                 1,
                 ( path, attrs ) -> NativeMemoryTrackingSnapshot.matches( path.getFileName().toString() ) ) )
         {
@@ -80,7 +77,7 @@ public class NativeMemoryTrackingSummaryReport
                 .collect( joining( delimiter ) );
 
         try ( PrintWriter writer = new PrintWriter(
-                Files.newBufferedWriter( path, StandardOpenOption.CREATE, StandardOpenOption.WRITE ) ) )
+                Files.newBufferedWriter( path, StandardOpenOption.CREATE, StandardOpenOption.WRITE ), true /*auto flush*/  ) )
         {
             writer.println( headers );
             snapshots.stream()

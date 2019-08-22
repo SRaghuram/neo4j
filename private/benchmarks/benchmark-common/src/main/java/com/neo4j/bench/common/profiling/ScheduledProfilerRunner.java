@@ -145,33 +145,6 @@ public class ScheduledProfilerRunner
         }
     }
 
-    static class ImmutableTick implements Tick
-    {
-
-        private static ImmutableTick zero()
-        {
-            return new ImmutableTick( 0 );
-        }
-
-        private final long counter;
-
-        private ImmutableTick( long counter )
-        {
-            this.counter = counter;
-        }
-
-        @Override
-        public long counter()
-        {
-            return counter;
-        }
-
-        ImmutableTick next()
-        {
-            return new ImmutableTick( counter + 1 );
-        }
-    }
-
     static class ScheduledProfilerRun implements Runnable
     {
 
@@ -183,7 +156,7 @@ public class ScheduledProfilerRunner
         private final Jvm jvm;
         private final Pid pid;
 
-        private ImmutableTick tick = ImmutableTick.zero();
+        private Tick tick = Tick.zero();
 
         private ScheduledProfilerRun(
                 ScheduledProfiler scheduledProfiler,

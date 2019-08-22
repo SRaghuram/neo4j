@@ -28,7 +28,7 @@ public class NativeMemoryTrackingSnapshot
         if ( matcher.matches() )
         {
             String counter = matcher.group( "counter" );
-            return Long.valueOf( counter );
+            return Long.parseLong( counter );
         }
         throw new IllegalArgumentException( String.format( "snapshot filename %s is not parsable", snapshotFilename ) );
     }

@@ -11,20 +11,20 @@ import java.util.Set;
 public class NativeMemoryTrackingSummary
 {
 
-    private final Map<String,NativeMemoryTrackingCategory> map;
+    private final Map<String,NativeMemoryTrackingCategory> categories;
 
-    public NativeMemoryTrackingSummary( Map<String,NativeMemoryTrackingCategory> map )
+    public NativeMemoryTrackingSummary( Map<String,NativeMemoryTrackingCategory> categories )
     {
-        this.map = map;
+        this.categories = categories;
     }
 
-    public NativeMemoryTrackingCategory getCategory( String string )
+    public NativeMemoryTrackingCategory getCategory( String category )
     {
-        return map.get( string );
+        return categories.get( category );
     }
 
     public Set<String> getCategories()
     {
-        return map.keySet();
+        return categories.keySet();
     }
 }

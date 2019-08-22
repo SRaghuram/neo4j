@@ -5,20 +5,20 @@
  */
 package com.neo4j.bench.common.profiling.nmt;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.nio.file.Paths;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class NativeMemoryTrackingSummaryParserTest
 {
     @Test
     public void parseNativeMemoryTrackingSummary() throws Exception
     {
-        NativeMemoryTrackingSummaryParser parser = new NativeMemoryTrackingSummaryParser();
-        NativeMemoryTrackingSummary summary = parser.parse( Paths.get(
-                "src/test/resources/NativeMemoryTrackingSummaryReportTest/test.nmt.summary" ) );
+        NativeMemoryTrackingSummary summary =
+                NativeMemoryTrackingSummaryParser.parse(
+                        Paths.get( "src/test/resources/nmt/nmt_0.snapshot" ) );
 
         assertEquals( 4194304, summary.getCategory( "Java Heap" ).getReserved() );
         assertEquals( 4194304, summary.getCategory( "Java Heap" ).getCommitted() );

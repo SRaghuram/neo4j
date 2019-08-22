@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.common.profiling;
 
+import com.google.common.collect.ImmutableList;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.Benchmark.Mode;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -19,6 +20,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 
 import static java.util.Collections.emptyMap;
 
@@ -46,7 +48,7 @@ public class ScheduledProfilerRunnerTest
         ScheduledProfilerRunner scheduledProfilers = ScheduledProfilerRunner.from( Collections.emptyList() );
         Jvm jvm = Jvm.defaultJvmOrFail();
         // when
-        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, null, jvm, new Pid( 1111 ) );
+        scheduledProfilers.start( forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, jvm, new Pid( 1111 ) );
         // then
         assertTrue( scheduledProfilers.isRunning() );
         //when
@@ -65,8 +67,8 @@ public class ScheduledProfilerRunnerTest
         Benchmark benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
         ForkDirectory forkDirectory = benchmarkDirectory.findOrCreate( "forkName", Collections.emptyList() );
-        CompletableFuture<Tick> futureTick = new CompletableFuture<Tick>();
-        List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( futureTick ) );
+        CompletableFuture<List<Tick>> futureTicks = new CompletableFuture<>();
+        List<ExternalProfiler> externalProfilers = Arrays.asList( new SimpleScheduledProfiler( futureTicks, 5 ) );
         ScheduledProfilerRunner scheduledProfilers = ScheduledProfilerRunner.from( externalProfilers );
         Jvm jvm = Jvm.defaultJvmOrFail();
         // when
@@ -74,14 +76,14 @@ public class ScheduledProfilerRunnerTest
                 forkDirectory,
                 benchmarkGroup,
                 benchmark,
-                new Parameters( Collections.emptyMap() ),
+                Parameters.NONE,
                 jvm,
                 new Pid( 1111 ) );
         try
         {
             // then, wait double time of default fixed rate,
             // to make sure scheduled profiler gets called
-            assertEquals(  0, futureTick.get( 10, TimeUnit.SECONDS ).counter() );
+            assertArrayEquals( new long[] {0,1,2,3,4}, futureTicks.get( 1, TimeUnit.MINUTES).stream().mapToLong( Tick::counter ).toArray());
         }
         finally
         {
@@ -92,11 +94,15 @@ public class ScheduledProfilerRunnerTest
 
     public static class SimpleScheduledProfiler implements ExternalProfiler, ScheduledProfiler
     {
-        private final CompletableFuture<Tick> future;
+        private final List<Tick> ticks;
+        private final CompletableFuture<List<Tick>> futureTicks;
+        private int waitUntil;
 
-        public SimpleScheduledProfiler( CompletableFuture<Tick> future )
+        public SimpleScheduledProfiler( CompletableFuture<List<Tick>> futureTicks, int waitUntil )
         {
-            this.future = future;
+            this.ticks = new ArrayList<Tick>();
+            this.futureTicks = futureTicks;
+            this.waitUntil = waitUntil;
         }
 
         @Override
@@ -129,7 +135,11 @@ public class ScheduledProfilerRunnerTest
         public void onSchedule( Tick tick, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
                 Parameters additionalParameters, Jvm jvm, Pid pid )
         {
-            future.complete( tick );
+            ticks.add( tick );
+            if ( ticks.size() == waitUntil )
+            {
+                futureTicks.complete( ImmutableList.copyOf( ticks ));
+            }
         }
     }
 }

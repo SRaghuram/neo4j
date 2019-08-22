@@ -9,7 +9,27 @@ package com.neo4j.bench.common.profiling;
  * Used by {@link ScheduledProfiler} to indicate next invocation of profiler by scheduler.
  *
  */
-public interface Tick
+public class Tick
 {
-    long counter();
+    public static Tick zero()
+    {
+        return new Tick( 0 );
+    }
+
+    private final long counter;
+
+    private Tick( long counter )
+    {
+        this.counter = counter;
+    }
+
+    public long counter()
+    {
+        return counter;
+    }
+
+    public Tick next()
+    {
+        return new Tick( counter + 1 );
+    }
 }
