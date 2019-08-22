@@ -16,7 +16,6 @@ import com.neo4j.bench.common.util.JsonUtil;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -78,16 +77,16 @@ abstract class SecondaryRecordingCreator
         Set<String> requiredEnvironmentVariables()
         {
             return secondaryRecordingCreators.stream()
-                    .flatMap( c -> c.requiredEnvironmentVariables().stream() )
-                    .collect( toSet() );
+                                             .flatMap( c -> c.requiredEnvironmentVariables().stream() )
+                                             .collect( toSet() );
         }
 
         @Override
         Set<RecordingType> recordingTypes()
         {
             return secondaryRecordingCreators.stream()
-                    .flatMap( c -> c.recordingTypes().stream() )
-                    .collect( toSet() );
+                                             .flatMap( c -> c.recordingTypes().stream() )
+                                             .collect( toSet() );
         }
 
         @Override
@@ -121,7 +120,7 @@ abstract class SecondaryRecordingCreator
             try
             {
                 // generate collapsed stack frames, into temporary location
-                Path collapsedStackFrames = Files.createTempFile( Paths.get( forkDirectory.toAbsolutePath() ), "", ".jfr.collapsed.stack" );
+                Path collapsedStackFrames = forkDirectory.create( recordingDescriptor.sanitizedName() + ".collapsed.stack" );
                 StackCollapse stackCollapse = JfrMemoryStackCollapse.forMemoryAllocation( jfrRecording );
                 StackCollapseWriter.write( stackCollapse, collapsedStackFrames );
                 // generate flamegraphs

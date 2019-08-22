@@ -352,7 +352,7 @@ public class BenchmarkUtil
 
     public static void appendFile( Path file, Instant timeStamp, String... lines )
     {
-        try ( PrintWriter printer = new PrintWriter( Files.newOutputStream( file, StandardOpenOption.APPEND ) ) )
+        try ( PrintWriter printer = new PrintWriter( Files.newOutputStream( file, StandardOpenOption.APPEND ), true /*auto flush*/ ) )
         {
             Arrays.stream( lines ).forEach( line -> printer.println( "[" + timeStamp + "] " + line ) );
         }
