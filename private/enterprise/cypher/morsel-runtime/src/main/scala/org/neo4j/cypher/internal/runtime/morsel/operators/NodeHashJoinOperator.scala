@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfi
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.NodeHashJoinOperator.{HashTable, HashTableFactory}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -47,7 +47,8 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          operatorInput: OperatorInput,
                          parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
+                         resources: QueryResources,
+                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {
       Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))

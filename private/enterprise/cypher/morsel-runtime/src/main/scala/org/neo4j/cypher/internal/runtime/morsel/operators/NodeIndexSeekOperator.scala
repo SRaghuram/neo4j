@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.ManyQueriesExactNodeIndexSeekTaskTemplate.{nextMethod, queryIteratorMethod}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -47,11 +48,12 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
-                         inputMorsel: MorselParallelizer,
-                         parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+  override protected def nextTasks(queryContext: QueryContext,
+                                   state: QueryState,
+                                   inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }

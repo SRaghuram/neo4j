@@ -10,6 +10,7 @@ import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateMaps}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.{CypherCoercions, CypherFunctions}
 import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate, StringContainsPredicate, StringSuffixPredicate}
@@ -49,6 +50,7 @@ object OperatorCodeGenHelperTemplates {
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
+  val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
 
   // Other method parameters
   val QUERY_RESOURCE_PARAMETER: Parameter = param[QueryResources]("resources")

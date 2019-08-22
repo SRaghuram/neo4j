@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{Buffer, LHSAccumulatingRHSStreamingBuffer, OptionalMorselBuffer, Sink}
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{LHSAccumulatingRHSStreamingBuffer, OptionalMorselBuffer, Sink}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, MorselParallelizer}
 
 /**
@@ -237,4 +237,9 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * Return a string representation of the state related to the given pipeline. Meant for debugging.
     */
   def prettyString(pipeline: ExecutablePipeline): String
+
+  /**
+   * Get a map used to lookup an ArgumentStateMap by id
+   */
+  def argumentStateMaps: ArgumentStateMaps
 }

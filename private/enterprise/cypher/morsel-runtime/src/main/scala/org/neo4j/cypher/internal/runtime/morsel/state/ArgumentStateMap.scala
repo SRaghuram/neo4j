@@ -199,6 +199,13 @@ object ArgumentStateMap {
       * Get the argument state map for the given id.
       */
     def apply(argumentStateMapId: ArgumentStateMapId): ArgumentStateMap[_ <: ArgumentState]
+
+    /**
+     * This is used from generated code where interoperability with AnyVal (here ArgumentStateMapId) is limited
+     */
+    def applyByIntId(argumentStateMapId: Int): ArgumentStateMap[_ <: ArgumentState] = {
+      apply(ArgumentStateMapId(argumentStateMapId))
+    }
   }
 
   /**

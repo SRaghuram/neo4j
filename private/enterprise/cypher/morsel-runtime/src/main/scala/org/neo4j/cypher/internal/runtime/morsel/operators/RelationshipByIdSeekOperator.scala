@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.RelationshipByIdSeekOperator.{asId, asIdMethod}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -163,11 +164,12 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
 
   override def toString: String = "DirectedRelationshipByIdTask"
 
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
-                         inputMorsel: MorselParallelizer,
-                         parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+  override protected def nextTasks(queryContext: QueryContext,
+                                   state: QueryState,
+                                   inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
       override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
@@ -192,11 +194,11 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
 }
 
 class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
-                                           relationship: Int,
-                                           startNode: Int,
-                                           endNode: Int,
-                                           relId: SeekArgs,
-                                           argumentSize: SlotConfiguration.Size)
+                                             relationship: Int,
+                                             startNode: Int,
+                                             endNode: Int,
+                                             relId: SeekArgs,
+                                             argumentSize: SlotConfiguration.Size)
   extends RelationshipByIdSeekOperator(workIdentity, relationship, startNode, endNode, relId, argumentSize) {
 
   /**
@@ -207,11 +209,12 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
   private var forwardDirection = true
 
   override def toString: String = "UndirectedRelationshipByIdTask"
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
-                         inputMorsel: MorselParallelizer,
-                         parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+  override protected def nextTasks(queryContext: QueryContext,
+                                   state: QueryState,
+                                   inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
       override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {

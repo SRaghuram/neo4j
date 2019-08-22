@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
@@ -48,7 +49,8 @@ class OptionalOperator(val workIdentity: WorkIdentity,
                            state: QueryState,
                            operatorInput: OperatorInput,
                            parallelism: Int,
-                           resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
       val input: MorselData = operatorInput.takeData()
       if (input != null) {
         IndexedSeq(new OTask(input))

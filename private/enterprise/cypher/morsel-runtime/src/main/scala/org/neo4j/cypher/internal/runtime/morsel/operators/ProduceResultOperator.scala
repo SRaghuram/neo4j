@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -42,11 +43,12 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   //==========================================================================
   // This is called when ProduceResult is the start operator of a new pipeline
-  override def nextTasks(context: QueryContext,
-                         state: QueryState,
-                         inputMorsel: MorselParallelizer,
-                         parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+  override protected def nextTasks(context: QueryContext,
+                                   state: QueryState,
+                                   inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 
   class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {

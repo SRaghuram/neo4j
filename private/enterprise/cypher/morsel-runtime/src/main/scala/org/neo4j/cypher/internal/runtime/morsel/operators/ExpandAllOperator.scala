@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -35,11 +36,12 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "ExpandAll"
 
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
-                         inputMorsel: MorselParallelizer,
-                         parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+  override protected def nextTasks(queryContext: QueryContext,
+                                   state: QueryState,
+                                   inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {

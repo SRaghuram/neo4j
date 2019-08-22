@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
@@ -17,11 +18,12 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "Argument"
 
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
-                         inputMorsel: MorselParallelizer,
-                         parallelism: Int,
-                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
+  override protected def nextTasks(queryContext: QueryContext,
+                                   state: QueryState,
+                                   inputMorsel: MorselParallelizer,
+                                   parallelism: Int,
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {

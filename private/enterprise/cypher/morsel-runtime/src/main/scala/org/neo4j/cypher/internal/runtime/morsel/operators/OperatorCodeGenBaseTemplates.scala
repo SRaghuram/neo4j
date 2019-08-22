@@ -11,14 +11,15 @@ import java.util.concurrent.atomic.AtomicLong
 import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
-import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, OperatorExpressionCompiler}
+import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
+import org.neo4j.cypher.internal.runtime.morsel.operators.CompiledStreamingOperator.{CompiledOperatorStateFactory, CompiledTaskFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
-import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps}
+import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -28,8 +29,16 @@ import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
 
+object CompiledStreamingOperator {
+  type CompiledTaskFactory = (Read, MorselParallelizer, ArgumentStateMaps) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
+  type CompiledOperatorStateFactory = (CompiledStreamingOperator, ArgumentStateMapCreator, StateFactory) => OperatorState
+}
+
+// Used to compose an operator based on generated code
 class CompiledStreamingOperator(val workIdentity: WorkIdentity,
-                                val taskFactory: CompiledTaskFactory) extends StreamingOperator {
+                                val taskFactory: CompiledTaskFactory,
+                                val compiledStateFactory: CompiledOperatorStateFactory) extends StreamingOperator {
+
   /**
     * Initialize new tasks for this operator. This code path let's operators create
     * multiple output rows for each row in `inputMorsel`.
@@ -38,8 +47,13 @@ class CompiledStreamingOperator(val workIdentity: WorkIdentity,
                                    state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
-                                   resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    taskFactory(context.transactionalContext.dataRead, inputMorsel)
+                                   resources: QueryResources,
+                                   argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+    taskFactory(context.transactionalContext.dataRead, inputMorsel, argumentStateMaps)
+  }
+
+  override final def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = {
+    compiledStateFactory(this, argumentStateCreator, stateFactory)
   }
 }
 
@@ -48,19 +62,35 @@ object ContinuableOperatorTaskWithMorselGenerator {
   private val COUNTER = new AtomicLong(0)
   private def className(): String = "Operator" + COUNTER.getAndIncrement()
 
-  type CompiledTaskFactory = (Read, MorselParallelizer) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
-
   /**
-    * Responsible for generating a tailored class and creates a factory for creating new instances of the class
+    * Responsible for generating a tailored class for the OperatorTask, and composing an operator creating new instances of that class
     */
-  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate, workIdentity: WorkIdentity): CompiledTaskFactory = {
+  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
+                      workIdentity: WorkIdentity,
+                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): StreamingOperator = {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
     val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className(), Seq(staticWorkIdentity)))
-    val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext])
+    val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext], classOf[ArgumentStateMaps])
 
-    (dataRead, inputMorsel) => {
-      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy))
+    // TBD: Use inheritance (and create an anonymous class directly based on StreamingOperator) instead of composition?
+    val taskFactory: CompiledTaskFactory = (dataRead, inputMorsel, argumentStateMaps) => {
+      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy, argumentStateMaps))
     }
+    val operatorStateFactory: CompiledOperatorStateFactory =
+      if (argumentStates.nonEmpty) {
+        (operator, argumentStateMapCreator, _) => {
+          argumentStates.map { case (argumentStateMapId, argumentStateFactory) =>
+            argumentStateMapCreator.createArgumentStateMap(argumentStateMapId, argumentStateFactory)
+          }
+          operator
+        }
+      } else {
+        (operator, _, _) => {
+          operator
+        }
+      }
+
+    new CompiledStreamingOperator(workIdentity, taskFactory, operatorStateFactory)
   }
 
 }
@@ -334,17 +364,6 @@ trait OperatorTaskTemplate {
     * }}}
     */
   def genCloseCursors: IntermediateRepresentation
-
-  /**
-    * Responsible for optionally generating:
-    * {{{
-    *   override filterCancelledArguments(operatorCloser: OperatorCloser): Boolean
-    * }}}
-    *
-    * If this returns None the base class method will not be overridden by generated code
-    */
-  def genFilterCancelledArguments: Option[IntermediateRepresentation] =
-    inner.genFilterCancelledArguments
 }
 
 object OperatorTaskTemplate {
@@ -379,7 +398,8 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
       extendsClass = None,
       implementsInterfaces = Seq(typeRefOf[CompiledTask]),
       constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER,
-                                  INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
+                                  INPUT_MORSEL_CONSTRUCTOR_PARAMETER,
+                                  ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER),
       initializationCode = genInit,
       methods = Seq(
         MethodDeclaration("initializeProfileEvents",
@@ -481,17 +501,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                           parameters = Seq.empty,
                           body = loadField(INPUT_MORSEL)
         )
-      ) ++ {
-        val maybeOverrideFilterCancelledArguments = genFilterCancelledArguments
-        maybeOverrideFilterCancelledArguments.map { ir =>
-          MethodDeclaration("filterCancelledArguments",
-            owner = typeRefOf[CompiledTask],
-            returnType = typeRefOf[Boolean],
-            parameters = Seq(OPERATOR_CLOSER_PARAMETER),
-            body = ir
-          )
-        }
-      },
+      ),
       // NOTE: This has to be called after genOperate!
       genFields = () => staticFields ++ Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
                                                                                              op.genProfileEventField ++
@@ -611,11 +621,4 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override protected def genCreateState: IntermediateRepresentation = noop()
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
-
-  // Code of the base class method:
-  //  override def genFilterCancelledArguments: IntermediateRepresentation = {
-  //    invoke(load(OPERATOR_CLOSER_PARAMETER.name), method[OperatorCloser, Boolean, MorselExecutionContext]("filterCancelledArguments"),
-  //      loadField(INPUT_MORSEL))
-  //  }
-  override def genFilterCancelledArguments: Option[IntermediateRepresentation] = None
 }

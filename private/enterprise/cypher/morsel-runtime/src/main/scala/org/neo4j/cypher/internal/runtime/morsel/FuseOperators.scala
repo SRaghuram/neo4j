@@ -15,8 +15,10 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
+import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.LazyLimitStateFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListLiteral}
@@ -149,6 +151,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       acc.copy(
         template = innermostTemplate,
         fusedPlans = List.empty,
+        argumentStates = List.empty,
         unhandledPlans = nextPlan :: acc.fusedPlans.filterNot(_ eq outputPlan) ::: acc.unhandledPlans,
         unhandledOutput = output)
     }
@@ -233,7 +236,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val serialExecutionOnly: Boolean = !parallelExecution || pipeline.serial
 
     val fusedPipeline =
-      reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, initUnhandledOutput)) {
+      reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, List.empty, initUnhandledOutput)) {
         case (acc, nextPlan) => nextPlan match {
 
           case plan@plans.AllNodesScan(nodeVariableName, _) =>
@@ -511,10 +514,16 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           // Special case for limit when not nested under an apply and with serial execution
           case plan@Limit(_, countExpression, DoNotIncludeTies) if hasNoNestedArguments(plan) && serialExecutionOnly =>
-            val newTemplate = new SimpleLimitOperatorTaskTemplate(acc.template, plan.id, compileExpression(countExpression))(expressionCompiler)
+            val argumentStateMapId = operatorFactory.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            val newTemplate = new SerialTopLevelLimitOperatorTaskTemplate(acc.template,
+                                                                          plan.id,
+                                                                          innermostTemplate,
+                                                                          argumentStateMapId,
+                                                                          compileExpression(countExpression))(expressionCompiler)
             acc.copy(
               template = newTemplate,
-              fusedPlans = nextPlan :: acc.fusedPlans
+              fusedPlans = nextPlan :: acc.fusedPlans,
+              argumentStates = (argumentStateMapId, LazyLimitStateFactory) :: acc.argumentStates
             )
 
           case _ =>
@@ -530,8 +539,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
       try {
-        val taskFactory = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity)
-        (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
+        val compiledOperator = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate,
+                                                                                          workIdentity,
+                                                                                          fusedPipeline.argumentStates)
+        (Some(compiledOperator), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
       } catch {
         case _: CantCompileQueryException =>
           (None, middlePlans, output)
@@ -546,5 +557,6 @@ object FuseOperators {
 
 case class FusionPlan(template: OperatorTaskTemplate,
                       fusedPlans: List[LogicalPlan],
+                      argumentStates: List[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])] = List.empty,
                       unhandledPlans: List[LogicalPlan] = List.empty,
                       unhandledOutput: OutputDefinition = NoOutput)

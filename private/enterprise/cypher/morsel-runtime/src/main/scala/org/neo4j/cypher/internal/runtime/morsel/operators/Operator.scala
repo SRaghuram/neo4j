@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
@@ -105,6 +105,8 @@ trait Operator extends HasWorkIdentity {
     * Create a new execution state for this operator.
     *
     * @param argumentStateCreator creator used to construct a argumentStateMap for this operator state
+    * @param stateFactory The state factory for the ExecutionState.
+   *                      This is used e.g. to create buffers, or in many places just to access the memory tracker
     * @return the new execution state for this operator.
     */
   def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState
@@ -123,7 +125,8 @@ trait OperatorState {
                 state: QueryState,
                 operatorInput: OperatorInput,
                 parallelism: Int,
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTask]
+                resources: QueryResources,
+                argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask]
 }
 
 /**
@@ -135,7 +138,8 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
                                state: QueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
-                               resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
+                               resources: QueryResources,
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
     val input = operatorInput.takeAccumulator[DATA, ACC]()
     if (input != null) {
       try {
@@ -167,11 +171,12 @@ trait StreamingOperator extends Operator with OperatorState {
                                state: QueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
-                               resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+                               resources: QueryResources,
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
     val input = operatorInput.takeMorsel()
     if (input != null) {
       try {
-        nextTasks(context, state, input, parallelism, resources)
+        nextTasks(context, state, input, parallelism, resources, argumentStateMaps)
       } catch {
         case t: Throwable =>
           throw SchedulingInputException(input, t)
@@ -189,9 +194,10 @@ trait StreamingOperator extends Operator with OperatorState {
                           state: QueryState,
                           inputMorsel: MorselParallelizer,
                           parallelism: Int,
-                          resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel]
+                          resources: QueryResources,
+                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
-  override final def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = this
+  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = this
 }
 
 trait MiddleOperator extends HasWorkIdentity {

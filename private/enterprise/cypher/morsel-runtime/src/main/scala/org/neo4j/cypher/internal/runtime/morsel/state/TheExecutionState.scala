@@ -46,11 +46,13 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   // of any reducing operators.
 
   private val queryStatus = new QueryStatus
-  private val argumentStateMaps = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
+  private val argumentStateMapHolder = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
+  override val argumentStateMaps: ArgumentStateMap.ArgumentStateMaps = id => argumentStateMapHolder(id.x)
   private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
                                              tracker,
-                                             id => argumentStateMaps(id.x),
+                                             argumentStateMaps,
                                              stateFactory)
+
 
   // This can hold a CleanUpTask if the query was cancelled. It will get scheduled before anything else.
   private val cleanUpTaskHolder = stateFactory.newSingletonBuffer[CleanUpTask]()
@@ -225,7 +227,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                                                                 factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
     val argumentSlotOffset = executionGraphDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
     val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory)
-    argumentStateMaps(argumentStateMapId.x) = asm
+    argumentStateMapHolder(argumentStateMapId.x) = asm
     asm
   }
 
