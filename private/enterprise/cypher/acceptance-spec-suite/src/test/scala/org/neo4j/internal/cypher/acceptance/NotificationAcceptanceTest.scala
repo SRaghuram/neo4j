@@ -455,6 +455,43 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     resultCorrectlySpelled.notifications shouldBe empty
   }
 
+  test("should warn for missing label and recompile if warning was invalidated later") {
+    // when
+    val resultFirst = executeSingle("EXPLAIN MATCH (a:NO_SUCH_THING) RETURN a")
+
+    // then
+    resultFirst.notifications should contain only MISSING_LABEL.notification(new graphdb.InputPosition(17, 1, 18), label("NO_SUCH_THING"))
+
+    // given
+    executeSingle("CREATE (:NO_SUCH_THING)")
+
+    // when
+    val resultSecond = executeSingle("EXPLAIN MATCH (a:NO_SUCH_THING) RETURN a")
+
+    //then
+    resultSecond.notifications shouldBe empty
+  }
+
+  test("should warn for multiple missing labels and recompile if warning was invalidated later") {
+    // when
+    val resultFirst = executeSingle("EXPLAIN MATCH (a:NO_SUCH_THING)-->(:OTHER) RETURN a")
+
+    // then
+    resultFirst.notifications should contain allOf(
+      MISSING_LABEL.notification(new graphdb.InputPosition(17, 1, 18), label("NO_SUCH_THING")),
+      MISSING_LABEL.notification(new graphdb.InputPosition(36, 1, 37), label("OTHER"))
+    )
+
+    // given
+    executeSingle("CREATE (:NO_SUCH_THING)")
+
+    // when
+    val resultSecond = executeSingle("EXPLAIN MATCH (a:NO_SUCH_THING)-->(:OTHER) RETURN a")
+
+    //then
+    resultSecond.notifications should contain only MISSING_LABEL.notification(new graphdb.InputPosition(36, 1, 37), label("OTHER"))
+  }
+
   test("should not warn for missing label on update") {
 
     //when
@@ -479,6 +516,43 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     resultCorrectlySpelled.notifications shouldBe empty
   }
 
+  test("should warn for missing rel type and recompile if warning was invalidated later") {
+    // when
+    val resultFirst = executeSingle("EXPLAIN MATCH (a)-[:NO_SUCH_THING]->(a) RETURN a")
+
+    // then
+    resultFirst.notifications should contain only MISSING_REL_TYPE.notification(new graphdb.InputPosition(20, 1, 21), relationshipType("NO_SUCH_THING"))
+
+    // given
+    executeSingle("CREATE (a)-[:NO_SUCH_THING]->(a)")
+
+    // when
+    val resultSecond = executeSingle("EXPLAIN MATCH (a)-[:NO_SUCH_THING]->(a) RETURN a")
+
+    //then
+    resultSecond.notifications shouldBe empty
+  }
+
+  test("should warn for multiple missing rel types and recompile if warning was invalidated later") {
+    // when
+    val resultFirst = executeSingle("EXPLAIN MATCH (a)-[:NO_SUCH_THING]->(a)<-[:OTHER]-() RETURN a")
+
+    // then
+    resultFirst.notifications should contain allOf(
+      MISSING_REL_TYPE.notification(new graphdb.InputPosition(20, 1, 21), relationshipType("NO_SUCH_THING")),
+      MISSING_REL_TYPE.notification(new graphdb.InputPosition(43, 1, 44), relationshipType("OTHER"))
+    )
+
+    // given
+    executeSingle("CREATE (a)-[:NO_SUCH_THING]->(a)")
+
+    // when
+    val resultSecond = executeSingle("EXPLAIN MATCH (a)-[:NO_SUCH_THING]->(a)<-[:OTHER]-() RETURN a")
+
+    //then
+    resultSecond.notifications should contain only MISSING_REL_TYPE.notification(new graphdb.InputPosition(43, 1, 44), relationshipType("OTHER"))
+  }
+
   test("should warn for misspelled/missing property names") {
     //given
     createNode(Map("prop" -> 42))
@@ -490,6 +564,43 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       NotificationCode.MISSING_PROPERTY_NAME.notification(new graphdb.InputPosition(26, 1, 27), propertyName("propp")))
 
     resultCorrectlySpelled.notifications shouldBe empty
+  }
+
+  test("should warn for missing property key name and recompile if warning was invalidated later") {
+    // when
+    val resultFirst = executeSingle("EXPLAIN MATCH (a) RETURN a.name")
+
+    // then
+    resultFirst.notifications should contain only MISSING_PROPERTY_NAME.notification(new graphdb.InputPosition(27, 1, 28), propertyName("name"))
+
+    // given
+    executeSingle("CREATE (a{name:'Tim'})")
+
+    // when
+    val resultSecond = executeSingle("EXPLAIN MATCH (a) RETURN a.name")
+
+    //then
+    resultSecond.notifications shouldBe empty
+  }
+
+  test("should warn for multiple missing property key names and recompile if warning was invalidated later") {
+    // when
+    val resultFirst = executeSingle("EXPLAIN MATCH (a) RETURN a.name, a.age")
+
+    // then
+    resultFirst.notifications should contain allOf(
+      MISSING_PROPERTY_NAME.notification(new graphdb.InputPosition(27, 1, 28), propertyName("name")),
+      MISSING_PROPERTY_NAME.notification(new graphdb.InputPosition(35, 1, 36), propertyName("age"))
+    )
+
+    // given
+    executeSingle("CREATE (a{name:'Tim'})")
+
+    // when
+    val resultSecond = executeSingle("EXPLAIN MATCH (a) RETURN a.name, a.age")
+
+    //then
+    resultSecond.notifications should contain only MISSING_PROPERTY_NAME.notification(new graphdb.InputPosition(35, 1, 36), propertyName("age"))
   }
 
   test("should not warn for missing properties on update") {
