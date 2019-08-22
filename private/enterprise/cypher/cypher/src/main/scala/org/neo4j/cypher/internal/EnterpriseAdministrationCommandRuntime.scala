@@ -88,11 +88,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
-            .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create the specified user '$userName'.")))
+            .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified user '$userName'.")))
             .handleError(e => e.getCause match {
               case _: UniquePropertyValueValidationException =>
                 new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", e)
-              case _ => new InvalidArgumentsException(s"Failed to create the specified user '$userName'.", e)
+              case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", e)
             })
         )
       } finally {
@@ -124,7 +124,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': User does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to alter the specified user '$userName'.", e))
+          .handleError(e => new IllegalStateException(s"Failed to alter the specified user '$userName'.", e))
           .handleResult((_, value) => {
             val maybeThrowable = initialPassword match {
               case Some(password) =>
@@ -181,11 +181,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN new.name""".stripMargin,
         VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create the specified role '$roleName'.")))
+          .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
           .handleError(e => e.getCause match {
             case _: UniquePropertyValueValidationException =>
               new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", e)
-            case _ => new InvalidArgumentsException(s"Failed to create the specified role '$roleName'.", e)
+            case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", e)
           }),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
@@ -209,7 +209,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |MERGE (to)-[g:$grantDeny]->(a)
            |RETURN from.name, to.name, count(g)""".stripMargin,
         VirtualValues.map(Array("from", "to"), Array(Values.stringValue(from), Values.stringValue(to))),
-        QueryHandler.handleError(e => new InvalidArgumentsException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
+        QueryHandler.handleError(e => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -221,7 +221,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified role '$roleName': Role does not exist.")))
-          .handleError(e => new InvalidArgumentsException(s"Failed to delete the specified role '$roleName'.", e))
+          .handleError(e => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", e))
       )
 
     // GRANT ROLE foo TO user
@@ -238,7 +238,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleError {
             case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
               new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)
-            case e => new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName'.", e)
+            case e => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
@@ -408,7 +408,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleError(e => e.getCause match {
             case _: UniquePropertyValueValidationException =>
               new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", e)
-            case _ => new InvalidArgumentsException(s"Failed to create the specified database '$dbName'.", e)
+            case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", e)
           })
       )
 
@@ -555,7 +555,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         .handleError {
           case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
             new InvalidArgumentsException(s"$startOfErrorMessage: Role '$roleName' does not exist.", e)
-          case e => new InvalidArgumentsException(s"$startOfErrorMessage.", e)
+          case e => new IllegalStateException(s"$startOfErrorMessage.", e)
         },
       source
     )
