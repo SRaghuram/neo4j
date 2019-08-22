@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package org.neo4j.cypher.internal.runtime.spec.stress
+
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+
+abstract class IndexEndsWithScanStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(runtime)
+    with RHSOfApplyLeafStressSuite {
+
+  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
+    RHSOfApplyLeafTD(
+      _.nodeIndexOperator(s"$variable:Label(text ENDS WITH ???)", paramExpr = Some(function("toString", varFor(propArgument))), argumentIds = Set(propArgument)),
+      rowsComingIntoTheOperator =>
+        for {
+          Array(x) <- rowsComingIntoTheOperator
+          y <- nodes.filter(_.getProperty("text").asInstanceOf[String].endsWith(x.getId.toString))
+        } yield Array(x, y)
+    )
+}

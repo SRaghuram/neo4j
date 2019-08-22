@@ -76,6 +76,7 @@ class ParallelRuntimeIndexContainsScanStressTest extends IndexContainsScanStress
 // INDEX ENDS WITH SCAN
 class ParallelRuntimeNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeIndexEndsWithScanStressTest extends IndexEndsWithScanStressTestBase(PARALLEL)
 
 // ARGUMENT
 class ParallelRuntimeArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
