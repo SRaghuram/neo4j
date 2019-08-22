@@ -9,7 +9,7 @@ import java.util
 import java.util.concurrent.atomic.AtomicLong
 import java.util.{Optional, regex}
 
-import org.neo4j.codegen.api.CodeGeneration.compileClass
+import org.neo4j.codegen.api.CodeGeneration.compileAnonymousClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
@@ -93,7 +93,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                 }: _*),
                                 nullCheckIfRequired(expression)
                               ))))
-      compileClass(classDeclaration).getDeclaredConstructor().newInstance()
+      compileAnonymousClass(classDeclaration).getDeclaredConstructor().newInstance()
     }
   }
 
@@ -128,7 +128,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                 }: _*),
                                 expression.ir
                               ))))
-      compileClass(classDeclaration).getDeclaredConstructor().newInstance()
+      compileAnonymousClass(classDeclaration).getDeclaredConstructor().newInstance()
     })
   }
 
@@ -184,7 +184,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                 declarations(grouping.getKey),
                                 nullCheckIfRequired(grouping.getKey)))
           ))
-      Some(compileClass(classDeclaration).getDeclaredConstructor().newInstance())
+      Some(compileAnonymousClass(classDeclaration).getDeclaredConstructor().newInstance())
     }
   }
 

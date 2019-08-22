@@ -539,9 +539,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
       try {
-        val compiledOperator = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate,
-                                                                                          workIdentity,
-                                                                                          fusedPipeline.argumentStates)
+        val compiledOperator = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, fusedPipeline.argumentStates)
         (Some(compiledOperator), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
       } catch {
         case _: CantCompileQueryException =>

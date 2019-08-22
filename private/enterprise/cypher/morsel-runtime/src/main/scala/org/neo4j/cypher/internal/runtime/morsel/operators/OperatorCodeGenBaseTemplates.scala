@@ -8,18 +8,18 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
-import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.CompiledStreamingOperator.{CompiledOperatorStateFactory, CompiledTaskFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps}
-import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, MorselParallelizer, StateFactory}
+import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -29,16 +29,8 @@ import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
 
-object CompiledStreamingOperator {
-  type CompiledTaskFactory = (Read, MorselParallelizer, ArgumentStateMaps) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
-  type CompiledOperatorStateFactory = (CompiledStreamingOperator, ArgumentStateMapCreator, StateFactory) => OperatorState
-}
 
-// Used to compose an operator based on generated code
-class CompiledStreamingOperator(val workIdentity: WorkIdentity,
-                                val taskFactory: CompiledTaskFactory,
-                                val compiledStateFactory: CompiledOperatorStateFactory) extends StreamingOperator {
-
+trait CompiledStreamingOperator extends StreamingOperator {
   /**
     * Initialize new tasks for this operator. This code path let's operators create
     * multiple output rows for each row in `inputMorsel`.
@@ -49,48 +41,131 @@ class CompiledStreamingOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    taskFactory(context.transactionalContext.dataRead, inputMorsel, argumentStateMaps)
+    IndexedSeq(compiledNextTask(context.transactionalContext.dataRead, inputMorsel.nextCopy, argumentStateMaps))
   }
 
-  override final def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = {
-    compiledStateFactory(this, argumentStateCreator, stateFactory)
+  protected def compiledNextTask(dataRead: Read,
+                                 inputMorsel: MorselExecutionContext,
+                                 argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithMorsel
+}
+
+object CompiledStreamingOperator {
+
+  type CompiledTaskFactory = (Read, MorselParallelizer, ArgumentStateMaps) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
+
+  def getClassDeclaration(packageName: String,
+                          className: String,
+                          taskClazz: Class[CompiledTask],
+                          workIdentityField: StaticField,
+                          argumentStates:  Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): ClassDeclaration[CompiledStreamingOperator] = {
+
+    def staticFieldName(obj: AnyRef) = s"FIELD_${System.identityHashCode(obj)}"
+
+    val argumentStateFields = argumentStates.map {
+      case (_, factory) =>
+        staticConstant[ArgumentStateFactory[ArgumentState]](staticFieldName(factory), factory)
+    }.toIndexedSeq
+
+    val createState = block(
+      argumentStates.map {
+        case (argumentStateMapId, factory) =>
+          /**
+            * {{{
+            *   argumentStateCreator.createStateMap(mapId, FACTORY_i)
+            * }}}
+            */
+          invokeSideEffect(load("argumentStateCreator"),
+                           method[ArgumentStateMapCreator,
+                                  ArgumentStateMap[ArgumentState],
+                                  Int,
+                                  ArgumentStateFactory[ArgumentState]]("createArgumentStateMap"),
+                           constant(argumentStateMapId.x),
+                 getStatic[ArgumentStateFactory[ArgumentState]](staticFieldName(factory)))
+      }: _*)
+
+    ClassDeclaration[CompiledStreamingOperator](
+      packageName,
+      className,
+      extendsClass = None,
+      implementsInterfaces = Seq(typeRefOf[CompiledStreamingOperator]),
+      constructorParameters = Seq(),
+      initializationCode = noop(),
+      methods = Seq(
+        MethodDeclaration("compiledNextTask",
+                          owner = typeRefOf[CompiledStreamingOperator],
+                          returnType = typeRefOf[ContinuableOperatorTaskWithMorsel],
+                          parameters = Seq(param[Read]("dataRead"),
+                                           param[MorselExecutionContext]("inputMorsel"),
+                                           param[ArgumentStateMaps]("argumentStateMaps")),
+                          body = newInstance(Constructor(TypeReference.typeReference(taskClazz),
+                                                         Seq(TypeReference.typeReference(classOf[Read]),
+                                                             TypeReference.typeReference(classOf[MorselExecutionContext]),
+                                                             TypeReference.typeReference(classOf[ArgumentStateMaps]))),
+                                             load("dataRead"),
+                                             load("inputMorsel"),
+                                             load("argumentStateMaps"))),
+        MethodDeclaration("workIdentity",
+                          owner = typeRefOf[CompiledStreamingOperator],
+                          returnType = typeRefOf[WorkIdentity],
+                          parameters = Seq.empty,
+                          body = getStatic[WorkIdentity](workIdentityField.name)),
+        MethodDeclaration("createState",
+                          owner = typeRefOf[CompiledStreamingOperator],
+                          returnType = typeRefOf[OperatorState],
+                          parameters = Seq(param[ArgumentStateMapCreator]("argumentStateCreator"),
+                                           param[StateFactory]("stateFactory")),
+                          body = block(createState, self()))
+      ),
+      // NOTE: This has to be called after genOperate!
+      genFields = () => argumentStateFields :+ workIdentityField)
   }
 }
 
 object ContinuableOperatorTaskWithMorselGenerator {
   private val PACKAGE_NAME = "org.neo4j.codegen"
   private val COUNTER = new AtomicLong(0)
-  private def className(): String = "Operator" + COUNTER.getAndIncrement()
 
   /**
     * Responsible for generating a tailored class for the OperatorTask, and composing an operator creating new instances of that class
     */
+//<<<<<<< HEAD
+//  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
+//                      workIdentity: WorkIdentity,
+//                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): StreamingOperator = {
+//    val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
+//    val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className(), Seq(staticWorkIdentity)))
+//    val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext], classOf[ArgumentStateMaps])
+//
+//    // TBD: Use inheritance (and create an anonymous class directly based on StreamingOperator) instead of composition?
+//    val taskFactory: CompiledTaskFactory = (dataRead, inputMorsel, argumentStateMaps) => {
+//      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy, argumentStateMaps))
+//    }
+//    val operatorStateFactory: CompiledOperatorStateFactory =
+//      if (argumentStates.nonEmpty) {
+//        (operator, argumentStateMapCreator, _) => {
+//          argumentStates.map { case (argumentStateMapId, argumentStateFactory) =>
+//            argumentStateMapCreator.createArgumentStateMap(argumentStateMapId, argumentStateFactory)
+//          }
+//          operator
+//        }
+//      } else {
+//        (operator, _, _) => {
+//          operator
+//        }
+//      }
+//
+//    new CompiledStreamingOperator(workIdentity, taskFactory, operatorStateFactory)
+//=======
   def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
                       workIdentity: WorkIdentity,
-                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): StreamingOperator = {
+                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): CompiledStreamingOperator = {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
-    val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className(), Seq(staticWorkIdentity)))
-    val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext], classOf[ArgumentStateMaps])
+    val operatorId = COUNTER.getAndIncrement()
+    val generator = CodeGeneration.createGenerator
+    val taskClazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, "OperatorTask"+operatorId, Seq(staticWorkIdentity)), generator)
+    val operatorClazz = compileClass(CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator"+operatorId, taskClazz, staticWorkIdentity, argumentStates), generator)
 
-    // TBD: Use inheritance (and create an anonymous class directly based on StreamingOperator) instead of composition?
-    val taskFactory: CompiledTaskFactory = (dataRead, inputMorsel, argumentStateMaps) => {
-      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy, argumentStateMaps))
-    }
-    val operatorStateFactory: CompiledOperatorStateFactory =
-      if (argumentStates.nonEmpty) {
-        (operator, argumentStateMapCreator, _) => {
-          argumentStates.map { case (argumentStateMapId, argumentStateFactory) =>
-            argumentStateMapCreator.createArgumentStateMap(argumentStateMapId, argumentStateFactory)
-          }
-          operator
-        }
-      } else {
-        (operator, _, _) => {
-          operator
-        }
-      }
-
-    new CompiledStreamingOperator(workIdentity, taskFactory, operatorStateFactory)
+    operatorClazz.getDeclaredConstructor().newInstance()
   }
 
 }
@@ -537,15 +612,18 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override protected def genOperate: IntermediateRepresentation = {
     val ops = new ArrayBuffer[IntermediateRepresentation]
 
-    if (shouldWriteToContext)
+    if (shouldWriteToContext) {
       ops += block(codeGen.writeLocalsToSlots(), OUTPUT_ROW_MOVE_TO_NEXT)
-    if (shouldCheckOutputCounter)
+    }
+    if (shouldCheckOutputCounter) {
       ops += UPDATE_OUTPUT_COUNTER
+    }
 
-    if (ops.nonEmpty)
+    if (ops.nonEmpty) {
       block(ops: _*)
-    else
+    } else {
       noop()
+    }
   }
 
   def resetCachedPropertyVariables: IntermediateRepresentation = {
@@ -561,12 +639,15 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   def predicate: IntermediateRepresentation = {
     val conditions = new ArrayBuffer[IntermediateRepresentation]
 
-    if (shouldWriteToContext)
+    if (shouldWriteToContext) {
       conditions += OUTPUT_ROW_IS_VALID
-    if (shouldCheckDemand)
+    }
+    if (shouldCheckDemand) {
       conditions += HAS_DEMAND
-    if (shouldCheckOutputCounter)
+    }
+    if (shouldCheckOutputCounter) {
       conditions += HAS_REMAINING_OUTPUT
+    }
 
     and(conditions)
   }
@@ -581,15 +662,18 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genOperateExit: IntermediateRepresentation = {
     val updates = new ArrayBuffer[IntermediateRepresentation]
 
-    if (shouldWriteToContext)
+    if (shouldWriteToContext) {
       updates += OUTPUT_ROW_FINISHED_WRITING
-    if (shouldCheckDemand)
+    }
+    if (shouldCheckDemand) {
       updates += UPDATE_DEMAND
+    }
 
-    if (updates.nonEmpty)
+    if (updates.nonEmpty) {
       block(updates: _*)
-    else
+    } else {
       noop()
+    }
   }
 
   override def genFields: Seq[Field] = Seq.empty

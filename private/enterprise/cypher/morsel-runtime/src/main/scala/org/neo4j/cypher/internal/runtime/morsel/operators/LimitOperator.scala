@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, TopLevelArgument}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -16,15 +16,15 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expre
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.{LazyLimitState, LimitState, LimitStateFactory, evaluateCountValue}
-import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER, OUTER_LOOP_LABEL_NAME, OUTPUT_COUNTER, OUTPUT_ROW, profileRows}
-import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, WorkCanceller}
+import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
-import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
