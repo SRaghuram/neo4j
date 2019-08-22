@@ -112,6 +112,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     while (i < len) {
       val cached = cachedPropertiesToCopy(i)
       newRow.setCachedPropertyAt(cached._2, rhs.getCachedPropertyAt(cached._1))
+      i += 1
     }
   }
 }
