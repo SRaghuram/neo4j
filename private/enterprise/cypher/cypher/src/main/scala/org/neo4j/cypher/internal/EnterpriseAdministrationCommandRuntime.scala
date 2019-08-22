@@ -261,24 +261,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // DROP ROLE [IF EXISTS] foo
-    case DropRole(roleName, checkRoleExists) => (_, _, _) =>
+    case DropRole(source, roleName) => (context, parameterMapping, securityContext) =>
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
           |RETURN role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() =>
-            if (checkRoleExists) {
-              Some(new InvalidArgumentsException(s"Failed to delete the specified role '$roleName': Role does not exist."))
-            } else {
-              None
-            }
-          )
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified role '$roleName': Role does not exist.")))
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
               new IllegalStateException(s"Failed to delete the specified role '$roleName': $followerError", error)
             case error => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
-          })
+          },
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+      )
 
     // GRANT ROLE foo TO user
     case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping, securityContext) =>
@@ -617,26 +613,18 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // Used to check whether a database is present and not the system database,
     // which means it can be dropped and stopped.
-    case EnsureValidNonSystemDatabase(normalizedName, action, checkDatabaseExists) => (_, _, _) =>
+    case EnsureValidNonSystemDatabase(source, normalizedName, action) => (context, parameterMapping, securityContext) =>
       val dbName = normalizedName.name
       if (dbName.equals(SYSTEM_DATABASE_NAME))
         throw new DatabaseAdministrationException(s"Not allowed to $action system database.")
 
-      SystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
+      UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
-          |RETURN db.name as name""".stripMargin,
+          |RETURN db.name AS name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
-        QueryHandler
-          .handleNoResult(() =>
-            // checkDatabaseExists = None: STOP DATABASE => throw error
-            // checkDatabaseExists = Some(true): DROP DATABASE => throw error
-            // checkDatabaseExists = Some(false): DROP DATABASE IF EXISTS => no error
-            if (checkDatabaseExists.getOrElse(true)) {
-              Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist."))
-            } else {
-              None
-            }
-          )
+        QueryHandler.handleNoResult(() =>
+          Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist."))),
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to log commands
