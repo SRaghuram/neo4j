@@ -57,7 +57,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_INL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
-
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static java.util.stream.Collectors.joining;
@@ -98,7 +97,7 @@ public class ConstantGenerator
         }
     }
 
-    public static String BIG_STRING_PREFIX = IntStream.range( 0, BIG_STRING_LENGTH )
+    public static final String BIG_STRING_PREFIX = IntStream.range( 0, BIG_STRING_LENGTH )
             .mapToObj( i -> Integer.toString( i ).substring( 0, 1 ) )
             .collect( joining() );
 

@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class LoopingParametersReader implements ParametersReader
 {
-    private static int MAX_SIZE = 10_000;
+    private static final int MAX_SIZE = 10_000;
     private final List<Map<String,Object>> parameters;
     private int offset;
 

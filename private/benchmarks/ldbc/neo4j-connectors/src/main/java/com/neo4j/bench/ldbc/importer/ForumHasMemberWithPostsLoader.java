@@ -28,14 +28,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 import static com.ldbc.driver.csv.charseeker.ThreadAheadReadable.threadAhead;
 import static java.util.stream.Collectors.toList;
 
 public class ForumHasMemberWithPostsLoader
 {
-    private static char NO_ARRAY_SEPARATOR = ';';
-    private static char NO_TUPLE_SEPARATOR = ',';
+    private static final char NO_ARRAY_SEPARATOR = ';';
+    private static final char NO_TUPLE_SEPARATOR = ',';
 
     public static void createIn( File csvDataDir ) throws IOException
     {

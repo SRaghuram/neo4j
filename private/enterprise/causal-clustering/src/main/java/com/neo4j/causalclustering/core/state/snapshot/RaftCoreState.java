@@ -30,7 +30,7 @@ public class RaftCoreState
 
     public static class Marshal extends SafeStateMarshal<RaftCoreState>
     {
-        private static MembershipEntry.Marshal membershipMarshal = new MembershipEntry.Marshal();
+        private static final MembershipEntry.Marshal MEMBERSHIP_MARSHAL = new MembershipEntry.Marshal();
 
         @Override
         public RaftCoreState startState()
@@ -48,13 +48,13 @@ public class RaftCoreState
         public void marshal( RaftCoreState raftCoreState, WritableChannel channel ) throws IOException
         {
 
-            membershipMarshal.marshal( raftCoreState.committed(), channel );
+            MEMBERSHIP_MARSHAL.marshal( raftCoreState.committed(), channel );
         }
 
         @Override
         protected RaftCoreState unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
         {
-            return new RaftCoreState( membershipMarshal.unmarshal( channel ) );
+            return new RaftCoreState( MEMBERSHIP_MARSHAL.unmarshal( channel ) );
         }
     }
 

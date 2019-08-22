@@ -485,7 +485,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Boolean> multi_dc_license =
             newBuilder( "causal_clustering.multi_dc_license", BOOL,  false  ).build();
 
-    private static SettingValueParser<ApplicationProtocolVersion> APP_PROTOCOL_VER = new SettingValueParser<>()
+    private static final SettingValueParser<ApplicationProtocolVersion> APP_PROTOCOL_VER = new SettingValueParser<>()
     {
 
         @Override

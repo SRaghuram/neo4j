@@ -13,9 +13,9 @@ import java.util.EnumMap;
 /**
  * Container for ids of entities that are considered to be inconsistent.
  */
-public class InconsistentRecords
+class InconsistentRecords
 {
-    static long NO_ID = -1;
+    private static final long NO_ID = -1;
 
     enum Type
     {
@@ -63,13 +63,13 @@ public class InconsistentRecords
             return min;
         }
 
-        private int getSeparatorIndex( char character, String line, int bracket )
+        private static int getSeparatorIndex( char character, String line, int bracket )
         {
             int index = line.indexOf( character, bracket );
             return index >= 0 ? index : Integer.MAX_VALUE;
         }
 
-        private boolean isNotPlainId( int bracket, int comma, int equally )
+        private static boolean isNotPlainId( int bracket, int comma, int equally )
         {
             return (equally > bracket) && (equally < comma);
         }
@@ -77,12 +77,12 @@ public class InconsistentRecords
 
     private final EnumMap<Type,MutableLongSet> ids = new EnumMap<>( Type.class );
 
-    public boolean containsId( Type recordType, long id )
+    boolean containsId( Type recordType, long id )
     {
         return ids.getOrDefault( recordType, LongSets.mutable.empty() ).contains( id );
     }
 
-    public void reportInconsistency( Type recordType, long recordId )
+    void reportInconsistency( Type recordType, long recordId )
     {
         if ( recordId != NO_ID )
         {

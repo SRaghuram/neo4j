@@ -56,7 +56,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
 {
     private static final int NODE_COUNT = 100_000;
-    private static int PROPERTY_COUNT = 64;
+    private static final int PROPERTY_COUNT = 64;
 
     @ParamValues(
             allowed = {

@@ -12,7 +12,7 @@ import java.util.Set;
 
 public class RaftTestMemberSetBuilder implements RaftMembers.Builder
 {
-    public static RaftTestMemberSetBuilder INSTANCE = new RaftTestMemberSetBuilder();
+    public static final RaftTestMemberSetBuilder INSTANCE = new RaftTestMemberSetBuilder();
 
     private RaftTestMemberSetBuilder()
     {

@@ -1057,7 +1057,7 @@ public abstract class NumberGenerator
             this.clazz = offset.getClass();
         }
 
-        private static Map<Class,IntFunction> TYPE_MAPPING_FUNS = new HashMap<Class,IntFunction>()
+        private static final Map<Class,IntFunction> TYPE_MAPPING_FUNS = new HashMap<>()
         {
             {
                 put( Integer.class, value -> value );

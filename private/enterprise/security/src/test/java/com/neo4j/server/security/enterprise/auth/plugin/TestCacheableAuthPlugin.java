@@ -26,7 +26,7 @@ public class TestCacheableAuthPlugin extends AuthPlugin.CachingEnabledAdapter
     @Override
     public AuthInfo authenticateAndAuthorize( AuthToken authToken )
     {
-        getAuthInfoCallCount.incrementAndGet();
+        GET_AUTH_INFO_CALL_COUNT.incrementAndGet();
 
         String principal = authToken.principal();
         char[] credentials = authToken.credentials();
@@ -40,5 +40,5 @@ public class TestCacheableAuthPlugin extends AuthPlugin.CachingEnabledAdapter
     }
 
     // For testing purposes
-    public static AtomicInteger getAuthInfoCallCount = new AtomicInteger( 0 );
+    public static final AtomicInteger GET_AUTH_INFO_CALL_COUNT = new AtomicInteger( 0 );
 }

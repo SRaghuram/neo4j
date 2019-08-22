@@ -106,41 +106,41 @@ public class PluginAuthenticationIT
     {
         startDatabaseWithSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
 
-        TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.set( 0 );
+        TestCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.set( 0 );
 
         // When we log in the first time our plugin should get a call
         assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthenticationPlugin" );
-        assertThat( TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.get(), equalTo( 1 ) );
 
         // When we log in the second time our plugin should _not_ get a call since authentication info should be cached
         assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthenticationPlugin" );
-        assertThat( TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.get(), equalTo( 1 ) );
 
         // When we log in the with the wrong credentials it should fail and
         // our plugin should _not_ get a call since authentication info should be cached
         assertAuthFail( boltUri, "neo4j", "wrong_password", "plugin-TestCacheableAuthenticationPlugin" );
-        assertThat( TestCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.get(), equalTo( 1 ) );
     }
 
     @Test
     public void shouldAuthenticateWithTestCustomCacheableAuthenticationPlugin()
     {
-        TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.set( 0 );
+        TestCustomCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.set( 0 );
 
         startDatabaseWithSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
 
         // When we log in the first time our plugin should get a call
         assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
-        assertThat( TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCustomCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.get(), equalTo( 1 ) );
 
         // When we log in the second time our plugin should _not_ get a call since authentication info should be cached
         assertAuth( boltUri, "neo4j", "neo4j", "plugin-TestCustomCacheableAuthenticationPlugin" );
-        assertThat( TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCustomCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.get(), equalTo( 1 ) );
 
         // When we log in the with the wrong credentials it should fail and
         // our plugin should _not_ get a call since authentication info should be cached
         assertAuthFail( boltUri, "neo4j", "wrong_password", "plugin-TestCustomCacheableAuthenticationPlugin" );
-        assertThat( TestCustomCacheableAuthenticationPlugin.getAuthenticationInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCustomCacheableAuthenticationPlugin.GET_AUTHENTICATION_INFO_CALL_COUNT.get(), equalTo( 1 ) );
     }
 
     @Test
@@ -168,14 +168,14 @@ public class PluginAuthenticationIT
     @Test
     public void shouldAuthenticateWithTestCacheableAuthPlugin()
     {
-        TestCacheableAuthPlugin.getAuthInfoCallCount.set( 0 );
+        TestCacheableAuthPlugin.GET_AUTH_INFO_CALL_COUNT.set( 0 );
 
         startDatabaseWithSettings( Map.of( SecuritySettings.auth_cache_ttl, Duration.ofMinutes( 60 ) ) );
 
         // When we log in the first time our plugin should get a call
         try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
         {
-            assertThat( TestCacheableAuthPlugin.getAuthInfoCallCount.get(), equalTo( 1 ) );
+            assertThat( TestCacheableAuthPlugin.GET_AUTH_INFO_CALL_COUNT.get(), equalTo( 1 ) );
             assertReadSucceeds( driver );
             assertWriteFails( driver );
         }
@@ -183,7 +183,7 @@ public class PluginAuthenticationIT
         // When we log in the second time our plugin should _not_ get a call since auth info should be cached
         try ( Driver driver = connectDriver( boltUri, "neo4j", "neo4j", "plugin-TestCacheableAuthPlugin" ) )
         {
-            assertThat( TestCacheableAuthPlugin.getAuthInfoCallCount.get(), equalTo( 1 ) );
+            assertThat( TestCacheableAuthPlugin.GET_AUTH_INFO_CALL_COUNT.get(), equalTo( 1 ) );
             assertReadSucceeds( driver );
             assertWriteFails( driver );
         }
@@ -191,7 +191,7 @@ public class PluginAuthenticationIT
         // When we log in the with the wrong credentials it should fail and
         // our plugin should _not_ get a call since auth info should be cached
         assertAuthFail( boltUri, "neo4j", "wrong_password", "plugin-TestCacheableAuthPlugin" );
-        assertThat( TestCacheableAuthPlugin.getAuthInfoCallCount.get(), equalTo( 1 ) );
+        assertThat( TestCacheableAuthPlugin.GET_AUTH_INFO_CALL_COUNT.get(), equalTo( 1 ) );
     }
 
     @Test

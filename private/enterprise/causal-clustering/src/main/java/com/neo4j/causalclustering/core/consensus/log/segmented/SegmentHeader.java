@@ -36,13 +36,13 @@ public class SegmentHeader
         private Magic()
         {
         }
-        static String string = "_NEO4J_RAFT_LOG_";
-        static byte[] bytes = string.getBytes( UTF_8 );
-        static int length = bytes.length;
+        static final String STRING = "_NEO4J_RAFT_LOG_";
+        static final byte[] BYTES = STRING.getBytes( UTF_8 );
+        static final int LENGTH = BYTES.length;
     }
 
     private static final int RECORD_OFFSET_V1 = 4 /* prevFileLastIndex + segmentNumber + prevIndex + prevTerm */ * Long.BYTES;
-    private static final int RECORD_OFFSET_V2 = Magic.string.length() + 2 /* formatVersion + recordOffset */ * Integer.BYTES + RECORD_OFFSET_V1;
+    private static final int RECORD_OFFSET_V2 = Magic.STRING.length() + 2 /* formatVersion + recordOffset */ * Integer.BYTES + RECORD_OFFSET_V1;
 
     static final int CURRENT_RECORD_OFFSET = RECORD_OFFSET_V2;
 
@@ -150,7 +150,7 @@ public class SegmentHeader
                 throw new IllegalArgumentException( format( "This software does not support writing version %s headers.", header.formatVersion ) );
             }
 
-            channel.put( Magic.bytes, Magic.bytes.length );
+            channel.put( Magic.BYTES, Magic.BYTES.length );
             channel.putInt( header.formatVersion );
             channel.putInt( CURRENT_RECORD_OFFSET );
 
@@ -163,8 +163,8 @@ public class SegmentHeader
         @Override
         public SegmentHeader unmarshal0( ReadableChannel channel ) throws IOException
         {
-            byte[] headBytes = new byte[Magic.length];
-            channel.get( headBytes, Magic.length );
+            byte[] headBytes = new byte[Magic.LENGTH];
+            channel.get( headBytes, Magic.LENGTH );
             ByteBuffer headBytesBuffer = ByteBuffer.wrap( headBytes );
 
             int formatVersion;
@@ -172,7 +172,7 @@ public class SegmentHeader
             long prevFileLastIndex;
             long segmentNumber;
 
-            if ( Arrays.equals( headBytesBuffer.array(), Magic.bytes ) )
+            if ( Arrays.equals( headBytesBuffer.array(), Magic.BYTES ) )
             {
                 formatVersion = channel.getInt();
                 recordOffset = channel.getInt();

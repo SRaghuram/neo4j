@@ -33,7 +33,7 @@ import org.neo4j.util.concurrent.BinaryLatch;
 class ForsetiFalseDeadlockTest
 {
     private static final int TEST_RUNS = 10;
-    private static ExecutorService executor = Executors.newCachedThreadPool( r ->
+    private static final ExecutorService executor = Executors.newCachedThreadPool( r ->
     {
         Thread thread = new Thread( r );
         thread.setDaemon( true );

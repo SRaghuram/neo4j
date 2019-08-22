@@ -16,15 +16,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DefaultTopTableTest
 {
-    private static Long[] testValues = new Long[]{7L, 4L, 5L, 0L, 3L, 4L, 8L, 6L, 1L, 9L, 2L};
+    private static final Long[] TEST_VALUES = new Long[]{7L, 4L, 5L, 0L, 3L, 4L, 8L, 6L, 1L, 9L, 2L};
 
-    private static long[] expectedValues = new long[]{0L, 1L, 2L, 3L, 4L, 4L, 5L, 6L, 7L, 8L, 9L};
+    private static final long[] EXPECTED_VALUES = new long[]{0L, 1L, 2L, 3L, 4L, 4L, 5L, 6L, 7L, 8L, 9L};
 
     @Test
     void shouldHandleAddingMoreValuesThanCapacity()
     {
         DefaultTopTable table = new DefaultTopTable( 7 );
-        for ( Long i : testValues )
+        for ( Long i : TEST_VALUES )
         {
             table.add( i );
         }
@@ -37,7 +37,7 @@ class DefaultTopTableTest
         {
             assertTrue( iterator.hasNext() );
             long value = (long) iterator.next();
-            assertEquals( expectedValues[i], value );
+            assertEquals( EXPECTED_VALUES[i], value );
         }
         assertFalse( iterator.hasNext() );
     }
@@ -46,7 +46,7 @@ class DefaultTopTableTest
     void shouldHandleWhenNotCompletelyFilledToCapacity()
     {
         DefaultTopTable table = new DefaultTopTable( 20 );
-        for ( Long i : testValues )
+        for ( Long i : TEST_VALUES )
         {
             table.add( i );
         }
@@ -55,11 +55,11 @@ class DefaultTopTableTest
 
         Iterator<Object> iterator = table.iterator();
 
-        for ( int i = 0; i < testValues.length; i++ )
+        for ( int i = 0; i < TEST_VALUES.length; i++ )
         {
             assertTrue( iterator.hasNext() );
             long value = (long) iterator.next();
-            assertEquals( expectedValues[i], value );
+            assertEquals( EXPECTED_VALUES[i], value );
         }
         assertFalse( iterator.hasNext() );
     }
@@ -92,7 +92,7 @@ class DefaultTopTableTest
     void shouldThrowOnSortNotCalledBeforeIterator()
     {
         DefaultTopTable table = new DefaultTopTable( 5 );
-        for ( Long i : testValues )
+        for ( Long i : TEST_VALUES )
         {
             table.add( i );
         }

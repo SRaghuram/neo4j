@@ -28,7 +28,7 @@ public final class CompiledHelpers
         throw new UnsupportedOperationException( "do not instantiate" );
     }
 
-    private static ValueGroup[] RANGE_SEEKABLE_VALUE_GROUPS = KernelAPISupport$.MODULE$.RANGE_SEEKABLE_VALUE_GROUPS();
+    private static final ValueGroup[] RANGE_SEEKABLE_VALUE_GROUPS = KernelAPISupport$.MODULE$.RANGE_SEEKABLE_VALUE_GROUPS();
 
     public static Value assertBooleanOrNoValue( AnyValue value )
     {

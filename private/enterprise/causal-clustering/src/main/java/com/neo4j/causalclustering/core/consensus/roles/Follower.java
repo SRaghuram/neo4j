@@ -208,7 +208,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static ElectionTimeoutHandler instance = new PreVoteSupportedHandler();
+        private static final ElectionTimeoutHandler INSTANCE = new PreVoteSupportedHandler();
     }
 
     private static class PreVoteUnsupportedHandler implements ElectionTimeoutHandler
@@ -225,7 +225,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static ElectionTimeoutHandler instance = new PreVoteUnsupportedHandler();
+        private static final ElectionTimeoutHandler INSTANCE = new PreVoteUnsupportedHandler();
     }
 
     private static class PreVoteUnsupportedRefusesToLead implements ElectionTimeoutHandler
@@ -237,7 +237,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static ElectionTimeoutHandler instance = new PreVoteUnsupportedRefusesToLead();
+        private static final ElectionTimeoutHandler INSTANCE = new PreVoteUnsupportedRefusesToLead();
     }
 
     private static class PreVoteSupportedRefusesToLeadHandler implements ElectionTimeoutHandler
@@ -254,7 +254,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static ElectionTimeoutHandler instance = new PreVoteSupportedRefusesToLeadHandler();
+        private static final ElectionTimeoutHandler INSTANCE = new PreVoteSupportedRefusesToLeadHandler();
     }
 
     private static class PreVoteRequestVotingHandler implements PreVoteRequestHandler
@@ -266,7 +266,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static PreVoteRequestHandler instance = new PreVoteRequestVotingHandler();
+        private static final PreVoteRequestHandler INSTANCE = new PreVoteRequestVotingHandler();
     }
 
     private static class PreVoteRequestDecliningHandler implements PreVoteRequestHandler
@@ -278,7 +278,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static PreVoteRequestHandler instance = new PreVoteRequestDecliningHandler();
+        private static final PreVoteRequestHandler INSTANCE = new PreVoteRequestDecliningHandler();
     }
 
     private static class PreVoteRequestNoOpHandler implements PreVoteRequestHandler
@@ -289,7 +289,7 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static PreVoteRequestHandler instance = new PreVoteRequestNoOpHandler();
+        private static final PreVoteRequestHandler INSTANCE = new PreVoteRequestNoOpHandler();
     }
 
     private static class PreVoteResponseSolicitingHandler implements PreVoteResponseHandler
@@ -326,7 +326,7 @@ class Follower implements RaftMessageHandler
             }
             return outcome;
         }
-        private static PreVoteResponseHandler instance = new PreVoteResponseSolicitingHandler();
+        private static final PreVoteResponseHandler INSTANCE = new PreVoteResponseSolicitingHandler();
     }
 
     private static class PreVoteResponseNoOpHandler implements PreVoteResponseHandler
@@ -337,10 +337,10 @@ class Follower implements RaftMessageHandler
             return outcome;
         }
 
-        private static PreVoteResponseHandler instance = new PreVoteResponseNoOpHandler();
+        private static final PreVoteResponseHandler INSTANCE = new PreVoteResponseNoOpHandler();
     }
 
-    private Handler visitor( ReadableRaftState ctx, Log log )
+    private static Handler visitor( ReadableRaftState ctx, Log log )
     {
         final ElectionTimeoutHandler electionTimeoutHandler;
         final PreVoteRequestHandler preVoteRequestHandler;
@@ -348,46 +348,46 @@ class Follower implements RaftMessageHandler
 
         if ( ctx.refusesToBeLeader() )
         {
-            preVoteResponseHandler = PreVoteResponseNoOpHandler.instance;
+            preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
             if ( ctx.supportPreVoting() )
             {
-                electionTimeoutHandler = PreVoteSupportedRefusesToLeadHandler.instance;
+                electionTimeoutHandler = PreVoteSupportedRefusesToLeadHandler.INSTANCE;
                 if ( ctx.isPreElection() )
                 {
-                    preVoteRequestHandler = PreVoteRequestVotingHandler.instance;
+                    preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
                 }
                 else
                 {
-                    preVoteRequestHandler = PreVoteRequestDecliningHandler.instance;
+                    preVoteRequestHandler = PreVoteRequestDecliningHandler.INSTANCE;
                 }
             }
             else
             {
-                preVoteRequestHandler = PreVoteRequestNoOpHandler.instance;
-                electionTimeoutHandler = PreVoteUnsupportedRefusesToLead.instance;
+                preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
+                electionTimeoutHandler = PreVoteUnsupportedRefusesToLead.INSTANCE;
             }
         }
         else
         {
             if ( ctx.supportPreVoting() )
             {
-                electionTimeoutHandler = PreVoteSupportedHandler.instance;
+                electionTimeoutHandler = PreVoteSupportedHandler.INSTANCE;
                 if ( ctx.isPreElection() )
                 {
-                    preVoteRequestHandler = PreVoteRequestVotingHandler.instance;
-                    preVoteResponseHandler = PreVoteResponseSolicitingHandler.instance;
+                    preVoteRequestHandler = PreVoteRequestVotingHandler.INSTANCE;
+                    preVoteResponseHandler = PreVoteResponseSolicitingHandler.INSTANCE;
                 }
                 else
                 {
-                    preVoteRequestHandler = PreVoteRequestDecliningHandler.instance;
-                    preVoteResponseHandler = PreVoteResponseNoOpHandler.instance;
+                    preVoteRequestHandler = PreVoteRequestDecliningHandler.INSTANCE;
+                    preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
                 }
             }
             else
             {
-                preVoteRequestHandler = PreVoteRequestNoOpHandler.instance;
-                preVoteResponseHandler = PreVoteResponseNoOpHandler.instance;
-                electionTimeoutHandler = PreVoteUnsupportedHandler.instance;
+                preVoteRequestHandler = PreVoteRequestNoOpHandler.INSTANCE;
+                preVoteResponseHandler = PreVoteResponseNoOpHandler.INSTANCE;
+                electionTimeoutHandler = PreVoteUnsupportedHandler.INSTANCE;
             }
         }
         return new Handler( preVoteRequestHandler, preVoteResponseHandler, electionTimeoutHandler, ctx, log );

@@ -24,7 +24,7 @@ class SimpleRandomMutation implements RandomMutation
         this.commonMutation = commonMutation;
     }
 
-    private static String[] NAMES =
+    private static final String[] NAMES =
             {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s"};
 
     @Override

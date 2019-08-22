@@ -20,7 +20,6 @@ import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
-import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.summary.SummaryCounters;
 import org.neo4j.harness.junit.rule.Neo4jRule;
@@ -28,14 +27,12 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.oneOf;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
 /**
  * We need to ensure that failures that come out of our read-committed isolation level, are turned into "transient" exceptions from the driver,
@@ -43,15 +40,15 @@ import static org.junit.Assert.fail;
  */
 public class ReadAndDeleteTransactionConflictIT
 {
-    private static SuppressOutput suppressOutput = SuppressOutput.suppress();
-    private static Neo4jRule graphDb = new Neo4jRule()
+    private static final SuppressOutput suppressOutput = SuppressOutput.suppress();
+    private static final Neo4jRule graphDb = new Neo4jRule()
             .dumpLogsOnFailure( () -> System.err ); // Late-bind to System.err to work better with SuppressOutput rule.
-    private static CleanupRule cleanupRule = new CleanupRule();
+    private static final CleanupRule cleanupRule = new CleanupRule();
 
     private static Driver driver;
 
     @ClassRule
-    public static RuleChain rules = RuleChain.outerRule( suppressOutput ).around( graphDb ).around( cleanupRule );
+    public static final RuleChain rules = RuleChain.outerRule( suppressOutput ).around( graphDb ).around( cleanupRule );
 
     @BeforeClass
     public static void setUp()

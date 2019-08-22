@@ -114,7 +114,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimers
 
     static class Tick
     {
-        private static Tick instance = new Tick();
+        private static final Tick INSTANCE = new Tick();
 
         private Tick()
         {
@@ -122,7 +122,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimers
 
         public static Tick getInstance()
         {
-            return instance;
+            return INSTANCE;
         }
     }
 }

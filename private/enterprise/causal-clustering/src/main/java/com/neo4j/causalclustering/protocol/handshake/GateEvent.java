@@ -16,17 +16,17 @@ public class GateEvent
         this.isSuccess = isSuccess;
     }
 
-    private static GateEvent success = new GateEvent( true );
-    private static GateEvent failure = new GateEvent( false );
+    private static final GateEvent SUCCESS = new GateEvent( true );
+    private static final GateEvent FAILURE = new GateEvent( false );
 
     public static GateEvent getSuccess()
     {
-        return success;
+        return SUCCESS;
     }
 
     public static GateEvent getFailure()
     {
-        return failure;
+        return FAILURE;
     }
 
     @Override

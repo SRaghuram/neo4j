@@ -7,7 +7,7 @@ package com.neo4j.bench.micro.benchmarks.gbptree;
 
 class AdaptableKey
 {
-    static int DATA_SIZE = Long.BYTES;
+    static final int DATA_SIZE = Long.BYTES;
     int totalSize;
     long value;
 

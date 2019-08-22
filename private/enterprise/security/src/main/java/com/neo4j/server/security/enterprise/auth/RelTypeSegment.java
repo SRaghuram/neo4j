@@ -54,5 +54,5 @@ public class RelTypeSegment implements Segment
         return relType == null ? "All relationships" : "relType: '" + relType + "'";
     }
 
-    public static RelTypeSegment ALL = new RelTypeSegment( null );
+    public static final RelTypeSegment ALL = new RelTypeSegment( null );
 }

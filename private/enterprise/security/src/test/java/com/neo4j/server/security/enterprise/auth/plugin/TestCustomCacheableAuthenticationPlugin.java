@@ -24,7 +24,7 @@ public class TestCustomCacheableAuthenticationPlugin extends AuthenticationPlugi
     @Override
     public AuthenticationInfo authenticate( AuthToken authToken )
     {
-        getAuthenticationInfoCallCount.incrementAndGet();
+        GET_AUTHENTICATION_INFO_CALL_COUNT.incrementAndGet();
 
         String principal = authToken.principal();
         char[] credentials = authToken.credentials();
@@ -42,5 +42,5 @@ public class TestCustomCacheableAuthenticationPlugin extends AuthenticationPlugi
     }
 
     // For testing purposes
-    public static AtomicInteger getAuthenticationInfoCallCount = new AtomicInteger( 0 );
+    public static final AtomicInteger GET_AUTHENTICATION_INFO_CALL_COUNT = new AtomicInteger( 0 );
 }

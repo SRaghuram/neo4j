@@ -44,7 +44,7 @@ public class ClusterStateActor extends AbstractActorWithTimers
 
     private ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
-    private static String downingTimerKey = "downingTimerKey key";
+    private static final String DOWNING_TIMER_KEY = "DOWNING_TIMER_KEY key";
 
     public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, Config config, LogProvider logProvider )
     {
@@ -157,12 +157,12 @@ public class ClusterStateActor extends AbstractActorWithTimers
     private void resetDowningTimer()
     {
         // will cancel previous timer
-        timers().startSingleTimer( downingTimerKey, StabilityMessage.INSTANCE, clusterStabilityWait );
+        timers().startSingleTimer( DOWNING_TIMER_KEY, StabilityMessage.INSTANCE, clusterStabilityWait );
     }
 
     private static class StabilityMessage
     {
-        static StabilityMessage INSTANCE = new StabilityMessage();
+        static final StabilityMessage INSTANCE = new StabilityMessage();
 
         private StabilityMessage()
         {

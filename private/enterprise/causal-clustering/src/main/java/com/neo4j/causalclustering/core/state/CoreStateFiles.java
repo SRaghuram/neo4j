@@ -5,10 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
@@ -19,8 +15,12 @@ import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersionMarshal;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
+
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
@@ -40,7 +40,6 @@ import static java.util.Arrays.asList;
  *
  * @param <STATE> The state type.
  */
-@SuppressWarnings( {"WeakerAccess", "deprecation"} )
 public class CoreStateFiles<STATE>
 {
     enum Scope
@@ -83,19 +82,19 @@ public class CoreStateFiles<STATE>
         return new CoreStateFiles<>( "dummy", DATABASE, marshal, CoreStateType.DUMMY );
     }
 
-    private static List<CoreStateFiles<?>> values;
+    private static final List<CoreStateFiles<?>> VALUES;
 
     static
     {
-        values = asList( VERSION, BARRIER_TOKEN, RAFT_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
+        List<CoreStateFiles<?>> all = asList( VERSION, BARRIER_TOKEN, RAFT_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
                 LAST_FLUSHED, SESSION_TRACKER );
-        values.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
-        values = Collections.unmodifiableList( values );
+        all.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
+        VALUES = Collections.unmodifiableList( all );
     }
 
     public static List<CoreStateFiles<?>> values()
     {
-        return values;
+        return VALUES;
     }
 
     private final String name;

@@ -54,5 +54,5 @@ public class LabelSegment implements Segment
         return label == null ? "All labels" : "label: '" + label + "'";
     }
 
-    public static LabelSegment ALL = new LabelSegment( null );
+    public static final LabelSegment ALL = new LabelSegment( null );
 }

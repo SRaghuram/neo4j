@@ -21,7 +21,7 @@ import org.neo4j.logging.NullLogProvider;
 
 public class LoggingActor extends AbstractActor implements RequiresMessageQueue<LoggerMessageQueueSemantics>
 {
-    private static Map<ActorSystem,LogProvider> logProviders = new HashMap<>();
+    private static final Map<ActorSystem,LogProvider> LOG_PROVIDERS = new HashMap<>();
     private static LogProvider defaultLogProvider = NullLogProvider.getInstance();
 
     /**
@@ -32,9 +32,9 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
      */
     static void enable( ActorSystem system, LogProvider logProvider )
     {
-        LoggingActor.logProviders.put( system, logProvider );
+        LoggingActor.LOG_PROVIDERS.put( system, logProvider );
         logProvider.getLog( LoggingActor.class )
-                .debug( "Added logProvider for %s. %d LogProviders and ActorSystems remaining.", system.name(), logProviders.size() );
+                .debug( "Added logProvider for %s. %d LogProviders and ActorSystems remaining.", system.name(), LOG_PROVIDERS.size() );
     }
 
     /**
@@ -54,9 +54,9 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
      */
     static void disable( ActorSystem system )
     {
-        Optional<LogProvider> removed = Optional.ofNullable( logProviders.remove( system ) );
+        Optional<LogProvider> removed = Optional.ofNullable( LOG_PROVIDERS.remove( system ) );
         removed.ifPresent( log -> log.getLog( LoggingActor.class )
-                .debug( "Removed logProvider for %s. %d LogProviders and ActorSystems remaining.", system.name(), logProviders.size() ) );
+                .debug( "Removed logProvider for %s. %d LogProviders and ActorSystems remaining.", system.name(), LOG_PROVIDERS.size() ) );
     }
 
     @Override
@@ -73,7 +73,7 @@ public class LoggingActor extends AbstractActor implements RequiresMessageQueue<
 
     private Log getLog( Class loggingClass )
     {
-        LogProvider configuredLogProvider = logProviders.get( getContext().system() );
+        LogProvider configuredLogProvider = LOG_PROVIDERS.get( getContext().system() );
         LogProvider logProvider = configuredLogProvider == null ? defaultLogProvider : configuredLogProvider;
         return logProvider.getLog( loggingClass );
     }

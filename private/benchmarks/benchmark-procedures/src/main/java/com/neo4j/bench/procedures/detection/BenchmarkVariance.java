@@ -17,7 +17,7 @@ import static java.lang.String.format;
 
 public class BenchmarkVariance
 {
-    public static Comparator<BenchmarkVariance> BY_VALUE = new VarianceComparator();
+    public static final Comparator<BenchmarkVariance> BY_VALUE = new VarianceComparator();
     private final BenchmarkGroup benchmarkGroup;
     private final Benchmark benchmark;
     private final Series series;

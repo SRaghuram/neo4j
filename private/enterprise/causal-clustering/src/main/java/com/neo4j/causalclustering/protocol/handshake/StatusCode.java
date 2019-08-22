@@ -22,7 +22,7 @@ public enum StatusCode
     FAILURE( -1 );
 
     private final int codeValue;
-    private static AtomicReference<Map<Integer, StatusCode>> codeMap = new AtomicReference<>();
+    private static final AtomicReference<Map<Integer, StatusCode>> CODE_MAP = new AtomicReference<>();
 
     StatusCode( int codeValue )
     {
@@ -36,13 +36,13 @@ public enum StatusCode
 
     public static Optional<StatusCode> fromCodeValue( int codeValue )
     {
-        Map<Integer,StatusCode> map = codeMap.get();
+        Map<Integer,StatusCode> map = CODE_MAP.get();
         if ( map == null )
         {
              map = Stream.of( StatusCode.values() )
                     .collect( Collectors.toMap( StatusCode::codeValue, Function.identity() ) );
 
-            codeMap.compareAndSet( null, map );
+            CODE_MAP.compareAndSet( null, map );
         }
         return Optional.ofNullable( map.get( codeValue ) );
     }

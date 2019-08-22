@@ -104,7 +104,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
     @State( Scope.Thread )
     public static class SeekerState
     {
-        private static long STRIDE = 10000;
+        private static final long STRIDE = 10000;
         private static int SEEKER_COUNT;
         private AdaptableKey from;
         private AdaptableKey to;

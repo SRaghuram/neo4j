@@ -33,7 +33,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith( MockitoJUnitRunner.class )
 public class RaftMessageProcessingTest
 {
-    private static ChannelMarshal<ReplicatedContent> serializer = new SafeChannelMarshal<ReplicatedContent>()
+    private static final ChannelMarshal<ReplicatedContent> SERIALIZER = new SafeChannelMarshal<>()
     {
         @Override
         public void marshal( ReplicatedContent content, WritableChannel channel ) throws IOException
@@ -54,13 +54,13 @@ public class RaftMessageProcessingTest
         {
             byte type = channel.get();
             final ReplicatedContent content;
-            switch ( type )
+            if ( type == 1 )
             {
-                case 1:
-                    content = ReplicatedInteger.valueOf( channel.getInt() );
-                    break;
-                default:
-                    throw new IllegalArgumentException( String.format( "Unknown content type 0x%x", type ) );
+                content = ReplicatedInteger.valueOf( channel.getInt() );
+            }
+            else
+            {
+                throw new IllegalArgumentException( String.format( "Unknown content type 0x%x", type ) );
             }
 
             try
@@ -81,7 +81,7 @@ public class RaftMessageProcessingTest
     @Before
     public void setup()
     {
-        channel = new EmbeddedChannel( new RaftMessageEncoder( serializer ), new RaftMessageDecoder( serializer, Clock.systemUTC() ) );
+        channel = new EmbeddedChannel( new RaftMessageEncoder( SERIALIZER ), new RaftMessageDecoder( SERIALIZER, Clock.systemUTC() ) );
     }
 
     @Test

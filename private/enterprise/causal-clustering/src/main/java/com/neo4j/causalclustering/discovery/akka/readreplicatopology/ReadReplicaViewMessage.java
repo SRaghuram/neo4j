@@ -26,7 +26,7 @@ class ReadReplicaViewMessage
 {
     private final Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas;
 
-    static ReadReplicaViewMessage EMPTY = new ReadReplicaViewMessage( Collections.emptyMap() );
+    static final ReadReplicaViewMessage EMPTY = new ReadReplicaViewMessage( Collections.emptyMap() );
 
     ReadReplicaViewMessage( Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas )
     {
