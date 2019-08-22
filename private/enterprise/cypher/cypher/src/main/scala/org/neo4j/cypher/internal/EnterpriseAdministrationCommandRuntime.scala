@@ -253,7 +253,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role", "user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
-        QueryHandler.handleNoResult(() => None),
+        new QueryHandler,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -422,7 +422,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
-        QueryHandler.handleResult((_, _) => None), // TODO: clean up this
+        new QueryHandler,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -606,7 +606,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
-      QueryHandler.handleNoResult(() => None),
+      new QueryHandler,
       source
     )
   }
