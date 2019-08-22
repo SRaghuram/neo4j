@@ -17,10 +17,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
@@ -48,10 +47,10 @@ public class CoreTopologyMarshalTest extends BaseMarshalTest<DatabaseCoreTopolog
         );
     }
 
-    public static Map<MemberId,CoreServerInfo> coreServerInfos( int count )
+    static Map<MemberId,CoreServerInfo> coreServerInfos( int count )
     {
         return IntStream.range( 0, count )
                 .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
-                .collect( CollectorsUtil.pairsToMap() );
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
     }
 }

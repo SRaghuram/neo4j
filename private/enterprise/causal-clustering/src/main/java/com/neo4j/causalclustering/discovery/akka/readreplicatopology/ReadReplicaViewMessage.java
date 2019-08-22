@@ -14,9 +14,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -46,7 +46,7 @@ class ReadReplicaViewMessage
                 .stream()
                 .filter( info -> info.readReplicaInfo().getDatabaseIds().contains( databaseId ) )
                 .map( info -> Pair.of( info.memberId(), info.readReplicaInfo() ) )
-                .collect( CollectorsUtil.pairsToMap() );
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new DatabaseReadReplicaTopology( databaseId, knownReadReplicas );
     }

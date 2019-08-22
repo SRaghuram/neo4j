@@ -11,9 +11,9 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.neo4j.internal.helpers.collection.CollectorsUtil;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -30,7 +30,7 @@ public class LeaderInfoDirectoryMessageMarshalTest extends BaseMarshalTest<Leade
     {
         Map<DatabaseId,LeaderInfo> leaders = IntStream.range( 0, 5 )
                 .mapToObj( id -> Pair.of( randomDatabaseId(), new LeaderInfo( new MemberId( UUID.randomUUID() ), id ) ) )
-                .collect( CollectorsUtil.pairsToMap() );
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new LeaderInfoDirectoryMessage( leaders );
     }
