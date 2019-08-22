@@ -155,7 +155,7 @@ class SchemaWithPECAcceptanceTest
         return getCreatedConstraint( before );
     }
 
-    private ConstraintDefinition createNodeKeyConstraint( SchemaHelper helper, String name, Label label, String propertyKey )
+    private void createNodeKeyConstraint( SchemaHelper helper, String name, Label label, String propertyKey )
     {
         Collection<ConstraintDefinition> before = getConstraints( db ).collection();
         ConstraintDefinition constraint = helper.createNodeKeyConstraint( db, name, label, propertyKey );
@@ -163,7 +163,6 @@ class SchemaWithPECAcceptanceTest
         helper.awaitIndexes( db );
         ConstraintDefinition foundConstraint = getCreatedConstraint( before );
         assertEquals( constraint, foundConstraint );
-        return foundConstraint;
     }
 
     private ConstraintDefinition createNodePropertyExistenceConstraint( SchemaHelper helper, Label label, String propertyKey )
