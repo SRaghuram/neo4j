@@ -19,8 +19,8 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, NoMemoryTracker, QueryContext}
-import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.AnyValue
@@ -185,8 +185,8 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
     val hasInnerLoop = codeGen.namer.nextVariableName()
     /**
       * {{{
-      *   this.nodeIndexCursor = resources.cursorPools.nodeValuIndexCursorPool.allocate()
-      *   context.transactionalContext.dataRead.nodeIndexScan(session, cursor, indexOrder, needsValues)
+      *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+      *   context.transactionalContext.dataRead.nodeIndexSeek(session, cursor, indexOrder, needsValues, searchPredicate)
       *   this.canContinue = nodeIndexCursor.next()
       *   true
       * }}}
@@ -210,8 +210,7 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
       * {{{
       *   while (hasDemand && this.canContinue) {
       *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(cacheOffset1, nodeIndexCursor.propertyValue(0))
-      *     setCachedPropertyAt(cacheOffset2, nodeIndexCursor.propertyValue(1))
+      *     setCachedPropertyAt(cacheOffset, nodeCursor.propertyValue(0))
       *     ...
       *     << inner.genOperate >>
       *     this.canContinue = this.nodeIndexCursor.next()
@@ -227,7 +226,12 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
           noop()
         },
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, load(seekVariable))).getOrElse(noop()),
+        property.maybeCachedNodePropertySlot.map(
+          codeGen.setCachedPropertyAt(_,
+                                      invoke(loadField(nodeIndexCursorField),
+                                             method[NodeValueIndexCursor, Value, Int]("propertyValue"),
+                                             constant(0) ))
+          ).getOrElse(noop()),
         profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
