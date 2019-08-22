@@ -81,8 +81,8 @@ object copyNodeWith {
       case RelationshipPattern(variable, types, length, properties, direction, legacyTypeSeparator, maybeBaseRel) =>
         RelationshipPattern(nc.ofOption(variable), nc.ofSeq(types), Option(nc.ofOption(length.flatten)), nc.ofOption(properties), direction, legacyTypeSeparator, nc.ofOption(maybeBaseRel))(node.position)
 
-      case FunctionInvocation(namespace, functionName, distinct, args) =>
-        FunctionInvocation(nc.ofSingle(namespace), nc.ofSingle(functionName), distinct, nc.ofSeq(args).toIndexedSeq)(node.position)
+      case FunctionInvocation(namespace, functionName, distinct, args, deprecated) =>
+        FunctionInvocation(nc.ofSingle(namespace), nc.ofSingle(functionName), distinct, nc.ofSeq(args).toIndexedSeq, deprecated)(node.position)
 
       case Namespace(_) => node
 
