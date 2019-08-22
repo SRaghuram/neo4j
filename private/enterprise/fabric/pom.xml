@@ -45,12 +45,14 @@
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-util-4.0</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-ast-4.0</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
             <version>${project.version}</version>
         </dependency>
         <dependency>
