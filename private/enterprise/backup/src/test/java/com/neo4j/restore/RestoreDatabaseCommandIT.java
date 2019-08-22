@@ -43,7 +43,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -207,21 +206,39 @@ class RestoreDatabaseCommandIT
     }
 
     @Test
-    void doNotRemoveRelativeTransactionDirectoryAgain() throws IOException
+    void shouldDeleteTargetTransactionLogDirectoryWhenItIsSameAsDatabaseDirectory() throws IOException
     {
+        String databaseName = "target-database";
         FileSystemAbstraction fs = Mockito.spy( fileSystem );
-        File fromPath = directory.directory( "old" );
-        DatabaseLayout testLayout = directory.databaseLayout("testdatabase");
-        File relativeLogDirectory = directory.directory( "relativeDirectory" );
+        File fromPath = directory.directory( "database-to-restore" );
+        File targetDatabaseDirectory = directory.directory( databaseName );
+        File targetTransactionLogDirectory = directory.directory( databaseName );
 
-        Config config = configWith( directory.absolutePath().getAbsolutePath(), relativeLogDirectory.toString() );
+        Config config = configWith( targetDatabaseDirectory.getParent(), targetTransactionLogDirectory.getParent() );
 
         createDbAt( fromPath, 10 );
 
-        new RestoreDatabaseCommand( fs, fromPath, config, "testDatabase", true ).execute();
+        new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true ).execute();
 
-        verify( fs ).deleteRecursively( eq( testLayout.databaseDirectory() ) );
-        verify( fs, never() ).deleteRecursively( eq( relativeLogDirectory ) );
+        verify( fs, never() ).deleteRecursively( targetTransactionLogDirectory );
+    }
+
+    @Test
+    void shouldDeleteTargetTransactionLogDirectoryWhenItIsDifferentFromDatabaseDirectory() throws IOException
+    {
+        String databaseName = "target-database";
+        FileSystemAbstraction fs = Mockito.spy( fileSystem );
+        File fromPath = directory.directory( "database-to-restore" );
+        File targetDatabaseDirectory = directory.directory( databaseName );
+        File targetTransactionLogDirectory = directory.directory( "different-tx-log-root-directory", databaseName );
+
+        Config config = configWith( targetDatabaseDirectory.getParent(), targetTransactionLogDirectory.getParent() );
+
+        createDbAt( fromPath, 10 );
+
+        new RestoreDatabaseCommand( fs, fromPath, config, databaseName, true ).execute();
+
+        verify( fs ).deleteRecursively( targetTransactionLogDirectory );
     }
 
     private static Config configWith( String dataDirectory )

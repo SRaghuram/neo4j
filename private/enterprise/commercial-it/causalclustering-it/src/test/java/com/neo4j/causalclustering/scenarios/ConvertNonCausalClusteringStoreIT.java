@@ -25,10 +25,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -43,7 +41,7 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@ExtendWith( TestDirectoryExtension.class )
 @ClusterExtension
 @TestInstance( PER_METHOD )
 class ConvertNonCausalClusteringStoreIT
@@ -113,13 +111,10 @@ class ConvertNonCausalClusteringStoreIT
         return clusterFactory.createCluster( clusterConfig );
     }
 
-    private static ClassicNeo4jDatabase createNeoDatabase( File dbDir, String recordFormat, int classicNodeCount ) throws IOException
+    private ClassicNeo4jDatabase createNeoDatabase( File dbDir, String recordFormat, int classicNodeCount ) throws IOException
     {
-        try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
-        {
-            return ClassicNeo4jDatabase.builder( dbDir, fileSystem )
-                    .transactionLogsInDatabaseFolder()
-                    .amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
-        }
+        return ClassicNeo4jDatabase.builder( dbDir, testDirectory.getFileSystem() )
+                .transactionLogsInDatabaseFolder()
+                .amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
     }
 }

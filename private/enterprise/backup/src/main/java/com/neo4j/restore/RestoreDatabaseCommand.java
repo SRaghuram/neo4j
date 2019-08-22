@@ -5,7 +5,6 @@
  */
 package com.neo4j.restore;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
@@ -17,7 +16,6 @@ import org.neo4j.configuration.LayoutConfig;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
@@ -38,10 +36,7 @@ public class RestoreDatabaseCommand
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
         this.forceOverwrite = forceOverwrite;
-        var rootFile = config.get( databases_root_path ).toFile().getAbsoluteFile();
-        var layoutConfig = LayoutConfig.of( config );
-        var normalizedDatabaseName = new NormalizedDatabaseName( databaseName );
-        this.targetDatabaseLayout = DatabaseLayout.of( rootFile, layoutConfig, normalizedDatabaseName.name() );
+        this.targetDatabaseLayout = buildTargetDatabaseLayout( databaseName, config );
     }
 
     public void execute() throws IOException
@@ -64,20 +59,14 @@ public class RestoreDatabaseCommand
         if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
         {
             throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
-                            targetDatabaseLayout.databaseDirectory() ) );
-        }
-
-        fs.deleteRecursively( targetDatabaseLayout.databaseDirectory() );
-        if ( !isSameOrChildFile( targetDatabaseLayout.databaseDirectory(), targetDatabaseLayout.getTransactionLogsDirectory() ) )
-        {
-            fs.deleteRecursively( targetDatabaseLayout.getTransactionLogsDirectory() );
+                    targetDatabaseLayout.databaseDirectory() ) );
         }
         fs.mkdirs( targetDatabaseLayout.databaseDirectory() );
 
-        try ( Closeable lock = DatabaseLockChecker.check( targetDatabaseLayout ) )
+        try ( var ignored = DatabaseLockChecker.check( targetDatabaseLayout ) )
         {
-            LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
-            restoreDatabaseFiles( backupLogFiles, fromDatabasePath.listFiles() );
+            cleanTargetDirectories();
+            restoreDatabaseFiles();
         }
         catch ( FileLockException e )
         {
@@ -87,28 +76,64 @@ public class RestoreDatabaseCommand
         {
             throw new CommandFailedException( "You do not have permission to restore database.", e );
         }
-
     }
 
-    private void restoreDatabaseFiles( LogFiles backupLogFiles, File[] files ) throws IOException
+    private void cleanTargetDirectories() throws IOException
     {
-        if ( files != null )
+        var databaseDirectory = targetDatabaseLayout.databaseDirectory();
+        var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
+        var databaseLockFile = targetDatabaseLayout.databaseLockFile();
+
+        var filesToRemove = fs.listFiles( databaseDirectory, ( dir, name ) -> !name.equals( databaseLockFile.getName() ) );
+        if ( filesToRemove != null )
         {
-            File databaseDirectory = targetDatabaseLayout.databaseDirectory();
-            File transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
-            for ( File file : files )
+            for ( var file : filesToRemove )
+            {
+                fs.deleteRecursively( file );
+            }
+        }
+        if ( !isSameOrChildFile( databaseDirectory, transactionLogsDirectory ) )
+        {
+            fs.deleteRecursively( transactionLogsDirectory );
+        }
+    }
+
+    private void restoreDatabaseFiles() throws IOException
+    {
+        var databaseFiles = fs.listFiles( fromDatabasePath );
+        var transactionLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( fromDatabasePath, fs ).build();
+
+        if ( databaseFiles != null )
+        {
+            var databaseDirectory = targetDatabaseLayout.databaseDirectory();
+            var transactionLogsDirectory = targetDatabaseLayout.getTransactionLogsDirectory();
+            var databaseLockFile = targetDatabaseLayout.databaseLockFile();
+            for ( var file : databaseFiles )
             {
                 if ( file.isDirectory() )
                 {
-                    File destination = new File( databaseDirectory, file.getName() );
+                    var destination = new File( databaseDirectory, file.getName() );
                     fs.mkdirs( destination );
                     fs.copyRecursively( file, destination );
                 }
                 else
                 {
-                    fs.copyToDirectory( file, backupLogFiles.isLogFile( file ) ? transactionLogsDirectory : databaseDirectory );
+                    var targetDirectory = transactionLogFiles.isLogFile( file ) ? transactionLogsDirectory : databaseDirectory;
+                    var targetFile = new File( targetDirectory, file.getName() );
+                    if ( !databaseLockFile.equals( targetFile ) )
+                    {
+                        fs.copyToDirectory( file, targetDirectory );
+                    }
                 }
             }
         }
+    }
+
+    private static DatabaseLayout buildTargetDatabaseLayout( String databaseName, Config config )
+    {
+        var rootFile = config.get( databases_root_path ).toFile().getAbsoluteFile();
+        var layoutConfig = LayoutConfig.of( config );
+        var normalizedDatabaseName = new NormalizedDatabaseName( databaseName );
+        return DatabaseLayout.of( rootFile, layoutConfig, normalizedDatabaseName.name() );
     }
 }
