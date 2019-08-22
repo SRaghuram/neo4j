@@ -127,7 +127,8 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ) );
+                    assertThrows( QueryExecutionException.class,
+                                  () -> db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ).resultAsString() );
             assertThat( exception.getMessage(), equalTo( "Can't coerce `Long(42)` to String" ) );
         }
     }
