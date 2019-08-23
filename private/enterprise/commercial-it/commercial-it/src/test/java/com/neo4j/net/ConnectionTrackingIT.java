@@ -586,7 +586,7 @@ class ConnectionTrackingIT
 
     private byte[] auth( String username, String password ) throws IOException
     {
-        Map<String,Object> authToken = map( "scheme", "basic", "principal", username, "credentials", password );
+        Map<String,Object> authToken = map( "scheme", "basic", "principal", username, "credentials", password, "user_agent", BOLT.userAgent );
         return util.defaultAuth( authToken );
     }
 
