@@ -75,7 +75,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
         // Children, who will be sending messages to us
         ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
-        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, metadataActor, logProvider ) );
+        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, logProvider ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, logProvider ) );
         clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), logProvider ) );
     }

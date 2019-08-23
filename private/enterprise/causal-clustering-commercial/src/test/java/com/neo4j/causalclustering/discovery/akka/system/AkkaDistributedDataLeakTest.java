@@ -16,9 +16,9 @@ import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
+import com.neo4j.causalclustering.discovery.AkkaUncleanShutdownDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.CommercialAkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
@@ -27,45 +27,56 @@ import org.junit.jupiter.api.TestInstance;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
+import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
 import org.neo4j.causalclustering.discovery.NoOpHostnameResolver;
 import org.neo4j.causalclustering.discovery.TopologyServiceMultiRetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
-import org.neo4j.test.assertion.Assert;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.discovery.akka.system.ClusterJoiningActor.AKKA_SCHEME;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.equalTo;
+import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class AkkaDistributedDataLeakTest
 {
-    // Part of Akka cluster. Listens to changes in distributed data, exposes for assertions
+    private static final int TIMEOUT = 20;
+    /** Part of Akka cluster. Bootstraps cluster. Listens to changes in distributed data, exposes for assertions */
     private Harness harness;
-    // We be started/stopped during test. Metadata from this should be cleaned up in distributed data.
-    private CoreTopologyService restarter;
-    // If restarter doesn't clean up after itself then this should clean up for it when it leaves the cluster.
+    /** Will be started/stopped during test. Metadata from this should be cleaned up in distributed data by repairer */
+    private CoreTopologyService cleanRestarter;
+    /** Will be started/stopped during test. Does not cleanly leave, needs downing from repairer. Should be cleaned up by repairer */
+    private CoreTopologyService uncleanRestarter;
+    /** Should clean up for other members when they leave the cluster.*/
     private CoreTopologyService repairer;
+
+    private int metadataCount = 2;
 
     @BeforeAll
     void setUp() throws Throwable
     {
         harness = new Harness();
-        repairer = lifecycle( harness.port );
-        restarter = lifecycle( harness.port );
+        CommercialAkkaDiscoveryServiceFactory cleanDiscoveryServiceFactory = new CommercialAkkaDiscoveryServiceFactory();
+        repairer = coreTopologyService( harness.port, cleanDiscoveryServiceFactory );
+        cleanRestarter = coreTopologyService( harness.port, cleanDiscoveryServiceFactory );
+        uncleanRestarter = coreTopologyService( harness.port, new AkkaUncleanShutdownDiscoveryServiceFactory() );
 
         repairer.init();
-        restarter.init();
+        cleanRestarter.init();
+        uncleanRestarter.init();
 
         repairer.start();
     }
@@ -76,23 +87,36 @@ class AkkaDistributedDataLeakTest
         harness.shutdown();
         repairer.stop();
         repairer.shutdown();
-        restarter.shutdown();
+        cleanRestarter.shutdown();
+        uncleanRestarter.shutdown();
     }
 
     // Needs hundreds of reps to have a good chance of replicating a leak
     @RepeatedTest( 10 )
-    void shouldNotLeakMetadata() throws Throwable
+    void shouldNotLeakMetadataOnCleanLeave() throws Throwable
     {
-        restarter.start();
+        cleanRestarter.start();
 
-        Assert.assertEventually( () -> harness.replicatedData.size(), Matchers.equalTo( 2 ), 20, TimeUnit.SECONDS );
+        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount ), TIMEOUT, SECONDS );
 
-        restarter.stop();
+        cleanRestarter.stop();
 
-        Assert.assertEventually( () -> harness.replicatedData.size(), Matchers.equalTo( 1 ), 20, TimeUnit.SECONDS );
+        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
-    private CoreTopologyService lifecycle( int port )
+    @RepeatedTest( 10 )
+    void shouldNotLeakMetadataOnUncleanLeave() throws Throwable
+    {
+        uncleanRestarter.start();
+
+        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount ), TIMEOUT, SECONDS );
+
+        uncleanRestarter.stop();
+
+        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount - 1 ), TIMEOUT, SECONDS );
+    }
+
+    private CoreTopologyService coreTopologyService( int port, DiscoveryServiceFactory discoveryServiceFactory )
     {
         Config config = Config.builder()
                 .withServerDefaults()
@@ -108,7 +132,7 @@ class AkkaDistributedDataLeakTest
         Monitors monitors = new Monitors();
         TopologyServiceMultiRetryStrategy retryStrategy = new TopologyServiceMultiRetryStrategy( 100, 3, logProvider );
 
-        return new CommercialAkkaDiscoveryServiceFactory().coreTopologyService( config, memberId, JobSchedulerFactory.createInitialisedScheduler(), logProvider,
+        return discoveryServiceFactory.coreTopologyService( config, memberId, createInitialisedScheduler(), logProvider,
                 logProvider, membersResolver, retryStrategy, monitors, Clocks.systemClock() );
     }
 

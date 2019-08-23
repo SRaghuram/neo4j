@@ -26,17 +26,6 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
       expectReplicatorUpdates(replicator, dataKey)
     }
 
-    "remove data on post stop" in new Fixture {
-      Given("initial update")
-      expectReplicatorUpdates(replicator, dataKey)
-
-      When("topping actor")
-      system.stop(replicatedDataActorRef)
-
-      Then("final update")
-      expectReplicatorUpdates(replicator, dataKey)
-    }
-
     "send metadata to core topology actor on update" in new Fixture {
       Given("new member metadata")
       val member1Address = UniqueAddress(Address("udp", system.name, "1.2.3.4", 8213), 1L)

@@ -32,7 +32,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     private final ActorRef topologyActor;
     private final Config config;
 
-    public MetadataActor( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
+    private MetadataActor( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
     {
         super( cluster, replicator, LWWMapKey.create( MEMBER_DATA_KEY ), LWWMap::empty, logProvider );
         this.myself = myself;
@@ -43,7 +43,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( CleanupMessage.class, message -> removeDataFromReplicator( message.uniqueAddress() ) );
+        builder.match( CleanupMessage.class, this::removeDataFromReplicator );
     }
 
     @Override
@@ -53,10 +53,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }
 
-    @Override
-    public void removeDataFromReplicator( UniqueAddress uniqueAddress )
+    private void removeDataFromReplicator( CleanupMessage message )
     {
-        modifyReplicatedData( key, map -> map.remove( cluster, uniqueAddress ) );
+        modifyReplicatedData( key, map -> map.remove( cluster, message.uniqueAddress() ) );
     }
 
     @Override

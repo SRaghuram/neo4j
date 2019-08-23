@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
-import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
 import akka.japi.pf.ReceiveBuilder;
@@ -35,12 +34,6 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
 
     @Override
     protected void sendInitialDataToReplicator()
-    {
-        // no-op
-    }
-
-    @Override
-    protected void removeDataFromReplicator( UniqueAddress uniqueAddress )
     {
         // no-op
     }

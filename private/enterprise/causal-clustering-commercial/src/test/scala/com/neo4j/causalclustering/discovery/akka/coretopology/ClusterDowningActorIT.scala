@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.cluster.{Cluster, MemberStatus}
-import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.logging.NullLogProvider
@@ -71,22 +70,13 @@ class ClusterDowningActorIT extends BaseAkkaIT("ClusterDowningActor") {
       Then("down then unreachable member")
       awaitAssert(Mockito.verify(cluster).down(unreachable1.address), max = defaultWaitTime)
     }
-    "send cleanup message to topology actor if more reachable than unreachabe" in new Fixture {
-      Given("Three members, one of which is unreachable")
-      When("send message")
-      actorRef ! messageWithMostReachable
-
-      Then("send cleanup message")
-      metadataActor.expectMsg(defaultWaitTime, new CleanupMessage(unreachable1.uniqueAddress))
-    }
   }
 
   trait Fixture {
     val cluster = mock[Cluster]
-    val metadataActor = TestProbe("Metadata")
     val logProvider = NullLogProvider.getInstance()
 
-    val actorRef = system.actorOf(ClusterDowningActor.props(cluster, metadataActor.ref, logProvider))
+    val actorRef = system.actorOf(ClusterDowningActor.props(cluster, logProvider))
 
     var port = new AtomicInteger(0)
     val unreachable1, unreachable2, reachable1, reachable2 = ClusterViewMessageTest.createMember(port.getAndIncrement(), MemberStatus.Up)
@@ -99,7 +89,6 @@ class ClusterDowningActorIT extends BaseAkkaIT("ClusterDowningActor") {
     
     def doNothing() = {
       awaitNotAssert(Mockito.verify(cluster, Mockito.atLeastOnce()).down(ArgumentMatchers.any()), defaultWaitTime, "Should not down")
-      metadataActor.expectNoMessage(defaultWaitTime)
     }
   }
 }

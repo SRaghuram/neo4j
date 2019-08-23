@@ -10,7 +10,6 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.ddata.ORMap;
 import akka.cluster.ddata.ORMapKey;
-import akka.cluster.UniqueAddress;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
@@ -35,8 +34,8 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink;
     private final ActorRef rrTopologyActor;
 
-    protected DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
-            ActorRef rrTopologyActor, LogProvider logProvider )
+    private DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink, ActorRef rrTopologyActor,
+            LogProvider logProvider )
     {
         super( cluster, replicator, ORMapKey.create( PER_DB_LEADER_KEY ), ORMap::create, logProvider );
         this.discoveryUpdateSink = discoveryUpdateSink;
@@ -45,12 +44,6 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
 
     @Override
     protected void sendInitialDataToReplicator()
-    {
-        // no op
-    }
-
-    @Override
-    protected void removeDataFromReplicator( UniqueAddress uniqueAddress )
     {
         // no op
     }
