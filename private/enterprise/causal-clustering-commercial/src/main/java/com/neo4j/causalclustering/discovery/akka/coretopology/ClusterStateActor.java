@@ -31,14 +31,15 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.akka_fail
  */
 public class ClusterStateActor extends AbstractActorWithTimers
 {
-    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, Config config, LogProvider logProvider )
+    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config, LogProvider logProvider )
     {
-        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, config, logProvider ) );
+        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config, logProvider ) );
     }
 
     private final Cluster cluster;
     private final ActorRef topologyActor;
     private final ActorRef downingActor;
+    private final ActorRef metadataActor;
     private final Duration clusterStabilityWait;
     private final Log log;
 
@@ -46,11 +47,12 @@ public class ClusterStateActor extends AbstractActorWithTimers
 
     private static String downingTimerKey = "downingTimerKey key";
 
-    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, Config config, LogProvider logProvider )
+    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config, LogProvider logProvider )
     {
         this.cluster = cluster;
         this.topologyActor = topologyActor;
         this.downingActor = downingActor;
+        this.metadataActor = metadataActor;
         this.log = logProvider.getLog( getClass() );
 
         clusterStabilityWait = config.get( akka_failure_detector_heartbeat_interval )
@@ -126,7 +128,7 @@ public class ClusterStateActor extends AbstractActorWithTimers
         Member member = event.member();
         clusterView = clusterView.withoutMember( member );
         sendClusterView();
-        topologyActor.tell( new CleanupMessage( member.uniqueAddress() ), getSelf() );
+        metadataActor.tell( new CleanupMessage( member.uniqueAddress() ), getSelf() );
     }
 
     private void handleLeaderChanged( ClusterEvent.LeaderChanged event )
