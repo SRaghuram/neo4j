@@ -77,7 +77,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // CREATE [OR REPLACE] USER [IF NOT EXISTS] foo SET PASSWORD password
-    case CreateUser(userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional, replace, allowExistingUser) => (_, _, _) =>
+    case CreateUser(source, userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional, replace) => (context, parameterMapping, securityContext) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
         validatePassword(initialPassword)
@@ -88,10 +88,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             |CREATE (new:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
             |RETURN new.name
           """.stripMargin
-        } else if (allowExistingUser) {
-          """MERGE (u:User {name: $name})
-            |ON CREATE SET u.credentials = $credentials, u.passwordChangeRequired = $passwordChangeRequired, u.suspended = $suspended
-            |RETURN u.name""".stripMargin
         } else {
           // NOTE: If username already exists we will violate a constraint
           """CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
@@ -114,7 +110,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
                 new IllegalStateException(s"Failed to create the specified user '$userName': $followerError", error)
               case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", error)
-            })
+            }),
+          source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
         )
       } finally {
         // Clear password
@@ -200,25 +197,18 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
     // CREATE [OR REPLACE] ROLE [IF NOT EXISTS] foo AS COPY OF bar
-    case CreateRole(source, roleName, replace, allowExistingRole) => (context, parameterMapping, securityContext) =>
+    case CreateRole(source, roleName, replace) => (context, parameterMapping, securityContext) =>
       val query = if (replace) {
         """
           |OPTIONAL MATCH (old:Role {name: $name})
           |DETACH DELETE old
           |
-          |CREATE (new:Role {name: $name, justCreated: true})
-          |RETURN new.name
-        """.stripMargin
-      } else if (allowExistingRole) {
-        """
-          |MERGE (new:Role {name: $name})
-          |ON CREATE SET new.justCreated = true
-          |ON MATCH SET new.justCreated = false
+          |CREATE (new:Role {name: $name})
           |RETURN new.name
         """.stripMargin
       } else {
         """
-          |CREATE (new:Role {name: $name, justCreated: true})
+          |CREATE (new:Role {name: $name})
           |RETURN new.name
         """.stripMargin
       }
@@ -251,7 +241,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       // This operator expects CreateRole(to) and RequireRole(from) to run as source, so we do not check for those
       UpdatingSystemCommandExecutionPlan("CopyPrivileges", normalExecutionEngine,
         s"""MATCH (to:Role {name: $$to})
-           |WHERE to.justCreated = true
            |MATCH (from:Role {name: $$from})-[:$grantDeny]->(a:Action)
            |MERGE (to)-[g:$grantDeny]->(a)
            |RETURN from.name, to.name, count(g)""".stripMargin,
@@ -438,7 +427,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("name"), Array(Values.stringValue(normalizedName.name))))
 
     // CREATE [OR REPLACE] DATABASE [IF NOT EXISTS] foo
-    case CreateDatabase(normalizedName, replace, allowExistingDatabase) => (_, _, _) =>
+    case CreateDatabase(source, normalizedName, replace) => (context, parameterMapping, securityContext) =>
       // Ensuring we don't exceed the max number of databases is a separate step
       val dbName = normalizedName.name
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
@@ -491,16 +480,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  $queryAdditions
           |RETURN d.name as name, d.status as status, d.uuid as uuid
         """.stripMargin
-      } else if (allowExistingDatabase) {
-        s"""MERGE (d:Database {name: $$name})
-          |ON CREATE SET
-          |  d.status = $$status,
-          |  d.default = $$default,
-          |  d.created_at = datetime(),
-          |  d.uuid = randomUUID()
-          |  $queryAdditions
-          |RETURN d.name as name, d.status as status, d.uuid as uuid
-        """.stripMargin
       } else {
         s"""CREATE (d:Database {name: $$name})
           |SET
@@ -520,7 +499,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
               new IllegalStateException(s"Failed to create the specified database '$dbName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
-          })
+          }),
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to ensure we don't create to many databases,
