@@ -115,6 +115,8 @@ class ParallelRuntimeProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALL
 class ParallelRuntimeProjectionNoFusingTest extends ProjectionTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProjectionStressTest extends ProjectionStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
 class ParallelRuntimeProjectionNoFusingStressTest extends ProjectionStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
+class ParallelRuntimeCachePropertiesTest extends CachePropertiesTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeCachePropertiesNoFusingTest extends CachePropertiesTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
 
 // FILTER
 class ParallelRuntimeFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)

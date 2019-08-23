@@ -467,6 +467,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = new ProjectOperatorTemplate(acc.template, plan.id, projections)(expressionCompiler),
               fusedPlans = nextPlan :: acc.fusedPlans)
 
+          case plan@plans.CacheProperties(_, properties) =>
+            acc.copy(
+              template = new CachePropertiesOperatorTemplate(acc.template, plan.id, properties.toSeq)(expressionCompiler),
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
           case plan@plans.Input(nodes, variables, nullable) =>
             val newTemplate = new InputOperatorTemplate(acc.template, plan.id, innermostTemplate, nodes.map(v => slots.getLongOffsetFor(v)).toArray,
                                                         variables.map(v => slots.getReferenceOffsetFor(v)).toArray, nullable)(expressionCompiler)

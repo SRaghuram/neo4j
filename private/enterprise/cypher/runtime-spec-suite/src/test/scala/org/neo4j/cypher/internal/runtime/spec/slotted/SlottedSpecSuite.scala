@@ -43,6 +43,7 @@ class SlottedPartialTop1Test extends PartialTop1TestBase(ENTERPRISE.SINGLE_THREA
 class SlottedFilterTest extends FilterTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedArgumentTest extends ArgumentTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedProjectionTest extends ProjectionTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedCachePropertiesTest extends CachePropertiesTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedUnwindTest extends UnwindTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedDistinctTest extends DistinctTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedOrderedDistinctTest extends OrderedDistinctTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)

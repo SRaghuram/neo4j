@@ -48,6 +48,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: Limit |
            _: Distinct |
            _: Projection |
+           _: CacheProperties |
            _: Selection
         => false
 

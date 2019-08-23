@@ -91,6 +91,8 @@ class MorselNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(SINGLE_T
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselProjectionNoFusingTest extends ProjectionTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+class MorselCachePropertiesTest extends CachePropertiesTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselCachePropertiesNoFusingTest extends CachePropertiesTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // FILTER
 class MorselFilterTest extends FilterTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)

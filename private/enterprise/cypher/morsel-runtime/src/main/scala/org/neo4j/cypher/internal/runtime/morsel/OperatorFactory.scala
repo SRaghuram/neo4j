@@ -343,6 +343,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val projectionOps: CommandProjection = converters.toCommandProjection(id, expressions)
         Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
 
+      case plans.CacheProperties(_, properties) =>
+        val propertyOps = properties.toArray.map(converters.toCommandExpression(id, _))
+        Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
+
       case _: plans.Argument => None
     }
   }

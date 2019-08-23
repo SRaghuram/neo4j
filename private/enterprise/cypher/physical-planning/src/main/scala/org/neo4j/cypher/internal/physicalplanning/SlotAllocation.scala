@@ -362,7 +362,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: Sort |
            _: PartialSort |
            _: Top |
-           _: PartialTop
+           _: PartialTop |
+           _: CacheProperties
       =>
 
       case p:ProjectingPlan =>
