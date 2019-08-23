@@ -63,8 +63,10 @@ out_of_memory_script="$basedir/on-out-of-memory.sh"
 out_of_memory_base_dir=$(realpath "${ldbc_results_dir}/out-of-memory")
 # path to benchmark process out of memory output directory
 out_of_memory_dir="$out_of_memory_base_dir/benchmark"
+mkdir -p "$out_of_memory_dir"
 # path to forked process out of memory output directory
 out_of_memory_fork_dir="$out_of_memory_base_dir/fork"
+mkdir -p "$out_of_memory_fork_dir"
 
 echo "------------------------------------------------"
 echo "------------------------------------------------"
@@ -116,11 +118,11 @@ echo "------------------------------------------------"
 
 function runReport {
     #shellcheck disable=SC2068
-    ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_dir" \
+    ${jvm_path} -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-dir $out_of_memory_dir" \
         -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
         -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
         --jvm "${jvm_path}" \
-        --jvm-args "-XX:OnOutOfMemoryError=\"$out_of_memory_script;--jvm-pid;%p;--output-dir;$out_of_memory_fork_dir\"  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\"$out_of_memory_fork_dir\" ${ldbc_jvm_args}" \
+        --jvm-args "-XX:OnOutOfMemoryError=\"$out_of_memory_script --jvm-pid %p --output-dir $out_of_memory_fork_dir\"  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\"$out_of_memory_fork_dir\" ${ldbc_jvm_args}" \
         --neo4j-package-for-jvm-args "${neo4j_tarball}" \
         --reads "${ldbc_read_params}" \
         --writes "${ldbc_write_params}" \

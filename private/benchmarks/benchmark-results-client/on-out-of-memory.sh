@@ -28,6 +28,18 @@ while (( "$#" )); do
   esac
 done
 
+if [[ ! $jvmPid ]]; then
+    echo "JVM pid is not set"
+    exit 1
+fi
+
+if [[ ! $outputDir ]]; then
+    echo "output directory is not set"
+    exit 1
+fi
+
+outputDir=$(realpath -s $outputDir)
+
 resultsDir="$outputDir/"$(uuidgen)
 
 if [[ ! -d $resultsDir ]]; then
@@ -39,9 +51,6 @@ vmstat -s -S M > "$resultsDir/vmstat.out"
 
 # dump process memory stats
 pidstat --human  -r -s -u -w -p "$jvmPid" > "$resultsDir/pidstat.out"
-
-# dump native memory tracking summary
-jcmd "$jvmPid" VM.native_memory > "$resultsDir/native_memory.out"
 
 # dump process tree
 ps fu > "$resultsDir/processes.out"
