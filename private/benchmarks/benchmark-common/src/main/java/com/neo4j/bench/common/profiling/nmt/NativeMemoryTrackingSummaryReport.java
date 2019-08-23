@@ -28,11 +28,11 @@ public class NativeMemoryTrackingSummaryReport
         this.snapshots = snapshots;
     }
 
-    public static NativeMemoryTrackingSummaryReport create( Path forkDirectory ) throws IOException
+    public static NativeMemoryTrackingSummaryReport create( Path snapshotDir ) throws IOException
     {
         // list NMT summary files, sort by snapshot
         try ( Stream<Path> files = Files.find(
-                forkDirectory,
+                snapshotDir,
                 1,
                 ( path, attrs ) -> NativeMemoryTrackingSnapshot.matches( path.getFileName().toString() ) ) )
         {

@@ -17,12 +17,11 @@ import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -68,17 +67,17 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
             Benchmark benchmark,
             Parameters additionalParameters )
     {
-        Path csvReport = Paths.get( ProfilerRecordingDescriptor.create(
+        ProfilerRecordingDescriptor csvReport = ProfilerRecordingDescriptor.create(
                 benchmarkGroup,
                 benchmark,
                 RunPhase.MEASUREMENT,
                 ProfilerType.NMT,
-                additionalParameters ).sanitizedFilename() );
+                additionalParameters );
         try
         {
             NativeMemoryTrackingSummaryReport summaryReport =
                     NativeMemoryTrackingSummaryReport.create( Paths.get( forkDirectory.toAbsolutePath() ) );
-            summaryReport.toCSV( csvReport );
+            summaryReport.toCSV( forkDirectory.pathFor( csvReport ) );
         }
         catch ( IOException e )
         {
@@ -96,11 +95,10 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
             Jvm jvm,
             Pid pid )
     {
-        String snapshotFilename = NativeMemoryTrackingSnapshot.snapshotFilename( tick.counter() );
+        File snapshotFile = forkDirectory.create( NativeMemoryTrackingSnapshot.snapshotFilename( tick.counter() ) ).toFile();
         List<String> command =
                 asList( jvm.launchJcmd(), Long.toString( pid.get() ), "VM.native_memory", "summary", "scale=KB" );
-        ProcessBuilder processBuilder = new ProcessBuilder( command )
-                .redirectOutput( forkDirectory.create( snapshotFilename ).toFile() );
+        ProcessBuilder processBuilder = new ProcessBuilder( command ).redirectOutput( snapshotFile );
 
         ProcessWrapper processWrapper = ProcessWrapper.start( processBuilder );
 
