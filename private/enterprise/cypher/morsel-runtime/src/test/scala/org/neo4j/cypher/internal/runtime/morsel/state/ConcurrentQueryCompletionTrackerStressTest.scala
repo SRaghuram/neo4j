@@ -44,10 +44,10 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
     stopSignal.set(true)
 
     for (thread <- threads) {
-      thread.join(1000)
+      thread.join(10000)
       if (thread.isAlive) {
         thread.interrupt()
-        thread.join(1000)
+        thread.join(10000)
         if (thread.isAlive) {
           fail(s"Thread $thread hung indefinitely and was not interruptable")
         }
@@ -67,6 +67,9 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
 
   class QueryRunner(ongoingWork: ArrayBlockingQueue[QueryCompletionTracker],
                     stopSignal: AtomicBoolean) extends Runnable {
+    private val querySubscriber = mock[QuerySubscriber]
+    private val context = mock[QueryContext](RETURNS_DEEP_STUBS)
+    private val executionTracer = mock[QueryExecutionTracer]
 
     private val random = ThreadLocalRandom.current()
     private var totalQueriesStarted = 0L
@@ -75,9 +78,10 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
     override def run(): Unit = {
       try {
         while (!stopSignal.get()) {
-          val newQuery = new ConcurrentQueryCompletionTracker(mock[QuerySubscriber],
-            mock[QueryContext](RETURNS_DEEP_STUBS),
-            mock[QueryExecutionTracer])
+
+          val newQuery = new ConcurrentQueryCompletionTracker(querySubscriber,
+                                                              context,
+                                                              executionTracer)
 
           newQuery.increment()
           ongoingWork.put(newQuery)
@@ -121,11 +125,6 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
           emulateQuery(query)
         }
       }
-
-      val finalQuery = ongoingWork.poll()
-      if (finalQuery != null) {
-        emulateQuery(finalQuery)
-      }
     }
 
     private def emulateQuery(query: QueryCompletionTracker): Unit = {
@@ -146,7 +145,7 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
 }
 
 object ConcurrentQueryCompletionTrackerStressTest {
-  private val POISON_PILL = new QueryCompletionTracker {
+  private val POISON_PILL: QueryCompletionTracker = new QueryCompletionTracker {
     override def increment(): Unit = fail()
     override def incrementBy(n: Long): Unit = fail()
     override def decrement(): Unit = fail()
