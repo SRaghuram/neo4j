@@ -18,6 +18,7 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -613,6 +614,12 @@ class TransactionGuardIT
         public void clearCache()
         {
             delegate.clearCache();
+        }
+
+        @Override
+        public Collection<File> listIdFiles()
+        {
+            return delegate.listIdFiles();
         }
     }
 

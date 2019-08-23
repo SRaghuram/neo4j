@@ -76,19 +76,19 @@ public class PrepareStoreCopyFilesTest
                 new StoreFileMetadata( databaseLayout.file( "b" ), 2 )};
         setExpectedFiles( expectedFiles );
 
-        //when
+        // when
         File[] files = prepareStoreCopyFiles.listReplayableFiles();
         StoreResource[] atomicFilesSnapshot = prepareStoreCopyFiles.getAtomicFilesSnapshot();
 
-        //then
+        // then
         File[] expectedFilesConverted = Arrays.stream( expectedFiles ).map( StoreFileMetadata::file ).toArray( File[]::new );
-        StoreResource[] exeptedAtomicFilesConverted = Arrays.stream( expectedFiles ).map(
+        StoreResource[] expectedAtomicFilesConverted = Arrays.stream( expectedFiles ).map(
                 f -> new StoreResource( f.file(), getRelativePath( f ), f.recordSize(), fileSystemAbstraction ) ).toArray( StoreResource[]::new );
         assertArrayEquals( expectedFilesConverted, files );
-        assertEquals( exeptedAtomicFilesConverted.length, atomicFilesSnapshot.length );
-        for ( int i = 0; i < exeptedAtomicFilesConverted.length; i++ )
+        assertEquals( expectedAtomicFilesConverted.length, atomicFilesSnapshot.length );
+        for ( int i = 0; i < expectedAtomicFilesConverted.length; i++ )
         {
-            StoreResource expected = exeptedAtomicFilesConverted[i];
+            StoreResource expected = expectedAtomicFilesConverted[i];
             StoreResource storeResource = atomicFilesSnapshot[i];
             assertEquals( expected.path(), storeResource.path() );
             assertEquals( expected.recordSize(), storeResource.recordSize() );

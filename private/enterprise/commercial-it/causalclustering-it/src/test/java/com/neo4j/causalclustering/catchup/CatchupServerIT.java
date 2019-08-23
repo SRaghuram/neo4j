@@ -320,7 +320,7 @@ class CatchupServerIT
     private List<String> getExpectedStoreFiles( Database database ) throws IOException
     {
         DatabaseFileListing.StoreFileListingBuilder builder = database.getDatabaseFileListing().builder();
-        builder.excludeLogFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeAdditionalProviders();
+        builder.excludeLogFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeAdditionalProviders().excludeIdFiles();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
             return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );

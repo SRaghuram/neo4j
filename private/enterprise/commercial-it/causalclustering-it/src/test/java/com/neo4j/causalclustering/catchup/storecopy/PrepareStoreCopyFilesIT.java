@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.test.extension.CommercialDbmsExtension;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -16,15 +17,23 @@ import java.util.Set;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseFile;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.NativeIndexFileFilter;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.Collections.disjoint;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.collections.impl.factory.Sets.intersect;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 
@@ -39,14 +48,88 @@ class PrepareStoreCopyFilesIT
     {
         try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles( db ) )
         {
+            // given
             createSchemaAndData( db );
 
+            // when
             var atomicFiles = atomicFiles( prepareStoreCopyFiles );
             var replayableFiles = replayableFiles( prepareStoreCopyFiles );
 
+            // then
             assertTrue( disjoint( atomicFiles, replayableFiles ),
                     () -> "Atomic and replayable files contain same elements:\n" + intersect( atomicFiles, replayableFiles ) );
         }
+    }
+
+    @Test
+    void shouldReturnAllGBPTreeFilesInAtomicSectionNotReplayableSection() throws IOException
+    {
+        // GBPTree files include:
+        // - Label index
+        // - Native indexes
+        // - .id files (as of 4.0, the IndexedIdGenerator)
+
+        try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles( db ) )
+        {
+            // given
+            createSchemaAndData( db );
+
+            // when
+            var atomicFiles = atomicFiles( prepareStoreCopyFiles );
+            var replayableFiles = replayableFiles( prepareStoreCopyFiles );
+
+            // then
+            assertContainsSomeGBPTreeFiles( atomicFiles );
+            assertContainsNoGBPTreeFiles( replayableFiles );
+        }
+    }
+
+    private void assertContainsSomeGBPTreeFiles( Set<File> files )
+    {
+        NativeIndexFileFilter nativeIndexFileFilter = new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
+        PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
+        long count = files.stream().filter( file ->
+                isKnownGBPTreeFile( nativeIndexFileFilter, db.databaseLayout(), file ) ||
+                fileContentsLooksLikeAGBPTree( file, pageCache ) ).count();
+        assertThat( count, greaterThan( 0L ) );
+    }
+
+    private void assertContainsNoGBPTreeFiles( Set<File> files )
+    {
+        NativeIndexFileFilter nativeIndexFileFilter = new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
+        PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
+        for ( File file : files )
+        {
+            // What we know today
+            assertFalse( isKnownGBPTreeFile( nativeIndexFileFilter, db.databaseLayout(), file ) );
+            // Future-proofness, sort of
+            assertFalse( fileContentsLooksLikeAGBPTree( file, pageCache ) );
+        }
+    }
+
+    private static boolean fileContentsLooksLikeAGBPTree( File file, PageCache pageCache )
+    {
+        try
+        {
+            MutableBoolean headerRead = new MutableBoolean();
+            GBPTree.readHeader( pageCache, file, buffer -> headerRead.setTrue() );
+            return headerRead.booleanValue();
+        }
+        catch ( Exception e )
+        {
+            // In addition to IOException and MetaDataMismatchException there could be stuff like IllegalArgumentException from trying to
+            // map a file with page size 0 or something like that, because this method is simply trying to open any type of file as a GBPTree
+            // file so the contents could be anything.
+            return false;
+        }
+    }
+
+    private static boolean isKnownGBPTreeFile( NativeIndexFileFilter nativeIndexFileFilter, DatabaseLayout databaseLayout, File file )
+    {
+        String name = file.getName();
+        return name.equals( DatabaseFile.LABEL_SCAN_STORE.getName() ) ||
+                nativeIndexFileFilter.accept( file ) ||
+                databaseLayout.idFiles().contains( file );
     }
 
     private static PrepareStoreCopyFiles newPrepareStoreCopyFiles( GraphDatabaseAPI db )
