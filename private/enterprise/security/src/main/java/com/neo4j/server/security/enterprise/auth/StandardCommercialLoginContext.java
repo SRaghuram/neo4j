@@ -465,7 +465,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         {
             if ( passwordChangeRequired )
             {
-                return AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( msg );
+                return AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( "Permission denied."  );
             }
             else
             {
