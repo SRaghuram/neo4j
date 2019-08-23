@@ -50,7 +50,6 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.CHECK_TYPES;
-import static com.neo4j.tools.txlog.checktypes.CheckTypes.NEO_STORE;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.NODE;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.PROPERTY;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.RELATIONSHIP;
@@ -666,109 +665,6 @@ class CheckTxLogsTest
         assertTrue( seenRecord2.inUse() );
         assertEquals( 42, currentRecord2.getId() );
         assertFalse( currentRecord2.inUse() );
-    }
-
-    @Test
-    void shouldReportNeoStoreInconsistenciesFromSingleLog() throws IOException
-    {
-        // Given
-        File log = logFile( 1 );
-
-        writeTxContent( log, 0,
-                new Command.NeoStoreCommand(
-                        new NeoStoreRecord(),
-                        createNeoStoreRecord( 42 )
-                ),
-                new Command.PropertyCommand(
-                        propertyRecord( 5, false, -1, -1 ),
-                        propertyRecord( 5, true, -1, -1, 777 )
-                ),
-                new Command.NeoStoreCommand(
-                        createNeoStoreRecord( 42 ),
-                        createNeoStoreRecord( 21 )
-                )
-        );
-
-        writeTxContent( log, 0,
-                new Command.NeoStoreCommand(
-                        createNeoStoreRecord( 42 ),
-                        createNeoStoreRecord( 33 )
-                )
-        );
-
-        CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
-
-        // When
-        checker.scan( getLogFiles(), handler, NEO_STORE );
-
-        // Then
-        assertEquals( 1, handler.recordInconsistencies.size() );
-
-        NeoStoreRecord seenRecord = (NeoStoreRecord) handler.recordInconsistencies.get( 0 ).committed.record();
-        NeoStoreRecord currentRecord = (NeoStoreRecord) handler.recordInconsistencies.get( 0 ).current.record();
-
-        assertEquals( 21, seenRecord.getNextProp() );
-        assertEquals( 42, currentRecord.getNextProp() );
-    }
-
-    @Test
-    void shouldReportNeoStoreInconsistenciesFromDifferentLogs() throws IOException
-    {
-        // Given
-        File log1 = logFile( 1 );
-        File log2 = logFile( 2 );
-        File log3 = logFile( 3 );
-
-        writeTxContent( log1, 0,
-                new Command.NeoStoreCommand(
-                        new NeoStoreRecord(),
-                        createNeoStoreRecord( 42 )
-                ),
-                new Command.PropertyCommand(
-                        propertyRecord( 5, false, -1, -1 ),
-                        propertyRecord( 5, true, -1, -1, 777 )
-                ),
-                new Command.NeoStoreCommand(
-                        createNeoStoreRecord( 42 ),
-                        createNeoStoreRecord( 21 )
-                )
-        );
-
-        writeTxContent( log2, 0,
-                new Command.NeoStoreCommand(
-                        createNeoStoreRecord( 12 ),
-                        createNeoStoreRecord( 21 )
-                )
-        );
-
-        writeTxContent( log3, 0,
-                new Command.NeoStoreCommand(
-                        createNeoStoreRecord( 13 ),
-                        createNeoStoreRecord( 21 )
-                )
-        );
-
-        CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
-        CheckTxLogs checker = new CheckTxLogs( System.out, fs );
-
-        // When
-        checker.scan( getLogFiles(), handler, NEO_STORE );
-
-        // Then
-        assertEquals( 2, handler.recordInconsistencies.size() );
-
-        NeoStoreRecord seenRecord1 = (NeoStoreRecord) handler.recordInconsistencies.get( 0 ).committed.record();
-        NeoStoreRecord currentRecord1 = (NeoStoreRecord) handler.recordInconsistencies.get( 0 ).current.record();
-
-        assertEquals( 21, seenRecord1.getNextProp() );
-        assertEquals( 12, currentRecord1.getNextProp() );
-
-        NeoStoreRecord seenRecord2 = (NeoStoreRecord) handler.recordInconsistencies.get( 1 ).committed.record();
-        NeoStoreRecord currentRecord2 = (NeoStoreRecord) handler.recordInconsistencies.get( 1 ).current.record();
-
-        assertEquals( 21, seenRecord2.getNextProp() );
-        assertEquals( 13, currentRecord2.getNextProp() );
     }
 
     @Test
