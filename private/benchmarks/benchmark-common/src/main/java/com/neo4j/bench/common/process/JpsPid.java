@@ -50,12 +50,29 @@ public class JpsPid
         String jpsOutput = inputStreamToString( jpsProcess.getInputStream() );
         if ( resultCode != 0 )
         {
-            throw new RuntimeException( "Bad things happened when invoking 'jps'\n" +
-                                        "Code   : " + resultCode + "\n" +
-                                        "Output : " + jpsOutput );
+            System.out.println( "Bad things happened when invoking 'jps', trying pgrep and ps before exiting\n" +
+                                "Code   : " + resultCode + "\n" +
+                                "Output : " + jpsOutput );
+            return tryPgrep( processName );
         }
 
         return fromProcessOutput( jpsOutput, processName );
+    }
+
+    private static JpsPid tryPgrep( String processName ) throws IOException, InterruptedException
+    {
+        String[] command = {"bash", "-c", "pgrep java | xargs ps -p"};
+        ProcessBuilder processBuilder = new ProcessBuilder( command );
+        Process psProcess = processBuilder.start();
+        int resultCode = psProcess.waitFor();
+        String psOutput = inputStreamToString( psProcess.getInputStream() );
+        if ( resultCode != 0 )
+        {
+            throw new RuntimeException( "Bad things happened when invoking 'ps'\n" +
+                                        "Code   : " + resultCode + "\n" +
+                                        "Output : " + psOutput );
+        }
+        return fromProcessOutput( psOutput, processName );
     }
 
     private static JpsPid fromProcessOutput( String jpsOutput, String processName )
