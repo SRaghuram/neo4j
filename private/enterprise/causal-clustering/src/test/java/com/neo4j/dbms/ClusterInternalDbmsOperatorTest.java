@@ -35,7 +35,7 @@ class ClusterInternalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenReturn( ReconcilerResponse.EMPTY );
+        when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenReturn( ReconcilerResult.EMPTY );
         operator.connect( connector );
     }
 
@@ -225,7 +225,7 @@ class ClusterInternalDbmsOperatorTest
         {
             var desiredState = operator.desired().get( databaseId.name() );
             stateRef.set( desiredState.operationalState() );
-            return ReconcilerResponse.EMPTY;
+            return ReconcilerResult.EMPTY;
         } );
     }
 }

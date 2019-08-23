@@ -23,8 +23,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @CommercialDbmsExtension
@@ -42,13 +40,12 @@ class DbmsReconcilerIT
         var reconciler = db.getDependencyResolver().resolveDependency( DbmsReconciler.class );
 
         // a fake operator that desires a state invalid for a standalone database
-        var fakeOperator = mock( DbmsOperator.class );
         var invalidDesiredState = new DatabaseState( db.databaseId(), STORE_COPYING );
-        doReturn( Map.of( databaseName, invalidDesiredState ) ).when( fakeOperator ).desired0();
+        var fixedOperator = new FixedDbmsOperator( Map.of( databaseName, invalidDesiredState ) );
 
-        // reconciler fails to reconcile the state transaction
-        var reconcilerResponse = reconciler.reconcile( List.of( fakeOperator ), ReconcilerRequest.simple() );
-        var error = assertThrows( CompletionException.class, () -> reconcilerResponse.await( databaseName ) );
+        // reconciler fails to reconcile the state transition
+        var reconcilerResult = reconciler.reconcile( List.of( fixedOperator ), ReconcilerRequest.simple() );
+        var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( databaseName ) );
         assertThat( error.getCause().getMessage(), containsString( "unsupported state transition" ) );
 
         // database panicked

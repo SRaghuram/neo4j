@@ -21,14 +21,14 @@ import java.util.stream.Stream;
  * databaseIds which are unrecognised the method will simply return immediately rather than
  * throw any kind of exception.
  */
-public final class ReconcilerResponse
+public final class ReconcilerResult
 {
-    public static final ReconcilerResponse EMPTY = new ReconcilerResponse( Collections.emptyMap() );
+    public static final ReconcilerResult EMPTY = new ReconcilerResult( Collections.emptyMap() );
 
     private final Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures;
     private final CompletableFuture<Void> completedFuture;
 
-    ReconcilerResponse( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
+    ReconcilerResult( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
     {
         this.reconciliationFutures = reconciliationFutures;
         this.completedFuture = buildCompletedFuture( reconciliationFutures );

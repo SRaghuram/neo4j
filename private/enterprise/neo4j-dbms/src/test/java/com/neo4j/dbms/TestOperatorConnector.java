@@ -33,7 +33,7 @@ public class TestOperatorConnector extends OperatorConnector
     }
 
     @Override
-    public ReconcilerResponse trigger( ReconcilerRequest request )
+    public ReconcilerResult trigger( ReconcilerRequest request )
     {
         var desired = new HashMap<>( operator.desired() );
         triggerCalls.add( Pair.of( desired, request ) );

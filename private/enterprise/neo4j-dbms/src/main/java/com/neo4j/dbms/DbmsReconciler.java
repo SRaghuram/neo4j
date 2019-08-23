@@ -99,7 +99,7 @@ public class DbmsReconciler
         this.transitions = prepareLifecycleTransitionSteps();
     }
 
-    ReconcilerResponse reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
+    ReconcilerResult reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
     {
         var namesOfDbsToReconcile = operators.stream()
                 .flatMap( op -> op.desired().keySet().stream() )
@@ -109,7 +109,7 @@ public class DbmsReconciler
                 .map( dbName -> Pair.of( dbName, reconcile( dbName, request, operators ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
-        return new ReconcilerResponse( reconciliation );
+        return new ReconcilerResult( reconciliation );
     }
 
     private static Map<String,DatabaseState> combineDesiredStates( Map<String,DatabaseState> combined, Map<String,DatabaseState> operator,

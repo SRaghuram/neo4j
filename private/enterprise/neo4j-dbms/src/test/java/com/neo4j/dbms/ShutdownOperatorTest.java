@@ -39,7 +39,7 @@ class ShutdownOperatorTest
     @BeforeEach
     void setup()
     {
-        when( dbmsReconciler.reconcile( anyList(), any() ) ).thenReturn( ReconcilerResponse.EMPTY );
+        when( dbmsReconciler.reconcile( anyList(), any() ) ).thenReturn( ReconcilerResult.EMPTY );
         operator.connect( connector );
         databases.forEach( databaseManager::createDatabase );
     }

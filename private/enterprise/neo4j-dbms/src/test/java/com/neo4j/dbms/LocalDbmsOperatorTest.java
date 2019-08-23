@@ -35,7 +35,7 @@ class LocalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( ReconcilerRequest.force() ) ).thenReturn( ReconcilerResponse.EMPTY );
+        when( connector.trigger( ReconcilerRequest.force() ) ).thenReturn( ReconcilerResult.EMPTY );
         operator.connect( connector );
     }
 

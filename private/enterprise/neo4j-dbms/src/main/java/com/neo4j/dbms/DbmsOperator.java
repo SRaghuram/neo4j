@@ -37,11 +37,11 @@ public abstract class DbmsOperator
         return Map.copyOf( desired0() );
     }
 
-    final ReconcilerResponse trigger( ReconcilerRequest request )
+    final ReconcilerResult trigger( ReconcilerRequest request )
     {
         if ( connector == null )
         {
-            return ReconcilerResponse.EMPTY;
+            return ReconcilerResult.EMPTY;
         }
         return connector.trigger( request );
     }
