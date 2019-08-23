@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.NodeIndexStringSearchScanOperator.failOrFalseMethod
+import org.neo4j.cypher.internal.runtime.morsel.operators.NodeIndexStringSearchScanOperator.isValidOrThrowMethod
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -78,7 +78,9 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 
-        case x => NodeIndexStringSearchScanOperator.failOrFalse(x)
+        case IsNoValue() => false
+
+        case x => throw new CypherTypeException(s"Expected a string value, but got $x")
       }
     }
 
@@ -100,12 +102,14 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
 }
 
 object NodeIndexStringSearchScanOperator {
-  def failOrFalse(value: AnyValue): Boolean = value match {
+
+  def isValidOrThrow(value: AnyValue): Boolean = value match {
     case IsNoValue() => false
+    case _: TextValue => true
     case x => throw new CypherTypeException(s"Expected a string value, but got $x")
   }
 
-  val failOrFalseMethod: Method = method[NodeIndexStringSearchScanOperator, Boolean, AnyValue]("failOrFalse")
+  val isValidOrThrowMethod: Method = method[NodeIndexStringSearchScanOperator, Boolean, AnyValue]("isValidOrThrow")
 }
 
 class NodeIndexContainsScanOperator(workIdentity: WorkIdentity,
@@ -194,10 +198,14 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
     block(
       assign(seekVariable, nullCheckIfRequired(seekExpression)),
       declareAndAssign(typeRefOf[Boolean], hasInnerLoop, constant(false)),
-      condition(or(instanceOf[TextValue](load(seekVariable)), invokeStatic(failOrFalseMethod, load(seekVariable))))(
+      condition(invokeStatic(isValidOrThrowMethod, load(seekVariable)))(
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
-          nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), searchPredicate(property.propertyKeyId, cast[TextValue](load(seekVariable))), indexOrder, needsValues),
+          nodeIndexSeek(
+            indexReadSession(queryIndexId),
+            loadField(nodeIndexCursorField),
+            searchPredicate(property.propertyKeyId,
+                            cast[TextValue](load(seekVariable))), indexOrder, needsValues),
           setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
           assign(hasInnerLoop, loadField(canContinue))
         )
