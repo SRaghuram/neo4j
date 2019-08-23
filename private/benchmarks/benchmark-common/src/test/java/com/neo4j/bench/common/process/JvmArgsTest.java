@@ -7,7 +7,10 @@ package com.neo4j.bench.common.process;
 
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.hamcrest.Matchers.contains;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
 
 import static java.util.Collections.emptyList;
@@ -96,5 +99,32 @@ public class JvmArgsTest
         // given
         JvmArgs jvmArgs = JvmArgs.from( emptyList() );
         jvmArgs = jvmArgs.set( "-NativeMemorySummary" );
+    }
+
+    @Test
+    public void handleQuotedArgsFromString()
+    {
+        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "-XX:OnOutMemoryError=\"kill -9 %p\" -Xms4g -Xmx4g" );
+        assertArrayEquals(
+                new String[] {"-XX:OnOutMemoryError=\"kill -9 %p\"","-Xms4g","-Xmx4g"},
+                jvmArgs.toArray( new String[] {} ) );
+    }
+
+    @Test
+    public void handleUnquotedArgsFromString()
+    {
+        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "-Xms4g -Xmx4g" );
+        assertArrayEquals(
+                new String[] {"-Xms4g","-Xmx4g"},
+                jvmArgs.toArray( new String[] {} ) );
+    }
+
+    @Test
+    public void handleLeadingAndTralingSpaceArgsFromString()
+    {
+        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "  -Xms4g   -Xmx4g  " );
+        assertArrayEquals(
+                new String[] {"-Xms4g","-Xmx4g"},
+                jvmArgs.toArray( new String[] {} ) );
     }
 }

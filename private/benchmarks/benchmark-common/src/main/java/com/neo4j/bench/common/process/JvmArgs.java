@@ -7,7 +7,10 @@ package com.neo4j.bench.common.process;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ForkDirectory;
+import org.apache.commons.lang3.StringUtils;
 
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,8 +18,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.neo4j.bench.common.util.Args.splitArgs;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -57,7 +58,45 @@ public class JvmArgs
 
     public static List<String> jvmArgsFromString( String jvmArgs )
     {
-        return Arrays.asList( splitArgs( jvmArgs, " " ) );
+        ArrayList<String> args = new ArrayList<>();
+
+        StringCharacterIterator iter = new StringCharacterIterator( jvmArgs );
+
+        StringBuilder builder = new StringBuilder();
+        boolean quoted = false;
+
+        for ( char c = iter.first(); ; c = iter.next() )
+        {
+            if ( c == CharacterIterator.DONE )
+            {
+                builder = addArg( args, builder );
+                break;
+
+            }
+            if ( c == ' ' && !quoted )
+            {
+                builder = addArg( args, builder );
+                continue;
+            }
+            if ( c == '\"' )
+            {
+                quoted = !quoted;
+            }
+            builder.append( c );
+        }
+
+        return args;
+    }
+
+    private static StringBuilder addArg( ArrayList<String> args, StringBuilder builder )
+    {
+        String str = builder.toString().trim();
+        if ( StringUtils.isNotBlank( str ) )
+        {
+            args.add( str );
+            builder = new StringBuilder();
+        }
+        return builder;
     }
 
     public static String jvmArgsToString( List<String> jvmArgs )
