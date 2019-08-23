@@ -41,6 +41,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.schema.ConstraintDefinition;
+import org.neo4j.graphdb.schema.ConstraintType;
+import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -171,7 +174,6 @@ public class StoreUpgradeIT
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );
-
             }
             finally
             {
@@ -456,6 +458,7 @@ public class StoreUpgradeIT
         checkGlobalNodeCount( store, db );
         checkLabelCounts( db );
         checkIndexCounts( store, db );
+        checkConstraints( db );
     }
 
     private static void checkIndexCounts( Store store, GraphDatabaseAPI db ) throws KernelException
@@ -481,6 +484,24 @@ public class StoreUpgradeIT
                 double selectivity = schemaRead.indexUniqueValuesSelectivity( reference );
                 assertEquals( store.indexSelectivity[i], selectivity, 0.0000001d );
             }
+        }
+    }
+
+    private static void checkConstraints( GraphDatabaseAPI db )
+    {
+        // All constraints that have indexes, must have their indexes named after them.
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( ConstraintDefinition constraint : db.schema().getConstraints() )
+            {
+                if ( constraint.isConstraintType( ConstraintType.UNIQUENESS ) || constraint.isConstraintType( ConstraintType.NODE_KEY ) )
+                {
+                    // These constraints have indexes, so we must be able to find their indexes by the constraint name.
+                    // The 'getIndexByName' method will throw if there is no such index.
+                    db.schema().getIndexByName( constraint.getName() );
+                }
+            }
+            tx.commit();
         }
     }
 
