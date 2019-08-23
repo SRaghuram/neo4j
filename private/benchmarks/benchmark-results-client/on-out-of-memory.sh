@@ -40,7 +40,7 @@ fi
 
 outputDir=$(realpath -s $outputDir)
 
-resultsDir="$outputDir/"$(uuidgen)
+resultsDir="$outputDir/$jvmPid"
 
 if [[ ! -d $resultsDir ]]; then
   mkdir -p "$resultsDir"
