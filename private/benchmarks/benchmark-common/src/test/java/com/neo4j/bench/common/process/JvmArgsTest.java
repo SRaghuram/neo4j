@@ -106,7 +106,7 @@ public class JvmArgsTest
     {
         List<String> jvmArgs = JvmArgs.jvmArgsFromString( "-XX:OnOutMemoryError=\"kill -9 %p\" -Xms4g -Xmx4g" );
         assertArrayEquals(
-                new String[] {"-XX:OnOutMemoryError=\"kill -9 %p\"","-Xms4g","-Xmx4g"},
+                new String[] {"-XX:OnOutMemoryError=kill -9 %p","-Xms4g","-Xmx4g"},
                 jvmArgs.toArray( new String[] {} ) );
     }
 

@@ -81,6 +81,7 @@ public class JvmArgs
             if ( c == '\"' )
             {
                 quoted = !quoted;
+                continue;
             }
             builder.append( c );
         }
