@@ -25,7 +25,7 @@ class PageLoaderFactory
 
     PageLoader getLoader( PagedFile file ) throws IOException
     {
-        if ( FileUtils.highIODevice( file.file().toPath(), false ) )
+        if ( FileUtils.highIODevice( file.file().toPath() ) )
         {
             return new ParallelPageLoader( file, executor, pageCache );
         }
