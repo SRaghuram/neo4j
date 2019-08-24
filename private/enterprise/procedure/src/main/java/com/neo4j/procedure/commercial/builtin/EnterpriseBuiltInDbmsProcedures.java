@@ -55,6 +55,8 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.scheduler.ActiveGroup;
+import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -481,6 +483,14 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @Description( "List the job groups that are active in the database internal job scheduler." )
+    @Procedure( name = "dbms.scheduler.groups", mode = DBMS )
+    public Stream<ActiveSchedulingGroup> schedulerActiveGroups()
+    {
+        JobScheduler scheduler = resolver.resolveDependency( JobScheduler.class );
+        return scheduler.activeGroups().map( ActiveSchedulingGroup::new );
+    }
+
     @Description( "Initiate and wait for a new check point, or wait any already on-going check point to complete. Note that this temporarily disables the " +
             "`dbms.checkpoint.iops.limit` setting in order to make the check point complete faster. This might cause transaction throughput to degrade " +
             "slightly, due to increased IO load." )
@@ -660,6 +670,18 @@ public class EnterpriseBuiltInDbmsProcedures
         MetadataResult( Map<String,Object> metadata )
         {
             this.metadata = metadata;
+        }
+    }
+
+    public static class ActiveSchedulingGroup
+    {
+        public final String group;
+        public final long threads;
+
+        ActiveSchedulingGroup( ActiveGroup activeGroup )
+        {
+            this.group = activeGroup.group.groupName();
+            this.threads = activeGroup.threads;
         }
     }
 }
