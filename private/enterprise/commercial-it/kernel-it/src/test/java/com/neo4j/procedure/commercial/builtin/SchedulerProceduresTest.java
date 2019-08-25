@@ -6,7 +6,6 @@
 package com.neo4j.procedure.commercial.builtin;
 
 import com.neo4j.test.extension.CommercialDbmsExtension;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.graphdb.Result;
@@ -14,6 +13,8 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @CommercialDbmsExtension
@@ -30,8 +31,15 @@ class SchedulerProceduresTest
             assertTrue( result.hasNext() );
             while ( result.hasNext() )
             {
-                assertThat( (Long) result.next().get( "threads" ), Matchers.greaterThan( 0L ) );
+                assertThat( (Long) result.next().get( "threads" ), greaterThan( 0L ) );
             }
         }
+    }
+
+    @Test
+    void shouldProfileGroup()
+    {
+        String result = db.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
+        assertThat( result, containsString( "morsel.Worker.run" ) );
     }
 }

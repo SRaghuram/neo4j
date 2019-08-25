@@ -7,7 +7,9 @@ package com.neo4j.procedure.commercial.builtin;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -28,6 +31,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.function.UncaughtCheckedException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.helpers.TimeUtil;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
@@ -55,7 +59,9 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.resources.Profiler;
 import org.neo4j.scheduler.ActiveGroup;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.format;
@@ -483,12 +489,69 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @Admin
     @Description( "List the job groups that are active in the database internal job scheduler." )
     @Procedure( name = "dbms.scheduler.groups", mode = DBMS )
     public Stream<ActiveSchedulingGroup> schedulerActiveGroups()
     {
         JobScheduler scheduler = resolver.resolveDependency( JobScheduler.class );
         return scheduler.activeGroups().map( ActiveSchedulingGroup::new );
+    }
+
+    @Admin
+    @Description( "Begin profiling all threads within the given job group, for the specified duration." )
+    @Procedure( name = "dbms.scheduler.profile", mode = DBMS )
+    public Stream<ProfileResult> schedulerProfileGroup(
+            @Name( "method" ) String method,
+            @Name( "group" ) String groupName,
+            @Name( "duration" ) String duration ) throws InterruptedException
+    {
+        Profiler profiler;
+        if ( "sample".equals( method ) )
+        {
+            profiler = Profiler.profiler();
+        }
+        else
+        {
+            throw new IllegalArgumentException( "No such profiling method: '" + method + "'. Valid methods are: 'sample'." );
+        }
+        Group group = null;
+        for ( Group value : Group.values() )
+        {
+            if ( value.groupName().equals( groupName ) )
+            {
+                group = value;
+                break;
+            }
+        }
+        if ( group == null )
+        {
+            throw new IllegalArgumentException( "No such scheduling group: '" + groupName + "'." );
+        }
+        long durationNanos = TimeUnit.MILLISECONDS.toNanos( TimeUtil.parseTimeMillis.apply( duration ) );
+        JobScheduler scheduler = resolver.resolveDependency( JobScheduler.class );
+        long deadline = System.nanoTime() + durationNanos;
+        try
+        {
+            scheduler.profileGroup( group, profiler );
+            while ( System.nanoTime() < deadline )
+            {
+                // TODO Figure out a way to get hold of the transaction here, so we can check if it has been terminated.
+                //      Apparantly we cannot have the KernelTransaction, or the TerminationGuard, field-injected with
+                //      @Context. For some reason, trying to do that breaks everything.
+//                terminationGuard.check();
+                Thread.sleep( 100 );
+            }
+        }
+        finally
+        {
+            profiler.finish();
+        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream( baos );
+        profiler.printProfile( out, "Profiled group '" + group + "'." );
+        out.flush();
+        return Stream.of( new ProfileResult( baos.toString() ) );
     }
 
     @Description( "Initiate and wait for a new check point, or wait any already on-going check point to complete. Note that this temporarily disables the " +
@@ -682,6 +745,16 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.group = activeGroup.group.groupName();
             this.threads = activeGroup.threads;
+        }
+    }
+
+    public static class ProfileResult
+    {
+        public final String profile;
+
+        public ProfileResult( String profile )
+        {
+            this.profile = profile;
         }
     }
 }
