@@ -323,6 +323,11 @@ class ProcedureResourcesIT
         case "dbms.routing.getRoutingTable":
             proc.withParam( "{}" );
             break;
+        case "dbms.scheduler.profile":
+            proc.withParam( "'sample'" );
+            proc.withParam( "'CheckPoint'" );
+            proc.withParam( "'0s'" );
+            break;
         default:
         }
         return proc;
