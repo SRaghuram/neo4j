@@ -120,6 +120,11 @@ trait OperatorState {
   /**
     * Initialize new tasks for this operator. This code path let's operators create
     * multiple output rows for each row in `inputMorsel`.
+    *
+    * TODO: ArgumentStateMaps are currently needed for fused operators that has argument state, to lookup its ArgumentStateMap in the CompiledTask constructor.
+    *       When we solve how to instantiate generated classes from generated code we would like to be able to remove it from this interface,
+    *       by generating an OperatorState class that can create instances of a generated OperatorTask class.
+    *       It can then pass the correct ArgumentStateMap directly as a constructor parameter.
     */
   def nextTasks(context: QueryContext,
                 state: QueryState,
