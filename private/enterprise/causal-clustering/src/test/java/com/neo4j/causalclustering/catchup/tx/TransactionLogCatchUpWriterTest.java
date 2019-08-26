@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -62,6 +63,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -151,6 +153,7 @@ public class TransactionLogCatchUpWriterTest
     @Test
     public void doNotPreallocateTxLogsDuringStoreCopy() throws IOException
     {
+        assumeTrue( SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         simulateStoreCopy();
         try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
@@ -166,6 +169,20 @@ public class TransactionLogCatchUpWriterTest
         {
             assertThat(  sizeOf( databaseLayout.getTransactionLogsDirectory() ), greaterThanOrEqualTo( logical_log_rotation_threshold.defaultValue() ) );
         }
+    }
+
+    @Test
+    public void noPreallocateTxLogsDuringStoreCopy() throws IOException
+    {
+        assumeTrue( !SystemUtils.IS_OS_LINUX );
+        Config config = defaults();
+        simulateStoreCopy();
+        try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true ) )
+        {
+            // empty
+        }
+        assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
     }
 
     @Test
