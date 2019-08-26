@@ -58,49 +58,41 @@ public class JvmArgs
 
     public static List<String> jvmArgsFromString( String jvmArgs )
     {
-        ArrayList<String> args = new ArrayList<>();
-
-        StringCharacterIterator iter = new StringCharacterIterator( jvmArgs );
-
+        List<String> args = new ArrayList<>();
+        CharacterIterator characters = new StringCharacterIterator(  jvmArgs.trim() );
         StringBuilder builder = new StringBuilder();
         boolean quoted = false;
 
-        for ( char c = iter.first(); ; c = iter.next() )
+        for ( char c = characters.first(); c != CharacterIterator.DONE; c = characters.next() )
         {
-            // we have reached end of string
-            if ( c == CharacterIterator.DONE )
-            {
-                builder = addArg( args, builder );
-                break;
-
-            }
             // we have found space and we are not in between quotes
-            // so we will try to append JVM argument
+            // so we will try to add JVM argument
             if ( c == ' ' && !quoted )
             {
-                builder = addArg( args, builder );
-                continue;
+                builder = addArgFromBuilder( args, builder );
             }
             // beginning or end of quoted string
-            if ( c == '\"' )
+            else if ( c == '\"' )
             {
                 quoted = !quoted;
-                 // we skip quotes because ProcessBuilder will add them,
-                // this way we are avoiding double quotes
-                continue;
             }
-            builder.append( c );
+            else
+            {
+                builder.append( c );
+            }
         }
-
+        // if there is JVM argument left in a string builder
+        // add it to JVM arguments
+        addArgFromBuilder( args, builder );
         return args;
     }
 
-    private static StringBuilder addArg( ArrayList<String> args, StringBuilder builder )
+    private static StringBuilder addArgFromBuilder( List<String> args, StringBuilder builder )
     {
-        String str = builder.toString();
-        if ( StringUtils.isNotBlank( str ) )
+        String jvmArg = builder.toString();
+        if ( StringUtils.isNotBlank( jvmArg ) )
         {
-            args.add( str );
+            args.add( jvmArg );
             builder = new StringBuilder();
         }
         return builder;
