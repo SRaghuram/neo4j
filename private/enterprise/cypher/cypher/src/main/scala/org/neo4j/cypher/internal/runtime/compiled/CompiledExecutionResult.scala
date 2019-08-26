@@ -22,12 +22,11 @@ class CompiledExecutionResult(context: QueryContext,
                               compiledCode: GeneratedQueryExecution,
                               override val queryProfile: QueryProfile,
                               prePopulateResults: Boolean,
-                              subscriber: QuerySubscriber)
+                              subscriber: QuerySubscriber,
+                              val fieldNames: Array[String])
   extends NaiveQuerySubscription(subscriber) {
 
   private var resultRequested = false
-
-  override def fieldNames(): Array[String] = compiledCode.fieldNames()
 
   override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
     if (prePopulateResults)

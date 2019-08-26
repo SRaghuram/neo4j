@@ -29,7 +29,8 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   context.tokenContext,
                                                   newSemanticTable,
                                                   query.readOnly,
-                                                  query.cardinalities)
+                                                  query.cardinalities,
+                                                  query.resultColumns)
     new CompiledExecutionPlan(compiled)
   }
 

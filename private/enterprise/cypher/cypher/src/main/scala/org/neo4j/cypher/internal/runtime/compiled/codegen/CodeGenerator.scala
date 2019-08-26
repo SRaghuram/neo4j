@@ -32,11 +32,15 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
 
   import CodeGenerator.generateCode
 
+  /**
+   * @param originalReturnColumns the original column names, as written in the query and without Namespacing.
+   */
   def generate(plan: LogicalPlan,
                tokenContext: TokenContext,
                semanticTable: SemanticTable,
                readOnly: Boolean,
-               cardinalities: Cardinalities
+               cardinalities: Cardinalities,
+               originalReturnColumns: Seq[String]
               ): CompiledPlan = {
     plan match {
       case res: ProduceResult =>
@@ -57,7 +61,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
 
             val execution: GeneratedQueryExecution = query.query.execute(queryContext,
                                                                          tracer.getOrElse(QueryProfiler.NONE), params)
-            new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults, subscriber)
+            new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults, subscriber, originalReturnColumns.toArray)
           }
 
           def metadata: Seq[Argument] = query.code
@@ -69,6 +73,9 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
     }
   }
 
+  /**
+   * @param columns the column names, which may have been changes by the Namespacer
+   */
   private def generateQuery(plan: LogicalPlan, semantics: SemanticTable,
                             columns: Seq[String], conf: CodeGenConfiguration, cardinalities: Cardinalities): CodeStructureResult[GeneratedQuery] = {
     import LogicalPlanConverter._

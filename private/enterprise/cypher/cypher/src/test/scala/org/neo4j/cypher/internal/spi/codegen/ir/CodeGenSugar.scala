@@ -11,7 +11,7 @@ import org.mockito.Mockito._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanConstructionTestSupport
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.planner.spi.{InstrumentedGraphStatistics, PlanContext}
 import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.runtime._
@@ -44,8 +44,9 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
     val statistics: InstrumentedGraphStatistics = mock[InstrumentedGraphStatistics]
     val context = mock[PlanContext]
     doReturn(statistics, Nil: _*).when(context).statistics
+    val returnColumns = plan.asInstanceOf[ProduceResult].columns
     new CodeGenerator(GeneratedQueryStructure, Clocks.systemClock())
-      .generate(plan, context, semanticTable, readOnly = true, new StubCardinalities)
+      .generate(plan, context, semanticTable, readOnly = true, new StubCardinalities, returnColumns)
   }
 
   def compileAndProfile(plan: LogicalPlan, graphDb: GraphDatabaseQueryService): RuntimeResult = {
@@ -99,7 +100,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
 
     val subscriber = new RecordingQuerySubscriber
     val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE),
-                                                    prePopulateResults = false, subscriber = subscriber)
+                                                    prePopulateResults = false, subscriber = subscriber, generated.fieldNames())
     RewindableExecutionResult(runtimeResult, queryContext, subscriber)
   }
 
