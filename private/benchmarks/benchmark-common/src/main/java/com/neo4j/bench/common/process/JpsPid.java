@@ -59,7 +59,7 @@ public class JpsPid
         return fromProcessOutput( jpsOutput, processName );
     }
 
-    private static JpsPid tryPgrep( String processName ) throws IOException, InterruptedException
+    static JpsPid tryPgrep( String processName ) throws IOException, InterruptedException
     {
         String[] command = {"bash", "-c", "pgrep java | xargs ps -p"};
         ProcessBuilder processBuilder = new ProcessBuilder( command );
