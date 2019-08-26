@@ -5,7 +5,7 @@
  */
 package com.neo4j.dmbs.database.events;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -21,7 +21,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -34,7 +33,7 @@ class StartingDatabaseEventsIT
     void receiveStartingDatabaseEvents()
     {
         AllDatabasesEventListener eventListener = new AllDatabasesEventListener();
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                                                         .addDatabaseListener( eventListener ).build();
         managementService.shutdown();
 
@@ -66,7 +65,7 @@ class StartingDatabaseEventsIT
             return startedDatabases;
         }
 
-        public List<String> getShutdownDatabases()
+        List<String> getShutdownDatabases()
         {
             return shutdownDatabases;
         }
