@@ -7,9 +7,9 @@ package com.neo4j.bench.common.process;
 
 import com.neo4j.bench.common.util.Jvm;
 
-public class JpsPid extends FindPid
+public class PgerpAndPsPid extends FindPid
 {
-    public JpsPid()
+    public PgerpAndPsPid()
     {
         super();
     }
@@ -17,6 +17,6 @@ public class JpsPid extends FindPid
     @Override
     protected String[] getCommand( Jvm jvm )
     {
-        return new String[]{jvm.launchJps(), "-v"};
+        return new String[]{"bash", "-c", "pgrep java | xargs ps -p"};
     }
 }

@@ -49,7 +49,8 @@ public class JpsPidTest
                                                                           JustForMain.class );
 
         JvmProcess jvmProcess = JvmProcess.start( jvmProcessArgs, ProcessBuilder.Redirect.INHERIT, ProcessBuilder.Redirect.INHERIT );
-        JpsPid jpsPid = JpsPid.tryFindFor( jvm, Instant.now(), Duration.of( 5, ChronoUnit.MINUTES ), jvmProcessArgs.processName() );
+        JpsPid jpsPid = new JpsPid();
+        jpsPid.tryFindFor( jvm, Instant.now(), Duration.of( 5, ChronoUnit.MINUTES ), jvmProcessArgs.processName() );
         assertThat( jpsPid.pid().get(), equalTo( jvmProcess.pid().get() ) );
         jvmProcess.waitFor();
     }
@@ -67,8 +68,9 @@ public class JpsPidTest
                                                                           JustForMain.class );
 
         JvmProcess jvmProcess = JvmProcess.start( jvmProcessArgs, ProcessBuilder.Redirect.INHERIT, ProcessBuilder.Redirect.INHERIT );
-        JpsPid jpsPid = JpsPid.tryPgrep( jvmProcessArgs.processName() );
-        assertThat( jpsPid.pid().get(), equalTo( jvmProcess.pid().get() ) );
+        PgerpAndPsPid findPid = new PgerpAndPsPid();
+        findPid.tryPgrep( jvmProcessArgs.processName() );
+        assertThat( findPid.pid().get(), equalTo( jvmProcess.pid().get() ) );
         jvmProcess.waitFor();
     }
 }

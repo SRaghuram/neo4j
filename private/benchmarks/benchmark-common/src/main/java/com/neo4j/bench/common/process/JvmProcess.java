@@ -28,7 +28,8 @@ public class JvmProcess implements BaseProcess, HasPid
             ProcessWrapper process = ProcessWrapper.start( processBuilder );
             Instant start = Instant.now();
             Duration timeout = Duration.of( 5, ChronoUnit.MINUTES );
-            JpsPid jpsPid = JpsPid.tryFindFor( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
+            JpsPid jpsPid = new JpsPid();
+            jpsPid.tryFindFor( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
             long pid = jpsPid.pid().orElseThrow( () -> failedToStartExceptionFor( jvmProcessArgs, process, jpsPid ) );
             return new JvmProcess( process, pid );
         }
