@@ -105,7 +105,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
   def genMoreFields: Seq[Field]
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
-    inner.genCanContinue.map(and(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
+    inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
   }
 
   override def genCloseCursors: IntermediateRepresentation = {

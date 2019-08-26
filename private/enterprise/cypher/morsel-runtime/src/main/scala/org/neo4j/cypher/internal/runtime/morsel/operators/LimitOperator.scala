@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expre
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.{LazyLimitState, LimitState, LimitStateFactory, evaluateCountValue}
-import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER, OUTER_LOOP_LABEL_NAME, OUTPUT_COUNTER, OUTPUT_ROW}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER, OUTER_LOOP_LABEL_NAME, OUTPUT_COUNTER, OUTPUT_ROW, profileRows}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -217,7 +217,8 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                              (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   private var countExpression: IntermediateExpression = _
-  private val countLeft: InstanceField = field[Long](codeGen.namer.nextVariableName() + "_countLeft")
+  private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_countLeft", constant(0L))
+  private val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_reserved", constant(0L))
   private val limitStateField = field[LazyLimitState](codeGen.namer.nextVariableName() + "_limitState",
     // Get the limit operator state from the ArgumentStateMaps that is passed to the constructor
     // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
@@ -261,38 +262,41 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         invoke(loadField(limitStateField), method[LazyLimitState, Unit, Long]("setCount"),
           invokeStatic(method[LimitOperator, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
       ),
-      setField(countLeft, invoke(loadField(limitStateField), method[LimitState, Long, Long]("reserve"), howMuchToReserve)),
+      assign(reservedVar, invoke(loadField(limitStateField), method[LimitState, Long, Long]("reserve"), howMuchToReserve)),
+      assign(countLeftVar, load(reservedVar)),
       inner.genOperateEnter
     )
   }
 
   override def genOperate: IntermediateRepresentation = {
     block(
-      condition(lessThanOrEqual(loadField(countLeft), constant(0L))) (
+      condition(lessThanOrEqual(load(countLeftVar), constant(0L))) (
         break(OUTER_LOOP_LABEL_NAME)
       ),
-      setField(countLeft, subtract(loadField(countLeft), constant(1L))),
+      assign(countLeftVar, subtract(load(countLeftVar), constant(1L))),
       inner.genOperateWithExpressions
     )
   }
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      condition(greaterThan(loadField(countLeft), constant(0L)))(
-        invoke(loadField(limitStateField), method[LazyLimitState, Unit, Long]("unreserve"), loadField(countLeft))
+      ifElse(greaterThan(load(countLeftVar), constant(0L)))(
+        block(
+          invoke(loadField(limitStateField), method[LazyLimitState, Unit, Long]("unreserve"), load(countLeftVar)),
+          profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar))))
+        )
+      )(
+        profileRows(id, cast[Int](load(reservedVar)))
       ),
       inner.genOperateExit
     )
   }
 
-  override def genLocalVariables: Seq[LocalVariable] = Seq.empty[LocalVariable]
+  override def genLocalVariables: Seq[LocalVariable] = Seq(countLeftVar, reservedVar)
 
-  override def genFields: Seq[Field] = Seq(limitStateField, countLeft)
+  override def genFields: Seq[Field] = Seq(limitStateField)
 
-  override def genCanContinue: Option[IntermediateRepresentation] = {
-    val canContinue = greaterThan(loadField(countLeft), constant(0L))
-    inner.genCanContinue.map(and(_, canContinue)).orElse(Some(canContinue))
-  }
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 

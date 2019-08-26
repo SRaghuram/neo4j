@@ -94,13 +94,11 @@ class MorselBuffer(id: BufferId,
   def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
     for (workCanceller <- workCancellers) {
       val argumentStateMap = argumentStateMaps(workCanceller).asInstanceOf[ArgumentStateMap[WorkCanceller]]
-      // We may not always have an argument state map in case limit was fused
-      if (argumentStateMap != null) {
-        val cancelledArguments =
-          argumentStateMap.filterCancelledArguments(morsel,
-                                                    canceller => canceller.isCancelled)
-        decrementArgumentCounts(downstreamArgumentReducers, cancelledArguments)
-      }
+      val cancelledArguments =
+        argumentStateMap.filterCancelledArguments(morsel,
+          canceller => canceller.isCancelled)
+
+      decrementArgumentCounts(downstreamArgumentReducers, cancelledArguments)
     }
     morsel.isEmpty
   }

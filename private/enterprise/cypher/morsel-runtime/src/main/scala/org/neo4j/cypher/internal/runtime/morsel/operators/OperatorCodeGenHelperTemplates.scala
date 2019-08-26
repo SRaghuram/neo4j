@@ -234,6 +234,16 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("row"))
   }
 
+  def profileRows(id: Id, nRows: Int): IntermediateRepresentation = {
+    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit, Int]("rows"),
+      constant(nRows))
+  }
+
+  def profileRows(id: Id, nRows: IntermediateRepresentation): IntermediateRepresentation = {
+    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit, Int]("rows"),
+      nRows)
+  }
+
   def indexReadSession(offset: Int): IntermediateRepresentation =
     arrayLoad(invoke(QUERY_STATE, method[QueryState, Array[IndexReadSession]]("queryIndexes")), offset)
 
