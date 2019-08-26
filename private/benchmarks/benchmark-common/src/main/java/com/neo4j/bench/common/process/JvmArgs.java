@@ -67,20 +67,26 @@ public class JvmArgs
 
         for ( char c = iter.first(); ; c = iter.next() )
         {
+            // we have reached end of string
             if ( c == CharacterIterator.DONE )
             {
                 builder = addArg( args, builder );
                 break;
 
             }
+            // we have found space and we are not in between quotes
+            // so we will try to append JVM argument
             if ( c == ' ' && !quoted )
             {
                 builder = addArg( args, builder );
                 continue;
             }
+            // beginning or end of quoted string
             if ( c == '\"' )
             {
                 quoted = !quoted;
+                 // we skip quotes because ProcessBuilder will add them,
+                // this way we are avoiding double quotes
                 continue;
             }
             builder.append( c );
@@ -91,7 +97,7 @@ public class JvmArgs
 
     private static StringBuilder addArg( ArrayList<String> args, StringBuilder builder )
     {
-        String str = builder.toString().trim();
+        String str = builder.toString();
         if ( StringUtils.isNotBlank( str ) )
         {
             args.add( str );

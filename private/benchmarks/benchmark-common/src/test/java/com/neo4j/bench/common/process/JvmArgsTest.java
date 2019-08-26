@@ -111,7 +111,7 @@ public class JvmArgsTest
     }
 
     @Test
-    public void handleUnquotedArgsFromString()
+    public void handleUnquotedArgsFromStringAndTrimsWhiteSpaces()
     {
         List<String> jvmArgs = JvmArgs.jvmArgsFromString( "-Xms4g -Xmx4g" );
         assertArrayEquals(
@@ -125,6 +125,15 @@ public class JvmArgsTest
         List<String> jvmArgs = JvmArgs.jvmArgsFromString( "  -Xms4g   -Xmx4g  " );
         assertArrayEquals(
                 new String[] {"-Xms4g","-Xmx4g"},
+                jvmArgs.toArray( new String[] {} ) );
+    }
+
+    @Test
+    public void handleLeadingAndTralingSpaceArgsFromQuotedString()
+    {
+        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "  -XX:OnOutMemoryError=\" kill -9 %p \"  " );
+        assertArrayEquals(
+                new String[] {"-XX:OnOutMemoryError= kill -9 %p "},
                 jvmArgs.toArray( new String[] {} ) );
     }
 }
