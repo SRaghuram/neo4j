@@ -95,7 +95,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     val exception = the[QueryExecutionException] thrownBy {
       executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser('neo4j', 'foo')")
     }
-    exception.getMessage should include("The specified user 'neo4j' already exists.")
+    exception.getMessage should include("Failed to create the specified user 'neo4j': User already exists.")
     testUserLogin("neo4j", "neo", AuthenticationResult.SUCCESS)
   }
 

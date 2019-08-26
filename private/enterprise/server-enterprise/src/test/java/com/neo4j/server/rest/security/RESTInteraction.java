@@ -17,6 +17,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.test.server.HTTP;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
 class RESTInteraction extends AbstractRESTInteraction
@@ -28,9 +29,9 @@ class RESTInteraction extends AbstractRESTInteraction
     }
 
     @Override
-    String commitPath()
+    String commitPath( String database )
     {
-        return "db/neo4j/tx/commit";
+        return String.format( "db/%s/tx/commit", database );
     }
 
     @Override
@@ -53,7 +54,7 @@ class RESTInteraction extends AbstractRESTInteraction
     @Override
     protected HTTP.Response authenticate( String principalCredentials )
     {
-        return HTTP.withHeaders( HttpHeaders.AUTHORIZATION, principalCredentials ).POST( commitURL() );
+        return HTTP.withHeaders( HttpHeaders.AUTHORIZATION, principalCredentials ).POST( commitURL( DEFAULT_DATABASE_NAME ) );
     }
 
     private class RESTResult extends AbstractRESTResult

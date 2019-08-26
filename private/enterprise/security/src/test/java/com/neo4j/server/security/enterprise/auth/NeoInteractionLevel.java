@@ -5,9 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -35,8 +32,8 @@ public interface NeoInteractionLevel<S>
     /*
      * The returned String is empty if the query executed as expected, and contains an error msg otherwise
      */
-    String executeQuery( S subject, String call, Map<String,Object> params,
-            Consumer<ResourceIterator<Map<String, Object>>> resultConsumer );
+    String executeQuery( S subject, String database, String call, Map<String,Object> params,
+            Consumer<ResourceIterator<Map<String,Object>>> resultConsumer );
 
     S login( String username, String password ) throws Exception;
 
@@ -48,20 +45,11 @@ public interface NeoInteractionLevel<S>
 
     void tearDown() throws Throwable;
 
-    static String tempPath( String prefix, String suffix ) throws IOException
-    {
-        Path path = Files.createTempFile( prefix, suffix );
-        Files.delete( path );
-        return path.toString();
-    }
-
     void assertAuthenticated( S subject );
 
     void assertPasswordChangeRequired( S subject );
 
-    void assertInitFailed( S subject );
-
-    void assertSessionKilled( S subject );
+    void assertUnauthenticated( S subject );
 
     String getConnectionProtocol();
 

@@ -65,7 +65,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     private final ConnectorPortRegister connectorPortRegister;
     private final EnterpriseAuthManager authManager;
 
-    abstract String commitPath();
+    abstract String commitPath( String database );
 
     abstract void consume( Consumer<ResourceIterator<Map<String,Object>>> resultConsumer, JsonNode data );
 
@@ -142,12 +142,12 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     }
 
     @Override
-    public String executeQuery( RESTSubject subject, String call, Map<String,Object> params,
-            Consumer<ResourceIterator<Map<String, Object>>> resultConsumer )
+    public String executeQuery( RESTSubject subject, String database, String call, Map<String,Object> params,
+            Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         HTTP.RawPayload payload = constructQuery( call );
         HTTP.Response response = HTTP.withHeaders( HttpHeaders.AUTHORIZATION, subject.principalCredentials )
-                .POST( commitURL(), payload );
+                .POST( commitURL( database ), payload );
 
         try
         {
@@ -215,15 +215,9 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     }
 
     @Override
-    public void assertInitFailed( RESTSubject subject )
+    public void assertUnauthenticated( RESTSubject subject )
     {
         assertThat( authenticate( subject.principalCredentials ).status(), not( equalTo( 200 ) ) );
-    }
-
-    @Override
-    public void assertSessionKilled( RESTSubject subject )
-    {
-        // There is no session that could have been killed
     }
 
     @Override
@@ -259,9 +253,9 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         return "";
     }
 
-    String commitURL()
+    String commitURL( String database )
     {
-        return server.baseUri().resolve( commitPath() ).toString();
+        return server.baseUri().resolve( commitPath( database ) ).toString();
     }
 
     abstract class AbstractRESTResult implements ResourceIterator<Map<String,Object>>

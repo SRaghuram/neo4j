@@ -9,10 +9,12 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -20,11 +22,11 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.security.User;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.Context;
 
-import static java.util.Collections.emptyList;
+import static org.neo4j.kernel.impl.security.User.PASSWORD_CHANGE_REQUIRED;
+import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.IS_SUSPENDED;
 
 @SuppressWarnings( "WeakerAccess" )
 public class AuthProceduresBase
@@ -102,24 +104,8 @@ public class AuthProceduresBase
     protected UserResult userResultForSubject()
     {
         String username = securityContext.subject().username();
-        User user = userManager.silentlyGetUser( username );
-        Iterable<String> flags = user == null ? emptyList() : user.getFlags();
-        return new UserResult( username, securityContext.roles(), flags );
-    }
-
-    protected UserResult userResultForName( String username )
-    {
-        if ( username.equals( securityContext.subject().username() ) )
-        {
-            return userResultForSubject();
-        }
-        else
-        {
-            User user = userManager.silentlyGetUser( username );
-            Iterable<String> flags = user == null ? emptyList() : user.getFlags();
-            Set<String> roles = userManager.silentlyGetRoleNamesForUser( username );
-            return new UserResult( username, roles, flags );
-        }
+        boolean changeReq = securityContext.subject().getAuthenticationResult().equals( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
+        return new UserResult( username, securityContext.roles(), changeReq, false );
     }
 
     public static class UserResult
@@ -128,22 +114,21 @@ public class AuthProceduresBase
         public final List<String> roles;
         public final List<String> flags;
 
-        UserResult( String username, Set<String> roles, Iterable<String> flags )
+        UserResult( String username, Collection<String> roles, boolean changeRequired, boolean suspended )
         {
             this.username = username;
             this.roles = new ArrayList<>();
             this.roles.addAll( roles );
             this.flags = new ArrayList<>();
-            for ( String f : flags )
+            if ( changeRequired )
             {
-                this.flags.add( f );
+                flags.add( PASSWORD_CHANGE_REQUIRED );
+            }
+            if ( suspended )
+            {
+                flags.add( IS_SUSPENDED );
             }
         }
-    }
-
-    protected RoleResult roleResultForName( String roleName )
-    {
-        return new RoleResult( roleName, userManager.silentlyGetUsernamesForRole( roleName ) );
     }
 
     public static class RoleResult

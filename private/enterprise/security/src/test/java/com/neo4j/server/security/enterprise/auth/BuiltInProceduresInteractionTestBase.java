@@ -73,6 +73,7 @@ import static org.hamcrest.core.Every.everyItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
@@ -832,6 +833,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         String result = neo.executeQuery(
                 readSubject,
+                DEFAULT_DATABASE_NAME,
                 "WITH 'Hello' AS marker CALL dbms.listQueries() YIELD queryId AS id, query " +
                 "WITH * WHERE query CONTAINS 'Hello' CALL dbms.killQuery(id) YIELD username " +
                 "RETURN count(username) AS count, username",
@@ -1481,7 +1483,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         String query = "CALL dbms.listQueries() YIELD query WITH query WHERE query = '" + targetQuery + "' RETURN 1";
         MutableBoolean resultIsNotEmpty = new MutableBoolean();
-        neo.executeQuery( adminSubject, query, emptyMap(), itr -> resultIsNotEmpty.setValue( itr.hasNext() ) );
+        neo.executeQuery( adminSubject, DEFAULT_DATABASE_NAME, query, emptyMap(), itr -> resultIsNotEmpty.setValue( itr.hasNext() ) );
         return resultIsNotEmpty.booleanValue();
     }
 

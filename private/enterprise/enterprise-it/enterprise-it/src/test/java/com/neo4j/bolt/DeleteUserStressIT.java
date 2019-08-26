@@ -22,11 +22,13 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.driver.AuthTokens.basic;
 
 public class DeleteUserStressIT
@@ -121,7 +123,7 @@ public class DeleteUserStressIT
     {
         for (; ; )
         {
-            try ( Session session = adminDriver.session();
+            try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ));
                   Transaction tx = session.beginTransaction() )
             {
                 tx.run( "CALL dbms.security.createUser('pontus', 'sutnop', false)" ).consume();
@@ -129,7 +131,7 @@ public class DeleteUserStressIT
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( "The specified user 'pontus' already exists." ) )
+                if ( !e.getMessage().equals( "Failed to create the specified user 'pontus': User already exists." ) )
                 {
                     errors.add( e );
                 }

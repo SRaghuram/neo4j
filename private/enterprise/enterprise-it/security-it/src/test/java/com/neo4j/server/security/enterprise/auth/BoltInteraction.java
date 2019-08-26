@@ -137,7 +137,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     }
 
     @Override
-    public String executeQuery( BoltSubject subject, String call, Map<String,Object> params,
+    public String executeQuery( BoltSubject subject, String database, String call, Map<String,Object> params,
             Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         if ( params == null )
@@ -146,7 +146,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
         }
         try
         {
-            subject.client.send( util.defaultRunAutoCommitTx( call, ValueUtils.asMapValue( params ) ) );
+            subject.client.send( util.defaultRunAutoCommitTx( call, ValueUtils.asMapValue( params ), database ) );
             resultConsumer.accept( collectResults( subject.client ) );
             return "";
         }
@@ -222,15 +222,9 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     }
 
     @Override
-    public void assertInitFailed( BoltSubject subject )
+    public void assertUnauthenticated( BoltSubject subject )
     {
         assertFalse( "Should not be authenticated", subject.isAuthenticated() );
-    }
-
-    @Override
-    public void assertSessionKilled( BoltSubject subject )
-    {
-        assertThat( subject.client, TransportTestUtil.eventuallyDisconnects() );
     }
 
     @Override

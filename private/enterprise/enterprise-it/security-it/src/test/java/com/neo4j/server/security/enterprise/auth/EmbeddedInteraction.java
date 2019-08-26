@@ -39,7 +39,6 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginContext>
 {
     private GraphDatabaseFacade db;
-    private GraphDatabaseFacade systemDB;
     private EnterpriseAuthManager authManager;
     private ConnectorPortRegister connectorRegister;
     private DatabaseManagementService managementService;
@@ -64,7 +63,6 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
 
         managementService = builder.build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
-        systemDB = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }
@@ -82,13 +80,13 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     @Override
     public GraphDatabaseFacade getLocalGraph()
     {
-        return db;
+        return (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @Override
     public GraphDatabaseFacade getSystemGraph()
     {
-        return systemDB;
+        return (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
     }
 
     @Override
@@ -110,10 +108,11 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public String executeQuery( EnterpriseLoginContext loginContext, String call, Map<String,Object> params,
-                                Consumer<ResourceIterator<Map<String, Object>>> resultConsumer )
+    public String executeQuery( EnterpriseLoginContext loginContext, String database, String call, Map<String,Object> params,
+                                Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
+        var gdb = (GraphDatabaseFacade) managementService.database( database );
+        try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? Collections.emptyMap() : params;
             resultConsumer.accept( tx.execute( call, p ) );
@@ -168,15 +167,9 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public void assertInitFailed( EnterpriseLoginContext loginContext )
+    public void assertUnauthenticated( EnterpriseLoginContext loginContext )
     {
         assertThat( loginContext.subject().getAuthenticationResult(), equalTo( AuthenticationResult.FAILURE ) );
-    }
-
-    @Override
-    public void assertSessionKilled( EnterpriseLoginContext loginContext )
-    {
-        // There is no session that could have been killed
     }
 
     @Override

@@ -14,7 +14,6 @@ import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.time.Clock;
 import java.util.Collections;
 
@@ -22,6 +21,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -231,7 +231,7 @@ class UserManagementProceduresLoggingTest
     }
 
     @Test
-    void shouldLogUserPasswordChanges() throws IOException, InvalidArgumentsException
+    void shouldLogUserPasswordChanges() throws InvalidArgumentsException, ProcedureException
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", true );

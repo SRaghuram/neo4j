@@ -84,8 +84,11 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
@@ -95,7 +98,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 @ExtendWith( {TestDirectorySupportExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>
 {
-    static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
+    private static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
     protected boolean PWD_CHANGE_CHECK_FIRST;
     protected String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private static final String BOLT_PWD_ERR_MSG =
@@ -148,6 +151,7 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         Path homeDir = testDirectory.directory( "logs" ).toPath();
         securityLog = new File( homeDir.toFile(), "security.log" );
+        //noinspection deprecation
         return Map.of(
                 GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
                 GraphDatabaseSettings.procedure_roles,
@@ -219,7 +223,7 @@ public abstract class ProcedureInteractionTestBase<S>
         return Stream.concat( Arrays.stream( strs ), Arrays.stream( moreStr ) ).toArray( String[]::new );
     }
 
-    protected List<String> listOf( String... values )
+    List<String> listOf( String... values )
     {
         return Stream.of( values ).collect( toList() );
     }
@@ -293,26 +297,26 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testFailCreateUser( S subject, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.createUser('Craig', 'foo', false)", errMsg );
-        assertFail( subject, "CALL dbms.security.createUser('Craig', '', false)", errMsg );
-        assertFail( subject, "CALL dbms.security.createUser('', 'foo', false)", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.createUser('Craig', 'foo', false)", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.createUser('Craig', '', false)", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.createUser('', 'foo', false)", errMsg );
     }
 
     void testFailCreateRole( S subject, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.createRole('RealAdmins')", errMsg );
-        assertFail( subject, "CALL dbms.security.createRole('RealAdmins')", errMsg );
-        assertFail( subject, "CALL dbms.security.createRole('RealAdmins')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.createRole('RealAdmins')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.createRole('RealAdmins')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.createRole('RealAdmins')", errMsg );
     }
 
     void testFailAddRoleToUser( S subject, String role, String username, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.addRoleToUser('" + role + "', '" + username + "')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.addRoleToUser('" + role + "', '" + username + "')", errMsg );
     }
 
     void testFailRemoveRoleFromUser( S subject, String role, String username, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.removeRoleFromUser('" + role + "', '" + username + "')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.removeRoleFromUser('" + role + "', '" + username + "')", errMsg );
     }
 
     void testFailDeleteUser( S subject, String username, String errMsg )
@@ -327,36 +331,36 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testSuccessfulListUsers( S subject, Object[] users )
     {
-        assertSuccess( subject, "CALL dbms.security.listUsers() YIELD username",
+        assertSystemCommandSuccess( subject, "CALL dbms.security.listUsers() YIELD username",
                 r -> assertKeyIsArray( r, "username", users ) );
     }
 
     void testFailListUsers( S subject, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.listUsers() YIELD username", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.listUsers() YIELD username", errMsg );
     }
 
     void testSuccessfulListRoles( S subject, Object[] roles )
     {
-        assertSuccess( subject, "CALL dbms.security.listRoles() YIELD role",
+        assertSystemCommandSuccess( subject, "CALL dbms.security.listRoles() YIELD role",
                 r -> assertKeyIsArray( r, "role", roles ) );
     }
 
     void testFailListRoles( S subject, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.listRoles() YIELD role", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.listRoles() YIELD role", errMsg );
     }
 
     void testFailListUserRoles( S subject, String username, String errMsg )
     {
-        assertFail( subject,
+        assertSystemCommandFail( subject,
                 "CALL dbms.security.listRolesForUser('" + username + "') YIELD value AS roles RETURN count(roles)",
                 errMsg );
     }
 
     void testFailListRoleUsers( S subject, String roleName, String errMsg )
     {
-        assertFail( subject,
+        assertSystemCommandFail( subject,
                 "CALL dbms.security.listUsersForRole('" + roleName + "') YIELD value AS users RETURN count(users)",
                 errMsg );
     }
@@ -378,35 +382,59 @@ public abstract class ProcedureInteractionTestBase<S>
                 r -> assertKeyIs( r, "value", "OK" ) );
     }
 
-    void assertPasswordChangeWhenPasswordChangeRequired( S subject, String newPassword )
+    void assertPasswordChangeWhenPasswordChangeRequired( S subject, String oldPassword, String newPassword )
     {
-        StringBuilder builder = new StringBuilder( 128 );
         S subjectToUse;
+        String query;
 
         // remove if-else ASAP
         if ( IS_EMBEDDED )
         {
             subjectToUse = subject;
-            builder.append( "CALL dbms.security.changePassword('" );
-            builder.append( newPassword );
-            builder.append( "')" );
+            query = String.format( "ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", oldPassword, newPassword );
         }
         else
         {
             subjectToUse = adminSubject;
-            builder.append( "CALL dbms.security.changeUserPassword('" );
-            builder.append( neo.nameOf( subject ) );
-            builder.append( "', '" );
-            builder.append( newPassword );
-            builder.append( "', false)" );
+            query = String.format( "ALTER USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", neo.nameOf( subject ), newPassword );
         }
-
-        assertEmpty( subjectToUse, builder.toString() );
+        assertDDLCommandSuccess( subjectToUse, query );
     }
 
     void assertFail( S subject, String call, String partOfErrorMsg )
     {
-        String err = assertCallEmpty( subject, call, null );
+        String err = assertCallEmpty( subject, DEFAULT_DATABASE_NAME, call, null );
+        if ( StringUtils.isEmpty( partOfErrorMsg ) )
+        {
+            assertThat( "Should have failed with an error message", err, not( equalTo( "" ) ) );
+        }
+        else
+        {
+            assertThat( err, containsString( partOfErrorMsg ) );
+        }
+    }
+
+    void assertSystemCommandSuccess( S subject, String call )
+    {
+        String err = assertCallEmpty( subject, SYSTEM_DATABASE_NAME, call, null );
+        assertThat( err, equalTo( "" ) );
+    }
+
+    void assertDDLCommandSuccess( S subject, String query )
+    {
+        neo.executeQuery( subject, SYSTEM_DATABASE_NAME, query, null, result -> assertFalse( result.hasNext() ) );
+    }
+
+    void assertSystemCommandSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    {
+        String err = neo.executeQuery( subject, SYSTEM_DATABASE_NAME, call, null, resultConsumer );
+        assertThat( err, equalTo( "" ) );
+    }
+
+    @SuppressWarnings( "SameParameterValue" )
+    void assertSystemCommandFail( S subject, String call, String partOfErrorMsg )
+    {
+        String err = assertCallEmpty( subject, SYSTEM_DATABASE_NAME, call, null );
         if ( StringUtils.isEmpty( partOfErrorMsg ) )
         {
             assertThat( "Should have failed with an error message", err, not( equalTo( "" ) ) );
@@ -419,12 +447,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void assertEmpty( S subject, String call )
     {
-        assertEmpty( subject, call, null );
-    }
-
-    void assertEmpty( S subject, String call, Map<String,Object> params )
-    {
-        String err = assertCallEmpty( subject, call, params );
+        String err = assertCallEmpty( subject, DEFAULT_DATABASE_NAME, call, null );
         assertThat( err, equalTo( "" ) );
     }
 
@@ -435,10 +458,11 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void assertSuccess( S subject, String call, Map<String, Object> params, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
-        String err = neo.executeQuery( subject, call, params, resultConsumer );
+        String err = neo.executeQuery( subject, DEFAULT_DATABASE_NAME, call, params, resultConsumer );
         assertThat( err, equalTo( "" ) );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     List<Map<String,Object>> collectSuccessResult( S subject, String call )
     {
         List<Map<String,Object>> result = new LinkedList<>();
@@ -446,9 +470,10 @@ public abstract class ProcedureInteractionTestBase<S>
         return result;
     }
 
-    private String assertCallEmpty( S subject, String call, Map<String, Object> params )
+    @SuppressWarnings( "SameParameterValue" )
+    private String assertCallEmpty( S subject, String database, String call, Map<String, Object> params )
     {
-        return neo.executeQuery( subject, call, params,
+        return neo.executeQuery( subject, database, call, params,
                 result ->
                 {
                     List<Map<String,Object>> collect = result.stream().collect( toList() );
@@ -456,6 +481,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 } );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     boolean userHasRole( String user, String role ) throws InvalidArgumentsException
     {
         return userManager.getRoleNamesForUser( user ).contains( role );
@@ -478,7 +504,8 @@ public abstract class ProcedureInteractionTestBase<S>
         assertThat( results, containsInAnyOrder( Arrays.stream( items ).map( this::valueOf ).toArray() ) );
     }
 
-    protected static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
+    @SuppressWarnings( "unchecked" )
+    static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
             Object expected )
     {
         if ( expected instanceof MapValue )
@@ -492,7 +519,7 @@ public abstract class ProcedureInteractionTestBase<S>
     }
 
     @SuppressWarnings( "unchecked" )
-    static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
+    private static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
             Map<String,Object> expected )
     {
         List<Map<String,Object>> result = r.stream().collect( toList() );
@@ -523,7 +550,7 @@ public abstract class ProcedureInteractionTestBase<S>
         }
     }
 
-    static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
+    private static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
             MapValue expected )
     {
         List<Map<String,Object>> result = r.stream().collect( toList() );
@@ -581,7 +608,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 EnterpriseBuiltInDbmsProcedures.getActiveTransactions(
                         neo.getLocalGraph().getDependencyResolver()
                 ).stream()
-                        .filter( tx -> !tx.terminationReason().isPresent() )
+                        .filter( tx -> tx.terminationReason().isEmpty() )
                         .map( tx -> tx.subject().username() )
         ).collect( Collectors.toMap( r -> r.username, r -> r.activeTransactions ) );
     }
@@ -609,7 +636,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 .collect( groupingBy( identity(), counting() ) );
     }
 
-    @SuppressWarnings( "unchecked" )
+    @SuppressWarnings( "SameParameterValue" )
     TransportConnection startBoltSession( String username, String password ) throws Exception
     {
         TransportConnection connection = new SocketConnection();
@@ -624,7 +651,6 @@ public abstract class ProcedureInteractionTestBase<S>
         return connection;
     }
 
-    @SuppressWarnings( "WeakerAccess" )
     public static class CountResult
     {
         public final String count;
@@ -678,6 +704,7 @@ public abstract class ProcedureInteractionTestBase<S>
                     }
                     catch ( InterruptedException e )
                     {
+                        //noinspection ResultOfMethodCallIgnored
                         Thread.interrupted();
                     }
                     guard.check();

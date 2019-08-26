@@ -5,162 +5,303 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Result.ResultVisitor;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import org.neo4j.string.UTF8;
 
+import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
+import static org.neo4j.kernel.api.exceptions.Status.Statement.FeatureDeprecationWarning;
 import static org.neo4j.procedure.Mode.DBMS;
 
-@SuppressWarnings( {"unused", "WeakerAccess"} )
+@SuppressWarnings( {"unused"} )
 public class UserManagementProcedures extends AuthProceduresBase
 {
-
     @Admin
     @SystemProcedure
     @Description( "Create a new user." )
     @Procedure( name = "dbms.security.createUser", mode = DBMS )
-    public void createUser( @Name( "username" ) String username, @Name( "password" ) String password,
+    public void createUser(
+            @Name( "username" ) String username,
+            @Name( "password" ) String password,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException
+            throws ProcedureException
     {
-        userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
+        var query = String.format( "CREATE USER `%s` SET PASSWORD '%s' %s", username, password,
+                requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" );
+        runDDL( query, "dbms.security.createUser" );
     }
 
+    @SystemProcedure
     @Description( "Change the current user's password." )
     @Procedure( name = "dbms.security.changePassword", mode = DBMS )
     public void changePassword( @Name( "password" ) String password,
-            @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException
+            @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange ) throws ProcedureException
     {
-        setUserPassword( securityContext.subject().username(), password, requirePasswordChange );
+        throw new ProcedureException( FeatureDeprecationWarning, "This procedure is no longer available, use: 'ALTER CURRENT USER SET PASSWORD'" );
     }
 
+    @Admin
+    @SystemProcedure
     @Description( "Change the given user's password." )
     @Procedure( name = "dbms.security.changeUserPassword", mode = DBMS )
     public void changeUserPassword( @Name( "username" ) String username, @Name( "newPassword" ) String newPassword,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException
+            throws ProcedureException
     {
-        securityContext.assertCredentialsNotExpired();
-        setUserPassword( username, newPassword, requirePasswordChange );
+        var query = String.format( "ALTER USER `%s` SET PASSWORD '%s' %s", username, newPassword,
+                requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" );
+        runDDL( query, "dbms.security.createUser" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Assign a role to the user." )
     @Procedure( name = "dbms.security.addRoleToUser", mode = DBMS )
-    public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws InvalidArgumentsException
+    public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
-        userManager.addRoleToUser( roleName, username );
+        var query = String.format( "GRANT ROLE `%s` TO `%s`", roleName, username );
+        runDDL( query, "dbms.security.addRoleToUser" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Unassign a role from the user." )
     @Procedure( name = "dbms.security.removeRoleFromUser", mode = DBMS )
-    public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws InvalidArgumentsException
+    public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
-        userManager.removeRoleFromUser( roleName, username );
+        var query = String.format( "REVOKE ROLE `%s` FROM `%s`", roleName, username );
+        runDDL( query, "dbms.security.removeRoleFromUser" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Delete the specified user." )
     @Procedure( name = "dbms.security.deleteUser", mode = DBMS )
-    public void deleteUser( @Name( "username" ) String username ) throws InvalidArgumentsException
+    public void deleteUser( @Name( "username" ) String username ) throws ProcedureException
     {
-        if ( userManager.deleteUser( username ) )
-        {
-            kickoutUser( username, "deletion" );
-        }
+        var query = String.format( "DROP USER %s", username );
+        runDDL( query, "dbms.security.deleteUser" );
+        kickoutUser( username, "deletion" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Suspend the specified user." )
     @Procedure( name = "dbms.security.suspendUser", mode = DBMS )
-    public void suspendUser( @Name( "username" ) String username ) throws InvalidArgumentsException
+    public void suspendUser( @Name( "username" ) String username ) throws ProcedureException
     {
-        userManager.suspendUser( username );
+        var query = String.format( "ALTER USER `%s` SET STATUS SUSPENDED", username );
+        runDDL( query, "dbms.security.suspendUser" );
         kickoutUser( username, "suspension" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Activate a suspended user." )
     @Procedure( name = "dbms.security.activateUser", mode = DBMS )
     public void activateUser( @Name( "username" ) String username,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws InvalidArgumentsException
+            throws ProcedureException
     {
-        userManager.activateUser( username, requirePasswordChange );
+        var query = String.format( "ALTER USER `%s` SET STATUS ACTIVE", username );
+        runDDL( query, "dbms.security.activateUser" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "List all native users." )
     @Procedure( name = "dbms.security.listUsers", mode = DBMS )
-    public Stream<UserResult> listUsers()
+    public Stream<UserResult> listUsers() throws ProcedureException
     {
-        Set<String> users = userManager.getAllUsernames();
-        if ( users.isEmpty() )
+        var result = new ArrayList<UserResult>();
+        var query = "SHOW USERS";
+        try
+        {
+            Result execute = ((GraphDatabaseFacade) graph).TEMP_TOP_LEVEL_TRANSACTION.get().execute( query );
+            execute.accept( row ->
+            {
+                var user = row.getString( "user" );
+                // TODO: Don't like this cast here
+                var roles = (List<String>) row.get( "roles" );
+                var changeRequired = row.getBoolean( "passwordChangeRequired" );
+                var suspended = row.getBoolean( "suspended" );
+                result.add( new UserResult( user, roles, changeRequired, suspended ) );
+                return true;
+            } );
+        }
+        catch ( Exception e )
+        {
+            translateException( e, "dbms.security.listUsers" );
+        }
+
+        if ( result.isEmpty() )
         {
             return Stream.of( userResultForSubject() );
         }
-        else
-        {
-            return users.stream().map( this::userResultForName );
-        }
+        return result.stream();
     }
 
     @Admin
+    @SystemProcedure
     @Description( "List all available roles." )
     @Procedure( name = "dbms.security.listRoles", mode = DBMS )
-    public Stream<RoleResult> listRoles()
+    public Stream<RoleResult> listRoles() throws ProcedureException
     {
-        Set<String> roles = userManager.getAllRoleNames();
-        return roles.stream().map( this::roleResultForName );
+        var result = new HashMap<String,Set<String>>();
+        var visitor = new ResultVisitor<RuntimeException>()
+        {
+            @Override
+            public boolean visit( Result.ResultRow row ) throws RuntimeException
+            {
+                var role = row.getString( "role" );
+                var user = row.getString( "member" );
+                var users = result.computeIfAbsent( role, k -> new HashSet<>() );
+                users.add( user );
+                return true;
+            }
+        };
+        queryForRoles( visitor, "dbms.security.listUsers" );
+        return result.entrySet().stream().map( e -> new RoleResult( e.getKey(), e.getValue() ) );
     }
 
+    @Admin
+    @SystemProcedure
     @Description( "List all roles assigned to the specified user." )
     @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS )
-    public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws InvalidArgumentsException
+    public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException
     {
-        securityContext.assertCredentialsNotExpired();
-        return userManager.getRoleNamesForUser( username ).stream().map( StringResult::new );
+        var result = new HashSet<StringResult>();
+        var visitor = new ResultVisitor<RuntimeException>()
+        {
+            @Override
+            public boolean visit( Result.ResultRow row ) throws RuntimeException
+            {
+                var role = row.getString( "role" );
+                var user = row.getString( "member" );
+                if ( username.equals( user ) )
+                {
+                    result.add( new StringResult( role ) );
+                }
+                return true;
+            }
+        };
+        queryForRoles( visitor, "dbms.security.listRolesForUser" );
+        return result.stream();
     }
 
     @Admin
+    @SystemProcedure
     @Description( "List all users currently assigned the specified role." )
     @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS )
-    public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException
+    public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
-        return userManager.getUsernamesForRole( roleName ).stream().map( StringResult::new );
+        var result = new HashSet<StringResult>();
+        var visitor = new ResultVisitor<RuntimeException>()
+        {
+            @Override
+            public boolean visit( Result.ResultRow row ) throws RuntimeException
+            {
+                var role = row.getString( "role" );
+                var user = row.getString( "member" );
+                if ( roleName.equals( role ) )
+                {
+                    result.add( new StringResult( user ) );
+                }
+                return true;
+            }
+        };
+        queryForRoles( visitor, "dbms.security.listUsersForRole" );
+        return result.stream();
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Create a new role." )
     @Procedure( name = "dbms.security.createRole", mode = DBMS )
-    public void createRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException
+    public void createRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
-        userManager.newRole( roleName );
+        var query = String.format( "CREATE ROLE `%s`", roleName );
+        runDDL( query, "dbms.security.createRole" );
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Delete the specified role. Any role assignments will be removed." )
     @Procedure( name = "dbms.security.deleteRole", mode = DBMS )
-    public void deleteRole( @Name( "roleName" ) String roleName ) throws InvalidArgumentsException
+    public void deleteRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
-        userManager.deleteRole( roleName );
+        var query = String.format( "DROP ROLE `%s`", roleName );
+        runDDL( query, "dbms.security.deleteRole" );
     }
 
-    private void setUserPassword( String username, String newPassword, boolean requirePasswordChange ) throws InvalidArgumentsException
+    private void queryForRoles( ResultVisitor<RuntimeException> visitor, String procedureName ) throws ProcedureException
     {
-        userManager.setUserPassword( username, newPassword != null ? UTF8.encode( newPassword ) : null, requirePasswordChange );
-        if ( securityContext.subject().hasUsername( username ) )
+        var query = "SHOW ALL ROLES WITH USERS";
+        try
         {
-            securityContext.subject().setPasswordChangeNoLongerRequired();
+            Result execute = ((GraphDatabaseFacade) graph).TEMP_TOP_LEVEL_TRANSACTION.get().execute( query );
+            execute.accept( visitor );
         }
+        catch ( Exception e )
+        {
+            translateException( e, procedureName );
+        }
+    }
+
+    private HashSet<String> getStrings( Object rolesObj ) throws ProcedureException
+    {
+        var roles = new HashSet<String>();
+        if ( !(rolesObj instanceof Collection) )
+        {
+            throw new ProcedureException( null, "" );
+        }
+        for ( var roleObject : (Collection) rolesObj )
+        {
+            if ( !(roleObject instanceof String) )
+            {
+                throw new ProcedureException( null, "" );
+            }
+            roles.add( (String) roleObject );
+        }
+        return roles;
+    }
+
+    private void runDDL( String query, String procedureName ) throws ProcedureException
+    {
+        try
+        {
+            Result execute = ((GraphDatabaseFacade) graph).TEMP_TOP_LEVEL_TRANSACTION.get().execute( query );
+            execute.accept( row -> true );
+        }
+        catch ( Exception e )
+        {
+            translateException( e, procedureName );
+        }
+    }
+
+    private void translateException( Exception e, String procedureName ) throws ProcedureException
+    {
+        Status status = Status.statusCodeOf( e );
+        if ( status != null && status.equals( Status.Statement.NotSystemDatabaseError ) )
+        {
+            throw new ProcedureException( ProcedureCallFailed, e,
+                    String.format( "This is an administration command and it should be executed against the system database: %s", procedureName ) );
+        }
+        throw new ProcedureException( ProcedureCallFailed, e, e.getMessage() );
     }
 }

@@ -111,7 +111,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         // TODO: uncomment and fix
         // testUnAuthenticated( readSubject );
 
-        neo.assertInitFailed( neo.login( "readSubject", "123" ) );
+        neo.assertUnauthenticated( neo.login( "readSubject", "123" ) );
         neo.assertAuthenticated( neo.login( "readSubject", "321" ) );
     }
 
@@ -119,7 +119,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldChangeUserPasswordAndRequirePasswordChangeOnNextLoginByDefault() throws Throwable
     {
         assertEmpty( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321' )" );
-        neo.assertInitFailed( neo.login( "readSubject", "123" ) );
+        neo.assertUnauthenticated( neo.login( "readSubject", "123" ) );
         neo.assertPasswordChangeRequired( neo.login( "readSubject", "321" ) );
     }
 
@@ -127,7 +127,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldChangeUserPasswordAndRequirePasswordChangeOnNextLoginOnRequest() throws Throwable
     {
         assertEmpty( adminSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321', true )" );
-        neo.assertInitFailed( neo.login( "readSubject", "123" ) );
+        neo.assertUnauthenticated( neo.login( "readSubject", "123" ) );
         neo.assertPasswordChangeRequired( neo.login( "readSubject", "321" ) );
     }
 
@@ -199,7 +199,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertEmpty( adminSubject, "CALL dbms.security.createUser('craig', '1234' )" );
         userManager.getUser( "craig" );
-        neo.assertInitFailed( neo.login( "craig", "321" ) );
+        neo.assertUnauthenticated( neo.login( "craig", "321" ) );
         neo.assertPasswordChangeRequired( neo.login( "craig", "1234" ) );
     }
 
@@ -208,7 +208,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertEmpty( adminSubject, "CALL dbms.security.createUser('craig', '1234', true)" );
         userManager.getUser( "craig" );
-        neo.assertInitFailed( neo.login( "craig", "321" ) );
+        neo.assertUnauthenticated( neo.login( "craig", "321" ) );
         neo.assertPasswordChangeRequired( neo.login( "craig", "1234" ) );
     }
 
@@ -405,7 +405,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         userManager.suspendUser( "readSubject" );
         assertEmpty( adminSubject, "CALL dbms.security.activateUser('readSubject')" );
-        neo.assertInitFailed( neo.login( "readSubject", "321" ) );
+        neo.assertUnauthenticated( neo.login( "readSubject", "321" ) );
         neo.assertPasswordChangeRequired( neo.login( "readSubject", "123" ) );
         assertFalse( userManager.getUser( "readSubject" ).hasFlag( IS_SUSPENDED ) );
     }
@@ -415,7 +415,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         userManager.suspendUser( "readSubject" );
         assertEmpty( adminSubject, "CALL dbms.security.activateUser('readSubject', true)" );
-        neo.assertInitFailed( neo.login( "readSubject", "321" ) );
+        neo.assertUnauthenticated( neo.login( "readSubject", "321" ) );
         neo.assertPasswordChangeRequired( neo.login( "readSubject", "123" ) );
         assertFalse( userManager.getUser( "readSubject" ).hasFlag( IS_SUSPENDED ) );
     }
@@ -981,7 +981,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testFailRead( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailWrite( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailSchema( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
-        assertPasswordChangeWhenPasswordChangeRequired( pwdSubject, "321" );
+        assertPasswordChangeWhenPasswordChangeRequired( pwdSubject, "abc", "321" );
 
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', true)" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ARCHITECT + "', 'Henrik')" );
@@ -990,7 +990,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testFailRead( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailWrite( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailSchema( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
-        assertPasswordChangeWhenPasswordChangeRequired( henrik, "321" );
+        assertPasswordChangeWhenPasswordChangeRequired( henrik, "bar", "321" );
 
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Olivia', 'bar', true)" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ADMIN + "', 'Olivia')" );
@@ -999,8 +999,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testFailRead( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailWrite( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailSchema( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
-        assertFail( olivia, "CALL dbms.security.createUser('OliviasFriend', 'bar', false)", CHANGE_PWD_ERR_MSG );
-        assertPasswordChangeWhenPasswordChangeRequired( olivia, "321" );
+        assertSystemCommandFail( olivia, "CALL dbms.security.createUser('OliviasFriend', 'bar', false)", CHANGE_PWD_ERR_MSG );
+        assertPasswordChangeWhenPasswordChangeRequired( olivia, "bar", "321" );
     }
 
     @Test
