@@ -9,14 +9,15 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
 import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
-import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions, RewindableExecutionResult}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
-class ExecutionEngineFullyParsedQueryTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+class ExecutionEngineFullyParsedQueryTest
+  extends ExecutionEngineFunSuite
+    with CypherComparisonSupport {
 
   // Using these just to get a sample of queries
   LdbcQueries.LDBC_QUERIES.foreach { query =>
@@ -34,21 +35,17 @@ class ExecutionEngineFullyParsedQueryTest extends ExecutionEngineFunSuite with C
 
   private def noParams: Map[String, Any] = Map.empty
 
-  private def execute(fpq: FullyParsedQuery, params: Map[String, Any]): RewindableExecutionResult =
-    execute(fpq, params, NoInput)
-
-  private val pipeline = CompilationPhases.parsing(
+  private val parsing = CompilationPhases.parsing(
     RewriterStepSequencer.newPlain,
     new GeneratingNamer()
   )
 
   private def parse(qs: String, options: QueryOptions = QueryOptions.default) =
     FullyParsedQuery(
-      state = pipeline.transform(
+      state = parsing.transform(
         InitialState(qs, None, PlannerNameFor(options.planner.name)),
         ContextHelper.create()
       ),
       options = options
     )
-
 }
