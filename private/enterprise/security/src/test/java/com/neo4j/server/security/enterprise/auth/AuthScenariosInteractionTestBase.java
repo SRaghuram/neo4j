@@ -25,7 +25,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
-import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 
 public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
 {
@@ -39,7 +38,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
         S subject = neo.login( "Henrik", "bar" );
         neo.assertPasswordChangeRequired( subject );
-        testFailRead( subject, 3, pwdReqErrMsg( READ_OPS_NOT_ALLOWED ) );
+        testFailRead( subject, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
     }
 
     @Test

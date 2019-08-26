@@ -23,7 +23,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -34,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.internal.kernel.api.security.AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
@@ -959,27 +957,27 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldSetCorrectPasswordChangeRequiredPermissions() throws Throwable
     {
-        testFailRead( pwdSubject, 3, pwdReqErrMsg( READ_OPS_NOT_ALLOWED ) );
-        testFailWrite( pwdSubject, pwdReqErrMsg( WRITE_OPS_NOT_ALLOWED ) );
-        testFailSchema( pwdSubject, pwdReqErrMsg( SCHEMA_OPS_NOT_ALLOWED ) );
+        testFailRead( pwdSubject, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailWrite( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailSchema( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
         assertPasswordChangeWhenPasswordChangeRequired( pwdSubject, "321" );
 
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', true)" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ARCHITECT + "', 'Henrik')" );
         S henrik = neo.login( "Henrik", "bar" );
         neo.assertPasswordChangeRequired( henrik );
-        testFailRead( henrik, 3, pwdReqErrMsg( READ_OPS_NOT_ALLOWED ) );
-        testFailWrite( henrik, pwdReqErrMsg( WRITE_OPS_NOT_ALLOWED ) );
-        testFailSchema( henrik, pwdReqErrMsg( SCHEMA_OPS_NOT_ALLOWED ) );
+        testFailRead( henrik, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailWrite( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailSchema( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
         assertPasswordChangeWhenPasswordChangeRequired( henrik, "321" );
 
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Olivia', 'bar', true)" );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ADMIN + "', 'Olivia')" );
         S olivia = neo.login( "Olivia", "bar" );
         neo.assertPasswordChangeRequired( olivia );
-        testFailRead( olivia, 3, pwdReqErrMsg( READ_OPS_NOT_ALLOWED ) );
-        testFailWrite( olivia, pwdReqErrMsg( WRITE_OPS_NOT_ALLOWED ) );
-        testFailSchema( olivia, pwdReqErrMsg( SCHEMA_OPS_NOT_ALLOWED ) );
+        testFailRead( olivia, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailWrite( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailSchema( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
         assertFail( olivia, "CALL dbms.security.createUser('OliviasFriend', 'bar', false)", CHANGE_PWD_ERR_MSG );
         assertPasswordChangeWhenPasswordChangeRequired( olivia, "321" );
     }

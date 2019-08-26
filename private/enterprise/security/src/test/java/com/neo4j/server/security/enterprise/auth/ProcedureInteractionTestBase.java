@@ -104,6 +104,7 @@ public abstract class ProcedureInteractionTestBase<S>
     private static final String BOLT_PWD_ERR_MSG =
             "The credentials you provided were valid, but must be changed before you can use this instance.";
     String READ_OPS_NOT_ALLOWED = "Read operations are not allowed";
+    String PERMISSION_DENIED = "Permission denied.";
     String WRITE_OPS_NOT_ALLOWED = "Write operations are not allowed";
     String TOKEN_CREATE_OPS_NOT_ALLOWED = "Token create operations are not allowed";
     String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
