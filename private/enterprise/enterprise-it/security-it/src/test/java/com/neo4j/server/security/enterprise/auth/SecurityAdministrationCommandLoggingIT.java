@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,12 +81,14 @@ class SecurityAdministrationCommandLoggingIT
         // WHEN
         execute( adminContext, "CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED" );
         execute( adminContext, "CREATE USER baz SET PASSWORD $password", Map.of( "password", "secret" ) );
+        execute( adminContext, "CALL dbms.security.createUser('bar', 'abc')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
+        assertThat( logLines, hasSize( 3 ) );
         assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ) );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "CREATE USER baz SET PASSWORD $password CHANGE REQUIRED" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "CREATE USER bar SET PASSWORD '******' CHANGE REQUIRED" ) ) );
     }
 
     @Test
@@ -93,14 +96,17 @@ class SecurityAdministrationCommandLoggingIT
     {
         // GIVEN
         execute( adminContext, "CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED" );
+        execute( adminContext, "CREATE USER bar SET PASSWORD 'bar' CHANGE NOT REQUIRED" );
 
         // WHEN
         execute( adminContext, "DROP USER foo" );
+        execute( adminContext, "CALL dbms.security.deleteUser('bar')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) ); // First line is from setting up the user to delete later
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DROP USER foo" ) ) );
+        assertThat( logLines, hasSize( 4 ) ); // First two lines are from setting up the users to delete later
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DROP USER foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DROP USER bar" ) ) );
     }
 
     @Test
@@ -112,12 +118,18 @@ class SecurityAdministrationCommandLoggingIT
         // WHEN
         execute( adminContext, "ALTER USER foo SET PASSWORD 'baz' CHANGE REQUIRED" );
         execute( adminContext, "ALTER USER foo SET STATUS SUSPENDED" );
+        execute( adminContext, "CALL dbms.security.changeUserPassword('foo', 'bar')" );
+        execute( adminContext, "CALL dbms.security.activateUser('foo')" );
+        execute( adminContext, "CALL dbms.security.suspendUser('foo')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 3 ) ); // First line is from setting up the user to alter later
+        assertThat( logLines, hasSize( 6 ) ); // First line is from setting up the user to alter later
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "ALTER USER foo SET PASSWORD '******' CHANGE REQUIRED" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "ALTER USER foo SET STATUS SUSPENDED" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "ALTER USER foo SET PASSWORD '******' CHANGE REQUIRED" ) ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS ACTIVE" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "ALTER USER foo SET STATUS SUSPENDED" ) ) );
     }
 
     @Test
@@ -141,11 +153,13 @@ class SecurityAdministrationCommandLoggingIT
     {
         // WHEN
         execute( adminContext, "CREATE ROLE foo" );
+        execute( adminContext, "CALL dbms.security.createRole('bar')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 1 ) );
+        assertThat( logLines, hasSize( 2 ) );
         assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "CREATE ROLE foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "CREATE ROLE bar" ) ) );
     }
 
     @Test
@@ -165,14 +179,17 @@ class SecurityAdministrationCommandLoggingIT
     {
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
+        execute( adminContext, "CREATE ROLE bar" );
 
         // WHEN
         execute( adminContext, "DROP ROLE foo" );
+        execute( adminContext, "CALL dbms.security.deleteRole('bar')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DROP ROLE foo" ) ) );
+        assertThat( logLines, hasSize( 4 ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DROP ROLE foo" ) ) );
+        assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DROP ROLE bar" ) ) );
     }
 
     @Test
@@ -181,18 +198,21 @@ class SecurityAdministrationCommandLoggingIT
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
         execute( adminContext, "CREATE ROLE bar" );
+        execute( adminContext, "CREATE ROLE baz" );
         execute( adminContext, "CREATE USER alice SET PASSWORD 'abc'" );
         execute( adminContext, "CREATE USER bob SET PASSWORD 'abc'" );
 
         // WHEN
         execute( adminContext, "GRANT ROLE foo TO alice" );
         execute( adminContext, "GRANT ROLE foo,bar TO alice,bob" );
+        execute( adminContext, "CALL dbms.security.addRoleToUser('baz', 'alice')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 6 ) );
-        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "GRANT ROLE foo TO alice" ) ) );
-        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT ROLES foo, bar TO alice, bob" ) ) );
+        assertThat( logLines, hasSize( 8 ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT ROLE foo TO alice" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "GRANT ROLES foo, bar TO alice, bob" ) ) );
+        assertThat( logLines.get( 7 ), containsString( withSubject( adminContext, "GRANT ROLE baz TO alice" ) ) );
     }
 
     @Test
@@ -201,20 +221,23 @@ class SecurityAdministrationCommandLoggingIT
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
         execute( adminContext, "CREATE ROLE bar" );
+        execute( adminContext, "CREATE ROLE baz" );
         execute( adminContext, "CREATE USER alice SET PASSWORD 'abc'" );
         execute( adminContext, "CREATE USER bob SET PASSWORD 'abc'" );
         execute( adminContext, "GRANT ROLE foo TO alice" );
-        execute( adminContext, "GRANT ROLE foo,bar TO bob" );
+        execute( adminContext, "GRANT ROLE foo,bar,baz TO bob" );
 
         // WHEN
         execute( adminContext, "REVOKE ROLE foo FROM alice" );
         execute( adminContext, "REVOKE ROLE foo,bar FROM bob" );
+        execute( adminContext, "CALL dbms.security.removeRoleFromUser('baz', 'bob')" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 8 ) );
-        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE ROLE foo FROM alice" ) ) );
-        assertThat( logLines.get( 7 ), containsString( withSubject( adminContext, "REVOKE ROLES foo, bar FROM bob" ) ) );
+        assertThat( logLines, hasSize( 10 ) );
+        assertThat( logLines.get( 7 ), containsString( withSubject( adminContext, "REVOKE ROLE foo FROM alice" ) ) );
+        assertThat( logLines.get( 8 ), containsString( withSubject( adminContext, "REVOKE ROLES foo, bar FROM bob" ) ) );
+        assertThat( logLines.get( 9 ), containsString( withSubject( adminContext, "REVOKE ROLE baz FROM bob" ) ) );
     }
 
     @Test
@@ -509,9 +532,9 @@ class SecurityAdministrationCommandLoggingIT
         }
 
         @Override
-        public SecurityContext authorize( IdLookup idLookup, String dbName )
+        public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
         {
-            return new SecurityContext( subject, accessMode );
+            return new EnterpriseSecurityContext( subject, accessMode, Collections.emptySet(), true );
         }
     }
 }
