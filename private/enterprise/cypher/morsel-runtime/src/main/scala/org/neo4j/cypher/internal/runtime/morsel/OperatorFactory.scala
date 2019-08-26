@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
@@ -167,6 +167,32 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               toOffset,
                               dir,
                               lazyTypes)
+
+      case plans.VarExpand(_,
+                           fromName,
+                           dir,
+                           projectedDir,
+                           types,
+                           to,
+                           relName,
+                           length,
+                           mode,
+                           nodePredicate,
+                           relationshipPredicate) =>
+
+        val fromOffset = slots.getLongOffsetFor(fromName)
+        val relOffset = slots.getReferenceOffsetFor(relName)
+        val toOffset = slots.getLongOffsetFor(to)
+        val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
+        new VarExpandOperator(WorkIdentity.fromPlan(plan),
+                              fromOffset,
+                              relOffset,
+                              toOffset,
+                              dir,
+                              lazyTypes,
+                              length.min,
+                              length.max.getOrElse(Int.MaxValue),
+                              mode == ExpandAll)
 
       case plans.Optional(source, protectedSymbols) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId

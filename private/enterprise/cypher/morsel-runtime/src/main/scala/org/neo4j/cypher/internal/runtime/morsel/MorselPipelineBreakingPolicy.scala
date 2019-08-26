@@ -40,7 +40,8 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
       case _: UnwindCollection |
            _: Sort |
            _: Aggregation |
-           _: Optional
+           _: Optional |
+           _: VarExpand
     => true
 
       case _: ProduceResult |

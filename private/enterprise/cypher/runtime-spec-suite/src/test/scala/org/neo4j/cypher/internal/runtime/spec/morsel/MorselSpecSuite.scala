@@ -82,6 +82,10 @@ class MorselExpandAllTest extends ExpandAllTestBase(SINGLE_THREADED, MORSEL, SIZ
 class MorselExpandAllTestNoFusing extends ExpandAllTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
                                   with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 
+// VAR EXPAND
+class MorselVarLengthExpandTest extends VarLengthExpandTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
+class MorselNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
 class MorselProjectionNoFusingTest extends ProjectionTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)

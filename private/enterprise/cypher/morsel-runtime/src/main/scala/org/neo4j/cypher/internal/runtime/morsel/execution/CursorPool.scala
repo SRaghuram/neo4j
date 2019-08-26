@@ -98,7 +98,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   def allocate(): CURSOR = {
     liveCount += 1
     if (DebugSupport.CURSORS.enabled) {
-      DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString("+ allocate\n        ", "\n        ", ""))
+      DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
     }
     val cursor =
       if (cached != null) {

@@ -85,7 +85,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
           val relVisitor = new RelationshipVisitor[InternalException] {
             override def visit(relationshipId: Long, typeId: Int, startNodeId: LNode, endNodeId: LNode): Unit = {
 
-              relationship = state.query.getRelationshipFor(relationshipId, typeId, startNodeId, endNodeId)
+              relationship = state.query.relationshipById(relationshipId, startNodeId, endNodeId, typeId)
             }
           }
 
