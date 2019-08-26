@@ -77,24 +77,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // CREATE [OR REPLACE] USER [IF NOT EXISTS] foo SET PASSWORD password
-    case CreateUser(source, userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional, replace) => (context, parameterMapping, securityContext) =>
+    case CreateUser(source, userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
         validatePassword(initialPassword)
-        val query = if (replace) {
-          """OPTIONAL MATCH (old:User {name: $name})
-            |DETACH DELETE old
-            |
-            |CREATE (new:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
-            |RETURN new.name
-          """.stripMargin
-        } else {
+        UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
           // NOTE: If username already exists we will violate a constraint
           """CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
-            |RETURN u.name""".stripMargin
-        }
-
-        UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine, query,
+            |RETURN u.name""".stripMargin,
           VirtualValues.map(
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
             Array(
@@ -197,22 +187,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
     // CREATE [OR REPLACE] ROLE [IF NOT EXISTS] foo AS COPY OF bar
-    case CreateRole(source, roleName, replace) => (context, parameterMapping, securityContext) =>
-      val query = if (replace) {
-        """
-          |OPTIONAL MATCH (old:Role {name: $name})
-          |DETACH DELETE old
-          |
-          |CREATE (new:Role {name: $name})
+    case CreateRole(source, roleName) => (context, parameterMapping, securityContext) =>
+      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
+        """CREATE (new:Role {name: $name})
           |RETURN new.name
-        """.stripMargin
-      } else {
-        """
-          |CREATE (new:Role {name: $name})
-          |RETURN new.name
-        """.stripMargin
-      }
-      UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine, query,
+        """.stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
@@ -256,7 +235,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified role '$roleName': Role does not exist.")))
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
               new IllegalStateException(s"Failed to delete the specified role '$roleName': $followerError", error)
@@ -427,7 +405,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("name"), Array(Values.stringValue(normalizedName.name))))
 
     // CREATE [OR REPLACE] DATABASE [IF NOT EXISTS] foo
-    case CreateDatabase(source, normalizedName, replace) => (context, parameterMapping, securityContext) =>
+    case CreateDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
       // Ensuring we don't exceed the max number of databases is a separate step
       val dbName = normalizedName.name
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
@@ -465,22 +443,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case None => ("",VirtualValues.map(virtualKeys, virtualValues))
       }
 
-      val query = if (replace) {
-        s"""OPTIONAL MATCH (old:Database {name: $$name})
-          |REMOVE old:Database
-          |SET old:DeletedDatabase
-          |SET old.deleted_at = datetime()
-          |
-          |CREATE (d:Database {name: $$name})
-          |SET
-          |  d.status = $$status,
-          |  d.default = $$default,
-          |  d.created_at = datetime(),
-          |  d.uuid = randomUUID()
-          |  $queryAdditions
-          |RETURN d.name as name, d.status as status, d.uuid as uuid
-        """.stripMargin
-      } else {
+      UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         s"""CREATE (d:Database {name: $$name})
           |SET
           |  d.status = $$status,
@@ -489,10 +452,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  d.uuid = randomUUID()
           |  $queryAdditions
           |RETURN d.name as name, d.status as status, d.uuid as uuid
-        """.stripMargin
-      }
-      UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine, query,
-        virtualMap, QueryHandler
+        """.stripMargin, virtualMap,
+        QueryHandler
           .handleError(error => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
               new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", error)
