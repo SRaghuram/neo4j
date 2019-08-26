@@ -7,7 +7,10 @@ package com.neo4j.bench.common.process;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ForkDirectory;
+import org.apache.commons.lang3.StringUtils;
 
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,8 +18,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.neo4j.bench.common.util.Args.splitArgs;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -57,7 +58,44 @@ public class JvmArgs
 
     public static List<String> jvmArgsFromString( String jvmArgs )
     {
-        return Arrays.asList( splitArgs( jvmArgs, " " ) );
+        List<String> args = new ArrayList<>();
+        CharacterIterator characters = new StringCharacterIterator(  jvmArgs.trim() );
+        StringBuilder builder = new StringBuilder();
+        boolean quoted = false;
+
+        for ( char c = characters.first(); c != CharacterIterator.DONE; c = characters.next() )
+        {
+            // we have found space and we are not in between quotes
+            // so we will try to add JVM argument
+            if ( c == ' ' && !quoted )
+            {
+                builder = addArgFromBuilder( args, builder );
+            }
+            // beginning or end of quoted string
+            else if ( c == '\"' )
+            {
+                quoted = !quoted;
+            }
+            else
+            {
+                builder.append( c );
+            }
+        }
+        // if there is JVM argument left in a string builder
+        // add it to JVM arguments
+        addArgFromBuilder( args, builder );
+        return args;
+    }
+
+    private static StringBuilder addArgFromBuilder( List<String> args, StringBuilder builder )
+    {
+        String jvmArg = builder.toString();
+        if ( StringUtils.isNotBlank( jvmArg ) )
+        {
+            args.add( jvmArg );
+            builder = new StringBuilder();
+        }
+        return builder;
     }
 
     public static String jvmArgsToString( List<String> jvmArgs )
