@@ -605,14 +605,6 @@ public class EnterpriseBuiltInDbmsProcedures
         return securityContext.isAdmin() || securityContext.subject().hasUsername( username );
     }
 
-    private void assertAdminOrSelf( String username )
-    {
-        if ( !isAdminOrSelf( username ) )
-        {
-            throw new AuthorizationViolationException( PERMISSION_DENIED );
-        }
-    }
-
     public static class QueryTerminationResult
     {
         public final String queryId;
