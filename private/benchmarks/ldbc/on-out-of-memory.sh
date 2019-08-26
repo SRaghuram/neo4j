@@ -38,7 +38,7 @@ if [[ ! $outputDir ]]; then
     exit 1
 fi
 
-outputDir=$(realpath -s $outputDir)
+outputDir=$(realpath -s "$outputDir")
 
 resultsDir="$outputDir/$jvmPid"
 
