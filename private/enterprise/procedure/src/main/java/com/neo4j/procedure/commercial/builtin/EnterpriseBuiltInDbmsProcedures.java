@@ -533,13 +533,11 @@ public class EnterpriseBuiltInDbmsProcedures
         long deadline = System.nanoTime() + durationNanos;
         try
         {
+            KernelTransaction tx = getCurrentTx();
             scheduler.profileGroup( group, profiler );
             while ( System.nanoTime() < deadline )
             {
-                // TODO Figure out a way to get hold of the transaction here, so we can check if it has been terminated.
-                //      Apparantly we cannot have the KernelTransaction, or the TerminationGuard, field-injected with
-                //      @Context. For some reason, trying to do that breaks everything.
-//                terminationGuard.check();
+                tx.assertOpen();
                 Thread.sleep( 100 );
             }
         }
