@@ -1,25 +1,13 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- *
- * This file is part of Neo4j.
- *
- * Neo4j is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.ExecutionEngineFunSuite
+import java.util
+
+import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption, ExecutionEngineFunSuite}
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
 import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
 import org.neo4j.cypher.internal.runtime.InputDataStreamTestSupport
@@ -33,7 +21,7 @@ import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{MapValue, VirtualValues}
+import org.neo4j.values.virtual.{MapValue, NodeValue, VirtualValues}
 
 import scala.collection.JavaConverters._
 
@@ -106,7 +94,7 @@ class ExecutionEngineInputDataStreamTest
       ))
   }
 
-  test("select from map stream") {
+  test("operations on streamed maps") {
     val q = query(
       input(varFor("x")),
       return_(prop(varFor("x"), "p").as("r"))
@@ -126,41 +114,84 @@ class ExecutionEngineInputDataStreamTest
       ))
   }
 
-  test("select from node stream") {
+  test("operations on streamed nodes (in NoDbAccess mode)") {
     val q = query(
       input(varFor("x")),
-      return_(prop(varFor("x"), "p").as("r"))
+      return_(
+        function("id", varFor("x")).as("id"),
+        prop(varFor("x"), "p").as("r"),
+        index(prop(varFor("x"), "l"), 1).as("s"),
+        hasLabels(varFor("x"), "A").as("t")
+      )
     )
 
     execute(
-      prepare(q),
+      prepare(q, noDbAccess),
       noParams,
-      iteratorInput(Iterator(
-        Array(node(1, Seq("A"), map("p" -> 1))),
-        Array(node(2, Seq("B"), map("p" -> 1))),
-        Array(node(3, Seq("A"), map("p" -> 1))),
+      iteratorInputRaw(Iterator(
+        Array(node(1, Seq("A"), map("p" -> "a", "l" -> arr(1, 2, 3)))),
+        Array(node(2, Seq("B"), map("p" -> "b", "l" -> arr()))),
+        Array(node(3, Seq("A"), map("p" -> "c"))),
       ))
     )
       .toComparableResult
       .shouldEqual(List(
-        Map("r" -> 1),
-        Map("r" -> 2),
-        Map("r" -> "a"),
-        Map("r" -> "b"),
+        Map("id" -> 1, "r" -> "a", "s" -> 2, "t" -> true),
+        Map("id" -> 2, "r" -> "b", "s" -> null, "t" -> false),
+        Map("id" -> 3, "r" -> "c", "s" -> null, "t" -> true),
       ))
   }
 
-  private def map(kvs: (String, _)*) =
-    ValueUtils.asMapValue(Map(kvs: _*).asJava)
+  test("operations on streamed relationships (in NoDbAccess mode)") {
+    val q = query(
+      input(varFor("x")),
+      return_(
+        function("id", varFor("x")).as("id"),
+        prop(varFor("x"), "p").as("r"),
+        index(prop(varFor("x"), "l"), 1).as("s"),
+      )
+    )
 
-  private def node(id: Long, labels: Seq[String], props: MapValue) =
-    VirtualValues.nodeValue(id, Values.stringArray(labels: _*), props)
+    execute(
+      prepare(q, noDbAccess),
+      noParams,
+      iteratorInputRaw(Iterator(
+        Array(relationship(10, node(1, Seq("A"), map()), node(4, Seq("B"), map()), "A", map("p" -> "a", "l" -> arr(1, 2, 3)))),
+        Array(relationship(20, node(2, Seq("A"), map()), node(5, Seq("B"), map()), "B", map("p" -> "b", "l" -> arr()))),
+        Array(relationship(30, node(3, Seq("A"), map()), node(6, Seq("B"), map()), "A", map("p" -> "c"))),
+      ))
+    )
+      .toComparableResult
+      .shouldEqual(List(
+        Map("id" -> 10, "r" -> "a", "s" -> 2),
+        Map("id" -> 20, "r" -> "b", "s" -> null),
+        Map("id" -> 30, "r" -> "c", "s" -> null),
+      ))
+  }
+
+  private def map(kvs: (String, Any)*): util.Map[String, Any] =
+    Map(kvs: _*).asJava
+
+  private def arr(vs: Any*): Array[Any] =
+    Array(vs: _*)
+
+  private def node(id: Long, labels: Seq[String], props: util.Map[String, Any]) =
+    VirtualValues.nodeValue(id, Values.stringArray(labels: _*), ValueUtils.asMapValue(props))
+
+  private def relationship(id: Long, start: NodeValue, end: NodeValue, label: String, props: util.Map[String, Any]) =
+    VirtualValues.relationshipValue(id, start, end, ValueUtils.asTextValue(label), ValueUtils.asMapValue(props))
 
   private def noParams: Map[String, Any] = Map.empty
 
   private val semanticAnalysis =
     SemanticAnalysis(warn = true, Cypher9Comparability, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
       AstRewriting(RewriterStepSequencer.newPlain, IfNoParameter, innerVariableNamer = new GeneratingNamer())
+
+  private val noDbAccess = QueryOptions.default.copy(
+    runtime = CypherRuntimeOption.slotted,
+    expressionEngine = CypherExpressionEngineOption.interpreted,
+    noDatabaseAccess = true,
+  )
 
   private def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =
     FullyParsedQuery(
