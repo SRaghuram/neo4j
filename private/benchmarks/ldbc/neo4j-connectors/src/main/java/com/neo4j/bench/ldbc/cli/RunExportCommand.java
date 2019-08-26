@@ -43,6 +43,7 @@ import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.profiling.Profiler;
@@ -808,7 +809,7 @@ public class RunExportCommand implements Runnable
             String processName ) throws IOException
     {
         String[] ldbcRunArgs = RunCommand.buildArgs( ldbcRunConfig, Paths.get( forkDirectory.toAbsolutePath() ).toFile() );
-        List<String> jvmArgs = Args.splitArgs( jvmArgsString );
+        List<String> jvmArgs = JvmArgs.jvmArgsFromString( jvmArgsString );
 
         JvmVersion jvmVersion = jvm.version();
 
