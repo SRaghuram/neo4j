@@ -242,35 +242,35 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
   }
 
-  // TESTS WITH EXTRACT
+  // TESTS WITH EXTRACTING LIST COMPREHENSION
 
-  test("match (n) return extract(x IN (n)-->() | head(nodes(x)) )  as p") {
+  test("match (n) return [x IN (n)-->() | head(nodes(x))]  as p") {
     val start = createNode()
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return extract(x IN (n)-->() | head(nodes(x)) )  as p")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return [x IN (n)-->() | head(nodes(x))]  as p")
 
     result.toList.head("p").asInstanceOf[Seq[_]] should equal(List(start, start))
   }
 
-  test("match (n:A) with extract(x IN (n)-->() | head(nodes(x)) ) as p, count(n) as c return p, c") {
+  test("match (n:A) with [x IN (n)-->() | head(nodes(x))] as p, count(n) as c return p, c") {
     val start = createLabeledNode("A")
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n:A) with extract(x IN (n)-->() | head(nodes(x)) ) as p, count(n) as c return p, c")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n:A) with [x IN (n)-->() | head(nodes(x))] as p, count(n) as c return p, c")
       .toList.head("p").asInstanceOf[Seq[_]]
 
     result should equal(List(start, start))
   }
 
-  test("match (n) where n IN extract(x IN (n)-->() | head(nodes(x)) ) return n") {
+  test("match (n) where n IN [x IN (n)-->() | head(nodes(x))] return n") {
     val start = createNode()
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where n IN extract(x IN (n)-->() | head(nodes(x)) ) return n")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where n IN [x IN (n)-->() | head(nodes(x))] return n")
       .toList
 
     result should equal(List(

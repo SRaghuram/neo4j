@@ -82,6 +82,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     failWithError(Configs.All, query, Seq("The function rels() is no longer supported. You can achieve the same result using relationships()"))
   }
 
+  test("should provide sensible error message for filter") {
+    val query = "WITH [1,2,3] AS list RETURN filter(x IN list WHERE x % 2 = 1) AS odds"
+    failWithError(Configs.All, query, Seq("Filter is no longer supported. You can achieve the same result using list comprehension"))
+  }
+
+  test("should provide sensible error message for extract") {
+    val query = "WITH [1,2,3] AS list RETURN extract(x IN list | x * 10) AS tens"
+    failWithError(Configs.All, query, Seq("Extract is no longer supported. You can achieve the same result using list comprehension"))
+  }
+
   test("should give correct error message with invalid number literal in a subtract") {
     a[SyntaxException] shouldBe thrownBy {
       executeSingle("with [1a-1] as list return list", Map())

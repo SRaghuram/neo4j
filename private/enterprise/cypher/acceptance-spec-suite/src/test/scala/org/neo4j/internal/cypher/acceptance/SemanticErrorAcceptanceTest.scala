@@ -330,12 +330,12 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       s"$mess (line 1, column 48 (offset: 47))")
 
     executeAndEnsureError(
-      "MATCH (n) RETURN EXTRACT(x in [1,2,3,4,5] | count(*) = 0)",
-      s"$mess (line 1, column 45 (offset: 44))")
+      "MATCH (n) RETURN [x in [1,2,3,4,5] | count(*) = 0]",
+      s"$mess (line 1, column 38 (offset: 37))")
 
     executeAndEnsureError(
-      "MATCH (n) RETURN FILTER(x in [1,2,3,4,5] WHERE count(*) = 0)",
-      s"$mess (line 1, column 48 (offset: 47))")
+      "MATCH (n) RETURN [x in [1,2,3,4,5] WHERE count(*) = 0]",
+      s"$mess (line 1, column 42 (offset: 41))")
 
     executeAndEnsureError(
       "MATCH (n) RETURN REDUCE(acc = 0, x in [1,2,3,4,5] | acc + count(*))",

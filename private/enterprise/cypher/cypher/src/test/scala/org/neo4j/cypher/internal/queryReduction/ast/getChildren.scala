@@ -94,9 +94,6 @@ object getChildren {
       case MapExpression(items) =>
         items.flatMap { case (pkn, exp) => Seq(pkn, exp) }
 
-      case FilterExpression(scope, expression) =>
-        Seq(scope, expression)
-
       case i:IterablePredicateExpression =>
         Seq(i.scope, i.expression)
 

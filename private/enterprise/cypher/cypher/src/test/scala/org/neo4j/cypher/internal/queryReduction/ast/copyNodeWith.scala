@@ -92,9 +92,6 @@ object copyNodeWith {
       case MapExpression(items) =>
         MapExpression(nc.ofTupledSeq(items))(node.position)
 
-      case FilterExpression(scope, expression) =>
-        FilterExpression(nc.ofSingle(scope), nc.ofSingle(expression))(node.position)
-
       case FilterScope(variable, innerPredicate) =>
         FilterScope(nc.ofSingle(variable), nc.ofOption(innerPredicate))(node.position)
 

@@ -117,10 +117,6 @@ object domainsOf {
       case MapExpression(items) =>
         ofTupledSeq(items, classOf[PropertyKeyName], classOf[Expression])
 
-      case FilterExpression(scope, expression) =>
-        ofSingle(scope, classOf[FilterScope]) ++
-          ofSingle(expression, classOf[Expression])
-
       case FilterScope(variable, innerPredicate) =>
         ofSingle(variable, classOf[Variable]) ++
           ofOption(innerPredicate, classOf[Expression])

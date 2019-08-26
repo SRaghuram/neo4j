@@ -48,13 +48,13 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     ))
   }
 
-  test("should extract on values") {
+  test("should perform extracting list comprehension on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN" +
-        " extract(s IN ['1','22','1','333'] | size(s)) AS result," +
-        " extract(s IN ['1','22','1','333'] | null) AS nullExpression," +
-        " extract(s IN ['1',null,'1','333'] | size(s)) AS nullElement," +
-        " extract(s IN [] | 7 + s) AS emptyList")
+        " [s IN ['1','22','1','333'] | size(s)] AS result," +
+        " [s IN ['1','22','1','333'] | null] AS nullExpression," +
+        " [s IN ['1',null,'1','333'] | size(s)] AS nullElement," +
+        " [s IN [] | 7 + s] AS emptyList")
 
     result.toList.head should equal(Map(
       "result" -> List(1, 2, 1, 3),
@@ -63,7 +63,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "emptyList" -> List()))
   }
 
-  test("should extract on nodes") {
+  test("should perform extracting list comprehension on nodes") {
     val n1 = createLabeledNode(Map("x" -> 1), "Label")
     val n2 = createLabeledNode(Map("x" -> 2), "Label")
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
@@ -73,9 +73,9 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "RETURN" +
-          " extract(n IN nodes(p) | n.x) AS result," +
-          " extract(n IN nodes(p) | null) AS nullExpression," +
-          " extract(n IN nodes(p) + [null] | n.x) AS nullElement")
+          " [n IN nodes(p) | n.x] AS result," +
+          " [n IN nodes(p) | null] AS nullExpression," +
+          " [n IN nodes(p) + [null] | n.x] AS nullElement")
 
     result.toList.head should equal(Map(
       "result" -> List(1, 2, 3),
@@ -84,21 +84,58 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     ))
   }
 
-  test("should list comprehension on values") {
+  test("should perform filtering list comprehension on values") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      query = "RETURN" +
+        " [s IN ['1','22','1','333'] WHERE s STARTS WITH '1'] AS result," +
+        " [s IN ['1','22','1','333'] WHERE null] AS nullPredicate," +
+        " [s IN ['1',null,'1','333'] WHERE size(s)>1] AS nullElement," +
+        " [s IN [] WHERE s > 7] AS emptyList")
+
+    result.toList.head should equal(Map(
+      "result" -> List("1", "1"),
+      "nullPredicate" -> List(),
+      "nullElement" -> List("333"),
+      "emptyList" -> List()
+    ))
+  }
+
+  test("should perform filtering list comprehension on nodes") {
+    val n1 = createLabeledNode(Map("x" -> 1), "Label")
+    val n2 = createLabeledNode(Map("x" -> 2), "Label")
+    val n3 = createLabeledNode(Map("x" -> 3), "Label")
+    relate(n1, n2)
+    relate(n2, n3)
+    val result = executeWith(Configs.VarExpand,
+      query =
+        "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
+          "RETURN" +
+          " [n IN nodes(p) WHERE n.x <= 2] AS result," +
+          " [n IN nodes(p) WHERE null] AS nullPredicate," +
+          " [n IN nodes(p) + [null] WHERE n.x < 2] AS nullElement")
+
+    result.toList.head should equal(Map(
+      "result" -> List(n1, n2),
+      "nullPredicate" -> List(),
+      "nullElement" -> List(n1)
+    ))
+  }
+
+  test("should perform list comprehension on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN [s IN ['1','22','1','333']] AS result")
 
     result.toList.head should equal(Map("result" -> List("1", "22", "1", "333")))
   }
 
-  test("should list comprehension on values, with predicate") {
+  test("should perform list comprehension on values, with predicate") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN [s IN ['1','22','1','333'] WHERE s STARTS WITH '1'] AS result")
 
     result.toList.head should equal(Map("result" -> List("1", "1")))
   }
 
-  test("should list comprehension on values, with predicate and extract") {
+  test("should perform comprehension on values, with predicate and extract") {
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN" +
         " [s IN ['1','22','1','333'] WHERE s STARTS WITH '1' | size(s)] AS result," +
@@ -114,7 +151,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     ))
   }
 
-  test("should list comprehension on nodes") {
+  test("should perform list comprehension on nodes") {
     val n1 = createLabeledNode(Map("x" -> 1), "Label")
     val n2 = createLabeledNode(Map("x" -> 2), "Label")
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
@@ -128,7 +165,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.toList.head should equal(Map("result" -> List(n1, n2, n3)))
   }
 
-  test("should list comprehension on nodes, with predicate") {
+  test("should perform list comprehension on nodes, with predicate") {
     val n1 = createLabeledNode(Map("x" -> 1), "Label")
     val n2 = createLabeledNode(Map("x" -> 2), "Label")
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
@@ -142,7 +179,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.toList.head should equal(Map("result" -> List(n1, n2)))
   }
 
-  test("should list comprehension on nodes, with predicate and extract") {
+  test("should perform list comprehension on nodes, with predicate and extract") {
     val n1 = createLabeledNode(Map("x" -> 1), "Label")
     val n2 = createLabeledNode(Map("x" -> 2), "Label")
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
@@ -154,43 +191,6 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           "RETURN [n IN nodes(p) WHERE n.x <= 2 | n.x] AS result")
 
     result.toList.head should equal(Map("result" -> List(1, 2)))
-  }
-
-  test("should filter on values") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      query = "RETURN" +
-        " filter(s IN ['1','22','1','333'] WHERE s STARTS WITH '1') AS result," +
-        " filter(s IN ['1','22','1','333'] WHERE null) AS nullPredicate," +
-        " filter(s IN ['1',null,'1','333'] WHERE size(s)>1) AS nullElement," +
-        " filter(s IN [] WHERE s > 7) AS emptyList")
-
-    result.toList.head should equal(Map(
-      "result" -> List("1", "1"),
-      "nullPredicate" -> List(),
-      "nullElement" -> List("333"),
-      "emptyList" -> List()
-    ))
-  }
-
-  test("should filter on nodes") {
-    val n1 = createLabeledNode(Map("x" -> 1), "Label")
-    val n2 = createLabeledNode(Map("x" -> 2), "Label")
-    val n3 = createLabeledNode(Map("x" -> 3), "Label")
-    relate(n1, n2)
-    relate(n2, n3)
-    val result = executeWith(Configs.VarExpand,
-      query =
-        "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
-          "RETURN" +
-          " filter(n IN nodes(p) WHERE n.x <= 2) AS result," +
-          " filter(n IN nodes(p) WHERE null) AS nullPredicate," +
-          " filter(n IN nodes(p) + [null] WHERE n.x < 2) AS nullElement")
-
-    result.toList.head should equal(Map(
-      "result" -> List(n1, n2),
-      "nullPredicate" -> List(),
-      "nullElement" -> List(n1)
-    ))
   }
 
   test("should all predicate on values") {

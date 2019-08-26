@@ -714,10 +714,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                collection.nullChecks)
       }
 
-    case FilterExpression(scope, collectionExpression) =>
-      filterExpression(intermediateCompileExpression(collectionExpression),
-                       scope.innerPredicate.get, ExpressionVariable.cast(scope.variable))
-
     case ListComprehension(scope, list) =>
       val filter = scope.innerPredicate match {
         case Some(_: True) | None => intermediateCompileExpression(list)
@@ -729,10 +725,6 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
         case Some(extract) =>
           extractExpression(filter, extract, ExpressionVariable.cast(scope.variable))
       }
-
-    case ExtractExpression(scope, collectionExpression) =>
-      extractExpression(intermediateCompileExpression(collectionExpression),
-                        scope.extractExpression.get, ExpressionVariable.cast(scope.variable))
 
     case ReduceExpression(scope, initExpression, collectionExpression) =>
       /*
