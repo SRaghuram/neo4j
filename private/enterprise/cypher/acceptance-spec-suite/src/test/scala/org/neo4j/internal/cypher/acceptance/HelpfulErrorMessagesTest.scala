@@ -62,6 +62,26 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     ))
   }
 
+  test("should provide sensible error message for removed toInt() function") {
+    val query = "RETURN toInt('1')"
+    failWithError(Configs.All, query, Seq("The function toInt() is no longer supported. You can achieve the same result using toInteger()"))
+  }
+
+  test("should provide sensible error message for removed lower() function") {
+    val query = "RETURN lower('BAR')"
+    failWithError(Configs.All, query, Seq("The function lower() is no longer supported. You can achieve the same result using toLower()"))
+  }
+
+  test("should provide sensible error message for removed upper() function") {
+    val query = "RETURN upper('foo')"
+    failWithError(Configs.All, query, Seq("The function upper() is no longer supported. You can achieve the same result using toUpper()"))
+  }
+
+  test("should provide sensible error message for removed rels() function") {
+    val query = "MATCH p = ()-->() RETURN rels(p) AS r"
+    failWithError(Configs.All, query, Seq("The function rels() is no longer supported. You can achieve the same result using relationships()"))
+  }
+
   test("should give correct error message with invalid number literal in a subtract") {
     a[SyntaxException] shouldBe thrownBy {
       executeSingle("with [1a-1] as list return list", Map())

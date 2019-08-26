@@ -676,36 +676,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications shouldBe empty
   }
 
-  test("warn for use of deprecated toInt") {
-    val result = executeSingle("EXPLAIN RETURN toInt('1') AS one", Map.empty)
-
-    result.notifications should contain(DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(15, 1, 16),
-                                                                         deprecatedName("toInt", "toInteger"))
-    )
-  }
-
-  test("warn for use of deprecated upper") {
-    val result = executeSingle("EXPLAIN RETURN upper('foo') AS one", Map.empty)
-
-    result.notifications should contain(DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(15, 1, 16),
-                                                                          deprecatedName("upper", "toUpper")))
-  }
-
-  test("warn for use of deprecated lower") {
-    val result = executeSingle("EXPLAIN RETURN lower('BAR') AS one", Map.empty)
-
-    result.notifications should contain(DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(15, 1, 16),
-                                                                         deprecatedName("lower", "toLower")))
-  }
-
-  test("warn for use of deprecated rels") {
-    val result = executeSingle("EXPLAIN MATCH p = ()-->() RETURN rels(p) AS r", Map.empty)
-
-    result.notifications should contain(
-      DEPRECATED_FUNCTION.notification(new graphdb.InputPosition(33, 1, 34),
-                                       deprecatedName("rels", "relationships")))
-  }
-
   test("should warn when using contains on an index with SLOW_CONTAINS limitation") {
     graph.createIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name CONTAINS 'er' RETURN a"

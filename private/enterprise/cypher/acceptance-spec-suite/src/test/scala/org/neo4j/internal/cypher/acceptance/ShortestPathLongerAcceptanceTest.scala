@@ -214,7 +214,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   // and the shortest path expression and then determine that the path expression does not depend on the whole path.
   // The var expand fallback exists primarily for correctness and is expected to perform very badly, so it could be
   // argued that this is not a very import case to optimize for.
-  ignore("Fallback expander should take on rel-type predicates (using rels(p))") {
+  ignore("Fallback expander should take on rel-type predicates (using relationships(p))") {
     val start = System.currentTimeMillis
     val results = executeWith(Configs.All,
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))

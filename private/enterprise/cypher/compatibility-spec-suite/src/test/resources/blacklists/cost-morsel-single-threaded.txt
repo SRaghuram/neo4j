@@ -372,3 +372,6 @@ Feature "WithAcceptance": Scenario "Connected components succeeding WITH"
 Feature "WithAcceptance": Scenario "Handle dependencies across WITH with SKIP"
 Feature "WithAcceptance": Scenario "No dependencies between the query parts"
 Feature "WithAcceptance": Scenario "ORDER BY and LIMIT can be used"
+
+// TODO: queries with old syntax, remove once a new TCK release is out
+Feature "ListComprehension": Scenario "Using a list comprehension in a WHERE"
