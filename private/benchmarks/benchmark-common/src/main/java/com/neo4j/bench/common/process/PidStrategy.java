@@ -60,9 +60,10 @@ public abstract class PidStrategy
 
     /**
      * Should return the correct comand for the Pid finder
+     *
      * @return the correct command
      */
-    protected abstract String[] getCommand(Jvm jvm);
+    protected abstract String[] getCommand( Jvm jvm );
 
     protected PidStrategy fromProcessOutput( String output, String processName )
     {
@@ -82,7 +83,9 @@ public abstract class PidStrategy
     private long pid;
     private String output;
 
-    PidStrategy() { }
+    PidStrategy()
+    {
+    }
 
     private PidStrategy( long pid, String output )
     {
