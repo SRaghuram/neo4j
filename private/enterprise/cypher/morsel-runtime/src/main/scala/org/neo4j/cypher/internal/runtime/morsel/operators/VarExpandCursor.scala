@@ -26,7 +26,7 @@ case object EMIT extends ExpandStatus
 
 class VarExpandCursor(fromNode: Long,
                       targetToNode: Long,
-                      cursorPools: CursorPools,
+                      theNodeCursor: NodeCursor,
                       dir: SemanticDirection,
                       projectBackwards: Boolean,
                       relTypes: Array[Int],
@@ -40,11 +40,17 @@ class VarExpandCursor(fromNode: Long,
   var expandStatus: ExpandStatus = NOT_STARTED
   var pathLength: Int = 0
 
-  // TODO: resources?
-  private val nodeCursor: NodeCursor = cursorPools.nodeCursorPool.allocate()
+  private val nodeCursor: NodeCursor = theNodeCursor
   private val relTraCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
   private val relGroupCursors: GrowingArray[RelationshipGroupCursor] = new GrowingArray[RelationshipGroupCursor]()
   private val selectionCursors: GrowingArray[RelationshipSelectionCursor] = new GrowingArray[RelationshipSelectionCursor]()
+
+  // this needs to be explicitly managed on every work unit, to avoid parallel workers accessing each others cursorPools.
+  private var cursorPools: CursorPools = _
+
+  def enterWorkUnit(cursorPools: CursorPools): Unit = {
+    this.cursorPools = cursorPools
+  }
 
   def next(): Boolean = {
 

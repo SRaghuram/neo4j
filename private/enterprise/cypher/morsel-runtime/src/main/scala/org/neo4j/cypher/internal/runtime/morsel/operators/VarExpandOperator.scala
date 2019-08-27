@@ -82,6 +82,10 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                                            state.subscriber,
                                            NoMemoryTracker)
       }
+
+      if (varExpandCursor != null) {
+        varExpandCursor.enterWorkUnit(resources.cursorPools)
+      }
     }
 
     protected override def initializeInnerLoop(context: QueryContext,
@@ -127,7 +131,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
         validInput = true
         varExpandCursor = new VarExpandCursor(fromNode,
                                               toNode,
-                                              resources.cursorPools,
+                                              resources.cursorPools.nodeCursorPool.allocate(),
                                               dir,
                                               projectBackwards,
                                               types.types(context),

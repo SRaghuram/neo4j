@@ -93,6 +93,11 @@ class ParallelRuntimeExpandAllTestNoFusing extends ExpandAllTestBase(ENTERPRISE.
                                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeExpandStressTest extends ExpandStressTestBase(PARALLEL)
 
+// VAR EXPAND
+class ParallelRuntimeVarLengthExpandTest extends VarLengthExpandTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeVarExpandStressTest extends VarExpandStressTestBase(PARALLEL)
+
 // PROJECTION
 class ParallelRuntimeProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProjectionNoFusingTest extends ProjectionTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
