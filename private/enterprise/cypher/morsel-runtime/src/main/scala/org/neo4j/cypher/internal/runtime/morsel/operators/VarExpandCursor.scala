@@ -37,8 +37,8 @@ class VarExpandCursor(fromNode: Long,
                       nodePredicate: VarExpandPredicate[Long],
                       relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor]) {
 
-  var expandStatus: ExpandStatus = NOT_STARTED
-  var pathLength: Int = 0
+  private var expandStatus: ExpandStatus = NOT_STARTED
+  private var pathLength: Int = 0
 
   private val nodeCursor: NodeCursor = theNodeCursor
   private val relTraCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
@@ -161,7 +161,6 @@ class VarExpandCursor(fromNode: Long,
   }
 
   def setTracer(event: OperatorProfileEvent): Unit = {
-    // TODO: also set on new cursors
     nodeCursor.setTracer(event)
     relTraCursors.foreach(_.setTracer(event))
     relGroupCursors.foreach(_.setTracer(event))

@@ -70,6 +70,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
     private var validInput: Boolean = false
     private var varExpandCursor: VarExpandCursor = _
     private var predicateState: OldQueryState = _
+    private var executionEvent: OperatorProfileEvent = _
 
     override protected def enterOperate(context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
       if (tempNodeOffset != NO_PREDICATE_OFFSET || tempRelationshipOffset != NO_PREDICATE_OFFSET) {
@@ -141,6 +142,8 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                                               context,
                                               nodeVarExpandPredicate,
                                               relVarExpandPredicate)
+        varExpandCursor.enterWorkUnit(resources.cursorPools)
+        varExpandCursor.setTracer(executionEvent)
         true
       }
     }
@@ -170,6 +173,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
     }
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+      this.executionEvent = event
       if (varExpandCursor != null) {
         varExpandCursor.setTracer(event)
       }
