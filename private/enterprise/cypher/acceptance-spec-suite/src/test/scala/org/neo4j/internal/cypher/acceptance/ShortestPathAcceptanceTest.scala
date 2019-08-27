@@ -676,7 +676,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN
         | reduce(weight=0.0, r IN relationships(path) |
         |            weight +
-        |            length(()-[r]->()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()-[r]->())*1.0
+        |            size(()-[r]->()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()-[r]->())*1.0
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
@@ -695,7 +695,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN
         | reduce(weight=0.0, r IN relationships(path) |
         |            weight +
-        |            length((:Comment)-[:COMMENT_HAS_CREATOR]->()<-[r]-()-[r]->()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()-[r]->()<-[r]-())*1.0
+        |            size((:Comment)-[:COMMENT_HAS_CREATOR]->()<-[r]-()-[r]->()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()-[r]->()<-[r]-())*1.0
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 

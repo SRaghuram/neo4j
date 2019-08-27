@@ -448,7 +448,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         |WHERE
         |    ALL(noeud in nodes(path) WHERE
         |      noeud.dateDebut <= ladate < noeud.dateFin
-        |      AND length( (noeud)<--() ) = 1
+        |      AND size( (noeud)<--() ) = 1
         |    )
         |AND
         |    ALL(r in relationships(path)
