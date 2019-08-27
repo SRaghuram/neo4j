@@ -14,7 +14,6 @@ import java.util.EnumSet;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -37,13 +36,13 @@ class SetConfigValueProcedureTest
     {
         Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" );
+        db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" );
         assertEquals( LogQueryLevel.OFF, config.get( log_queries ) );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" );
+        db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" );
         assertEquals( LogQueryLevel.INFO, config.get( log_queries ) );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'verbose')" );
+        db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'verbose')" );
         assertEquals( LogQueryLevel.VERBOSE, config.get( log_queries ) );
     }
 
@@ -52,10 +51,10 @@ class SetConfigValueProcedureTest
     {
         Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '11s')" );
+        db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '11s')" );
         assertEquals( Duration.ofSeconds( 11 ), config.get( log_queries_threshold ) );
 
-        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '')" );
+        db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '')" );
         assertEquals( log_queries_threshold.defaultValue(), config.get( log_queries_threshold ) );
     }
 
@@ -63,7 +62,7 @@ class SetConfigValueProcedureTest
     void failIfUnknownSetting()
     {
         Throwable rootCause = Exceptions.rootCause(
-                assertThrows( RuntimeException.class, () -> executeTransactionally( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
+                assertThrows( RuntimeException.class, () -> db.executeTransactionally( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "Setting `unknown.setting.indeed` not found", rootCause.getMessage() );
     }
@@ -73,7 +72,7 @@ class SetConfigValueProcedureTest
     {
         // Static setting, at least for now
         Throwable rootCause = Exceptions.rootCause( assertThrows( RuntimeException.class,
-                () -> executeTransactionally( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
+                () -> db.executeTransactionally( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "Setting 'dbms.directories.plugins' is not dynamic and can not be changed at runtime", rootCause.getMessage() );
     }
@@ -81,18 +80,9 @@ class SetConfigValueProcedureTest
     @Test
     void failIfInvalidValue()
     {
-        Throwable rootCause = Exceptions.rootCause(
-                assertThrows( RuntimeException.class, () -> executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
+        Throwable rootCause = Exceptions.rootCause( assertThrows( RuntimeException.class,
+                () -> db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "'invalid' not one of " + EnumSet.allOf( GraphDatabaseSettings.LogQueryLevel.class ), rootCause.getMessage() );
-    }
-
-    private void executeTransactionally( String query )
-    {
-        try ( Transaction transaction = db.beginTx() )
-        {
-            db.execute( query );
-            transaction.commit();
-        }
     }
 }

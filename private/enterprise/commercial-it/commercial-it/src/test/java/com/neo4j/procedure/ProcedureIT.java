@@ -68,6 +68,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -1066,10 +1067,13 @@ public class ProcedureIT
         MutableInt counter = new MutableInt( 1 );
         db.executeTransactionally(
                 "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " + "CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n " +
-                        "RETURN n.prop", (Result.ResultVisitor<Exception>) row ->
+                        "RETURN n.prop", emptyMap(), result ->
                 {
-                    assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter.getAndIncrement() ) ) );
-                    return true;
+                    while ( result.hasNext() )
+                    {
+                        var row = result.next();
+                        assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter.getAndIncrement() ) ) );
+                    }
                 } );
         assertEquals( 101, counter.getValue() );
 

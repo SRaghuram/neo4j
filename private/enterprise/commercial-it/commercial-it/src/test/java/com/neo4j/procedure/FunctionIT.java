@@ -65,6 +65,7 @@ import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -578,12 +579,15 @@ class FunctionIT
         //WHEN
         MutableLong counter = new MutableLong( 1 );
         db.executeTransactionally( "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
-                "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " + "RETURN n.prop", (Result.ResultVisitor<Exception>) row ->
-        {
-            assertThat( row.get( "n.prop" ), equalTo( counter.getAndIncrement() ) );
-            return true;
-        } );
-        // THEN
+                        "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " + "RETURN n.prop", emptyMap(), result ->
+                {
+                    while ( result.hasNext() )
+                    {
+                        var row = result.next();
+                        assertThat( row.get( "n.prop" ), equalTo( counter.getAndIncrement() ) );
+                    }
+                } );
+                // THEN
         assertEquals( 101L, counter.getValue() );
         try ( Transaction transaction = db.beginTx() )
         {

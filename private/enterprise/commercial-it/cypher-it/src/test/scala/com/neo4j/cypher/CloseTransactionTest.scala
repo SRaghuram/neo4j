@@ -60,7 +60,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       val engine = createEngine(service)
 
       // when
-      executeTransactionally(s"CYPHER runtime=$runtime return 1")
+      db.executeTransactionally(s"CYPHER runtime=$runtime return 1")
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -78,7 +78,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       val engine = createEngine(service)
 
       // when
-      executeTransactionally(s"CYPHER runtime=$runtime profile return 1")
+      db.executeTransactionally(s"CYPHER runtime=$runtime profile return 1")
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -99,7 +99,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       val engine = createEngine(service)
 
       // when
-      executeTransactionally(s"CYPHER runtime=$runtime explain return 1")
+      db.executeTransactionally(s"CYPHER runtime=$runtime explain return 1")
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -129,7 +129,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       txBridge(service).hasTransaction shouldBe false
 
       // when
-      executeTransactionally(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()")
+      db.executeTransactionally(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()")
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -148,7 +148,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       txBridge(service).hasTransaction shouldBe false
 
       // when
-      executeTransactionally(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()")
+      db.executeTransactionally(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()")
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -167,7 +167,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       txBridge(service).hasTransaction shouldBe false
 
       // when
-      executeTransactionally(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()")
+      db.executeTransactionally(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()")
       // then
       txBridge(service).hasTransaction shouldBe false
 
@@ -453,13 +453,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // then
       txBridge(service).hasTransaction shouldBe false
     }
-  }
-
-  private def executeTransactionally(query:String): Unit =
-  {
-    val transaction = db.beginTx()
-    db.execute(query).close()
-    transaction.commit()
   }
 
   private val consumerVisitor = new ResultVisitor[RuntimeException] {

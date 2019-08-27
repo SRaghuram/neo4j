@@ -35,7 +35,6 @@ import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -210,7 +209,7 @@ public class ListQueriesProcedureTest
 
         // Run the query one time first so that the plan is cached and
         // locks taken during planning is not counted in
-        executeTransactionally( query );
+        db.executeTransactionally( query );
 
         Set<Long> locked = new HashSet<>();
         try ( Resource<Node> test = test( () ->
@@ -443,7 +442,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), notNullValue() ) );
 
         // when
-        executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
+        db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -452,7 +451,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), nullValue() ) );
 
         // when
-        executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
+        db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -497,7 +496,7 @@ public class ListQueriesProcedureTest
                 instanceOf( Long.class ), greaterThan( 0L ) ) ) );
 
         // when
-        executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
+        db.executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -506,7 +505,7 @@ public class ListQueriesProcedureTest
         assertThat( data, hasEntry( equalTo( "allocatedBytes" ), nullValue() ) );
 
         // when
-        executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
+        db.executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
         try ( Resource<Node> test = test( db::createNode, query ) )
         {
             data = getQueryListing( query );
@@ -667,16 +666,5 @@ public class ListQueriesProcedureTest
         }, null, waitingWhileIn( GraphDatabaseFacade.class, "execute" ), SECONDS_TIMEOUT, SECONDS );
 
         return new Resource<>( listQueriesLatch, finishQueriesLatch, resource );
-    }
-
-    private Result executeTransactionally( String query )
-    {
-        Result result;
-        try ( Transaction transaction = db.beginTx() )
-        {
-            result = db.execute( query );
-            transaction.commit();
-        }
-        return result;
     }
 }
