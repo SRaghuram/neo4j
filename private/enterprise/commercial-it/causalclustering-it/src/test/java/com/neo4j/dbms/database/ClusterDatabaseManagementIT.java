@@ -28,7 +28,6 @@ import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.assertion.Assert;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
@@ -39,12 +38,14 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.drop
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // TODO: Fix: Failing to start when other members are unavailable: https://trello.com/c/l3TW6rp6/1576-stop-blocking-in-corelifestart
 @ClusterExtension
@@ -397,7 +398,8 @@ class ClusterDatabaseManagementIT
         toStop.start();
 
         // Core should have eventually started database and have only data from the recreation
-        Assert.assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1L ), 90, TimeUnit.SECONDS );
+        assertDatabaseEventuallyStarted( databaseName, singleton( toStop ) );
+        assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1L ), 90, TimeUnit.SECONDS );
         assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0L ) );
     }
 
