@@ -11,8 +11,10 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 
 public class JvmArgsTest
@@ -135,5 +137,13 @@ public class JvmArgsTest
         assertArrayEquals(
                 new String[] {"-XX:OnOutMemoryError= kill -9 %p "},
                 jvmArgs.toArray( new String[] {} ) );
+    }
+
+    @Test
+    public void addAllArguments()
+    {
+        JvmArgs jvmArgs0 = JvmArgs.from( asList( "-Xmx4g" ) );
+        JvmArgs jvmargs1 = jvmArgs0.addAll( asList( "-Xms4g", "-XX:-PrintFlagsFinal" ) );
+        assertEquals( asList( "-Xmx4g", "-Xms4g", "-XX:-PrintFlagsFinal" ), jvmargs1.toArgs() );
     }
 }
