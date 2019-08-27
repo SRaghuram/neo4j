@@ -403,7 +403,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
-            val fromOffset = slots.getLongOffsetFor(fromName)
+            val fromSlot = slots(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
             val toOffset = slots.getLongOffsetFor(to)
             val tokensOrNames = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
@@ -421,7 +421,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
             val newTemplate = new ExpandAllOperatorTaskTemplate(acc.template,
                                                                 plan.id,
                                                                 innermostTemplate,
-                                                                fromOffset,
+                                                                fromSlot,
                                                                 relOffset,
                                                                 toOffset,
                                                                 dir,

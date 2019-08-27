@@ -159,12 +159,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                                                     physicalPlan.argumentSizes(id))
 
       case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll) =>
-        val fromOffset = slots.getLongOffsetFor(fromName)
+        val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
-                              fromOffset,
+                              fromSlot,
                               relOffset,
                               toOffset,
                               dir,

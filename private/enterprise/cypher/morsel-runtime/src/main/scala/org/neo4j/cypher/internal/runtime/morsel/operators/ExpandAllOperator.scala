@@ -7,8 +7,10 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
@@ -20,19 +22,25 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryConte
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
 import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
+import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
-                        fromOffset: Int,
+                        fromSlot: Slot,
                         relOffset: Int,
                         toOffset: Int,
                         dir: SemanticDirection,
                         types: RelationshipTypes) extends StreamingOperator {
+  //===========================================================================
+  // Compile-time initializations
+  //===========================================================================
+  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 
   override def toString: String = "ExpandAll"
 
@@ -64,7 +72,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
-      val fromNode = inputMorsel.getLongAt(fromOffset)
+      val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
       if (entityIsNull(fromNode))
         false
       else {
@@ -133,7 +141,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     id: Id,
                                     innermost: DelegateOperatorTaskTemplate,
-                                    fromOffset: Int,
+                                    fromSlot: Slot,
                                     relOffset: Int,
                                     toOffset: Int,
                                     dir: SemanticDirection,
@@ -200,7 +208,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, codeGen.getLongFromExecutionContext(fromOffset, loadField(INPUT_MORSEL))),
+      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
       condition(notEqual(load(fromNode), constant(-1L))){
        block(
          loadTypes,
@@ -263,7 +271,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         } else {
           noop()
         },
-        codeGen.setLongAt(fromOffset, codeGen.getLongFromExecutionContext(fromOffset, loadField(INPUT_MORSEL))),
+        setNode(fromSlot),
         codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
@@ -310,6 +318,29 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ),
       inner.genSetExecutionEvent(event)
     )
+  }
+
+  private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
+    case LongSlot(offset, _, _) =>
+      codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
+    case RefSlot(offset, false, _) =>
+      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"),
+                   codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+    case RefSlot(offset, true, _) =>
+      ternary(
+        equal(codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)), noValue),
+        constant(-1L),
+        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"),
+                     codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))))
+    case _ =>
+      throw new InternalException(s"Do not know how to get a node id for slot $slot")
+  }
+
+  private def setNode(slot: Slot): IntermediateRepresentation = slot match {
+    case LongSlot(offset, _, _) =>
+      codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+    case RefSlot(offset, _, _) =>
+      codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
   }
 }
 

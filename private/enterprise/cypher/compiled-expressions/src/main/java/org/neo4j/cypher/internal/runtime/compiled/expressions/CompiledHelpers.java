@@ -9,12 +9,15 @@ import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.exceptions.CypherTypeException;
+import org.neo4j.exceptions.ParameterWrongTypeException;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
+import org.neo4j.values.virtual.VirtualNodeValue;
 
+import static java.lang.String.format;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
 /**
@@ -34,7 +37,7 @@ public final class CompiledHelpers
     {
         if ( value != NO_VALUE && !(value instanceof BooleanValue) )
         {
-            throw new CypherTypeException( String.format( "Don't know how to treat a predicate: %s", value.toString() ),
+            throw new CypherTypeException( format( "Don't know how to treat a predicate: %s", value.toString() ),
                     null );
         }
         return (Value) value;
@@ -64,5 +67,18 @@ public final class CompiledHelpers
             }
         }
         return false;
+    }
+
+    public static long nodeFromAnyValue( AnyValue value )
+    {
+        if ( value instanceof VirtualNodeValue )
+        {
+            return ((VirtualNodeValue) value).id();
+        }
+        else
+        {
+            throw new ParameterWrongTypeException(
+                    format( "Expected to find a node but found %s instead", value ) );
+        }
     }
 }
