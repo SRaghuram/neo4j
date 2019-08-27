@@ -58,6 +58,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -108,7 +109,11 @@ public class SubmitTestRunsAndPlansIT
     void cleanUpDb( GraphDatabaseService databaseService )
     {
         // this is hacky HACK, needs to be fixed in Neo4jExtension
-        databaseService.execute( "MATCH (n) DETACH DELETE n" ).close();
+        try ( Transaction transaction = databaseService.beginTx() )
+        {
+            databaseService.execute( "MATCH (n) DETACH DELETE n" ).close();
+            transaction.commit();
+        }
     }
 
     @Test
