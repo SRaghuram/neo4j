@@ -9,7 +9,6 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.Status.Failure;
 import akka.cluster.Cluster;
-import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
 import akka.cluster.ddata.LWWRegister;
@@ -48,12 +47,6 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
 
     @Override
     protected void sendInitialDataToReplicator()
-    {
-        // no-op
-    }
-
-    @Override
-    protected void removeDataFromReplicator( UniqueAddress uniqueAddress )
     {
         // no-op
     }

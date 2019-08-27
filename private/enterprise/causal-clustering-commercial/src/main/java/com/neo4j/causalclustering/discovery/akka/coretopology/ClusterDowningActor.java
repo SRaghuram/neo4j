@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import akka.actor.AbstractActor;
-import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
@@ -17,19 +16,17 @@ import org.neo4j.logging.LogProvider;
 
 public class ClusterDowningActor extends AbstractActor
 {
-    public static Props props( Cluster cluster, ActorRef metadataActor, LogProvider logProvider )
+    public static Props props( Cluster cluster, LogProvider logProvider )
     {
-        return Props.create( ClusterDowningActor.class, () -> new ClusterDowningActor( cluster, metadataActor, logProvider ) );
+        return Props.create( ClusterDowningActor.class, () -> new ClusterDowningActor( cluster, logProvider ) );
     }
 
     private final Cluster cluster;
-    private final ActorRef metadataActor;
     private final Log log;
 
-    public ClusterDowningActor( Cluster cluster, ActorRef metadataActor, LogProvider logProvider )
+    public ClusterDowningActor( Cluster cluster, LogProvider logProvider )
     {
         this.cluster = cluster;
-        this.metadataActor = metadataActor;
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -53,12 +50,6 @@ public class ClusterDowningActor extends AbstractActor
                     .stream()
                     .map( Member::address )
                     .forEach( cluster::down );
-
-            clusterView
-                    .unreachable()
-                    .stream()
-                    .map( Member::uniqueAddress)
-                    .forEach( addr -> metadataActor.tell( new CleanupMessage( addr ), getSelf() ) );
         }
         else
         {

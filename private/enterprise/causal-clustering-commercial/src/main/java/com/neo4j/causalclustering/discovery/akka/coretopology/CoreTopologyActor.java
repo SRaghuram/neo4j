@@ -55,8 +55,14 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private CoreTopology coreTopology;
 
-    CoreTopologyActor( MemberId myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef readReplicaTopologyActor, ActorRef replicator,
-            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
+    CoreTopologyActor( MemberId myself,
+            SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
+            ActorRef readReplicaTopologyActor,
+            ActorRef replicator,
+            Cluster cluster,
+            TopologyBuilder topologyBuilder,
+            Config config,
+            LogProvider logProvider )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
@@ -72,8 +78,8 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
         // Children, who will be sending messages to us
         ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
-        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, metadataActor, logProvider ) );
-        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, config, logProvider ) );
+        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, logProvider ) );
+        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, logProvider ) );
         clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), logProvider, minCoreHostsAtRuntime ) );
     }
 
