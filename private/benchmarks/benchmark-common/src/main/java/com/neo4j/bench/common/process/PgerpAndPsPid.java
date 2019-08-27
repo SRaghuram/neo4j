@@ -7,7 +7,7 @@ package com.neo4j.bench.common.process;
 
 import com.neo4j.bench.common.util.Jvm;
 
-public class PgerpAndPsPid extends FindPid
+public class PgerpAndPsPid extends PidStrategy
 {
     public PgerpAndPsPid()
     {

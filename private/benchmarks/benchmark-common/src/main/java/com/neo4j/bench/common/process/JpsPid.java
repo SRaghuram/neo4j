@@ -7,7 +7,7 @@ package com.neo4j.bench.common.process;
 
 import com.neo4j.bench.common.util.Jvm;
 
-public class JpsPid extends FindPid
+public class JpsPid extends PidStrategy
 {
     public JpsPid()
     {
