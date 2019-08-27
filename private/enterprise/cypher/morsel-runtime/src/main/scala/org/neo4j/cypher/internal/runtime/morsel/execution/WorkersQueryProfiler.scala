@@ -63,6 +63,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
         i += 1
       }
       data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+      data.sanitize()
       data
     }
 
@@ -80,6 +81,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
         i += 1
       }
       data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+      data.sanitize()
       data
     }
   }
