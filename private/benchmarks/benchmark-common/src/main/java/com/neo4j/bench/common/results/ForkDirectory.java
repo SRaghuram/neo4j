@@ -272,20 +272,6 @@ public class ForkDirectory
         return forkDescription.profilers();
     }
 
-    public Path temporaryDir()
-    {
-        Path tmpDir = dir.resolve( "tmp" );
-        try
-        {
-            Files.createDirectories( tmpDir );
-            return tmpDir;
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( format( "failed to create temporary fork directory %s", tmpDir ), e );
-        }
-    }
-
     private static ForkDescription loadDescription( Path dir )
     {
         Path jsonPath = dir.resolve( FORK_JSON );

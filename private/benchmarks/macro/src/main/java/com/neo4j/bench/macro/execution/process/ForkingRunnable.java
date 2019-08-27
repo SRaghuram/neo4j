@@ -24,7 +24,6 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable> extends RunnableFork<LAUNCHER,CONNECTION>
@@ -90,9 +89,8 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                                               jvmArgs );
 
         List<String> enrichedClientJvmArgs = JvmArgs.from( clientJvmArgs )
-              .set( format( "-Djava.io.tmpdir=%s", forkDirectory.temporaryDir().toAbsolutePath() ) )
               .set( "-Xmx2g" )
-              .set( "-Xms2g")
+              .set( "-Xms2g" )
               .toArgs();
 
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( clientInvokeArgs,
