@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{RelationshipTypes, V
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.{NULL_ENTITY, entityIsNull}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
@@ -67,6 +67,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
 
     override def toString: String = "VarExpandTask"
 
+    private var validInput: Boolean = false
     private var varExpandCursor: VarExpandCursor = _
     private var predicateState: OldQueryState = _
 
@@ -116,9 +117,14 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
           VarExpandPredicate.NO_RELATIONSHIP_PREDICATE
         }
 
-      if (entityIsNull(fromNode) || (!shouldExpandAll && entityIsNull(toNode)) || !nodeVarExpandPredicate.isTrue(fromNode)) {
+      if (!nodeVarExpandPredicate.isTrue(fromNode) || (!shouldExpandAll && entityIsNull(toNode))) {
         false
+      } else if (entityIsNull(fromNode)) {
+        validInput = false
+        varExpandCursor = null
+        true
       } else {
+        validInput = true
         varExpandCursor = new VarExpandCursor(fromNode,
                                               toNode,
                                               resources.cursorPools,
@@ -138,6 +144,16 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
     override protected def innerLoop(outputRow: MorselExecutionContext,
                            context: QueryContext,
                            state: QueryState): Unit = {
+
+      if (!validInput) {
+        outputRow.copyFrom(inputMorsel)
+        if (shouldExpandAll) {
+          outputRow.setLongAt(toOffset, NULL_ENTITY)
+        }
+        outputRow.setRefAt(relOffset, Values.NO_VALUE)
+        outputRow.moveToNextRow()
+        return
+      }
 
       while (outputRow.isValidRow && varExpandCursor.next()) {
         outputRow.copyFrom(inputMorsel)
