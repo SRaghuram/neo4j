@@ -137,11 +137,13 @@ public class JvmArgsTest
         assertArrayEquals(
                 new String[] {"-XX:OnOutMemoryError= kill -9 %p "},
                 jvmArgs.toArray( new String[] {} ) );
-                
+    }
+
+    @Test
     public void addAllArguments()
     {
         JvmArgs jvmArgs0 = JvmArgs.from( asList( "-Xmx4g" ) );
-        JvmArgs jvmargs1 = jvmArgs0.addAll( asList( "-Xms4g" ) );
-        assertEquals( asList( "-Xmx4g", "-Xms4g" ), jvmargs1.toArgs() );
+        JvmArgs jvmargs1 = jvmArgs0.addAll( asList( "-Xms4g", "-XX:-PrintFlagsFinal" ) );
+        assertEquals( asList( "-Xmx4g", "-Xms4g", "-XX:-PrintFlagsFinal" ), jvmargs1.toArgs() );
     }
 }
