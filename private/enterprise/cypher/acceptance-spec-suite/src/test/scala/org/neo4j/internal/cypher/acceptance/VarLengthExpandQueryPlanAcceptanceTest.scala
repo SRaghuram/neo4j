@@ -66,7 +66,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
   test("Query that aggregates before making the result DISTINCT") {
     val query = "MATCH (a)-[:R*1..3]->(b) WITH count(*) AS count RETURN DISTINCT count"
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
+    executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -114,7 +114,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
   test("Do not plan pruning var expand for length=1") {
     val query = "MATCH (a)-[*1..1]->(b) RETURN DISTINCT b"
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
+    executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -357,9 +357,9 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     path.endNode() should equal(node2)
   }
 
-  test("Do not plan pruning var executeWithCostPlannerAndInterpretedRuntimeOnly when path is needed") {
+  test("Do not plan pruning var expand when path is needed") {
     val query = "MATCH p=(from)-[r*0..1]->(to) WITH nodes(p) AS d RETURN DISTINCT d"
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
+    executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -474,7 +474,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         |RETURN path
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.VarExpand, query)
 
     result.toList shouldBe empty
   }

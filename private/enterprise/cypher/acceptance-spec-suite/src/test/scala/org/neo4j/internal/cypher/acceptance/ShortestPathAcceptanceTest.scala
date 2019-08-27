@@ -645,7 +645,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.toList should equal(List(Map("l" -> 16)))
   }
 
-  test("shortest path and unwind should work together") {
+  test("var expand and unwind should work together") {
     val a1 = createLabeledNode("A")
     val a2 = createLabeledNode("A")
     val a3 = createLabeledNode("A")
@@ -655,7 +655,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(a2, a3, "T")
     relate(a3, a4, "T")
 
-    val result = executeWith(Configs.ShortestPath,
+    val result = executeWith(Configs.VarExpand,
       """
         |MATCH p = (:A)-[:T*]-(:A)
         |WITH p WHERE length(p) > 1

@@ -476,7 +476,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       relate(c, d, "X")
       relate(e, d, "Y")
 
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.VarExpand,
         s"""
            |MATCH (a:Foo)-[:X*]->(b)<-[:Y]->(c:Bar)
            |USING JOIN ON b
