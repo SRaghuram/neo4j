@@ -240,6 +240,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.middleware.logging.level", ofEnum( Level.class ), Level.NONE ).build();
 
     @Internal
+    @Description( "External config file for Akka" )
+    public static final Setting<Path> middleware_akka_external_config =
+            newBuilder( "causal_clustering.middleware.akka.external_config", PATH, null ).build();
+
+    @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )
     public static final Setting<Integer> middleware_akka_default_parallelism_level =
             newBuilder( "causal_clustering.middleware.akka.default-parallelism", INT, 4 ).build();

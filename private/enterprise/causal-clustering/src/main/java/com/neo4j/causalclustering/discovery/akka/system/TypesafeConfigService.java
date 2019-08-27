@@ -34,6 +34,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.typesafe.config.ConfigFactory;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -72,7 +73,18 @@ public final class TypesafeConfigService
 
     public com.typesafe.config.Config generate()
     {
-        return ConfigFactory.empty()
+        Path externalConfig = config.get( CausalClusteringSettings.middleware_akka_external_config );
+        final com.typesafe.config.Config base;
+        if ( externalConfig == null )
+        {
+            base = ConfigFactory.empty();
+        }
+        else
+        {
+            base = ConfigFactory.parseFileAnySyntax( externalConfig.toFile() );
+        }
+
+        return base
                 .withFallback( shutdownConfig() )
                 .withFallback( transportConfig() )
                 .withFallback( serializationConfig() )

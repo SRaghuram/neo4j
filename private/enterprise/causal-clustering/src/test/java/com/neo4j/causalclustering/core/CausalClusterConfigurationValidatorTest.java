@@ -13,6 +13,9 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.File;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +28,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernetes_label_selector;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.kubernetes_service_port_name;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_akka_external_config;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -64,7 +68,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, Mode.SINGLE )
+                .set( CommercialEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -81,7 +85,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, Mode.SINGLE )
+                .set( CommercialEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( kubernetes_service_port_name, "default" )
@@ -186,5 +190,75 @@ public class CausalClusterConfigurationValidatorTest
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
+    }
+
+    @Test
+    public void nonExistingAkkaExternalConfig()
+    {
+        expected.expect( IllegalArgumentException.class );
+        expected.expectMessage(
+                "'causal_clustering.middleware.akka.external_config' must be a file or empty"
+        );
+
+        // when
+        Config.newBuilder()
+                .set( middleware_akka_external_config, Path.of( "/this isnt a real file" ) )
+                .set( CommercialEditionSettings.mode, mode )
+                .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
+                .set( BoltConnector.enabled, true )
+                .addValidator( CausalClusterConfigurationValidator.class )
+                .build();
+    }
+
+    @Test
+    public void nonFileAkkaExternalConfig()
+    {
+        expected.expect( IllegalArgumentException.class );
+        expected.expectMessage(
+                "'causal_clustering.middleware.akka.external_config' must be a file or empty"
+        );
+
+        // when
+        Config.newBuilder()
+                .set( middleware_akka_external_config, Path.of( "/" ) )
+                .set( CommercialEditionSettings.mode, mode )
+                .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
+                .set( BoltConnector.enabled, true )
+                .addValidator( CausalClusterConfigurationValidator.class )
+                .build();
+    }
+
+    @Test
+    public void nonParseableAkkaExternalConfig() throws URISyntaxException
+    {
+        File conf = new File( getClass().getResource( "/akka.external.config/illegal.conf" ).toURI() );
+        expected.expect( IllegalArgumentException.class );
+        expected.expectMessage( String.format( "'%s' could not be parsed", conf ) );
+
+        // when
+        Config.newBuilder()
+                .set( middleware_akka_external_config, conf.toPath() )
+                .set( CommercialEditionSettings.mode, mode )
+                .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
+                .set( BoltConnector.enabled, true )
+                .addValidator( CausalClusterConfigurationValidator.class )
+                .build();
+    }
+
+    @Test
+    public void parseableAkkaExternalConfig() throws URISyntaxException
+    {
+        File conf = new File( getClass().getResource( "/akka.external.config/legal.conf" ).toURI() );
+
+        // when
+        Config.newBuilder()
+                .set( middleware_akka_external_config, conf.toPath() )
+                .set( CommercialEditionSettings.mode, mode )
+                .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
+                .set( BoltConnector.enabled, true )
+                .addValidator( CausalClusterConfigurationValidator.class )
+                .build();
+
+        // then no exception
     }
 }

@@ -12,12 +12,14 @@ import akka.actor.setup.ActorSystemSetup;
 import akka.dispatch.ExecutionContexts;
 import akka.remote.artery.tcp.SSLEngineProvider;
 import akka.remote.artery.tcp.SSLEngineProviderSetup;
+import com.typesafe.config.ConfigRenderOptions;
 import scala.concurrent.ExecutionContextExecutor;
 
 import java.util.Optional;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 public class ActorSystemFactory
@@ -27,6 +29,7 @@ public class ActorSystemFactory
     private final Optional<SSLEngineProvider> sslEngineProvider;
     private final TypesafeConfigService configService;
     private final Executor executor;
+    private final Log log;
 
     public ActorSystemFactory( Optional<SSLEngineProvider> sslEngineProvider, Executor executor, Config config, LogProvider logProvider )
     {
@@ -36,11 +39,13 @@ public class ActorSystemFactory
         TypesafeConfigService.ArteryTransport arteryTransport =
                 sslEngineProvider.isPresent() ? TypesafeConfigService.ArteryTransport.TLS_TCP : TypesafeConfigService.ArteryTransport.TCP;
         this.configService = new TypesafeConfigService( arteryTransport, config );
+        this.log = logProvider.getLog( getClass() );
     }
 
     ActorSystem createActorSystem( ProviderSelection providerSelection )
     {
         com.typesafe.config.Config tsConfig = configService.generate();
+        log.debug( "Akka config: " + tsConfig.root().render( ConfigRenderOptions.concise() ) );
 
         ExecutionContextExecutor ec = ExecutionContexts.fromExecutor( executor );
 
