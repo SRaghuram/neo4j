@@ -106,7 +106,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
     // WHEN
-    execute("CREATE USER IF NOT EXISTS bar SET PASSWORD 'password'")
+    execute("CREATE USER bar IF NOT EXISTS SET PASSWORD 'password'")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("bar"))
@@ -274,7 +274,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
-    execute("CREATE USER IF NOT EXISTS neo4j SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
+    execute("CREATE USER neo4j IF NOT EXISTS SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -368,7 +368,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     prepareUser("foo", "bar")
 
     // WHEN
-    execute("DROP USER IF EXISTS foo")
+    execute("DROP USER foo IF EXISTS")
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
@@ -459,7 +459,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
     // WHEN
-    execute("DROP USER IF EXISTS foo")
+    execute("DROP USER foo IF EXISTS")
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
@@ -467,7 +467,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // and an invalid (non-existing) one
 
     // WHEN
-    execute("DROP USER IF EXISTS `:foo`")
+    execute("DROP USER `:foo` IF EXISTS")
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))

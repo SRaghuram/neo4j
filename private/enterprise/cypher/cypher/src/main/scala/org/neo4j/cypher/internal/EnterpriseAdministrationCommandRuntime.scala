@@ -76,7 +76,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.EMPTY_MAP
       )
 
-    // CREATE [OR REPLACE] USER [IF NOT EXISTS] foo SET PASSWORD password
+    // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD password
     case CreateUser(source, userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
@@ -186,7 +186,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
       }
 
-    // CREATE [OR REPLACE] ROLE [IF NOT EXISTS] foo AS COPY OF bar
+    // CREATE [OR REPLACE] ROLE foo [IF NOT EXISTS] AS COPY OF bar
     case CreateRole(source, roleName) => (context, parameterMapping, securityContext) =>
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
         """CREATE (new:Role {name: $name})
@@ -228,7 +228,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
-    // DROP ROLE [IF EXISTS] foo
+    // DROP ROLE foo [IF EXISTS]
     case DropRole(source, roleName) => (context, parameterMapping, securityContext) =>
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
@@ -404,7 +404,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         "MATCH (d:Database {name: $name}) RETURN d.name as name, d.status as status, d.default as default",
         VirtualValues.map(Array("name"), Array(Values.stringValue(normalizedName.name))))
 
-    // CREATE [OR REPLACE] DATABASE [IF NOT EXISTS] foo
+    // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
       // Ensuring we don't exceed the max number of databases is a separate step
       val dbName = normalizedName.name
@@ -483,7 +483,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
-    // DROP DATABASE [IF EXISTS] foo
+    // DROP DATABASE foo [IF EXISTS]
     case DropDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
       val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,

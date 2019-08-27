@@ -173,7 +173,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    execute("CREATE ROLE IF NOT EXISTS foo")
+    execute("CREATE ROLE foo IF NOT EXISTS")
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
   }
@@ -200,7 +200,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
     // WHEN
-    execute("CREATE ROLE IF NOT EXISTS foo")
+    execute("CREATE ROLE foo IF NOT EXISTS")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
@@ -266,7 +266,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
     // WHEN
-    execute("CREATE ROLE IF NOT EXISTS bar AS COPY OF foo")
+    execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
@@ -391,7 +391,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
 
     // WHEN
-    execute("CREATE ROLE IF NOT EXISTS bar AS COPY OF foo")
+    execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
@@ -444,7 +444,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
 
     // WHEN
-    execute("DROP ROLE IF EXISTS foo")
+    execute("DROP ROLE foo IF EXISTS")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
@@ -493,7 +493,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // WHEN
-    execute("DROP ROLE IF EXISTS foo")
+    execute("DROP ROLE foo IF EXISTS")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
@@ -501,7 +501,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // and an invalid (non-existing) one
 
     // WHEN
-    execute("DROP ROLE IF EXISTS ``")
+    execute("DROP ROLE `` IF EXISTS")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)

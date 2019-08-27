@@ -364,7 +364,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup(defaultConfig)
 
     // WHEN
-    execute("CREATE DATABASE IF NOT EXISTS `f.o-o123`")
+    execute("CREATE DATABASE `f.o-o123` IF NOT EXISTS")
 
     // THEN
     val result = execute("SHOW DATABASE `f.o-o123`")
@@ -585,7 +585,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
 
     // WHEN
-    execute("CREATE DATABASE IF NOT EXISTS foo")
+    execute("CREATE DATABASE foo IF NOT EXISTS")
 
     // THEN
     execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
@@ -805,7 +805,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     setup(defaultConfig)
 
     // WHEN
-    execute("DROP DATABASE IF EXISTS foo")
+    execute("DROP DATABASE foo IF EXISTS")
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set.empty)
@@ -813,7 +813,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // and an invalid (non-existing) one
 
     // WHEN
-    execute("DROP DATABASE IF EXISTS ``")
+    execute("DROP DATABASE `` IF EXISTS")
 
     // THEN
     execute("SHOW DATABASE ``").toSet should be(Set.empty)
@@ -848,7 +848,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASE foo").toSet should be(Set.empty)
 
     // WHEN
-    execute("DROP DATABASE IF EXISTS foo")
+    execute("DROP DATABASE foo IF EXISTS")
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set.empty)
@@ -869,7 +869,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // GIVEN
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
-      execute(s"DROP DATABASE IF EXISTS $SYSTEM_DATABASE_NAME")
+      execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME IF EXISTS")
       // THEN
     } should have message "Not allowed to drop system database."
 
