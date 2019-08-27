@@ -51,9 +51,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( CleanupMessage.class, message -> removeDataFromReplicator( message.uniqueAddress() ) )
-                .match( DatabaseStartedMessage.class, this::handleDatabaseStartedMessage )
-                .match( DatabaseStoppedMessage.class, this::handleDatabaseStoppedMessage );
+        builder .match( CleanupMessage.class,           this::removeDataFromReplicator )
+                .match( DatabaseStartedMessage.class,   this::handleDatabaseStartedMessage )
+                .match( DatabaseStoppedMessage.class,   this::handleDatabaseStoppedMessage );
     }
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
@@ -79,10 +79,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
         sendCoreServerInfo();
     }
 
-    @Override
-    public void removeDataFromReplicator( UniqueAddress uniqueAddress )
+    private void removeDataFromReplicator( CleanupMessage message )
     {
-        modifyReplicatedData( key, map -> map.remove( cluster, uniqueAddress ) );
+        modifyReplicatedData( key, map -> map.remove( cluster, message.uniqueAddress() ) );
     }
 
     @Override

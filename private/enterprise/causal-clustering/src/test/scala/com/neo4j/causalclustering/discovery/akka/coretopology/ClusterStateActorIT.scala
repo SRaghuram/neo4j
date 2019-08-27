@@ -148,6 +148,9 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
 
           Then("receive a ClusterViewMessage without that member")
           coreTopologyProbe.expectMsg(max = defaultWaitTime, ClusterViewMessage.EMPTY)
+
+          And("send cleanup to metadata actor")
+          metadataPrope.expectMsg(max = defaultWaitTime, new CleanupMessage(member.uniqueAddress))
         }
         "leader changed event" in new Fixture {
           Given("A leader change event with a leader")
@@ -184,11 +187,12 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
     val cluster = mock[Cluster]
     val coreTopologyProbe = TestProbe("CoreTopology")
     val downingProbe = TestProbe("Downing")
+    val metadataPrope = TestProbe("Metadata")
     val config = Config.newBuilder()
       .set(akka_failure_detector_heartbeat_interval, Duration.ofSeconds( 1 ) )
       .set(akka_failure_detector_acceptable_heartbeat_pause, Duration.ofSeconds( 1 ) )
       .build()
-    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, config, NullLogProvider.getInstance())
+    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config, NullLogProvider.getInstance())
     val clusterStateRef = system.actorOf(props)
   }
 
