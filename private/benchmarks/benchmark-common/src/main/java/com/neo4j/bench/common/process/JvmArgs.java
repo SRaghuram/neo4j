@@ -38,7 +38,7 @@ public class JvmArgs
     private static final List<Pattern> PATTERNS =
             asList( MEMORY_SETTING, JVM_SETTING, BOOLEAN_ARGUMENT, VALUE_ARGUMENT, PROPERTY );
 
-    public static List<String> standardArgs( ForkDirectory forkDirectory )
+    public static JvmArgs standardArgs( ForkDirectory forkDirectory )
     {
         // Other options:
         //      -XX:+HeapDumpAfterFullGC             : Creates heap dump file after full GC
@@ -50,10 +50,10 @@ public class JvmArgs
         //      -XX:+PrintClassHistogramBeforeFullGC : Prints class histogram before full GC
         //      -XX:+PrintClassHistogramAfterFullGC  : Prints class histogram after full GC
         //      -XX:+PrintGCTimeStamps               : Print timestamps for each GC event (seconds count from start of JVM)  <-- use PrintGCDateStamps instead
-        return Lists.newArrayList(
+        return from( Lists.newArrayList(
                 "-XX:+HeapDumpOnOutOfMemoryError",                   // Creates heap dump in out-of-memory condition
                 "-XX:HeapDumpPath=" + forkDirectory.toAbsolutePath() // Specifies path to save heap dumps
-        );
+        ) );
     }
 
     public static List<String> jvmArgsFromString( String jvmArgs )
@@ -221,6 +221,19 @@ public class JvmArgs
                 .map( m -> m.group( ARGNAME_CAPTURING_GROUP) )
                 .findFirst()
                 .orElseThrow( () -> new IllegalArgumentException( format( "Don't know how to handle JVM argument: '%s'", jvmArg ) ) );
+    }
+
+    public JvmArgs addAll( List<String> newJvmArgs )
+    {
+        Objects.requireNonNull( newJvmArgs );
+
+        JvmArgs allJvmArgs = this;
+        for ( String jvmArg : newJvmArgs )
+        {
+            allJvmArgs = allJvmArgs.set( jvmArg );
+        }
+
+        return allJvmArgs;
     }
 
 }

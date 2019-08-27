@@ -12,6 +12,7 @@ import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.measurement.Results;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static com.neo4j.bench.common.util.Args.concatArgs;
 import static java.lang.String.format;
 
 public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable>
@@ -34,7 +34,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
     private final Store originalStore;
     private final Path neo4jConfigFile;
     private final Jvm jvm;
-    private final List<String> jvmArgs;
+    private final JvmArgs jvmArgs;
     private final LAUNCHER launcher;
     private final Resources resources;
 
@@ -55,7 +55,10 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         this.originalStore = originalStore;
         this.neo4jConfigFile = neo4jConfigFile;
         this.jvm = jvm;
-        this.jvmArgs = concatArgs( JvmArgs.standardArgs( forkDirectory ), jvmArgs );
+        this.jvmArgs = JvmArgs.standardArgs( forkDirectory )
+                .addAll( jvmArgs )
+                // every fork will have its own temporary directory
+                .set( format( "-Djava.io.tmpdir=%s", BenchmarkUtil.tryMkDir( forkDirectory.pathFor( "tmp" ) ) ) );
         this.launcher = launcher;
         this.resources = resources;
     }
@@ -98,7 +101,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                                                                   forkDirectory,
                                                                                   query,
                                                                                   serverParameters,
-                                                                                  jvmArgs );
+                                                                                  jvmArgs.toArgs() );
 
             if ( launcher.isDatabaseInDifferentProcess() )
             {
@@ -120,7 +123,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                 ProfilerType.internalProfilers( profilerTypes ),
                                 jvm,
                                 neo4jConfigFile,
-                                jvmArgs,
+                                jvmArgs.toArgs(),
                                 clientParameters,
                                 resources );
             }

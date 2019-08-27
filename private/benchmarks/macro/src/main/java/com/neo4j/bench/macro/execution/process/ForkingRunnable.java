@@ -88,9 +88,14 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                                               clientParameters,
                                                                               jvmArgs );
 
+        List<String> enrichedClientJvmArgs = JvmArgs.from( clientJvmArgs )
+              .set( "-Xmx2g" )
+              .set( "-Xms2g" )
+              .toArgs();
+
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( clientInvokeArgs,
                                                                           jvm,
-                                                                          JvmArgs.from( clientJvmArgs ).set( "-Xmx2g" ).set( "-Xms2g").toArgs(),
+                                                                          enrichedClientJvmArgs,
                                                                           commandArgs,
                                                                           Main.class );
 
