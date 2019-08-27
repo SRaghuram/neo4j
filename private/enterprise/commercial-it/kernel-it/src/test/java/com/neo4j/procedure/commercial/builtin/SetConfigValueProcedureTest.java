@@ -13,8 +13,8 @@ import java.util.EnumSet;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -52,10 +52,10 @@ class SetConfigValueProcedureTest
     {
         Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
-        db.execute( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '11s')" );
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '11s')" );
         assertEquals( Duration.ofSeconds( 11 ), config.get( log_queries_threshold ) );
 
-        db.execute( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '')" );
+        executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '')" );
         assertEquals( log_queries_threshold.defaultValue(), config.get( log_queries_threshold ) );
     }
 
