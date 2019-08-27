@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -602,6 +603,12 @@ class TransactionGuardIT
         public IdGenerator get( IdType idType )
         {
             return delegate.get( idType );
+        }
+
+        @Override
+        public void visit( Consumer<IdGenerator> visitor )
+        {
+            delegate.visit( visitor );
         }
     }
 

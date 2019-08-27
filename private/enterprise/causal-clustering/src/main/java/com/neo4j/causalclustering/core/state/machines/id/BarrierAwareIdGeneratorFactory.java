@@ -11,6 +11,7 @@ import java.io.File;
 import java.nio.file.OpenOption;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
 import org.neo4j.internal.id.IdGenerator;
@@ -54,5 +55,11 @@ public class BarrierAwareIdGeneratorFactory implements IdGeneratorFactory
                 delegate.create( pageCache, fileName, idType, highId, throwIfFileExists, maxId, openOptions ), barrierState );
         generators.put( idType, idGenerator );
         return idGenerator;
+    }
+
+    @Override
+    public void visit( Consumer<IdGenerator> visitor )
+    {
+        delegate.visit( visitor );
     }
 }
