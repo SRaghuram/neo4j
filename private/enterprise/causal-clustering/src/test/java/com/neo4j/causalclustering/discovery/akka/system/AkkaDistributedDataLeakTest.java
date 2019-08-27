@@ -29,20 +29,18 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -50,6 +48,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_listen_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
@@ -83,7 +82,7 @@ class AkkaDistributedDataLeakTest
     void setUp() throws Throwable
     {
         harness = new Harness();
-        AkkaDiscoveryServiceFactory cleanDiscoveryServiceFactory = new AkkaDiscoveryServiceFactory();
+        var cleanDiscoveryServiceFactory = new AkkaDiscoveryServiceFactory();
         repairer = coreTopologyService( harness.port, cleanDiscoveryServiceFactory );
         cleanRestarter = coreTopologyService( harness.port, cleanDiscoveryServiceFactory );
         uncleanRestarter = coreTopologyService( harness.port, new AkkaUncleanShutdownDiscoveryServiceFactory() );
@@ -106,7 +105,6 @@ class AkkaDistributedDataLeakTest
     }
 
     // Needs hundreds of reps to have a good chance of replicating a leak
-    @Disabled
     @RepeatedTest( 10 )
     void shouldNotLeakMetadataOnCleanLeave() throws Throwable
     {
@@ -119,7 +117,6 @@ class AkkaDistributedDataLeakTest
         assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
-    @Disabled
     @RepeatedTest( 10 )
     void shouldNotLeakMetadataOnUncleanLeave() throws Throwable
     {
@@ -132,18 +129,19 @@ class AkkaDistributedDataLeakTest
         assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
-    private CoreTopologyService coreTopologyService( int port, DiscoveryServiceFactory discoveryServiceFactory )
+    private CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory )
     {
+        var discoverySocket = new SocketAddress( "localhost", PortAuthority.allocatePort() );
         var config = Config.newBuilder()
                 .setDefaults( SERVER_DEFAULTS )
-                .set( discovery_listen_address, new SocketAddress( "localhost" , 0 ) )
-                .set( initial_discovery_members, singletonList( new SocketAddress( "localhost" , port ) ) )
+                .set( discovery_listen_address, discoverySocket )
+                .set( discovery_advertised_address, discoverySocket )
+                .set( initial_discovery_members, singletonList( new SocketAddress( "localhost" , harnessPort ) ) )
                 .set( store_internal_log_level, Level.DEBUG )
                 .set( middleware_logging_level, Level.DEBUG )
                 .build();
         var memberId = new MemberId( UUID.randomUUID() );
-        // var logProvider = NullLogProvider.getInstance();
-        var logProvider = FormattedLogProvider.toOutputStream( System.out );
+        var logProvider = NullLogProvider.getInstance();
         var membersResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
         var monitors = new Monitors();
         var retryStrategy = new RetryStrategy( 100, 3 );
@@ -160,16 +158,22 @@ class AkkaDistributedDataLeakTest
         static final Key<LWWMap<UniqueAddress,CoreServerInfoForMemberId>> KEY = LWWMapKey.create( "member-data" );
         LWWMap<?,?> replicatedData = LWWMap.empty();
         private final ActorSystemComponents actorSystemComponents;
+        private final ExecutorService executor;
 
         Harness()
         {
+            var discoverySocket = new SocketAddress( "localhost", port );
             var config = Config.newBuilder()
-                    .set( discovery_listen_address, new SocketAddress( "localhost" , port ) )
-                    .set( initial_discovery_members, singletonList( new SocketAddress( "localhost" , port ) ) )
+                    .set( discovery_listen_address, discoverySocket )
+                    .set( discovery_advertised_address, discoverySocket )
+                    .set( initial_discovery_members, singletonList( discoverySocket ) )
+                    .set( store_internal_log_level, Level.DEBUG )
+                    .set( middleware_logging_level, Level.DEBUG )
                     .build();
 
             var logProvider = NullLogProvider.getInstance();
-            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), Executors.newWorkStealingPool(), config, logProvider );
+            executor = Executors.newWorkStealingPool();
+            var actorSystemFactory = new ActorSystemFactory( Optional.empty(), executor, config, logProvider );
             actorSystemComponents = new ActorSystemComponents( actorSystemFactory, ProviderSelection.cluster() );
             actorSystemComponents.cluster().joinSeedNodes(
                     singletonList( new Address( AKKA_SCHEME, actorSystemComponents.cluster().system().name(), "localhost", port ) ) );
@@ -182,6 +186,7 @@ class AkkaDistributedDataLeakTest
         public void shutdown()
         {
             actorSystemComponents.coordinatedShutdown().runAll();
+            executor.shutdown();
         }
     }
 
