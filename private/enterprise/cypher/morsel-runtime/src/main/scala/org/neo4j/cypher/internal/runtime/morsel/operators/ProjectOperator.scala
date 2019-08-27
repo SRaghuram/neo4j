@@ -29,13 +29,13 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                        resources: QueryResources): Unit = {
 
     val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+                                       resources = null,
+                                       params = state.params,
+                                       resources.expressionCursors,
+                                       Array.empty[IndexReadSession],
+                                       resources.expressionVariables(state.nExpressionSlots),
+                                       state.subscriber,
+                                       NoMemoryTracker)
 
     while (currentRow.isValidRow) {
       projectionOps.project(currentRow, queryState)

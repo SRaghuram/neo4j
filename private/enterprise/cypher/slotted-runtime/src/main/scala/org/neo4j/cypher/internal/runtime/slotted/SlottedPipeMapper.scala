@@ -7,19 +7,18 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{AbstractSelectOrSemiApply, AbstractSemiApply, Aggregation, AllNodesScan, AntiConditionalApply, Apply, Argument, AssertSameNode, CartesianProduct, ConditionalApply, Create, DeleteExpression, DeleteNode, DeletePath, DeleteRelationship, DetachDeleteExpression, DetachDeleteNode, DetachDeletePath, Distinct, DropResult, Eager, EmptyResult, ErrorPlan, Expand, ExpandAll, ExpandInto, ForeachApply, IncludeTies, Limit, LockNodes, LogicalPlan, MergeCreateNode, MergeCreateRelationship, NodeByLabelScan, NodeHashJoin, NodeIndexScan, NodeIndexSeek, NodeUniqueIndexSeek, Optional, OptionalExpand, OrderedAggregation, OrderedDistinct, ProduceResult, Projection, RemoveLabels, RollUpApply, Selection, SetLabels, SetNodePropertiesFromMap, SetNodeProperty, SetProperty, SetRelationshipPropertiesFromMap, SetRelationshipProperty, Skip, Sort, Top, Union, UnwindCollection, ValueHashJoin, VarExpand, VariablePredicate}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, NullCheckVariable, RelationshipFromSlot}
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{AggregationExpression, Expression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionForIdentifier, createProjectionsForResult}
-import org.neo4j.cypher.internal.runtime.slotted.aggregation.{SlottedGroupingAggTable, SlottedNonGroupingAggTable, SlottedOrderedGroupingAggTable, SlottedOrderedNonGroupingAggTable, SlottedPrimitiveGroupingAggTable}
+import org.neo4j.cypher.internal.runtime.slotted.aggregation._
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
@@ -336,14 +335,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
     pipe
   }
 
-  private def expressionSlotForPredicate(predicate: Option[VariablePredicate]): Int =
-    predicate match {
-      case None => SlottedPipeMapper.NO_PREDICATE_OFFSET
-      case Some(VariablePredicate(ExpressionVariable(offset, _), _)) => offset
-      case Some(VariablePredicate(v, _)) =>
-        throw new InternalException(s"Failure during slotted physical planning: the expression slot of variable $v has not been allocated.")
-    }
-
   private def refSlotAndNotAlias(slots: SlotConfiguration, k: String) = {
     !slots.isAlias(k) &&
       slots.get(k).forall(_.isInstanceOf[RefSlot])
@@ -648,8 +639,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
 }
 
 object SlottedPipeMapper {
-
-  val NO_PREDICATE_OFFSET: Int = -1
 
   def createProjectionsForResult(columns: Seq[String], slots: SlotConfiguration): Seq[(String, Expression)] = {
     val runtimeColumns: Seq[(String, commandExpressions.Expression)] =

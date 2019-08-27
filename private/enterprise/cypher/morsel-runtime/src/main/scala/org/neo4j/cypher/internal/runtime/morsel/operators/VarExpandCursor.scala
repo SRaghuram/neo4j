@@ -10,13 +10,14 @@ import java.util
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution.CursorPools
+import org.neo4j.cypher.internal.runtime.morsel.operators.VarExpandCursor.relationshipFromCursor
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
+import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
-import org.neo4j.internal.kernel.api.{NodeCursor, Read, RelationshipGroupCursor, RelationshipTraversalCursor}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.{ListValue, VirtualValues}
+import org.neo4j.values.virtual.{ListValue, RelationshipValue, VirtualValues}
 
 sealed trait ExpandStatus
 case object NOT_STARTED extends ExpandStatus
@@ -27,11 +28,14 @@ class VarExpandCursor(fromNode: Long,
                       targetToNode: Long,
                       cursorPools: CursorPools,
                       dir: SemanticDirection,
+                      projectBackwards: Boolean,
                       relTypes: Array[Int],
                       minLength: Int,
                       maxLength: Int,
                       read: Read,
-                      dbAccess: DbAccess) {
+                      dbAccess: DbAccess,
+                      nodePredicate: VarExpandPredicate[Long],
+                      relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor]) {
 
   var expandStatus: ExpandStatus = NOT_STARTED
   var pathLength: Int = 0
@@ -59,8 +63,18 @@ class VarExpandCursor(fromNode: Long,
           expandStatus = EMIT
 
         case EMIT =>
-          val selectionCursor = selectionCursors.get(pathLength-1)
-          if (selectionCursor.next()) {
+          val r = pathLength - 1
+          val selectionCursor = selectionCursors.get(r)
+          var hasNext = false
+          do {
+            hasNext = selectionCursor.next()
+          } while (hasNext &&
+            (!relationshipIsUniqueInPath(r, selectionCursor.relationshipReference()) ||
+             !relationshipPredicate.isTrue(selectionCursor) ||
+             !nodePredicate.isTrue(selectionCursor.otherNodeReference())
+            ))
+
+          if (hasNext) {
             if (pathLength < maxLength) {
               expandStatus = EXPAND
             }
@@ -77,6 +91,16 @@ class VarExpandCursor(fromNode: Long,
   }
 
   private def validToNode: Boolean = targetToNode < 0 || targetToNode == toNode
+
+  private def relationshipIsUniqueInPath(relInPath: Int, relationshipId: Long): Boolean = {
+    var i = relInPath - 1
+    while (i >= 0) {
+      if (selectionCursors.get(i).relationshipReference() == relationshipId)
+        return false
+      i -= 1
+    }
+    true
+  }
 
   private def expand(node: Long): Unit = {
 
@@ -112,14 +136,20 @@ class VarExpandCursor(fromNode: Long,
 
   def relationships: ListValue = {
     val r = new util.ArrayList[AnyValue]()
-    var i = 0
-    while (i < pathLength) {
-      val cursor = relTraCursors.get(i)
-      r.add(dbAccess.relationshipById(cursor.relationshipReference(),
-                                      cursor.originNodeReference(),
-                                      cursor.neighbourNodeReference(),
-                                      cursor.`type`()))
-      i += 1
+    if (projectBackwards) {
+      var i = pathLength - 1
+      while (i >= 0) {
+        val cursor = selectionCursors.get(i)
+        r.add(relationshipFromCursor(dbAccess, cursor))
+        i -= 1
+      }
+    } else {
+      var i = 0
+      while (i < pathLength) {
+        val cursor = selectionCursors.get(i)
+        r.add(relationshipFromCursor(dbAccess, cursor))
+        i += 1
+      }
     }
     VirtualValues.fromList(r)
   }
@@ -135,6 +165,15 @@ class VarExpandCursor(fromNode: Long,
     cursorPools.nodeCursorPool.free(nodeCursor)
     relTraCursors.foreach(cursor => cursorPools.relationshipTraversalCursorPool.free(cursor))
     relGroupCursors.foreach(cursor => cursorPools.relationshipGroupCursorPool.free(cursor))
+  }
+}
+
+object VarExpandCursor {
+  def relationshipFromCursor(dbAccess: DbAccess, cursor: RelationshipSelectionCursor): RelationshipValue = {
+    dbAccess.relationshipById(cursor.relationshipReference(),
+                              cursor.sourceNodeReference(),
+                              cursor.targetNodeReference(),
+                              cursor.`type`())
   }
 }
 
@@ -183,4 +222,13 @@ class GrowingArray[T <: AnyRef] {
       System.arraycopy(temp, 0, array, 0, temp.length)
     }
   }
+}
+
+trait VarExpandPredicate[ENTITY] {
+  def isTrue(entity: ENTITY): Boolean
+}
+
+object VarExpandPredicate {
+  val NO_NODE_PREDICATE: VarExpandPredicate[Long] = (entity: Long) => true
+  val NO_RELATIONSHIP_PREDICATE: VarExpandPredicate[RelationshipSelectionCursor] = (entity: RelationshipSelectionCursor) => true
 }

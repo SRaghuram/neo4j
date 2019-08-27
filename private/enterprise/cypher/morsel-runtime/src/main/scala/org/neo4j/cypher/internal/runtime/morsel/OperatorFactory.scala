@@ -8,12 +8,14 @@ package org.neo4j.cypher.internal.runtime.morsel
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
@@ -173,26 +175,35 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                            dir,
                            projectedDir,
                            types,
-                           to,
+                           toName,
                            relName,
                            length,
                            mode,
                            nodePredicate,
                            relationshipPredicate) =>
 
-        val fromOffset = slots.getLongOffsetFor(fromName)
+        val fromSlot = slots(fromName)
         val relOffset = slots.getReferenceOffsetFor(relName)
-        val toOffset = slots.getLongOffsetFor(to)
+        val toSlot = slots(toName)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
+
+        val tempNodeOffset = expressionSlotForPredicate(nodePredicate)
+        val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
+
         new VarExpandOperator(WorkIdentity.fromPlan(plan),
-                              fromOffset,
+                              fromSlot,
                               relOffset,
-                              toOffset,
+                              toSlot,
                               dir,
+                              projectedDir,
                               lazyTypes,
                               length.min,
                               length.max.getOrElse(Int.MaxValue),
-                              mode == ExpandAll)
+                              mode == ExpandAll,
+                              tempNodeOffset,
+                              tempRelationshipOffset,
+                              nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+                              relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
       case plans.Optional(source, protectedSymbols) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId

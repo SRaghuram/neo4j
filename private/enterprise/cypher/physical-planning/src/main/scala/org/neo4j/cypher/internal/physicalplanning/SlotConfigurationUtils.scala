@@ -137,8 +137,8 @@ object SlotConfigurationUtils {
     * Use this to make a specialized getter function for a slot that is expected to contain a node
     * that given an ExecutionContext returns a long with the node id.
     */
-  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
-    makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOfTypeError)
+  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOnTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+    makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOnTypeError)
 
   /**
     * Use this to make a specialized getter function for a slot that is expected to contain a node
@@ -146,6 +146,8 @@ object SlotConfigurationUtils {
     */
   def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship, throwOfTypeError)
+
+  val NO_ENTITY_FUNCTION: ToLongFunction[ExecutionContext] = (value: ExecutionContext) => PRIMITIVE_NULL
 
   /**
     * Use this to make a specialized setter function for a slot,

@@ -8,9 +8,10 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.eclipse.collections.impl.factory.Stacks
 import org.eclipse.collections.impl.factory.primitive.LongStacks
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
-import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration, VariablePredicates}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState, RelationshipTypes}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe.projectBackwards
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedPipeMapper}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, RelationshipContainer, RelationshipIterator}
@@ -21,8 +22,6 @@ import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.RelationshipValue
-
-import scala.collection.mutable
 
 /**
   * On predicates... to communicate the tested entity to the predicate, expressions
@@ -51,10 +50,14 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot, throwOfTypeError = false)
+  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot, throwOnTypeError = false)
   private val getToNodeFunction =
-    if (shouldExpandAll) null // We only need this getter in the ExpandInto case
-    else makeGetPrimitiveNodeFromSlotFunctionFor(toSlot, throwOfTypeError = false)
+    if (shouldExpandAll) {
+      null
+    } // We only need this getter in the ExpandInto case
+    else {
+      makeGetPrimitiveNodeFromSlotFunctionFor(toSlot, throwOnTypeError = false)
+    }
   private val toOffset = toSlot.offset
 
   nodePredicate.registerOwningPipe(this)
@@ -106,15 +109,12 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             }
           }
         }
-        val needsFlipping = if (dir == SemanticDirection.BOTH)
-          projectedDir == SemanticDirection.INCOMING
-        else
-          dir != projectedDir
-
-        val projectedRels = if (needsFlipping)
-          rels.reverse
-        else
-          rels
+        val projectedRels =
+          if (projectBackwards(dir, projectedDir)) {
+            rels.reverse
+          } else {
+            rels
+          }
 
         (fromNode, projectedRels)
       }
@@ -131,8 +131,9 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
           val resultRow = SlottedExecutionContext(slots)
           resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
           resultRow.setRefAt(relOffset, Values.NO_VALUE)
-          if (shouldExpandAll)
+          if (shouldExpandAll) {
             resultRow.setLongAt(toOffset, -1L)
+          }
           Iterator(resultRow)
         }
         else {
@@ -145,14 +146,16 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                 if rels.size >= min && isToNodeValid(inputRow, toNode) =>
                 val resultRow = SlottedExecutionContext(slots)
                 resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
-                if (shouldExpandAll)
+                if (shouldExpandAll) {
                   resultRow.setLongAt(toOffset, toNode)
+                }
                 resultRow.setRefAt(relOffset, rels.asList)
                 resultRow
             }
           }
-          else
+          else {
             Iterator.empty
+          }
         }
     }
   }
@@ -162,7 +165,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                               tempOffset: Int,
                               predicate: Expression,
                               entity: AnyValue): Boolean =
-    tempOffset == SlottedPipeMapper.NO_PREDICATE_OFFSET || {
+    tempOffset == VariablePredicates.NO_PREDICATE_OFFSET || {
       state.expressionVariables(tempOffset) = entity
       predicate(row, state) eq Values.TRUE
     }

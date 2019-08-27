@@ -421,8 +421,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         SemanticDirection.INCOMING, SemanticDirection.INCOMING,
         RelationshipTypes.empty, varLength.min, varLength.max, shouldExpandAll = false,
         varExpandSlots,
-        SlottedPipeMapper.NO_PREDICATE_OFFSET, // no node predicate
-        SlottedPipeMapper.NO_PREDICATE_OFFSET, // no relationship predicate
+        VariablePredicates.NO_PREDICATE_OFFSET, // no node predicate
+        VariablePredicates.NO_PREDICATE_OFFSET, // no relationship predicate
         commands.predicates.True(), commands.predicates.True(), Size(3, 0))()
     )
     pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)

@@ -40,12 +40,17 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
     */
   protected def closeInnerLoop(resources: QueryResources): Unit
 
+  protected def enterOperate(context: QueryContext, state: QueryState, resources: QueryResources): Unit = {}
+  protected def exitOperate(): Unit = {}
+
   private var innerLoop: Boolean = false
 
   override final def operate(outputRow: MorselExecutionContext,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources): Unit = {
+
+    enterOperate(context, state, resources)
 
     while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
       if (!innerLoop) {
@@ -80,6 +85,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
     }
 
     outputRow.finishedWriting()
+    exitOperate()
   }
 
   override def canContinue: Boolean =
