@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
 import org.neo4j.cypher.result.OperatorProfile
 
@@ -14,6 +15,9 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
                                                                 runtime: CypherRuntime[CONTEXT],
                                                                 sizeHint: Int
                                                                ) extends RuntimeTestSuite[CONTEXT](edition, runtime) {
+
+  // We always get OperatorProfile.NO_DATA for page cache hits and misses in Morsel
+  private val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
 
   test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
     // given
@@ -38,8 +42,10 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
     queryProfile.operatorProfile(1).time() should not be(OperatorProfile.NO_DATA) // sort - not fused
     queryProfile.operatorProfile(2).time() should not be(OperatorProfile.NO_DATA) // aggregation - not fused
     queryProfile.operatorProfile(3).time() should be(OperatorProfile.NO_DATA) // filter - fused
-    queryProfile.operatorProfile(4).time() should be(OperatorProfile.NO_DATA) // expand - fused
+    queryProfile.operatorProfile(4).time() should not be(OperatorProfile.NO_DATA) // expand - fused, but the prepare output time is attributed here
     queryProfile.operatorProfile(5).time() should not be(OperatorProfile.NO_DATA) // node by label scan - not fused
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 
   test("should not profile time if completely fused") {
@@ -58,5 +64,7 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(0).time() should be(OperatorProfile.NO_DATA) // produce results
     queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // all node scan
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 }

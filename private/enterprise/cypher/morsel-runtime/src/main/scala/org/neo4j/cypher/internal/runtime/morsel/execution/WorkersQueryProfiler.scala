@@ -44,7 +44,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
   object Profile extends QueryProfile {
     override def operatorProfile(operatorId: Int): OperatorProfile = {
       applyRhsPlans.get(operatorId) match {
-        case Some(applyRhsPlanId) => applyOperatorProfile(applyRhsPlanId)
+        case Some(applyRhsPlanId) => applyOperatorProfile(operatorId, applyRhsPlanId)
         case None => regularOperatorProfile(operatorId)
       }
     }
@@ -67,16 +67,14 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
       data
     }
 
-    private def applyOperatorProfile(applyRhsPlanId: Int): OperatorProfile = {
+    private def applyOperatorProfile(applyPlanId: Int, applyRhsPlanId: Int): OperatorProfile = {
       var i = 0
       val data = new ProfilingTracerData()
       while (i < numberOfWorkers) {
-        val workerData = profilers(i).operatorProfile(applyRhsPlanId)
-        data.update(0,
-          0,
-          workerData.rows(),
-          0,
-          0)
+        val timeData = profilers(i).operatorProfile(applyPlanId)
+        val rowData = profilers(i).operatorProfile(applyRhsPlanId)
+        data.update(timeData.time(), 0, 0, 0, 0)
+        data.update(0, 0, rowData.rows(), 0, 0)
 
         i += 1
       }

@@ -190,15 +190,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     pipeline
   }
 
-  private def outputToBuffer(pipeline: PipelineDefinitionBuild): MorselBufferDefinitionBuild = {
+  private def outputToBuffer(pipeline: PipelineDefinitionBuild, plan: LogicalPlan): MorselBufferDefinitionBuild = {
     val output = stateDefinition.newBuffer(pipeline.id, slotConfigurations(pipeline.headPlan.id))
-    pipeline.outputDefinition = MorselBufferOutput(output.id)
+    pipeline.outputDefinition = MorselBufferOutput(output.id, plan.id)
     output
   }
 
-  private def outputToApplyBuffer(pipeline: PipelineDefinitionBuild, argumentSlotOffset: Int): ApplyBufferDefinitionBuild = {
+  private def outputToApplyBuffer(pipeline: PipelineDefinitionBuild, argumentSlotOffset: Int, plan: LogicalPlan): ApplyBufferDefinitionBuild = {
     val output = stateDefinition.newApplyBuffer(pipeline.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id))
-    pipeline.outputDefinition = MorselBufferOutput(output.id)
+    pipeline.outputDefinition = MorselBufferOutput(output.id, plan.id)
     output
   }
 
@@ -213,7 +213,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def outputToOptionalMorselBuffer(pipeline: PipelineDefinitionBuild, plan: LogicalPlan, applyBuffer: ApplyBufferDefinitionBuild, argumentSlotOffset: Int): OptionalMorselBufferDefinitionBuild = {
     val asm = stateDefinition.newArgumentStateMap(plan.id, argumentSlotOffset, counts = true)
     val output = stateDefinition.newOptionalBuffer(pipeline.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id))
-    pipeline.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset)
+    pipeline.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, plan.id)
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
   }
@@ -226,8 +226,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     val lhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset, counts = true)
     val rhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset, counts = true)
     val output = stateDefinition.newLhsAccumulatingRhsStreamingBuffer(lhs.id, rhs.id, lhsAsm.id, rhsAsm.id, slotConfigurations(rhs.headPlan.id))
-    lhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset)
-    rhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset)
+    lhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, planId)
+    rhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, planId)
     markReducerInUpstreamBuffers(lhs.inputBuffer, applyBuffer, lhsAsm)
     markReducerInUpstreamBuffers(rhs.inputBuffer, applyBuffer, rhsAsm)
     output
@@ -261,7 +261,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       case produceResult: ProduceResult =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
-          pipeline.inputBuffer = outputToBuffer(source)
+          pipeline.inputBuffer = outputToBuffer(source, plan)
           pipeline.serial = true
           pipeline
         } else {
@@ -299,7 +299,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: UnwindCollection =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
-          pipeline.inputBuffer = outputToBuffer(source)
+          pipeline.inputBuffer = outputToBuffer(source, plan)
           pipeline
         } else {
           source.middlePlans += plan
@@ -331,7 +331,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     plan match {
       case _: plans.Apply =>
         val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
-        outputToApplyBuffer(lhs, argumentSlotOffset)
+        outputToApplyBuffer(lhs, argumentSlotOffset, plan)
 
       case _ =>
         argument

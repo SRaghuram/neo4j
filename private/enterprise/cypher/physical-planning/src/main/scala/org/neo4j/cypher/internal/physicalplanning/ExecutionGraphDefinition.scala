@@ -108,8 +108,8 @@ case class LHSAccumulatingRHSStreamingBufferVariant(lhsPipelineId: PipelineId,
 // -- OUTPUT
 sealed trait OutputDefinition
 case class ProduceResultOutput(plan: ProduceResult) extends OutputDefinition
-case class MorselBufferOutput(id: BufferId) extends OutputDefinition
-case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int) extends OutputDefinition
+case class MorselBufferOutput(id: BufferId, planId: Id) extends OutputDefinition
+case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int, planId: Id) extends OutputDefinition
 case class ReduceOutput(bufferId: BufferId, plan: LogicalPlan) extends OutputDefinition
 case object NoOutput extends OutputDefinition
 

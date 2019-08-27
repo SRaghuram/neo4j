@@ -80,9 +80,9 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 
 // MORSEL BUFFER OUTPUT
 
-case class MorselBufferOutputOperator(bufferId: BufferId) extends OutputOperator {
+case class MorselBufferOutputOperator(bufferId: BufferId, planId: Id) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
-  override val workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, s"Output morsel to $bufferId")
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(planId, s"Output morsel to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselBufferOutputState(workIdentity, bufferId, executionState, pipelineId)
 }
@@ -107,9 +107,9 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
 
 // MORSEL ARGUMENT STATE BUFFER OUTPUT
 
-case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int) extends OutputOperator {
+case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, planId: Id) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
-  override val workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(planId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
                                          executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),

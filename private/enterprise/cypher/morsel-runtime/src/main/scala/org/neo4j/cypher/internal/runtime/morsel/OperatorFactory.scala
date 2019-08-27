@@ -359,8 +359,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
     outputDefinition match {
       case NoOutput => NoOutputOperator
-      case MorselBufferOutput(bufferId) => MorselBufferOutputOperator(bufferId)
-      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset)
+      case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId)
+      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId)
       case ProduceResultOutput(p) => createProduceResults(p)
       case ReduceOutput(bufferId, plan) =>
         val id = plan.id
