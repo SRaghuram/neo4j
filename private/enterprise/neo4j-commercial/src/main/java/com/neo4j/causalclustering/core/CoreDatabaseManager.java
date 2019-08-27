@@ -79,7 +79,6 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
                 .createKernelComponents( databaseId, coreDatabaseLife, raftContext, kernelResolvers,
                         coreDatabaseLogService, versionContextSupplier );
 
-        log.info( "Creating '%s' database.", databaseId.name() );
         var databaseCreationContext = newDatabaseCreationContext( databaseId, coreDatabaseDependencies,
                 coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig, coreDatabaseLogService );
         var kernelDatabase = new Database( databaseCreationContext );
