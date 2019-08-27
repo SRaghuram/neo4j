@@ -99,7 +99,35 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
   test("cant use LENGTH on nodes") {
     executeAndEnsureError(
       "match (n) where id(n) = 0 return length(n)",
-      "Type mismatch: expected Path, String or List<T> but was Node (line 1, column 41 (offset: 40))"
+      "Type mismatch: expected Path but was Node (line 1, column 41 (offset: 40))"
+    )
+  }
+
+  test("cant use LENGTH on collections") {
+    executeAndEnsureError(
+      "return length([1, 2, 3])",
+      "Type mismatch: expected Path but was List<Integer> (line 1, column 15 (offset: 14))"
+    )
+  }
+
+  test("cant use LENGTH on strings") {
+    executeAndEnsureError(
+      "return length('a string')",
+      "Type mismatch: expected Path but was String (line 1, column 15 (offset: 14))"
+    )
+  }
+
+  test("cant use LENGTH on pattern expression") {
+    executeAndEnsureError(
+      " match (a) where a.name='Alice' return length((a)-->()-->())",
+      "Type mismatch: expected Path but was List<Path> (line 1, column 47 (offset: 46))"
+    )
+  }
+
+  test ("cant use SIZE on paths") {
+    executeAndEnsureError(
+      " MATCH p =(a)-->(b)-->(c) WHERE a.name = 'Alice' RETURN size(p)",
+      "Type mismatch: expected String or List<T> but was Path (line 1, column 62 (offset: 61))"
     )
   }
 

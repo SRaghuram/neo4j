@@ -148,41 +148,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications shouldBe empty
   }
 
-  test("warn when using length on collection") {
-    val result = executeSingle("explain return length([1, 2, 3])", Map.empty)
-
-    result.notifications should equal(Set(
-      LENGTH_ON_NON_PATH.notification(new graphdb.InputPosition(22, 1, 23))))
-  }
-
-  test("do not warn when using length on a path") {
-    val result = executeSingle("explain match p=(a)-[*]->(b) return length(p)", Map.empty)
-
-    result.notifications shouldBe empty
-  }
-
-  test("do warn when using length on a pattern expression") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
-        "explain match (a) where a.name='Alice' return length((a)-->()-->())")
-      result.notifications should contain(LENGTH_ON_NON_PATH.notification(new graphdb.InputPosition(93, 1, 94)))
-  }
-
-  test("do warn when using length on a string") {
-    val result = executeSingle("explain return length('a string')", Map.empty)
-
-    result.notifications should equal(Set(LENGTH_ON_NON_PATH.notification(new graphdb.InputPosition(22, 1, 23))))
-  }
-
-  test("do not warn when using size on a collection") {
-    val result = executeSingle("explain return size([1, 2, 3])", Map.empty)
-    result.notifications shouldBe empty
-  }
-
-  test("do not warn when using size on a string") {
-    val result = executeSingle("explain return size('a string')", Map.empty)
-    result.notifications shouldBe empty
-  }
-
   test("warn when requesting runtime=compiled on an unsupported query") {
     val result = executeSingle("EXPLAIN CYPHER runtime=compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
     result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
