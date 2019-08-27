@@ -754,7 +754,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     })
   }
 
-  test("should handle unwind on a list of nodes in both runtimes") {
+  test("should handle unwind on a list of nodes in all runtimes") {
     // Given
     val node1 = createNode()
     val node2 = createNode()
@@ -765,7 +765,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // When
     val res =
-      executeWith(Configs.All - Configs.Morsel, "UNWIND $p AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
+      executeWith(Configs.All, "UNWIND $p AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
 
     //Then
     res.toList should equal(List(Map("c" -> 2)))

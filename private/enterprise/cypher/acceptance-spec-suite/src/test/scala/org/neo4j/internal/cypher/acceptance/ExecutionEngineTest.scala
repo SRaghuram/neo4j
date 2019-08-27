@@ -771,7 +771,7 @@ order by a.COL1""".format(a, b))
     val n = createNode("n")
     val m = createNode("m")
     relate(n,m,"link")
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 with coalesce(n,n) as n match (n)--() return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where id(n) = 0 with coalesce(n,n) as n match (n)--() return n")
 
     result.toList should equal(List(Map("n" -> n)))
   }
