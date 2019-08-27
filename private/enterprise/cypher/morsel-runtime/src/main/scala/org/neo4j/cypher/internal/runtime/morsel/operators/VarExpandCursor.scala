@@ -49,7 +49,7 @@ class VarExpandCursor(fromNode: Long,
   def next(): Boolean = {
 
     if (expandStatus == NOT_STARTED) {
-      expandStatus = EXPAND
+      expandStatus = if (pathLength < maxLength) EXPAND else EMIT
       if (minLength == 0 && validToNode) {
         return true
       }
