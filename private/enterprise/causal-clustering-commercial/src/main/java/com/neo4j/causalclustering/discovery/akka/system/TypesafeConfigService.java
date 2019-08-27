@@ -26,6 +26,7 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.typesafe.config.ConfigFactory;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,7 +74,18 @@ public final class TypesafeConfigService
 
     public com.typesafe.config.Config generate()
     {
-        return ConfigFactory.empty()
+        File externalConfig = config.get( CausalClusteringSettings.middleware_akka_external_config );
+        final com.typesafe.config.Config base;
+        if ( externalConfig == null )
+        {
+            base = ConfigFactory.empty();
+        }
+        else
+        {
+            base = ConfigFactory.parseFileAnySyntax( externalConfig );
+        }
+
+        return base
                 .withFallback( shutdownConfig() )
                 .withFallback( transportConfig() )
                 .withFallback( serializationConfig() )
