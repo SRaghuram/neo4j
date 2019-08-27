@@ -26,6 +26,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
@@ -105,7 +106,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile ignore = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.stop();
             assertSame( OptionalLong.empty(), warmer.reheat() );
@@ -118,7 +119,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile ignore = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.stop();
             assertSame( OptionalLong.empty(), warmer.profile() );
@@ -131,7 +132,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile pf = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.stop();
             warmer.start();
@@ -152,7 +153,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile ignore = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.reheat();
         }
         cursorTracer.get().reportEvents();
@@ -171,7 +172,7 @@ class PageCacheWarmerTest
                 assertTrue( writer.next( 3 ) );
             }
             pf.flushAndForce();
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.profile();
         }
@@ -181,7 +182,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile pf = pageCache.map( file, pageCache.pageSize() ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.reheat();
 
@@ -218,7 +219,7 @@ class PageCacheWarmerTest
                 }
             }
             pf.flushAndForce();
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.profile();
         }
 
@@ -227,7 +228,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile pf = pageCache.map( file, pageCache.pageSize() ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.reheat();
 
@@ -261,7 +262,7 @@ class PageCacheWarmerTest
                 assertTrue( writer.next( 3 ) );
             }
             pf.flushAndForce();
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.profile();
             warmer.profile();
@@ -305,7 +306,7 @@ class PageCacheWarmerTest
               PagedFile aa = pageCache.map( aaFile, pageCache.pageSize(), StandardOpenOption.CREATE );
               PagedFile ba = pageCache.map( baFile, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir() );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), Config.defaults() );
             warmer.start();
             warmer.profile();
             List<StoreFileMetadata> fileListing = new ArrayList<>();

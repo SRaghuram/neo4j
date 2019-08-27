@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -38,6 +39,8 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
 import static java.util.Comparator.naturalOrder;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_whitelist;
 import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 
@@ -70,8 +73,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private volatile boolean stopped;
     private ExecutorService executor;
     private PageLoaderFactory pageLoaderFactory;
+    private Config config;
 
-    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory )
+    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config )
     {
         this.fs = fs;
         this.pageCache = pageCache;
@@ -79,6 +83,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         this.databaseDirectory = databaseDirectory;
         this.profilesDirectory = new File( databaseDirectory, Profile.PROFILE_DIR );
         this.refCounts = new ProfileRefCounts();
+        this.config = config;
     }
 
     @Override
@@ -103,6 +108,41 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         stopped = false;
         executor = buildExecutorService( scheduler );
         pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
+        if ( config.get( pagecache_warmup_prefetch ) )
+        {
+            loadEverythingToPageCache();
+        }
+    }
+
+    private void loadEverythingToPageCache()
+    {
+        try
+        {
+            String whitelistFilterRegex = config.get( pagecache_warmup_prefetch_whitelist );
+            pageCache.listExistingMappings().parallelStream()
+                    .filter( pagedFile -> pagedFile.file().toString().matches( whitelistFilterRegex ) )
+                    .forEach( this::touchAllPages );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Could not list existing mappings in page cache", e );
+        }
+    }
+
+    private void touchAllPages( PagedFile pagedFile )
+    {
+        try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_READ_AHEAD ) )
+        {
+            do
+            {
+                cursor.getByte(); //read something to make sure page is loaded and loop not removed by compiler
+            }
+            while ( cursor.next() );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Could not prefetch all pages into page cache", e );
+        }
     }
 
     public void stop()
