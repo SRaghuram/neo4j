@@ -15,6 +15,7 @@ import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.interactive.Neo4jQuery13;
 import com.neo4j.bench.ldbc.operators.Operators;
 
+import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.Direction;
@@ -31,8 +32,9 @@ public class LongQuery13EmbeddedCore_0_1 extends Neo4jQuery13<Neo4jConnectionSta
     {
         Node person1 = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.person1Id() );
         Node person2 = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.person2Id() );
+        var context = new BasicEvaluationContext( connection.getTransaction().get(), connection.db() );
         PathFinder<Path> finder = GraphAlgoFactory
-                .shortestPath( PathExpanders.forTypeAndDirection( Rels.KNOWS, Direction.BOTH ), Integer.MAX_VALUE );
+                .shortestPath( context, PathExpanders.forTypeAndDirection( Rels.KNOWS, Direction.BOTH ), Integer.MAX_VALUE );
         Path shortestPath = finder.findSinglePath( person1, person2 );
         return (null == shortestPath) ? NO_PATH : new LdbcQuery13Result( shortestPath.length() );
     }

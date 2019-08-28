@@ -15,6 +15,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphalgo.WeightedPath;
@@ -130,8 +131,8 @@ public class TestProcedure
             @Name( "relType" ) String relType,
             @Name( "weightProperty" ) String weightProperty )
     {
-        PathFinder<WeightedPath> pathFinder =
-                GraphAlgoFactory.dijkstra(
+        var context = new BasicEvaluationContext( null, db );
+        PathFinder<WeightedPath> pathFinder = GraphAlgoFactory.dijkstra( context,
                         PathExpanders.forTypeAndDirection(
                                 RelationshipType.withName( relType ), Direction.BOTH ),
                         weightProperty );

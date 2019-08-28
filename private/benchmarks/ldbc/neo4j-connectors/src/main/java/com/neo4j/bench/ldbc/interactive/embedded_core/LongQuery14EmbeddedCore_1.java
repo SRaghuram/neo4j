@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.Direction;
@@ -49,8 +50,8 @@ public class LongQuery14EmbeddedCore_1 extends Neo4jQuery14<Neo4jConnectionState
     {
         Node person1 = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.person1Id() );
         Node person2 = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.person2Id() );
-
-        PathFinder<Path> finder = GraphAlgoFactory.shortestPath(
+        var context = new BasicEvaluationContext( connection.getTransaction().get(), connection.db() );
+        PathFinder<Path> finder = GraphAlgoFactory.shortestPath( context,
                 PathExpanders.forTypeAndDirection( Rels.KNOWS, Direction.BOTH ),
                 Integer.MAX_VALUE );
         List<LdbcQuery14Result> results = new ArrayList<>();

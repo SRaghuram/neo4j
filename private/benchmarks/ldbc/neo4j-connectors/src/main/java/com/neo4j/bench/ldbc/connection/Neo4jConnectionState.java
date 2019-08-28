@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -33,6 +34,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
 import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
@@ -53,6 +55,7 @@ public class Neo4jConnectionState extends DbConnectionState
     private final IntSet seenOperationTypes;
     private final Int2ObjectMap<ExecutionPlanDescription> planMap;
     private final Int2ObjectMap<PlanMeta> planMetaMap;
+    private Transaction transaction;
 
     public Neo4jConnectionState( DatabaseManagementService managementService, GraphDatabaseService db, URI uri, AuthToken authToken,
             LoggingService loggingService, AnnotatedQueries annotatedQueries, final LdbcDateCodec.Format dateFormat,
@@ -84,6 +87,16 @@ public class Neo4jConnectionState extends DbConnectionState
     public Session session()
     {
         return driverSupplier.get().session();
+    }
+
+    public void setTransaction( Transaction transaction )
+    {
+        this.transaction = transaction;
+    }
+
+    public Optional<Transaction> getTransaction()
+    {
+        return Optional.ofNullable( transaction );
     }
 
     public TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache()
