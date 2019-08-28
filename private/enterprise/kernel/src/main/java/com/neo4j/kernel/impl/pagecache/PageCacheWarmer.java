@@ -107,12 +107,16 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     public synchronized void start()
     {
-        stopped = false;
-        executor = buildExecutorService( scheduler );
-        pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
         if ( config.get( pagecache_warmup_prefetch ) )
         {
-            loadEverythingToPageCache();
+            loadEverythingToPageCache(); //pre-fetch synchronous
+            stopped = true; //When pre-fetching there is nothing to 'start', disabling profiling
+        }
+        else
+        {
+            stopped = false;
+            executor = buildExecutorService( scheduler );
+            pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
         }
     }
 

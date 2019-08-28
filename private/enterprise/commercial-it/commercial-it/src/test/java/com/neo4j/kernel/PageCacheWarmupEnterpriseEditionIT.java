@@ -14,6 +14,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
@@ -26,10 +27,13 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -38,18 +42,22 @@ import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.io.FileUtils.cleanDirectory;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
+import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSupport
 {
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
 
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    //@Rule
+    //public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     @Rule
@@ -218,6 +226,50 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         logProvider.rawMessageMatcher().assertContains( "Page cache warmup started." );
         logProvider.rawMessageMatcher().assertContains( "Page cache warmup completed. %d pages loaded. Duration: %s." );
+    }
+
+    @Test
+    public void willPrefetchEverything() throws IOException
+    {
+        db.withSetting( GraphDatabaseSettings.pagecache_warmup_enabled, false )
+                .withSetting( GraphDatabaseSettings.pagecache_memory, "50M" ) //enough to keep everything in page-cache & prevent evictions
+                .ensureStarted();
+        createData();
+
+        db.restartDatabase();
+        long pagesInMemoryWithoutPrefetch = getPageFaults( db );
+        touchAllPages( db );
+        long pagesInMemoryWithoutPrefetchAfterTouch = getPageFaults( db );
+
+        db.restartDatabase( Map.of( GraphDatabaseSettings.pagecache_warmup_enabled, true, GraphDatabaseSettings.pagecache_warmup_prefetch, true ));
+        long pagesInMemoryWithPrefetch = getPageFaults( db );
+        touchAllPages( db );
+        long pagesInMemoryWithPrefetchAfterTouch = getPageFaults( db );
+
+        assertThat( pagesInMemoryWithoutPrefetch, lessThanOrEqualTo( pagesInMemoryWithoutPrefetchAfterTouch ) ); //we dont prefetch everything by default
+        assertThat( pagesInMemoryWithoutPrefetchAfterTouch, lessThanOrEqualTo( pagesInMemoryWithPrefetch ) ); //prefetch should load same or more pages
+        assertThat( pagesInMemoryWithPrefetch, equalTo( pagesInMemoryWithPrefetchAfterTouch ) ); //touching everything should not generate faults
+    }
+
+    private static void touchAllPages( CommercialDbmsRule db ) throws IOException
+    {
+        PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
+        for ( PagedFile pagedFile : pageCache.listExistingMappings() )
+        {
+            try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK ) )
+            {
+                while ( cursor.next() )
+                {
+                    //do nothing
+                }
+            }
+            pageCache.reportEvents();
+        }
+    }
+
+    private static long getPageFaults( CommercialDbmsRule db )
+    {
+        return db.getDependencyResolver().resolveDependency( PageCacheTracer.class ).faults();
     }
 
     private void executeBackup( File backupDir ) throws Exception
