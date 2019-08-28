@@ -15,6 +15,7 @@ import java.util.Optional;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -68,12 +69,17 @@ public class EnterpriseSanityCheckTest
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile() );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
-        Result result = db.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
-        result.accept( row -> true );
-        String planner = (String) result.getExecutionPlanDescription().getArguments().get( "planner" );
-        String runtime = (String) result.getExecutionPlanDescription().getArguments().get( "runtime" );
-        assertThat( planner.toLowerCase(), equalTo( "cost" ) );
-        assertThat( runtime.toLowerCase(), equalTo( expectedRuntime ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result result = db.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
+            result.accept( row -> true );
+            String planner = (String) result.getExecutionPlanDescription().getArguments().get( "planner" );
+            String runtime = (String) result.getExecutionPlanDescription().getArguments().get( "runtime" );
+            assertThat( planner.toLowerCase(), equalTo( "cost" ) );
+            assertThat( runtime.toLowerCase(), equalTo( expectedRuntime ) );
+            transaction.commit();
+        }
+
         managementService.shutdown();
     }
 
