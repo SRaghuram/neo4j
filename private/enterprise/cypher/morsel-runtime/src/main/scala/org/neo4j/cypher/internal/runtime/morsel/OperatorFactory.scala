@@ -279,6 +279,17 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               ordering,
                               argumentSlot)
 
+      case plans.Top(_, sortItems, limit) =>
+        val ordering = sortItems.map(translateColumnOrder(slots, _))
+        val argumentDepth = physicalPlan.applyPlans(id)
+        val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
+        new TopMergeOperator(argumentStateMapId,
+                             WorkIdentity.fromPlan(plan),
+                             ordering,
+                             argumentSlot,
+                             converters.toCommandExpression(plan.id, limit))
+
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
 
@@ -373,6 +384,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
         plan match {
           case plans.Sort(_, sortItems) =>
+            val argumentDepth = physicalPlan.applyPlans(id)
+            val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
+            val ordering = sortItems.map(translateColumnOrder(slots, _))
+            new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, bufferId, ordering)
+
+          case plans.Top(_, sortItems, limit) =>
             val argumentDepth = physicalPlan.applyPlans(id)
             val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
             val ordering = sortItems.map(translateColumnOrder(slots, _))

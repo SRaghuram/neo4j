@@ -39,6 +39,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
           throw unsupported("ExpandInto")
       case _: UnwindCollection |
            _: Sort |
+           _: Top |
            _: Aggregation |
            _: Optional |
            _: VarExpand
