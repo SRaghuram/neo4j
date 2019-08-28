@@ -14,22 +14,26 @@ import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
+import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
@@ -39,9 +43,11 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.star
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.singleton;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -399,8 +405,45 @@ class ClusterDatabaseManagementIT
 
         // Core should have eventually started database and have only data from the recreation
         assertDatabaseEventuallyStarted( databaseName, singleton( toStop ) );
-        assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1L ), 90, TimeUnit.SECONDS );
+        assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1L ), 90, SECONDS );
         assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0L ) );
+    }
+
+    @Test
+    void shouldInvalidateDatabaseIdRepositoryCache() throws Exception
+    {
+        var databaseName = RandomStringUtils.randomAlphabetic( 10 ).toLowerCase();
+        var cluster = startCluster( clusterConfig );
+        assertDefaultDatabasesAreAvailable( cluster );
+
+        var dbIdRepos = cluster
+                .allMembers()
+                .stream()
+                .map( member -> member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseManager.class ) )
+                .map( DatabaseManager::databaseIdRepository )
+                .collect( Collectors.toList() );
+
+        for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
+        {
+            assertEventually( () -> dbIdRepo.getByName( databaseName ), empty(), 20, SECONDS );
+        }
+
+        createDatabase( databaseName, cluster );
+
+        for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
+        {
+            assertEventually( () -> dbIdRepo.getByName( databaseName ), not( empty() ), 20, SECONDS );
+        }
+
+        assertDatabaseEventuallyStarted( databaseName, cluster );
+        dropDatabase( databaseName, cluster );
+
+        for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
+        {
+            assertEventually( () -> dbIdRepo.getByName( databaseName ), empty(), 30, SECONDS );
+        }
+
+        assertDatabaseDoesNotExist( databaseName, cluster );
     }
 
     private static long hasNodeCount( CoreClusterMember member, String databaseName, Label label )

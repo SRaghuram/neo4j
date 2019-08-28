@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionException;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
@@ -34,7 +35,8 @@ class DbmsReconcilerIT
     @Test
     void shouldPanicDatabaseThatFailsToTransitionToDesiredState() throws Exception
     {
-        var databaseName = "foo";
+        var databaseId = TestDatabaseIdRepository.randomDatabaseId();
+        var databaseName = databaseId.name();
         managementService.createDatabase( databaseName );
         var db = (GraphDatabaseAPI) managementService.database( databaseName );
         var reconciler = db.getDependencyResolver().resolveDependency( DbmsReconciler.class );
@@ -45,7 +47,7 @@ class DbmsReconcilerIT
 
         // reconciler fails to reconcile the state transition
         var reconcilerResult = reconciler.reconcile( List.of( fixedOperator ), ReconcilerRequest.simple() );
-        var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( databaseName ) );
+        var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( databaseId ) );
         assertThat( error.getCause().getMessage(), containsString( "unsupported state transition" ) );
 
         // database panicked

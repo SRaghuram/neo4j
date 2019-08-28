@@ -33,31 +33,31 @@ import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LA
 /**
  * Utility class for accessing the DBMS model in the system database.
  */
-public class SystemGraphDbmsModel
+class SystemGraphDbmsModel
 {
     private GraphDatabaseService systemDatabase;
 
-    public void setSystemDatabase( GraphDatabaseService systemDatabase )
+    void setSystemDatabase( GraphDatabaseService systemDatabase )
     {
         this.systemDatabase = systemDatabase;
     }
 
-    Collection<String> updatedDatabases( TransactionData transactionData )
+    Collection<DatabaseId> updatedDatabases( TransactionData transactionData )
     {
-        Collection<String> updatedDatabases;
+        Collection<DatabaseId> updatedDatabases;
 
         try ( var tx = systemDatabase.beginTx() )
         {
             var changedDatabases = Iterables.stream( transactionData.assignedNodeProperties() )
                     .map( PropertyEntry::entity )
                     .filter( n -> n.hasLabel( DATABASE_LABEL ) )
-                    .map( this::getDatabaseName )
+                    .map( this::getDatabaseId )
                     .distinct();
 
             var deletedDatabases = Iterables.stream( transactionData.assignedLabels() )
                     .filter( l -> l.label().equals( DELETED_DATABASE_LABEL ) )
                     .map( LabelEntry::node )
-                    .map( this::getDatabaseName );
+                    .map( this::getDatabaseId );
 
             updatedDatabases = Stream.concat( changedDatabases, deletedDatabases ).collect( Collectors.toList() );
             tx.commit();

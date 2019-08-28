@@ -100,7 +100,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     {
         if ( !bootstrapping.contains( databaseId ) && !panicked.contains( databaseId ) )
         {
-            trigger( ReconcilerRequest.simple() ).await( databaseId.name() );
+            trigger( ReconcilerRequest.simple() ).await( databaseId );
             return true;
         }
         return false;

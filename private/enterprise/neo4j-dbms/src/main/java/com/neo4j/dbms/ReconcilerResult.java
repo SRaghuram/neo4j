@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 /**
  * Simple holder for a Collection of concurrently executing {@link CompletableFuture}s
  * returned from {@link DbmsReconciler#reconcile(List, ReconcilerRequest)}. Provides the ability
@@ -34,19 +36,19 @@ public final class ReconcilerResult
         this.completedFuture = buildCompletedFuture( reconciliationFutures );
     }
 
-    public void await( String databaseName )
+    public void await( DatabaseId databaseId )
     {
-        var future = reconciliationFutures.get( databaseName );
+        var future = reconciliationFutures.get( databaseId.name() );
         if ( future != null )
         {
             future.join();
         }
     }
 
-    public void await( Collection<String> databaseNames )
+    public void await( Collection<DatabaseId> databaseIds )
     {
-        var futures = databaseNames.stream()
-                .map( reconciliationFutures::get )
+        var futures = databaseIds.stream()
+                .map( id -> reconciliationFutures.get( id.name() ) )
                 .flatMap( Stream::ofNullable )
                 .toArray( CompletableFuture<?>[]::new );
 

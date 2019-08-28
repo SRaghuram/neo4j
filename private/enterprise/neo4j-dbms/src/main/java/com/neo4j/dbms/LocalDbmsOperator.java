@@ -29,21 +29,21 @@ public final class LocalDbmsOperator extends DbmsOperator
     {
         var id = databaseId( databaseName );
         desired.put( databaseName, new DatabaseState( id, DROPPED ) );
-        trigger( ReconcilerRequest.force() ).await( databaseName );
+        trigger( ReconcilerRequest.force() ).await( id );
     }
 
     public void startDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
         desired.put( databaseName, new DatabaseState( id, STARTED ) );
-        trigger( ReconcilerRequest.force() ).await( databaseName );
+        trigger( ReconcilerRequest.force() ).await( id );
     }
 
     public void stopDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
         desired.put( databaseName, new DatabaseState( id, STOPPED ) );
-        trigger( ReconcilerRequest.force() ).await( databaseName );
+        trigger( ReconcilerRequest.force() ).await( id );
     }
 
     private DatabaseId databaseId( String databaseName )

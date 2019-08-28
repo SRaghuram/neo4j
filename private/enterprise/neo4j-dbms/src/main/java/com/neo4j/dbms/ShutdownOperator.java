@@ -36,7 +36,7 @@ class ShutdownOperator extends DbmsOperator
         trigger( ReconcilerRequest.force() ).awaitAll();
 
         desired.put( SYSTEM_DATABASE_ID.name(), stoppedState( SYSTEM_DATABASE_ID ) );
-        trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID.name() );
+        trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID );
     }
 
     private DatabaseState stoppedState( DatabaseId id )

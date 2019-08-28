@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -28,8 +29,8 @@ class SystemGraphDbmsOperator extends DbmsOperator
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
-    SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, ThreadToStatementContextBridge txBridge,
-            ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
+    SystemGraphDbmsOperator( SystemGraphDbmsModel dbmsModel, ThreadToStatementContextBridge txBridge, ReconciledTransactionTracker reconciledTxTracker,
+            LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.txBridge = txBridge;
@@ -81,7 +82,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
         systemStates.forEach( desired::put );
     }
 
-    private Collection<String> extractUpdatedDatabases( TransactionData transactionData )
+    private Collection<DatabaseId> extractUpdatedDatabases( TransactionData transactionData )
     {
         if ( transactionData == null )
         {

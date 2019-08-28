@@ -11,14 +11,18 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
@@ -40,7 +44,7 @@ class SystemGraphDbmsModelTest
     private DatabaseManagementService managementService;
     @Inject
     private GraphDatabaseService db;
-    private Collection<String> updatedDatabases = new ArrayList<>();
+    private Collection<DatabaseId> updatedDatabases = new ArrayList<>();
     private SystemGraphDbmsModel dbmsModel;
 
     @BeforeEach
@@ -63,7 +67,7 @@ class SystemGraphDbmsModelTest
     void shouldDetectUpdatedDatabases()
     {
         // when
-        HashMap<String,DatabaseState> expectedCreated = new HashMap<>();
+        HashMap<DatabaseId,DatabaseState> expectedCreated = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
             makeDatabaseNode( tx, "A", true, expectedCreated );
@@ -79,7 +83,7 @@ class SystemGraphDbmsModelTest
         updatedDatabases.clear();
 
         // when
-        HashMap<String,DatabaseState> expectedDeleted = new HashMap<>();
+        HashMap<DatabaseId,DatabaseState> expectedDeleted = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
             makeDeletedDatabaseNode( tx, "D", expectedDeleted );
@@ -97,46 +101,48 @@ class SystemGraphDbmsModelTest
     {
 
         // when
-        HashMap<String,DatabaseState> expected = new HashMap<>();
+        HashMap<DatabaseId,DatabaseState> expectedIds = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( tx, "A", true, expected );
-            makeDatabaseNode( tx, "B", false, expected );
-            makeDeletedDatabaseNode( tx,"C", expected );
+            makeDatabaseNode( tx, "A", true, expectedIds );
+            makeDatabaseNode( tx, "B", false, expectedIds );
+            makeDeletedDatabaseNode( tx, "C", expectedIds );
             tx.commit();
         }
 
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( tx, "D", true, expected );
-            makeDeletedDatabaseNode( tx, "E", expected );
-            makeDeletedDatabaseNode( tx, "F", expected );
+            makeDatabaseNode( tx, "D", true, expectedIds );
+            makeDeletedDatabaseNode( tx, "E", expectedIds );
+            makeDeletedDatabaseNode( tx, "F", expectedIds );
             tx.commit();
         }
+
+        var expectedNames = expectedIds.entrySet().stream().collect( Collectors.toMap( entry -> entry.getKey().name(), Map.Entry::getValue ) );
 
         // then
-        assertEquals( expected, dbmsModel.getDatabaseStates() );
+        assertEquals( expectedNames, dbmsModel.getDatabaseStates() );
     }
 
-    private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<String,DatabaseState> expected )
+    private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<DatabaseId,DatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DATABASE_LABEL );
-        node.setProperty( "name", databaseName );
+        node.setProperty( "name", new NormalizedDatabaseName( databaseName ).name() );
         node.setProperty( "status", online ? "online" : "offline" );
         node.setProperty( "uuid", uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
-        expected.put( databaseName, online ? new DatabaseState( id, STARTED ) : new DatabaseState( id, STOPPED ) );
+        expected.put( id, online ? new DatabaseState( id, STARTED ) : new DatabaseState( id, STOPPED ) );
     }
 
-    private void makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<String,DatabaseState> expected )
+    private void makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<DatabaseId,DatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DELETED_DATABASE_LABEL );
-        node.setProperty( "name", databaseName );
+        node.setProperty( "name", new NormalizedDatabaseName( databaseName ).name() );
         node.setProperty( "uuid", uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
-        expected.put( databaseName , new DatabaseState( id, DROPPED ) );
+        expected.put( id , new DatabaseState( id, DROPPED ) );
     }
 
 }

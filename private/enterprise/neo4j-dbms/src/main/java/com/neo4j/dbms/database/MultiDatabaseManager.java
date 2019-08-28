@@ -80,6 +80,9 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
                     databaseContext.fail( t );
                 }
             }
+
+            databaseIdRepository().cache( databaseId );
+
             return databaseContext;
         } );
     }
