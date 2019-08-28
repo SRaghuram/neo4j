@@ -30,6 +30,23 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
 object LimitOperator {
+  def evaluateCountValue(queryContext: QueryContext,
+                         state: QueryState,
+                         resources: QueryResources,
+                         countExpression: Expression): Long = {
+    val queryState = new OldQueryState(queryContext,
+      resources = null,
+      params = state.params,
+      resources.expressionCursors,
+      Array.empty[IndexReadSession],
+      resources.expressionVariables(state.nExpressionSlots),
+      state.subscriber,
+      NoMemoryTracker)
+
+    val countValue = countExpression(ExecutionContext.empty, queryState)
+    evaluateCountValue(countValue)
+  }
+
   def evaluateCountValue(countValue: AnyValue): Long = {
     val limitNumber = NumericHelper.asNumber(countValue)
     if (limitNumber.isInstanceOf[FloatingPointValue]) {
@@ -157,17 +174,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     countExpression: Expression) extends MiddleOperator {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = {
-
-    val queryState = new OldQueryState(queryContext,
-                                       resources = null,
-                                       params = state.params,
-                                       resources.expressionCursors,
-                                       Array.empty[IndexReadSession],
-                                       resources.expressionVariables(state.nExpressionSlots),
-                                       state.subscriber,
-                                       NoMemoryTracker)
-    val countValue: AnyValue = countExpression(ExecutionContext.empty, queryState)
-    val limit = evaluateCountValue(countValue)
+    val limit = evaluateCountValue(queryContext, state, resources, countExpression)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
                                                                       new LimitStateFactory(limit)))
   }

@@ -31,10 +31,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
   override def toString: String = "SortMerge"
 
-  private val comparator: Comparator[MorselExecutionContext] =
-    orderBy
-    .map(MorselSorting.createMorselComparator)
-    .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
+  private val comparator: Comparator[MorselExecutionContext] = MorselSorting.createComparator(orderBy)
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
@@ -76,15 +73,13 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
       }
 
       while (outputRow.isValidRow && canContinue) {
-        while (outputRow.isValidRow && !sortedInputPerArgument.isEmpty) {
-          val nextRow: MorselExecutionContext = sortedInputPerArgument.poll()
-          outputRow.copyFrom(nextRow)
-          nextRow.moveToNextRow()
-          outputRow.moveToNextRow()
-          // If there is more data in this Morsel, we'll re-insert it into the sortedInputs
-          if (nextRow.isValidRow) {
-            sortedInputPerArgument.add(nextRow)
-          }
+        val nextRow: MorselExecutionContext = sortedInputPerArgument.poll()
+        outputRow.copyFrom(nextRow)
+        nextRow.moveToNextRow()
+        outputRow.moveToNextRow()
+        // If there is more data in this Morsel, we'll re-insert it into the sortedInputs
+        if (nextRow.isValidRow) {
+          sortedInputPerArgument.add(nextRow)
         }
       }
 

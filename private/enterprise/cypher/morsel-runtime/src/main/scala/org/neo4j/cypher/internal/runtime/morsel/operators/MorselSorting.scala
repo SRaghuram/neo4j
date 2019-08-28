@@ -14,6 +14,11 @@ import org.neo4j.values.AnyValue
 
 object MorselSorting {
 
+  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[MorselExecutionContext] =
+    orderBy
+      .map(MorselSorting.createMorselComparator)
+      .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
+
   def compareMorselIndexesByColumnOrder(row: MorselExecutionContext)(order: ColumnOrder): Comparator[Integer] = order.slot match {
     case LongSlot(offset, true, _) =>
       (idx1: Integer, idx2: Integer) => {
