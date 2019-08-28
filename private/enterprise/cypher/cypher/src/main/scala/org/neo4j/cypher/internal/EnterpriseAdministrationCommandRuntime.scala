@@ -21,12 +21,12 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.ast
-import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
 import org.neo4j.internal.kernel.api.security.SecurityContext
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+import org.neo4j.kernel.api.exceptions.Status.HasStatus
+import org.neo4j.kernel.api.exceptions.{InvalidArgumentsException, Status}
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
@@ -36,8 +36,8 @@ import org.neo4j.values.virtual.VirtualValues
   * This runtime takes on queries that require no planning, such as multidatabase administration commands
   */
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
-  val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver)
-  val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
+  private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver)
+  private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
   override def name: String = "enterprise administration-commands"
@@ -89,10 +89,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               Values.booleanValue(suspended))),
           QueryHandler
             .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified user '$userName'.")))
-            .handleError(e => e.getCause match {
-              case _: UniquePropertyValueValidationException =>
-                new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", e)
-              case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", e)
+            .handleError(error => (error, error.getCause) match {
+              case (_, _: UniquePropertyValueValidationException) =>
+                new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", error)
+              case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
+                new IllegalStateException(s"Failed to create the specified user '$userName': $followerError", error)
+              case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", error)
             })
         )
       } finally {
@@ -124,7 +126,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': User does not exist.")))
-          .handleError(e => new IllegalStateException(s"Failed to alter the specified user '$userName'.", e))
+          .handleError {
+            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to alter the specified user '$userName': $followerError", error)
+            case error => new IllegalStateException(s"Failed to alter the specified user '$userName'.", error)
+          }
           .handleResult((_, value) => {
             val maybeThrowable = initialPassword match {
               case Some(password) =>
@@ -182,10 +188,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("new"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
-          .handleError(e => e.getCause match {
-            case _: UniquePropertyValueValidationException =>
-              new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", e)
-            case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", e)
+          .handleError(error => (error, error.getCause) match {
+            case (_, _: UniquePropertyValueValidationException) =>
+              new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", error)
+            case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to create the specified role '$roleName': $followerError", error)
+            case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", error)
           }),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
@@ -221,8 +229,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to delete the specified role '$roleName': Role does not exist.")))
-          .handleError(e => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", e))
-      )
+          .handleError {
+            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to delete the specified role '$roleName': $followerError", error)
+            case error => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
+          })
 
     // GRANT ROLE foo TO user
     case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping, securityContext) =>
@@ -238,6 +249,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleError {
             case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
               new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)
+            case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName': $followerError", e)
             case e => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -253,7 +266,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role", "user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
-        new QueryHandler,
+        QueryHandler.handleError {
+          case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
+          case error => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
+        },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -405,10 +422,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))),
         QueryHandler
           .handleNoResult(() => Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName': ")))
-          .handleError(e => e.getCause match {
-            case _: UniquePropertyValueValidationException =>
-              new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", e)
-            case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", e)
+          .handleError(error => (error, error.getCause) match {
+            case (_, _: UniquePropertyValueValidationException) =>
+              new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", error)
+            case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to create the specified database '$dbName': $followerError", error)
+            case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
           })
       )
 
@@ -422,7 +441,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
-        new QueryHandler,
+        QueryHandler.handleError {
+          case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            new IllegalStateException(s"Failed to delete the specified database '$dbName': $followerError", error)
+          case error => new IllegalStateException(s"Failed to delete the specified database '$dbName'.", error)
+        },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -442,10 +465,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             DatabaseStatus.Online
           )
         ),
-        QueryHandler.handleResult((offset, value) => {
-          if (offset == 2 && (value eq Values.NO_VALUE)) Some(new DatabaseNotFoundException(s"Failed to start the specified database '$dbName': Database does not exist."))
-          else None
-        })
+        QueryHandler
+          .handleResult((offset, value) => {
+            if (offset == 2 && (value eq Values.NO_VALUE)) Some(new DatabaseNotFoundException(s"Failed to start the specified database '$dbName': Database does not exist."))
+            else None
+          })
+          .handleError {
+            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to start the specified database '$dbName': $followerError", error)
+            case error => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
+          }
       )
 
     // STOP DATABASE foo
@@ -463,7 +492,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             DatabaseStatus.Offline
           )
         ),
-        new QueryHandler,
+        QueryHandler.handleError {
+          case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            new IllegalStateException(s"Failed to stop the specified database '$dbName': $followerError", error)
+          case error => new IllegalStateException(s"Failed to stop the specified database '$dbName'.", error)
+        },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -555,6 +588,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         .handleError {
           case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
             new InvalidArgumentsException(s"$startOfErrorMessage: Role '$roleName' does not exist.", e)
+          case e: HasStatus if e.status() == Status.Cluster.NotALeader => new IllegalStateException(s"$startOfErrorMessage: $followerError", e)
           case e => new IllegalStateException(s"$startOfErrorMessage.", e)
         },
       source
@@ -606,16 +640,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
-      new QueryHandler,
+      QueryHandler.handleError {
+        case e: HasStatus if e.status() == Status.Cluster.NotALeader => new IllegalStateException(s"$startOfErrorMessage: $followerError", e)
+        case e => new IllegalStateException(s"$startOfErrorMessage.", e)
+      },
       source
     )
-  }
-
-  private def describePrivilege(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier, revokeType: ast.RevokeType): String = {
-    // TODO: Improve description - or unify with main prettifier
-    val (res, db, segment) = Prettifier.extractScope(resource, database, qualifier)
-    val start = if (revokeType.name.nonEmpty) revokeType.name + " " else ""
-    s"$start$actionName $res ON GRAPH $db $segment"
   }
 
   override def isApplicableAdministrationCommand(logicalPlanState: LogicalPlanState): Boolean =

@@ -512,9 +512,18 @@ public class Cluster
     public CoreClusterMember coreTx( String databaseName, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
     {
+      return coreTx( databaseName, Role.LEADER, op, timeout, timeUnit );
+    }
+
+    /**
+     * Perform a transaction against a member with given role of the core cluster, retrying as necessary.
+     */
+    public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
+            throws Exception
+    {
         ThrowingSupplier<CoreClusterMember,Exception> supplier = () ->
         {
-            CoreClusterMember member = awaitLeader( databaseName, timeout, timeUnit );
+            CoreClusterMember member = awaitCoreMemberWithRole( databaseName, role, timeout, timeUnit );
             GraphDatabaseFacade db = (GraphDatabaseFacade) member.managementService().database( databaseName );
             if ( db == null )
             {
