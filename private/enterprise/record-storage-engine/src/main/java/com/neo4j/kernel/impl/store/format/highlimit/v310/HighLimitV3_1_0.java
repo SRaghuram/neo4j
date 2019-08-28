@@ -25,7 +25,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
-import org.neo4j.storageengine.api.LuceneCapability;
+import org.neo4j.storageengine.api.IndexCapabilities;
 
 /**
  * Record format with very high limits, 50-bit per ID, while at the same time keeping store size small.
@@ -51,7 +51,7 @@ public class HighLimitV3_1_0 extends BaseRecordFormats
                 RecordStorageCapability.RELATIONSHIP_TYPE_3BYTES,
                 RecordStorageCapability.SCHEMA,
                 RecordStorageCapability.SECONDARY_RECORD_UNITS,
-                LuceneCapability.LUCENE_5 );
+                IndexCapabilities.LuceneCapability.LUCENE_5 );
     }
 
     @Override
