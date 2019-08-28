@@ -233,6 +233,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
+  override protected def validatePlan(plan: LogicalPlan): Unit = breakingPolicy.breakOn(plan)
+
   override protected def initialArgument(leftLeaf: LogicalPlan): ApplyBufferDefinitionBuild = {
     val initialArgumentSlotOffset = slotConfigurations(leftLeaf.id).getArgumentLongOffsetFor(Id.INVALID_ID)
     stateDefinition.initBuffer = stateDefinition.newApplyBuffer(NO_PIPELINE, initialArgumentSlotOffset, SlotAllocation.INITIAL_SLOT_CONFIGURATION)

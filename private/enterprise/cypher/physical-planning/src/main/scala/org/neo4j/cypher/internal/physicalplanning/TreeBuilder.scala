@@ -65,6 +65,7 @@ trait TreeBuilder[T, ARGUMENT] {
   protected def onOneChildPlan(plan: LogicalPlan, source: T, argument: ARGUMENT): T
   protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan, lhs: T, argument: ARGUMENT): ARGUMENT
   protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: T, rhs: T, argument: ARGUMENT): T
+  protected def validatePlan(plan: LogicalPlan)
 
   def build(plan: LogicalPlan): T = {
 
@@ -79,6 +80,7 @@ trait TreeBuilder[T, ARGUMENT] {
     def populate(plan: LogicalPlan): Unit = {
       var current = plan
       while (!current.isLeaf) {
+        validatePlan(current)
         planStack.push(current)
         current = current.lhs.get
       }
@@ -113,7 +115,7 @@ trait TreeBuilder[T, ARGUMENT] {
           planStack.push(current)
           populate(right)
 
-        case (Some(left), Some(right)) if comingFrom eq right =>
+        case (Some(_), Some(right)) if comingFrom eq right =>
           val rightOutput = outputStack.pop()
           val leftOutput = outputStack.pop()
           val output = onTwoChildPlanComingFromRight(current, leftOutput, rightOutput, argument)

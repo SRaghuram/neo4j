@@ -91,7 +91,24 @@ class TreeBuilderTest extends CypherFunSuite {
       OnLeaf("g", Some("argC")),
       OnTwoChildPlanComingFromRight("c", "F", "G", Some("argC")),
       OnTwoChildPlanComingFromRight("a", "B", "C", Some("argA"))
-    )
+      )
+  }
+
+  test("fail gracefully on invalid plans") {
+    // given
+    val treeBuilder = new TestTreeBuilder
+    val logicalPlan =
+      branch("a",
+             branch("b",
+                    link("d", leaf("h")),
+                    leaf("e")),
+             branch("INVALID",
+                    leaf("f"),
+                    leaf("g")))
+
+
+    // when
+    a [GracefulError] should be thrownBy treeBuilder.build(logicalPlan)
   }
 
   class TestTreeBuilder extends TreeBuilder[String, Option[String]] {
@@ -128,6 +145,11 @@ class TreeBuilderTest extends CypherFunSuite {
       callbacks += OnTwoChildPlanComingFromRight(str, lhs, rhs, argument)
       str.toUpperCase
     }
+
+    override protected def validatePlan(plan: LogicalPlan): Unit = plan match {
+      case StringPlan("INVALID", _, _ ) => throw new GracefulError
+      case _ => //do nothing
+    }
   }
 
   def leaf(str: String) = StringPlan(str, None, None)
@@ -147,4 +169,6 @@ class TreeBuilderTest extends CypherFunSuite {
   case class OnOneChildPlan(str: String, source: String, arg: Option[String]) extends CallBack
   case class OnTwoChildPlanComingFromLeft(str: String, lhs: String, arg: Option[String]) extends CallBack
   case class OnTwoChildPlanComingFromRight(str: String, lhs: String, rhs: String, arg: Option[String]) extends CallBack
+
+  class GracefulError extends RuntimeException
 }
