@@ -499,7 +499,8 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @Admin
-    @Description( "Begin profiling all threads within the given job group, for the specified duration." )
+    @Description( "Begin profiling all threads within the given job group, for the specified duration. " +
+            "Note that profiling incurs overhead to a system, and will slow it down." )
     @Procedure( name = "dbms.scheduler.profile", mode = DBMS )
     public Stream<ProfileResult> schedulerProfileGroup(
             @Name( "method" ) String method,
