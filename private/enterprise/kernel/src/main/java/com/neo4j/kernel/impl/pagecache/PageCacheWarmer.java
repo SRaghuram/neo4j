@@ -22,6 +22,7 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -42,6 +43,7 @@ import static java.util.Comparator.naturalOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_whitelist;
 import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
+import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 
 /**
@@ -118,9 +120,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     {
         try
         {
-            String whitelistFilterRegex = config.get( pagecache_warmup_prefetch_whitelist );
+            Pattern whitelist = Pattern.compile( config.get( pagecache_warmup_prefetch_whitelist ) );
             pageCache.listExistingMappings().parallelStream()
-                    .filter( pagedFile -> pagedFile.file().toString().matches( whitelistFilterRegex ) )
+                    .filter( pagedFile -> whitelist.matcher( pagedFile.file().toString() ).matches() )
                     .forEach( this::touchAllPages );
         }
         catch ( IOException e )
@@ -131,13 +133,13 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     private void touchAllPages( PagedFile pagedFile )
     {
-        try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_READ_AHEAD ) )
+        try ( PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK ) )
         {
-            do
+            while ( cursor.next() )
             {
-                cursor.getByte(); //read something to make sure page is loaded and loop not removed by compiler
+                // Iterate over all pages
             }
-            while ( cursor.next() );
+            pageCache.reportEvents();
         }
         catch ( IOException e )
         {

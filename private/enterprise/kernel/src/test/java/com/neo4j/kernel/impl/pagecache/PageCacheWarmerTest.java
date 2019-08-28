@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -27,6 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
@@ -395,6 +397,96 @@ class PageCacheWarmerTest
         Collections.shuffle( resortedProfiles );
         Collections.sort( resortedProfiles );
         assertThat( resortedProfiles, is( sortedProfiles ) );
+    }
+
+    @Test
+    void canPrefetchOneFile() throws IOException
+    {
+        int numPages = 7;
+
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
+        {
+            int pageSize = pageCache.pageSize();
+            File testFile = testDirectory.createFile( "testfile" );
+            fs.write( testFile ).writeAll( ByteBuffer.wrap( new byte[ numPages * pageSize] ) );
+
+            try ( PagedFile ignore = pageCache.map( testFile, pageCache.pageSize(), StandardOpenOption.CREATE ) )
+            {
+
+                Config config = Config.newBuilder()
+                        .set( GraphDatabaseSettings.pagecache_warmup_prefetch, true )
+                        .build();
+                PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config );
+                warmer.start();
+                warmer.stop();
+            }
+            pageCache.reportEvents();
+            assertEquals( numPages, cacheTracer.faults() );
+        }
+    }
+
+    @Test
+    void canPrefetchMultipleFiles() throws IOException
+    {
+        int numPagesFile1 = 7;
+        int numPagesFile2 = 3;
+
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
+        {
+            int pageSize = pageCache.pageSize();
+            File testFile1 = testDirectory.createFile( "testfile1" );
+            File testFile2 = testDirectory.createFile( "testfile2" );
+            fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
+            fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
+
+            try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize(), StandardOpenOption.READ );
+                  PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize(), StandardOpenOption.READ ) )
+            {
+
+                Config config = Config.defaults( GraphDatabaseSettings.pagecache_warmup_prefetch, true );
+                PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config );
+                warmer.start();
+                warmer.stop();
+            }
+            pageCache.reportEvents();
+            assertEquals( numPagesFile1 + numPagesFile2, cacheTracer.faults() );
+        }
+    }
+
+    @Test
+    void canFilterPrefetchFiles() throws IOException
+    {
+        int numPagesFile1 = 7;
+        int numPagesFile2 = 3;
+        int numPagesFile3 = 5;
+
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg ) )
+        {
+            int pageSize = pageCache.pageSize();
+            File testFile1 = testDirectory.createFile( "testfile1.taken" );
+            File testFile2 = testDirectory.createFile( "testfile.ignored" );
+            File testFile3 = testDirectory.createFile( "testfile2.taken" );
+            fs.write( testFile1 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile1 * pageSize] ) );
+            fs.write( testFile2 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile2 * pageSize] ) );
+            fs.write( testFile3 ).writeAll( ByteBuffer.wrap( new byte[ numPagesFile3 * pageSize] ) );
+
+            try ( PagedFile pf1 = pageCache.map( testFile1, pageCache.pageSize() );
+                  PagedFile pf2 = pageCache.map( testFile2, pageCache.pageSize() );
+                  PagedFile pf3 = pageCache.map( testFile3, pageCache.pageSize() ) )
+            {
+
+                Config config = Config.newBuilder()
+                        .set( GraphDatabaseSettings.pagecache_warmup_prefetch, true )
+                        .set( GraphDatabaseSettings.pagecache_warmup_prefetch_whitelist, ".*\\.taken" )
+                        .build();
+                PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config );
+                warmer.start();
+                warmer.stop();
+            }
+            pageCache.reportEvents();
+
+            assertEquals( numPagesFile1 + numPagesFile3, cacheTracer.faults() );
+        }
     }
 
     private void assertFilesExists( List<StoreFileMetadata> fileListing )
