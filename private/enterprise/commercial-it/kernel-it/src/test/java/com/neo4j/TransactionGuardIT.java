@@ -462,7 +462,7 @@ class TransactionGuardIT
 
     private static String transactionUri( CommercialNeoServer neoServer )
     {
-        return neoServer.baseUri().toString() + "db/data/transaction";
+        return neoServer.baseUri().toString() + "db/neo4j/tx";
     }
 
     private static URL prepareTestImportFile( int lines ) throws IOException

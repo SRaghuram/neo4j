@@ -17,7 +17,7 @@ import javax.ws.rs.core.Response;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.relativeDatabaseManagePath;
+import static com.neo4j.server.rest.causalclustering.CausalClusteringService.relativeDatabaseClusterPath;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -37,7 +37,7 @@ abstract class ClusterMemberStatus implements CausalClusteringStatus
     @Override
     public final Response discover()
     {
-        return output.ok( new CausalClusteringDiscovery( relativeDatabaseManagePath( db.databaseName() ) ) );
+        return output.ok( new CausalClusteringDiscovery( relativeDatabaseClusterPath( db.databaseName() ) ) );
     }
 
     Response statusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,

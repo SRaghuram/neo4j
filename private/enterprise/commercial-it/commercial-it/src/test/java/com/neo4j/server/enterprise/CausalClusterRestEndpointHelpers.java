@@ -32,6 +32,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.net.http.HttpClient.newBuilder;
 import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpResponse.BodySubscribers.mapping;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
@@ -45,6 +46,7 @@ final class CausalClusterRestEndpointHelpers
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
     private static final HttpClient HTTP_CLIENT = newHttpClient();
+    private static final HttpClient REDIRECT_HTTP_CLIENT = newBuilder().followRedirects( HttpClient.Redirect.NORMAL ).build();
 
     private CausalClusterRestEndpointHelpers()
     {
@@ -105,9 +107,24 @@ final class CausalClusterRestEndpointHelpers
         return ((GraphDatabaseFacade) core.defaultDatabaseService()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
     }
 
-    static HttpResponse<Map<String,Object>> queryDiscoveryEndpoint( Neo4j server, String databaseName )
+    static HttpResponse<Map<String,Object>> queryClusterEndpoint( Neo4j server, String databaseName )
     {
-        return sendGET( discoveryEndpoint( server, databaseName ), ofJson() );
+        return sendGET( clusterEndpoint( server, databaseName ), ofJson() );
+    }
+
+    static HttpResponse<Map<String,Object>> queryLegacyClusterEndpoint( Neo4j server )
+    {
+        return sendGET( legacyClusterEndpoint( server ), ofJson(), true );
+    }
+
+    static HttpResponse<Boolean> queryLegacyClusterEndpoint( Neo4j server, String path )
+    {
+        return sendGET( legacyClusterEndpoint( server, path ), ofBoolean(), true );
+    }
+
+    static HttpResponse<Map<String,Object>> queryLegacyClusterStatusEndpoint( Neo4j server )
+    {
+        return sendGET( legacyClusterEndpoint( server, "status" ), ofJson(), true );
     }
 
     static HttpResponse<Boolean> queryAvailabilityEndpoint( Neo4j server, String databaseName )
@@ -130,29 +147,39 @@ final class CausalClusterRestEndpointHelpers
         return sendGET( statusEndpoint( server, databaseName ), ofJson() );
     }
 
-    private static URI discoveryEndpoint( Neo4j server, String databaseName )
+    private static URI legacyClusterEndpoint( Neo4j server )
     {
-        return server.httpURI().resolve( "/db/" + databaseName + "/manage/causalclustering" );
+        return server.httpURI().resolve( "/db/manage/server/causalclustering" );
+    }
+
+    private static URI legacyClusterEndpoint( Neo4j server, String path )
+    {
+        return server.httpURI().resolve( "/db/manage/server/causalclustering/" + path );
+    }
+
+    private static URI clusterEndpoint( Neo4j server, String databaseName )
+    {
+        return server.httpURI().resolve( "/db/" + databaseName + "/cluster" );
     }
 
     private static URI readOnlyEndpoint( Neo4j server, String databaseName )
     {
-        return server.httpURI().resolve( "/db/" + databaseName + "/manage/causalclustering/read-only" );
+        return server.httpURI().resolve( "/db/" + databaseName + "/cluster/read-only" );
     }
 
     private static URI writableEndpoint( Neo4j server, String databaseName )
     {
-        return server.httpURI().resolve( "/db/" + databaseName + "/manage/causalclustering/writable" );
+        return server.httpURI().resolve( "/db/" + databaseName + "/cluster/writable" );
     }
 
     private static URI availabilityEndpoint( Neo4j server, String databaseName )
     {
-        return server.httpURI().resolve( "/db/" + databaseName + "/manage/causalclustering/available" );
+        return server.httpURI().resolve( "/db/" + databaseName + "/cluster/available" );
     }
 
     private static URI statusEndpoint( Neo4j server, String databaseName )
     {
-        return server.httpURI().resolve( "/db/" + databaseName + "/manage/causalclustering/status" );
+        return server.httpURI().resolve( "/db/" + databaseName + "/cluster/status" );
     }
 
     private static HttpResponse<Boolean> queryBooleanEndpoint( URI uri )
@@ -162,14 +189,20 @@ final class CausalClusterRestEndpointHelpers
 
     private static <T> HttpResponse<T> sendGET( URI uri, BodyHandler<T> bodyHandler )
     {
+        return sendGET( uri, bodyHandler, false );
+    }
+
+    private static <T> HttpResponse<T> sendGET( URI uri, BodyHandler<T> bodyHandler, boolean allowsRedirect )
+    {
         var request = HttpRequest.newBuilder( uri )
                 .header( ACCEPT, APPLICATION_JSON )
                 .GET()
                 .build();
 
+        var client = allowsRedirect ? REDIRECT_HTTP_CLIENT : HTTP_CLIENT;
         try
         {
-            return HTTP_CLIENT.send( request, bodyHandler );
+            return client.send( request, bodyHandler );
         }
         catch ( IOException e )
         {

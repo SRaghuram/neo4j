@@ -11,7 +11,9 @@ import com.neo4j.metrics.source.server.ServerThreadViewSetter;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import com.neo4j.server.rest.DatabaseRoleInfoServerModule;
+import com.neo4j.server.rest.LegacyManagementModule;
 import com.neo4j.server.rest.causalclustering.CausalClusteringService;
+import com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService;
 import org.eclipse.jetty.util.thread.ThreadPool;
 
 import java.util.ArrayList;
@@ -103,7 +105,8 @@ public class CommercialNeoServer extends CommunityNeoServer
     protected Iterable<ServerModule> createServerModules()
     {
         List<ServerModule> modules = new ArrayList<>();
-        modules.add( new DatabaseRoleInfoServerModule( webServer, getConfig(), userLogProvider ) );
+        modules.add( new DatabaseRoleInfoServerModule( webServer, getConfig() ) );
+        modules.add( new LegacyManagementModule( webServer, getConfig() ) );
         super.createServerModules().forEach( modules::add );
         return modules;
     }
@@ -114,7 +117,8 @@ public class CommercialNeoServer extends CommunityNeoServer
         var result = new ArrayList<>( super.getUriWhitelist() );
         if ( !getConfig().get( CausalClusteringSettings.status_auth_enabled ) )
         {
-            result.add( CausalClusteringService.databaseManageUriPattern( getConfig() ) );
+            result.add( CausalClusteringService.databaseClusterUriPattern( getConfig() ) );
+            result.add( LegacyCausalClusteringRedirectService.databaseLegacyClusterUriPattern( getConfig() ) );
         }
         return result;
     }

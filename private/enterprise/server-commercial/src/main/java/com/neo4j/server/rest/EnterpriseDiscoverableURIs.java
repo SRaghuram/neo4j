@@ -25,7 +25,7 @@ public class EnterpriseDiscoverableURIs
         var mode = config.get( CommercialEditionSettings.mode );
         if ( mode == CORE || mode == READ_REPLICA )
         {
-            discoverableURIsBuilder.addEndpoint( CausalClusteringService.NAME, CausalClusteringService.absoluteDatabaseManagePath( config ) );
+            discoverableURIsBuilder.addEndpoint( CausalClusteringService.NAME, CausalClusteringService.absoluteDatabaseClusterPath( config ) );
         }
 
         return discoverableURIsBuilder.build();

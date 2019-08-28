@@ -577,7 +577,7 @@ public class ConnectionTrackingIT
     private static String txCommitUri( boolean encrypted )
     {
         URI baseUri = encrypted ? neo4j.httpsURI() : neo4j.httpURI();
-        return baseUri.resolve( "db/data/transaction/commit" ).toString();
+        return baseUri.resolve( "db/neo4j/tx/commit" ).toString();
     }
 
     private static RawPayload query( String statement )

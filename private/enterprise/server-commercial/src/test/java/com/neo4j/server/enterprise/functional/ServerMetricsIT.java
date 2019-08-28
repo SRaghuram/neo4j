@@ -67,7 +67,7 @@ class ServerMetricsIT
             server.start();
 
             String endpoint = "http://localhost:" + server.baseUri().getPort() +
-                              ServerSettings.db_api_path.defaultValue() + "/data/transaction/commit";
+                              ServerSettings.db_api_path.defaultValue() + "/neo4j/tx/commit";
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder( URI.create( endpoint ) )

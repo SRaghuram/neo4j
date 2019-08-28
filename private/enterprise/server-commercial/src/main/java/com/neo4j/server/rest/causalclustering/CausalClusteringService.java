@@ -17,15 +17,13 @@ import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
-@Path( CausalClusteringService.DB_MANAGE_PATH )
+@Path( CausalClusteringService.DB_CLUSTER_PATH )
 public class CausalClusteringService
 {
-    public static final String NAME = "causalclustering";
-
+    public static final String NAME = "cluster";
+    private static final String CLUSTER_PATH = "/" + NAME;
     private static final String DB_NAME = "databaseName";
-    private static final String MANAGE_PATH = "/manage/" + NAME;
-
-    static final String DB_MANAGE_PATH = "/{" + DB_NAME + "}" + MANAGE_PATH;
+    static final String DB_CLUSTER_PATH = "/{" + DB_NAME + "}" + CLUSTER_PATH;
 
     static final String AVAILABLE = "available";
     static final String WRITABLE = "writable";
@@ -73,18 +71,18 @@ public class CausalClusteringService
         return status.description();
     }
 
-    public static Pattern databaseManageUriPattern( Config config )
+    public static Pattern databaseClusterUriPattern( Config config )
     {
-        return Pattern.compile( config.get( ServerSettings.db_api_path ).getPath() + "/[^/]*" + MANAGE_PATH );
+        return Pattern.compile( config.get( ServerSettings.db_api_path ).getPath() + "/[^/]*" + CLUSTER_PATH );
     }
 
-    public static String absoluteDatabaseManagePath( Config config )
+    public static String absoluteDatabaseClusterPath( Config config )
     {
-        return config.get( ServerSettings.db_api_path ).getPath() + DB_MANAGE_PATH;
+        return config.get( ServerSettings.db_api_path ).getPath() + DB_CLUSTER_PATH;
     }
 
-    static String relativeDatabaseManagePath( String databaseName )
+    static String relativeDatabaseClusterPath( String databaseName )
     {
-        return databaseName + MANAGE_PATH;
+        return databaseName + CLUSTER_PATH;
     }
 }

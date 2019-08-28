@@ -35,7 +35,7 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertNull( discoverableURIs.get( "causalclustering" ) );
+        assertNull( discoverableURIs.get( "cluster" ) );
     }
 
     @Test
@@ -48,7 +48,7 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "causalclustering" ), equalTo( "/db/{databaseName}/manage/causalclustering" ) );
+        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
     }
 
     @Test
@@ -61,7 +61,7 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "causalclustering" ), equalTo( "/db/{databaseName}/manage/causalclustering" ) );
+        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/db/{databaseName}/cluster" ) );
     }
 
     @Test
@@ -77,7 +77,7 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "causalclustering" ), equalTo( "/a/new/core/db/path/{databaseName}/manage/causalclustering" ) );
+        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/a/new/core/db/path/{databaseName}/cluster" ) );
     }
 
     @Test
@@ -93,7 +93,7 @@ class EnterpriseDiscoverableURIsTest
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
 
         // Then
-        assertThat( discoverableURIs.get( "causalclustering" ), equalTo( "/a/new/read_replica/db/path/{databaseName}/manage/causalclustering" ) );
+        assertThat( discoverableURIs.get( "cluster" ), equalTo( "/a/new/read_replica/db/path/{databaseName}/cluster" ) );
     }
 
     private static Map<String,Object> findEnterpriseDiscoverableURIs( Config config )

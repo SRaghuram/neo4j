@@ -30,7 +30,7 @@ class RESTInteraction extends AbstractRESTInteraction
     @Override
     String commitPath()
     {
-        return "db/data/transaction/commit";
+        return "db/neo4j/tx/commit";
     }
 
     @Override

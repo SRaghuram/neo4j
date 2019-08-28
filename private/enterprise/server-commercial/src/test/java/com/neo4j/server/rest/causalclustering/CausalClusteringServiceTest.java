@@ -11,9 +11,9 @@ import java.net.URI;
 
 import org.neo4j.configuration.Config;
 
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.absoluteDatabaseManagePath;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.databaseManageUriPattern;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.relativeDatabaseManagePath;
+import static com.neo4j.server.rest.causalclustering.CausalClusteringService.absoluteDatabaseClusterPath;
+import static com.neo4j.server.rest.causalclustering.CausalClusteringService.databaseClusterUriPattern;
+import static com.neo4j.server.rest.causalclustering.CausalClusteringService.relativeDatabaseClusterPath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,16 +26,16 @@ class CausalClusteringServiceTest
     {
         var config = Config.defaults( db_api_path, URI.create( "/custom/db" ) );
 
-        var pattern = databaseManageUriPattern( config );
+        var pattern = databaseClusterUriPattern( config );
 
-        assertTrue( pattern.matcher( "/custom/db/neo4j/manage/causalclustering" ).matches() );
-        assertTrue( pattern.matcher( "/custom/db/foobar/manage/causalclustering" ).matches() );
-        assertTrue( pattern.matcher( "/custom/db/system/manage/causalclustering" ).matches() );
+        assertTrue( pattern.matcher( "/custom/db/neo4j/cluster" ).matches() );
+        assertTrue( pattern.matcher( "/custom/db/foobar/cluster" ).matches() );
+        assertTrue( pattern.matcher( "/custom/db/system/cluster" ).matches() );
 
-        assertFalse( pattern.matcher( "/db/neo4j/manage/causalclustering" ).matches() );
+        assertFalse( pattern.matcher( "/db/neo4j/cluster" ).matches() );
         assertFalse( pattern.matcher( "/custom/db/neo4j/causalclustering" ).matches() );
-        assertFalse( pattern.matcher( "/custom/db/manage/causalclustering" ).matches() );
-        assertFalse( pattern.matcher( "/custom/db/neo4j/system/manage/causalclustering" ).matches() );
+        assertFalse( pattern.matcher( "/custom/db/cluster" ).matches() );
+        assertFalse( pattern.matcher( "/custom/db/neo4j/system/cluster" ).matches() );
     }
 
     @Test
@@ -43,16 +43,16 @@ class CausalClusteringServiceTest
     {
         var config = Config.defaults( db_api_path, URI.create( "/foo/bar/db" ) );
 
-        var path = absoluteDatabaseManagePath( config );
+        var path = absoluteDatabaseClusterPath( config );
 
-        assertEquals( "/foo/bar/db/{databaseName}/manage/causalclustering", path );
+        assertEquals( "/foo/bar/db/{databaseName}/cluster", path );
     }
 
     @Test
     void shouldReturnRelativeDatabaseManagePath()
     {
-        var path = relativeDatabaseManagePath( "hello" );
+        var path = relativeDatabaseClusterPath( "hello" );
 
-        assertEquals( "hello/manage/causalclustering", path );
+        assertEquals( "hello/cluster", path );
     }
 }

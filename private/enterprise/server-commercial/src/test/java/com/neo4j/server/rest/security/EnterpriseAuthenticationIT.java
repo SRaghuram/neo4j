@@ -47,11 +47,10 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
 
         // When
         String method = "POST";
-        String path = "db/data/transaction/commit";
         HTTP.RawPayload payload = HTTP.RawPayload.quotedJson(
                 "{'statements':[{'statement':'CALL dbms.security.listRoles()'}]}" );
         HTTP.Response response = HTTP.withBasicAuth( "neo4j", "secret" )
-                .request( method, server.baseUri().resolve( path ).toString(), payload );
+                .request( method, txCommitURL(), payload, false );
 
         // Then
         assertThat(response.status(), equalTo(200));
@@ -74,10 +73,9 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
 
         // When
         String method = "POST";
-        String path = "db/data/transaction/commit";
         HTTP.RawPayload payload = HTTP.RawPayload.quotedJson(
                 "{'statements':[{'statement':'CALL dbms.listQueries()'}]}" );
-        HTTP.Response response = HTTP.request( method, server.baseUri().resolve( path ).toString(), payload );
+        HTTP.Response response = HTTP.request( method, txCommitURL(), payload );
 
         // Then
         assertThat(response.status(), equalTo(200));

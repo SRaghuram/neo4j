@@ -21,7 +21,9 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.getLeader;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryAvailabilityEndpoint;
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryDiscoveryEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryClusterEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterStatusEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryReadOnlyEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryWritableEndpoint;
@@ -97,14 +99,14 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void discoveryEndpointsAreReachable()
+    void clusterEndpointsAreReachable()
     {
         for ( var neo4j : cluster.getCoresAndReadReplicas() )
         {
-            var response = queryDiscoveryEndpoint( neo4j, KNOWN_DB );
+            var response = queryClusterEndpoint( neo4j, KNOWN_DB );
             assertEquals( OK.getStatusCode(), response.statusCode() );
 
-            var baseUri = neo4j.httpURI().resolve( "/db/" + KNOWN_DB + "/manage/causalclustering/" );
+            var baseUri = neo4j.httpURI().resolve( "/db/" + KNOWN_DB + "/cluster/" );
 
             var expectedBody = Map.of(
                     "available", baseUri.resolve( "available" ).toString(),
@@ -117,13 +119,33 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void discoveryEndpointsAreNotReachableForUnknownDatabase()
+    void clusterEndpointsAreNotReachableForUnknownDatabase()
     {
         for ( var neo4j : cluster.getCoresAndReadReplicas() )
         {
-            var response = queryDiscoveryEndpoint( neo4j, UNKNOWN_DB );
+            var response = queryClusterEndpoint( neo4j, UNKNOWN_DB );
             assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
             assertThat( response.body(), is( anEmptyMap() ) );
+        }
+    }
+
+    @Test
+    void shouldRedirectClusterEndpoints()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryLegacyClusterEndpoint( neo4j );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
+
+            var baseUri = neo4j.httpURI().resolve( "/db/" + KNOWN_DB + "/cluster/" );
+
+            var expectedBody = Map.of(
+                    "available", baseUri.resolve( "available" ).toString(),
+                    "writable", baseUri.resolve( "writable" ).toString(),
+                    "read-only", baseUri.resolve( "read-only" ).toString(),
+                    "status", baseUri.resolve( "status" ).toString() );
+
+            assertEquals( expectedBody, response.body() );
         }
     }
 
@@ -146,6 +168,17 @@ class CausalClusterRestEndpointsIT
             var response = queryAvailabilityEndpoint( neo4j, UNKNOWN_DB );
             assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
             assertFalse( response.body() );
+        }
+    }
+
+    @Test
+    void shouldRedirectAvailabilityEndpoints()
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryLegacyClusterEndpoint( neo4j, "available" );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
+            assertTrue( response.body() );
         }
     }
 
@@ -188,6 +221,33 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
+    void shouldRedirectWritableEndpoints()
+    {
+        for ( var core : cluster.getCores() )
+        {
+            var response = queryLegacyClusterEndpoint( core, "writable" );
+
+            if ( core == getLeader( cluster ) )
+            {
+                assertEquals( OK.getStatusCode(), response.statusCode() );
+                assertTrue( response.body() );
+            }
+            else
+            {
+                assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+                assertFalse( response.body() );
+            }
+        }
+
+        for ( var replica : cluster.getReadReplicas() )
+        {
+            var response = queryLegacyClusterEndpoint( replica, "writable" );
+            assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+            assertFalse( response.body() );
+        }
+    }
+
+    @Test
     void readOnlyEndpointsAreReachable()
     {
         for ( var core : cluster.getCores() )
@@ -222,6 +282,33 @@ class CausalClusterRestEndpointsIT
             var response = queryReadOnlyEndpoint( neo4j, UNKNOWN_DB );
             assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
             assertFalse( response.body() );
+        }
+    }
+
+    @Test
+    void shouldRedirectReadOnlyEndpoints()
+    {
+        for ( var core : cluster.getCores() )
+        {
+            var response = queryLegacyClusterEndpoint( core, "read-only" );
+
+            if ( core == getLeader( cluster ) )
+            {
+                assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
+                assertFalse( response.body() );
+            }
+            else
+            {
+                assertEquals( OK.getStatusCode(), response.statusCode() );
+                assertTrue( response.body() );
+            }
+        }
+
+        for ( var replica : cluster.getReadReplicas() )
+        {
+            var response = queryLegacyClusterEndpoint( replica, "read-only" );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
+            assertTrue( response.body() );
         }
     }
 
@@ -272,6 +359,16 @@ class CausalClusterRestEndpointsIT
             assertEventually( statusEndpoint( replica, KNOWN_DB ), votingMemberSetIs( hasSize( 3 ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), participatingInRaftGroup( false ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), millisSinceLastLeaderMessageSanityCheck( false ), 1, MINUTES );
+        }
+    }
+
+    @Test
+    void shouldRedirectStatusEndpoints() throws Exception
+    {
+        for ( var neo4j : cluster.getCoresAndReadReplicas() )
+        {
+            var response = queryLegacyClusterStatusEndpoint( neo4j );
+            assertEquals( OK.getStatusCode(), response.statusCode() );
         }
     }
 

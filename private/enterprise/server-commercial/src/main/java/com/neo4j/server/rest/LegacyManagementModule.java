@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.server.rest.causalclustering.CausalClusteringService;
+import com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService;
 
 import java.util.List;
 
@@ -14,12 +14,15 @@ import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.web.WebServer;
 
-public class DatabaseRoleInfoServerModule implements ServerModule
+/**
+ * This is the legacy management module.
+ */
+public class LegacyManagementModule implements ServerModule
 {
     private final WebServer server;
     private final Config config;
 
-    public DatabaseRoleInfoServerModule( WebServer server, Config config )
+    public LegacyManagementModule( WebServer server, Config config )
     {
         this.server = server;
         this.config = config;
@@ -40,11 +43,11 @@ public class DatabaseRoleInfoServerModule implements ServerModule
 
     private String mountPoint()
     {
-        return config.get( ServerSettings.db_api_path ).toString();
+        return config.get( ServerSettings.management_api_path ).toString();
     }
 
     private static List<Class<?>> jaxRsClasses()
     {
-        return List.of( CausalClusteringService.class );
+        return List.of( LegacyCausalClusteringRedirectService.class );
     }
 }
