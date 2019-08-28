@@ -64,9 +64,9 @@ class CoreFallBehindIT
             .withNumberOfReadReplicas( 0 )
             .withTimeout( 1000, SECONDS );
 
-    class DownloadMonitor implements PersistentSnapshotDownloader.Monitor
+    static class DownloadMonitor implements PersistentSnapshotDownloader.Monitor
     {
-        AtomicInteger systemDownloadCount = new AtomicInteger();
+        private AtomicInteger systemDownloadCount = new AtomicInteger();
 
         @Override
         public void startedDownloadingSnapshot( DatabaseId databaseId )
@@ -133,8 +133,9 @@ class CoreFallBehindIT
 
         // also check that the tracker of reconciled transaction IDs actually got updated as well
         TransactionIdStore txIdStore = staleFollower.resolveDependency( SYSTEM_DATABASE_NAME, TransactionIdStore.class );
+        long lastClosedTransactionId = txIdStore.getLastClosedTransactionId();
         ReconciledTransactionTracker reconciledTxTracker = staleFollower.resolveDependency( SYSTEM_DATABASE_NAME, ReconciledTransactionTracker.class );
-        assertEquals( txIdStore.getLastClosedTransactionId(), reconciledTxTracker.getLastReconciledTransactionId() );
+        assertEventually( reconciledTxTracker::getLastReconciledTransactionId, equalTo( lastClosedTransactionId ), 60, SECONDS );
     }
 
     private void forceRaftLogRotationAndPruning( CoreClusterMember core ) throws Exception
