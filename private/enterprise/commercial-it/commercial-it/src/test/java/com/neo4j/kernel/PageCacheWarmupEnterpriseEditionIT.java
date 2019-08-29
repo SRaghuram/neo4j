@@ -34,6 +34,7 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -56,8 +57,8 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 {
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
 
-    //@Rule
-    //public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Rule
+    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     @Rule

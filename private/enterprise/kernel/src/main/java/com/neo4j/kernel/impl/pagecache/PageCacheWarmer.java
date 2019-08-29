@@ -10,12 +10,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -37,6 +39,7 @@ import org.neo4j.io.pagecache.impl.FileIsNotMappedException;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
@@ -74,10 +77,10 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private final File profilesDirectory;
     private final Log log;
     private final ProfileRefCounts refCounts;
+    private final Config config;
     private volatile boolean stopped;
     private ExecutorService executor;
     private PageLoaderFactory pageLoaderFactory;
-    private Config config;
 
     PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config, Log log )
     {
@@ -110,14 +113,14 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     public synchronized void start()
     {
+        stopped = false;
         if ( config.get( pagecache_warmup_prefetch ) )
         {
             loadEverythingToPageCache(); //pre-fetch synchronous
-            stopped = true; //When pre-fetching there is nothing to 'start', disabling profiling
+            stop(); //Pre-fetching runs during startup and can be stopped when complete, disabling profiling
         }
         else
         {
-            stopped = false;
             executor = buildExecutorService( scheduler );
             pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
         }
@@ -129,14 +132,27 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         {
             Pattern whitelist = Pattern.compile( config.get( pagecache_warmup_prefetch_whitelist ) );
             log.info( "Warming up page cache by pre-fetching files matching regex: %s", whitelist.pattern() );
-            pageCache.listExistingMappings().parallelStream()
-                    .filter( pagedFile -> whitelist.matcher( pagedFile.file().toString() ).find() )
-                    .forEach( this::touchAllPages );
+            List<JobHandle> handles = new ArrayList<>();
+            for ( PagedFile pagedFile : pageCache.listExistingMappings() )
+            {
+                if ( whitelist.matcher( pagedFile.file().toString() ).find() )
+                {
+                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, () -> touchAllPages( pagedFile ) ) );
+                }
+            }
+            for ( JobHandle handle : handles )
+            {
+                handle.waitTermination();
+            }
             log.info( "Warming of page cache completed" );
         }
         catch ( IOException e )
         {
             throw new RuntimeException( "Could not list existing mappings in page cache", e );
+        }
+        catch ( ExecutionException | InterruptedException e )
+        {
+            throw new RuntimeException( "Got interrupted while warming up page cache", e );
         }
     }
 
@@ -145,7 +161,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         log.debug( "Pre-fetching %s", pagedFile.file().getName() );
         try ( PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK ) )
         {
-            while ( cursor.next() )
+            while ( cursor.next() && !stopped )
             {
                 // Iterate over all pages
             }
