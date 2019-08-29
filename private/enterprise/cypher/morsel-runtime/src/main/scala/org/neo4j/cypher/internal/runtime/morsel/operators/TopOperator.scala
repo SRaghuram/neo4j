@@ -227,8 +227,7 @@ object TopOperator {
         val mergedTopTable = topTables.next()
         while (topTables.hasNext) {
           val topTable = topTables.next()
-          topTable.sort()
-          topTable.iterator().forEachRemaining(mergedTopTable.add)
+          topTable.unorderedIterator().forEachRemaining(mergedTopTable.add)
         }
         mergedTopTable.sort()
         mergedTopTable.iterator()
