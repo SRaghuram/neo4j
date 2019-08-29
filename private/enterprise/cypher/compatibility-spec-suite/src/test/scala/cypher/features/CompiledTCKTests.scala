@@ -14,7 +14,7 @@ import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
 
 class CompiledTCKTests extends EnterpriseBaseTCKTests {
 
-  // If you want to only run a specific feature or scenario, go to the BaseTCKTests
+  // If you want to only run a specific feature or scenario, go to the EnterpriseBaseTCKTests
 
   @TestFactory
   def runCostCompiled(): util.Collection[DynamicTest] = {

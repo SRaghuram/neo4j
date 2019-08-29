@@ -72,6 +72,5 @@ object Configs {
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val Top                   : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
 }

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
 class CompiledAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
-  // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
+  // If you want to only run a specific feature or scenario, go to the EnterpriseBaseAcceptanceTest
 
   @TestFactory
   def runCostCompiled(): util.Collection[DynamicTest] = {

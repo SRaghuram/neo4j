@@ -156,7 +156,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop LIMIT 1"
 
-    val result = executeWith(Configs.All - Configs.Morsel, query)
+    val result = executeWith(Configs.All, query)
 
     result.toList should equal(List(Map("a.prop" -> 1)))
   }

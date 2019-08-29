@@ -15,7 +15,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 
 class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
-  // If you want to only run a specific feature or scenario, go to the BaseAcceptanceTest
+  // If you want to only run a specific feature or scenario, go to the EnterpriseBaseAcceptanceTest
 
   @TestFactory
   def runCostMorsel(): util.Collection[DynamicTest] = {

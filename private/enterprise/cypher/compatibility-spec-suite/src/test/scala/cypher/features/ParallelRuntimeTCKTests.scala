@@ -15,7 +15,7 @@ import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
 class ParallelRuntimeTCKTests extends EnterpriseBaseTCKTests {
 
-  // If you want to only run a specific feature or scenario, go to the BaseTCKTests
+  // If you want to only run a specific feature or scenario, go to the EnterpriseBaseTCKTests
 
   @TestFactory
   def runCostMorsel(): util.Collection[DynamicTest] = {
