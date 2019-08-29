@@ -146,6 +146,10 @@ class ParallelRuntimeUnwindNoFusingStressTest extends UnwindStressTestBase(ENTER
 // SORT
 class ParallelRuntimeSortTest extends SortTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 
+// TOP
+class ParallelRuntimeTopTest extends TopTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+class ParallelRuntimeTopNoFusingTest extends TopTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+
 // AGGREGATION
 class ParallelRuntimeParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)

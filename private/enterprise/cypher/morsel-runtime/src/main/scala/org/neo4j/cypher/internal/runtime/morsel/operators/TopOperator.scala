@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util
 import java.util.Comparator
+import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
@@ -20,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFa
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
-import org.neo4j.cypher.internal.runtime.{MemoryTracker, QueryContext, WithHeapUsageEstimation}
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryMemoryTracker, WithHeapUsageEstimation}
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -102,7 +103,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[MorselExecutionContext, TopTable] = {
       // TODO note: limit is only allowed to be an Int for top table. do this safely
-      val limit = LimitOperator.safeGetLimit(queryContext, state, resources, countExpression).toInt
+      val limit = LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression).toInt
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit))
       this
     }
@@ -151,32 +152,40 @@ case class TopOperator(workIdentity: WorkIdentity,
 
 object TopOperator {
 
-  class Factory(memoryTracker: MemoryTracker, comparator: Comparator[MorselExecutionContext], limit: Int) extends ArgumentStateFactory[TopTable] {
+  class Factory(memoryTracker: QueryMemoryTracker, comparator: Comparator[MorselExecutionContext], limit: Int) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): TopTable =
       new StandardTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): TopTable =
-    // TODO implement concurrent top table state
-      null
+      new ConcurrentTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
   }
 
   /**
    * MorselAccumulator which returns top `limit` rows
    */
   abstract class TopTable extends MorselAccumulator[MorselExecutionContext] {
-    def topRows(): java.util.Iterator[MorselExecutionContext]
+    private var sorted = false
+
+    final def topRows(): java.util.Iterator[MorselExecutionContext] = {
+      if (sorted) {
+        throw new IllegalArgumentException("Method should not be called more than once, per top table instance")
+      }
+      val rows = getTopRows
+      sorted = true
+      rows
+    }
+
+    protected def getTopRows: java.util.Iterator[MorselExecutionContext]
   }
 
   class StandardTopTable(override val argumentRowId: Long,
                          override val argumentRowIdsForReducers: Array[Long],
-                         memoryTracker: MemoryTracker,
+                         memoryTracker: QueryMemoryTracker,
                          comparator: Comparator[MorselExecutionContext],
                          limit: Int) extends TopTable with WithHeapUsageEstimation {
 
     private val topTable = new DefaultComparatorTopTable(comparator, limit)
-    private var sorted = false
 
-    // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: MorselExecutionContext): Unit = {
       while (morsel.isValidRow) {
         topTable.add(morsel.shallowCopy())
@@ -184,13 +193,46 @@ object TopOperator {
       }
     }
 
-    override def topRows(): util.Iterator[MorselExecutionContext] = {
-      if (sorted) {
-        throw new IllegalArgumentException("Method should not be called more than once, per top table instance")
-      }
+    override protected def getTopRows: util.Iterator[MorselExecutionContext] = {
       topTable.sort()
-      sorted = true
       topTable.iterator()
+    }
+
+    // TODO track heap usage
+    override def estimatedHeapUsage: Long = ???
+  }
+
+  class ConcurrentTopTable(override val argumentRowId: Long,
+                           override val argumentRowIdsForReducers: Array[Long],
+                           memoryTracker: QueryMemoryTracker,
+                           comparator: Comparator[MorselExecutionContext],
+                           limit: Int) extends TopTable with WithHeapUsageEstimation {
+
+    private val topTableByThread = new ConcurrentHashMap[Long, DefaultComparatorTopTable[MorselExecutionContext]]
+
+    override def update(morsel: MorselExecutionContext): Unit = {
+      val threadId = Thread.currentThread().getId
+      val topTable = topTableByThread.computeIfAbsent(threadId, _ => new DefaultComparatorTopTable(comparator, limit))
+      while (morsel.isValidRow) {
+        topTable.add(morsel.shallowCopy())
+        morsel.moveToNextRow()
+      }
+    }
+
+    override protected def getTopRows: util.Iterator[MorselExecutionContext] = {
+      val topTables = topTableByThread.values().iterator()
+      if (!topTables.hasNext) {
+        util.Collections.emptyIterator()
+      } else {
+        val mergedTopTable = topTables.next()
+        while (topTables.hasNext) {
+          val topTable = topTables.next()
+          topTable.sort()
+          topTable.iterator().forEachRemaining(mergedTopTable.add)
+        }
+        mergedTopTable.sort()
+        mergedTopTable.iterator()
+      }
     }
 
     // TODO track heap usage
