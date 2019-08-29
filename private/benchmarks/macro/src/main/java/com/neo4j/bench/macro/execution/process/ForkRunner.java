@@ -13,7 +13,7 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.process.JpsPid;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
-import com.neo4j.bench.common.process.PgerpAndPsPid;
+import com.neo4j.bench.common.process.PgrepAndPsPid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -191,7 +191,7 @@ public class ForkRunner
             JvmProcess.start( jvmProcessArgs,
                               outputRedirect,
                               errorRedirect,
-                              Arrays.asList( new JpsPid(), new PgerpAndPsPid() ) ).waitFor();
+                              Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) ).waitFor();
         }
         else
         {

@@ -133,4 +133,13 @@ public abstract class PidStrategy
             return false;
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "PidStrategy{" +
+               "pid=" + pid +
+               ", output='" + output + '\'' +
+               '}';
+    }
 }

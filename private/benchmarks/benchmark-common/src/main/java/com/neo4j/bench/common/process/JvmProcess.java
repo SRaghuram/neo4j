@@ -19,7 +19,7 @@ public class JvmProcess implements BaseProcess, HasPid
 {
     public static JvmProcess start( JvmProcessArgs jvmProcessArgs )
     {
-        return start( jvmProcessArgs, Redirect.INHERIT, Redirect.INHERIT, Lists.asList( new JpsPid(), new PgerpAndPsPid[]{new PgerpAndPsPid()} ) );
+        return start( jvmProcessArgs, Redirect.INHERIT, Redirect.INHERIT, Lists.asList( new JpsPid(), new PgrepAndPsPid[]{new PgrepAndPsPid()} ) );
     }
 
     public static JvmProcess start( JvmProcessArgs jvmProcessArgs, Redirect outputRedirect, Redirect errorRedirect, List<PidStrategy> discoverPidStrategy )
@@ -59,17 +59,22 @@ public class JvmProcess implements BaseProcess, HasPid
             pidStrategy.tryFindFor( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
             haveFoundPid = pidStrategy.pid().isPresent();
         }
-        if ( pidStrategy != null && pidStrategy.pid().isPresent() )
+        if ( pidStrategy.pid().isPresent() )
         {
             return pidStrategy.pid().get();
         }
-        process.stop();
-        throw new RuntimeException( "Failed to start process, and was not reported by 'jps'\n" +
-                                    "Process '-Dname' : '" + jvmProcessArgs.processName() + "'\n" +
-                                    "------------------  JPS Output  ----------------\n" +
-                                    discoverPidStrategy.stream().map( PidStrategy::toString ).collect( Collectors.joining( "\n " ) ) + "\n" +
-                                    "------------------  Process Output  ------------\n" +
-                                    process.infoString() );
+        else
+        {
+            process.stop();
+            throw new RuntimeException( "Failed to start process, and was not reported by 'jps'\n" +
+                                        "Process '-Dname' : '" + jvmProcessArgs.processName() + "'\n" +
+                                        "------------------  JPS Output  ----------------\n" +
+                                        discoverPidStrategy.stream().
+                                                map( PidStrategy::toString ).collect( Collectors.joining( "\n ---------------------- \n" ) ) +
+                                        "\n" +
+                                        "------------------  Process Output  ------------\n" +
+                                        process.infoString() );
+        }
     }
 
     private final ProcessWrapper process;

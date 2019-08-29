@@ -9,11 +9,6 @@ import com.neo4j.bench.common.util.Jvm;
 
 public class JpsPid extends PidStrategy
 {
-    public JpsPid()
-    {
-        super();
-    }
-
     @Override
     protected String[] getCommand( Jvm jvm )
     {

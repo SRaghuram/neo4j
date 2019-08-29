@@ -63,14 +63,14 @@ public class JpsPidTest
                                                                           JustForMain.class );
 
         JvmProcess jvmProcess = JvmProcess.start( jvmProcessArgs, ProcessBuilder.Redirect.INHERIT, ProcessBuilder.Redirect.INHERIT,
-                                                  Arrays.asList( new JpsPid(), new PgerpAndPsPid() ) );
+                                                  Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) );
         JpsPid jpsPid = new JpsPid();
-        PgerpAndPsPid pgerpAndPsPid = new PgerpAndPsPid();
+        PgrepAndPsPid pgrepAndPsPid = new PgrepAndPsPid();
 
         jpsPid.tryFindFor( jvm, Instant.now(), Duration.of( 5, ChronoUnit.MINUTES ), jvmProcessArgs.processName() );
-        pgerpAndPsPid.tryFindFor( jvm, Instant.now(), Duration.of( 5, ChronoUnit.MINUTES ), jvmProcessArgs.processName() );
+        pgrepAndPsPid.tryFindFor( jvm, Instant.now(), Duration.of( 5, ChronoUnit.MINUTES ), jvmProcessArgs.processName() );
         assertThat( jpsPid.pid().get(), equalTo( jvmProcess.pid().get() ) );
-        assertThat( pgerpAndPsPid.pid().get(), equalTo( jvmProcess.pid().get() ) );
+        assertThat( pgrepAndPsPid.pid().get(), equalTo( jvmProcess.pid().get() ) );
         jvmProcess.waitFor();
     }
 }

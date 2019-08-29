@@ -11,7 +11,7 @@ import com.neo4j.bench.common.process.JpsPid;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
-import com.neo4j.bench.common.process.PgerpAndPsPid;
+import com.neo4j.bench.common.process.PgrepAndPsPid;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.ScheduledProfilerRunner;
@@ -116,7 +116,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                 jvmProcessArgs,
                                                 outputRedirect,
                                                 errorRedirect,
-                                                Arrays.asList( new JpsPid(), new PgerpAndPsPid() ));
+                                                Arrays.asList( new JpsPid(), new PgrepAndPsPid() ));
 
         // if any, schedule runs of scheduled profilers
         ScheduledProfilerRunner scheduledProfilersRunner = ScheduledProfilerRunner.from(externalProfilers);
