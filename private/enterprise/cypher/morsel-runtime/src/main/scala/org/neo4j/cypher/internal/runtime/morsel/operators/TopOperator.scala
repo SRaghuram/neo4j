@@ -64,18 +64,17 @@ case class TopOperator(workIdentity: WorkIdentity,
       override def workIdentity: WorkIdentity = TopOperator.this.workIdentity
 
       override def prepareOutput(morsel: MorselExecutionContext,
-                                 context: QueryContext,
+                                 queryContext: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreTopOutput = {
-
-        val preTopped = ArgumentStateMap.map(argumentSlotOffset, morsel, preTop)
-        new PreTopOutput(preTopped, sink)
-      }
-
-      private def preTop(morsel: MorselExecutionContext): MorselExecutionContext = {
-        morsel
-        // TODO sort & compact the morsel
+        val limit = LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression)
+        val perArguments = if (limit <= 0) {
+          IndexedSeq.empty
+        } else {
+          ArgumentStateMap.map(argumentSlotOffset, morsel, argumentMorsel => argumentMorsel)
+        }
+        new PreTopOutput(perArguments, sink)
       }
     }
 
@@ -154,10 +153,18 @@ object TopOperator {
 
   class Factory(memoryTracker: QueryMemoryTracker, comparator: Comparator[MorselExecutionContext], limit: Int) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): TopTable =
-      new StandardTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
+      if (limit <= 0) {
+        ZeroTable(argumentRowId, argumentRowIdsForReducers)
+      } else {
+        new StandardTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
+      }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): TopTable =
-      new ConcurrentTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
+      if (limit <= 0) {
+        ZeroTable(argumentRowId, argumentRowIdsForReducers)
+      } else {
+        new ConcurrentTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
+      }
   }
 
   /**
@@ -176,6 +183,14 @@ object TopOperator {
     }
 
     protected def getTopRows: java.util.Iterator[MorselExecutionContext]
+  }
+
+  case class ZeroTable(override val argumentRowId: Long,
+                       override val argumentRowIdsForReducers: Array[Long]) extends TopTable {
+    override protected def getTopRows: util.Iterator[MorselExecutionContext] = util.Collections.emptyIterator()
+
+    override def update(data: MorselExecutionContext): Unit =
+      throw new IllegalStateException("Top table update() should never be called with LIMIT 0")
   }
 
   class StandardTopTable(override val argumentRowId: Long,
