@@ -9,17 +9,14 @@ import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
-import com.neo4j.bench.common.profiling.ScheduledProfiler.FixedRate;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ScheduledProfilerRunner
 {
@@ -95,20 +92,13 @@ public class ScheduledProfilerRunner
 
     private FixedRateValue getFixedRate( ScheduledProfiler scheduledProfiler )
     {
-        return Arrays.stream( scheduledProfiler.getClass().getMethods() )
-                .filter( method -> "onSchedule".equals( method.getName() ) )
-                .flatMap( method ->
-                    {
-                        FixedRate fixedRate = method.getAnnotation( FixedRate.class );
-                        if ( fixedRate != null )
-                        {
-                            return Stream.of( fixedRate );
-                        }
-                        return Stream.empty();
-                    })
-                .findFirst()
-                .map( fixedRate -> new FixedRateValue( fixedRate.period(), fixedRate.timeUnit() ) )
-                .orElseGet( () -> new FixedRateValue( 5, TimeUnit.SECONDS ) );
+        FixedRate fixedRate = scheduledProfiler.getClass().getAnnotation( FixedRate.class );
+
+        if ( fixedRate == null )
+        {
+            fixedRate = ScheduledProfiler.class.getAnnotation( FixedRate.class );
+        }
+        return new FixedRateValue( fixedRate.period(), fixedRate.timeUnit() );
     }
 
     static class FixedRateValue
