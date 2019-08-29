@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
@@ -55,6 +56,8 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
         TransactionLogCounters transactionLogCounters();
 
         CheckpointCounters checkpointCounters();
+
+        FileSystemAbstraction fileSystem();
     }
 
     public DatabaseMetricsExtensionFactory()

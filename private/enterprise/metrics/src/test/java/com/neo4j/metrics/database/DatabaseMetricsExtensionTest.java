@@ -235,6 +235,12 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
+        public FileSystemAbstraction fileSystem()
+        {
+            return null;
+        }
+
+        @Override
         public Supplier<TransactionIdStore> transactionIdStoreSupplier()
         {
             return singleton( mock( TransactionIdStore.class ) );

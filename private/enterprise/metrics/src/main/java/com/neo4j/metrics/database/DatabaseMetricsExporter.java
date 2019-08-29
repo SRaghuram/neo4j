@@ -15,6 +15,7 @@ import com.neo4j.metrics.source.db.CheckPointingMetrics;
 import com.neo4j.metrics.source.db.CypherMetrics;
 import com.neo4j.metrics.source.db.DatabaseCountMetrics;
 import com.neo4j.metrics.source.db.EntityCountMetrics;
+import com.neo4j.metrics.source.db.StoreSizeMetrics;
 import com.neo4j.metrics.source.db.TransactionLogsMetrics;
 import com.neo4j.metrics.source.db.TransactionMetrics;
 
@@ -78,6 +79,12 @@ public class DatabaseMetricsExporter
             {
                 life.add( new DatabaseCountMetrics( metricsPrefix, registry, dependencies.storeEntityCounters() ) );
             }
+        }
+
+        if ( config.get( MetricsSettings.neoStoreSizeEnabled ) )
+        {
+            life.add( new StoreSizeMetrics( metricsPrefix, registry, dependencies.scheduler(), dependencies.fileSystem(),
+                    dependencies.database().getDatabaseLayout() ) );
         }
 
         if ( config.get( MetricsSettings.cypherPlanningEnabled ) )

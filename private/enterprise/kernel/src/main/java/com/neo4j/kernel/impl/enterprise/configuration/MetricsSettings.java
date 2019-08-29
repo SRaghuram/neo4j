@@ -50,6 +50,9 @@ public class MetricsSettings implements SettingsDeclaration
             "relationships, properties, etc." )
     public static final Setting<Boolean> neoCountsEnabled = newBuilder( "metrics.neo4j.counts.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics about the store size of each database" )
+    public static final Setting<Boolean> neoStoreSizeEnabled = newBuilder( "metrics.neo4j.size.enabled", BOOL, true ).build();
+
     @Description( "Enable reporting metrics about number of entities in the database." )
     public static final Setting<Boolean> databaseCountsEnabled = newBuilder( "metrics.neo4j.data.counts.enabled", BOOL, true ).build();
 
