@@ -36,13 +36,8 @@ import static org.neo4j.server.rest.AbstractRestFunctionalTestBase.txCommitUri;
 import static org.neo4j.test.server.HTTP.POST;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 
-<<<<<<< HEAD:private/enterprise/commercial-it/commercial-it/src/test/java/com/neo4j/server/MultiDatabaseHttpIt.java
 @TestDirectoryExtension
-class MultiDatabaseHttpIt
-=======
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class MultiDatabaseHttpIT
->>>>>>> Redirect HTTP server endpoints:private/enterprise/commercial-it/commercial-it/src/test/java/com/neo4j/server/MultiDatabaseHttpIT.java
 {
     @Inject
     private TestDirectory testDirectory;
