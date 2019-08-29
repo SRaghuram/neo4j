@@ -141,3 +141,7 @@ Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with empty
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"
 Feature "UnwindAcceptance": Scenario "Primitive node type support in list literal"
 Feature "UnwindAcceptance": Scenario "Primitive relationship type support in list literal"
+Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results"
+Feature "SubqueryAcceptance": Scenario "CALL around union query - using returned var in outer query"
+Feature "SubqueryAcceptance": Scenario "CALL around union query with different return column orders - using returned vars in outer query"
+

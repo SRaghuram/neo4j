@@ -227,3 +227,8 @@ Feature "VarLengthAcceptance": Scenario "Handles checking properties on relation
 Feature "VarLengthAcceptance": Scenario "Handles checking properties on relationships in multistep path - using ALL() function on path relationship properties"
 Feature "Create": Scenario "Dependencies in creating multiple nodes"
 Feature "Create": Scenario "Dependencies in creating multiple rels"
+Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results"
+Feature "SubqueryAcceptance": Scenario "CALL around union query - using returned var in outer query"
+Feature "SubqueryAcceptance": Scenario "CALL around union query with different return column orders - using returned vars in outer query"
+Feature "SubqueryAcceptance": Scenario "Should treat variables with the same name but different scopes correctly"
+Feature "SubqueryAcceptance": Scenario "Post-processing of a subquery result"
