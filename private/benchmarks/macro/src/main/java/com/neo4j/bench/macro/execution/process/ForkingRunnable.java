@@ -12,6 +12,7 @@ import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ScheduledProfilerRunner;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
@@ -108,9 +109,24 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         Redirect outputRedirect = Redirect.INHERIT;
         // redirect error to file
         Redirect errorRedirect = Redirect.to( forkDirectory.newErrorLog().toFile() );
-        JvmProcess.start( jvmProcessArgs,
-                          outputRedirect,
-                          errorRedirect ).waitFor();
+        JvmProcess jvmProcess = JvmProcess.start(
+                                                jvmProcessArgs,
+                                                outputRedirect,
+                                                errorRedirect );
+
+        // if any, schedule runs of scheduled profilers
+        ScheduledProfilerRunner scheduledProfilersRunner = ScheduledProfilerRunner.from(externalProfilers);
+        scheduledProfilersRunner.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvm, jvmProcess.pid() );
+
+        try
+        {
+            jvmProcess.waitFor();
+        }
+        finally
+        {
+            // stop scheduled profilers
+            scheduledProfilersRunner.stop();
+        }
 
         externalProfilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
                                                                       query.benchmarkGroup(),
