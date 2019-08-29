@@ -18,16 +18,20 @@ import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 public class DefaultLeaderService implements LeaderService
 {
     private final LeaderLocatorForDatabase leaderLocatorForDatabase;
     private final TopologyService topologyService;
+    private final Log log;
 
-    public DefaultLeaderService( LeaderLocatorForDatabase leaderLocatorForDatabase, TopologyService topologyService )
+    public DefaultLeaderService( LeaderLocatorForDatabase leaderLocatorForDatabase, TopologyService topologyService, LogProvider logProvider )
     {
         this.leaderLocatorForDatabase = leaderLocatorForDatabase;
         this.topologyService = topologyService;
+        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -38,20 +42,26 @@ public class DefaultLeaderService implements LeaderService
         {
             // this cluster member is part of the Raft group for the specified database
             // leader can be located from the Raft state machine
-            return getLeaderIdFromLeaderLocator( leaderLocator.get() );
+            var leaderId = getLeaderIdFromLeaderLocator( leaderLocator.get() );
+            log.debug( "Leader locator %s for database %s returned leader ID %s", leaderLocator, databaseId, leaderId );
+            return leaderId;
         }
         else
         {
             // this cluster member does not participate in the Raft group for the specified database
             // lookup the leader ID using the discovery service
-            return getLeaderIdFromTopologyService( databaseId );
+            var leaderId = getLeaderIdFromTopologyService( databaseId );
+            log.debug( "Topology service for database %s returned leader ID %s", databaseId, leaderId );
+            return leaderId;
         }
     }
 
     @Override
     public Optional<SocketAddress> getLeaderBoltAddress( DatabaseId databaseId )
     {
-        return getLeaderId( databaseId ).flatMap( this::resolveBoltAddress );
+        var leaderBoltAddress = getLeaderId( databaseId ).flatMap( this::resolveBoltAddress );
+        log.debug( "Leader for database %s has Bolt address %s", databaseId, leaderBoltAddress );
+        return leaderBoltAddress;
     }
 
     private static Optional<MemberId> getLeaderIdFromLeaderLocator( LeaderLocator leaderLocator )
@@ -79,6 +89,7 @@ public class DefaultLeaderService implements LeaderService
     private Optional<SocketAddress> resolveBoltAddress( MemberId memberId )
     {
         Map<MemberId,CoreServerInfo> coresById = topologyService.allCoreServers();
+        log.debug( "Resolving Bolt address for member %s using %s", memberId, coresById );
         return Optional.ofNullable( coresById.get( memberId ) ).map( ClientConnector::boltAddress );
     }
 }

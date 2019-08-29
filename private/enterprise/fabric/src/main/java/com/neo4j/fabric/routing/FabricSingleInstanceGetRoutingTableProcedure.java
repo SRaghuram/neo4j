@@ -13,6 +13,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
 import org.neo4j.values.virtual.MapValue;
@@ -23,9 +24,9 @@ public class FabricSingleInstanceGetRoutingTableProcedure extends SingleInstance
     private final FabricDatabaseManager fabricDatabaseManager;
 
     public FabricSingleInstanceGetRoutingTableProcedure( List<String> namespace, DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister,
-            Config config, FabricDatabaseManager fabricDatabaseManager )
+            Config config, FabricDatabaseManager fabricDatabaseManager, LogProvider logProvider )
     {
-        super( namespace, databaseManager, portRegister, config );
+        super( namespace, databaseManager, portRegister, config, logProvider );
         this.fabricDatabaseManager = fabricDatabaseManager;
     }
 

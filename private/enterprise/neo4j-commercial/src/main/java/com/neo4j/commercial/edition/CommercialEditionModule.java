@@ -209,7 +209,8 @@ public class CommercialEditionModule extends CommunityEditionModule implements A
     {
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
-        return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager );
+        LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
+        return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager, logProvider );
     }
 
     @Override

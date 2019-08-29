@@ -20,7 +20,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -43,15 +42,13 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private final TopologyService topologyService;
     private final LeaderService leaderService;
-    private final Log log;
 
     public GetRoutingTableProcedureForSingleDC( List<String> namespace, TopologyService topologyService, LeaderService leaderService,
             DatabaseManager<?> databaseManager, Config config, LogProvider logProvider )
     {
-        super( namespace, databaseManager, config );
+        super( namespace, databaseManager, config, logProvider );
         this.topologyService = topologyService;
         this.leaderService = leaderService;
-        this.log = logProvider.getLog( getClass() );
     }
 
     @Override

@@ -40,6 +40,7 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTString;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -147,6 +148,6 @@ class GetRoutingTableProcedureForMultiDCTest
 
     private static GetRoutingTableProcedureForMultiDC newProcedure( LoadBalancingPlugin loadBalancingPlugin, DatabaseManager<?> databaseManager )
     {
-        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin, databaseManager, Config.defaults() );
+        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin, databaseManager, Config.defaults(), nullLogProvider() );
     }
 }

@@ -244,10 +244,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 .map( DatabaseContext::dependencies )
                 .map( dep -> dep.resolveDependency( LeaderLocator.class ) );
 
-        LeaderService leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService );
-
-        Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
+        LeaderService leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService, logProvider );
+        Config config = globalModule.getGlobalConfig();
         return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseManager, config, logProvider );
     }
 

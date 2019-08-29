@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
+import static co.unruly.matchers.OptionalMatchers.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -203,13 +204,13 @@ class RaftOutcomeApplierTest
     }
 
     @Test
-    void shouldSetLeader() throws IOException, NoLeaderFoundException
+    void shouldSetLeader() throws IOException
     {
         var outcome = outcomeBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
-        assertThat( raftOutcomeApplier.getLeader(), is( outcome.getLeader() ) );
+        assertThat( raftOutcomeApplier.getLeader(), contains( outcome.getLeader() ) );
     }
 
     @Test

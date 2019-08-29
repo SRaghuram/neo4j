@@ -13,6 +13,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 
 public class FabricRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
@@ -22,19 +23,21 @@ public class FabricRoutingProcedureInstaller extends BaseRoutingProcedureInstall
     private final ConnectorPortRegister portRegister;
     private final Config config;
     private final FabricDatabaseManager fabricDatabaseManager;
+    private final LogProvider logProvider;
 
     public FabricRoutingProcedureInstaller( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister,
-            Config config, FabricDatabaseManager fabricDatabaseManager )
+            Config config, FabricDatabaseManager fabricDatabaseManager, LogProvider logProvider )
     {
         this.databaseManager = databaseManager;
         this.portRegister = portRegister;
         this.config = config;
         this.fabricDatabaseManager = fabricDatabaseManager;
+        this.logProvider = logProvider;
     }
 
     @Override
     protected CallableProcedure createProcedure( List<String> namespace )
     {
-        return new FabricSingleInstanceGetRoutingTableProcedure( namespace, databaseManager, portRegister, config, fabricDatabaseManager );
+        return new FabricSingleInstanceGetRoutingTableProcedure( namespace, databaseManager, portRegister, config, fabricDatabaseManager, logProvider );
     }
 }

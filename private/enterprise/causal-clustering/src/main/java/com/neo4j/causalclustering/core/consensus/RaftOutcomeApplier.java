@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -24,7 +25,7 @@ import org.neo4j.logging.LogProvider;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static java.lang.String.format;
 
-class RaftOutcomeApplier implements LeaderLocator
+class RaftOutcomeApplier
 {
     private final RaftState state;
     private final Log log;
@@ -143,26 +144,18 @@ class RaftOutcomeApplier implements LeaderLocator
         }
     }
 
-    @Override
-    public MemberId getLeader() throws NoLeaderFoundException
+    Optional<MemberId> getLeader()
     {
-        var leaderId = this.leaderId;
-        if ( leaderId == null )
-        {
-            throw new NoLeaderFoundException();
-        }
-        return leaderId;
+        return Optional.ofNullable( leaderId );
     }
 
-    @Override
-    public synchronized void registerListener( LeaderListener listener )
+    synchronized void registerListener( LeaderListener listener )
     {
         leaderListeners.add( listener );
         listener.onLeaderSwitch( state.leaderInfo() );
     }
 
-    @Override
-    public synchronized void unregisterListener( LeaderListener listener )
+    synchronized void unregisterListener( LeaderListener listener )
     {
         leaderListeners.remove( listener );
     }

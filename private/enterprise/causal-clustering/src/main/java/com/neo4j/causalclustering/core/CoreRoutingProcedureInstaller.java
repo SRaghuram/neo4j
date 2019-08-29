@@ -44,7 +44,7 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
         {
             var loadBalancingProcessor = loadLoadBalancingProcessor();
-            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, databaseManager, config );
+            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, databaseManager, config, logProvider );
         }
         else
         {

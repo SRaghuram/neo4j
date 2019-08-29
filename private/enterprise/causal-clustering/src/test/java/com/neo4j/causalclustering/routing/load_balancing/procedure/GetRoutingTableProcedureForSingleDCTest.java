@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -82,6 +81,7 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTString;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -128,7 +128,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
         setupCoreTopologyService( coreTopologyService, coreMembers, emptyMap() );
 
-        var leaderService = new DefaultLeaderService( noLeaderAvailable(), coreTopologyService );
+        var leaderService = newLeaderService( noLeaderAvailable(), coreTopologyService );
 
         // set the TTL in minutes
         config.set( routing_ttl, Duration.ofMinutes( 10 ) );
@@ -164,7 +164,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( noLeaderAvailable(), coreTopologyService );
+        var leaderService = newLeaderService( noLeaderAvailable(), coreTopologyService );
 
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
@@ -188,7 +188,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
 
         var coreMembers = Map.of(
                 member( 0 ), addressesForCore( 0, false ),
@@ -219,7 +219,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
 
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
@@ -244,7 +244,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var theLeader = member( 0 );
         var coreMembers = Map.of( theLeader, addressesForCore( 0, false ) );
@@ -278,7 +278,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var theLeader = member( 0 );
         var coreMembers = Map.of( theLeader, addressesForCore( 0, false ) );
@@ -304,7 +304,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( noLeaderAvailable(), topologyService );
+        var leaderService = newLeaderService( noLeaderAvailable(), topologyService );
 
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
@@ -328,7 +328,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 1 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 1 ), topologyService );
 
         var coreMembers = Map.of( member( 0 ), addressesForCore( 0, false ) );
 
@@ -354,7 +354,7 @@ class GetRoutingTableProcedureForSingleDCTest
         // given
         var config = Config.defaults();
         var coreTopologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), coreTopologyService );
 
         var coreMembers = Map.of(
                 member( 0 ), addressesForCore( 0, false ),
@@ -390,7 +390,7 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         // given
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var proc = newProcedure( topologyService, leaderService, Config.defaults() );
 
@@ -411,7 +411,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var leaderLocator = mock( LeaderLocator.class );
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
         when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
-        var leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService );
+        var leaderService = newLeaderService( leaderLocatorForDatabase, topologyService );
         var config = Config.defaults();
 
         var proc = newProcedure( topologyService, leaderService, config );
@@ -429,7 +429,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseManager = new StubClusteredDatabaseManager();
         var databaseId = TestDatabaseIdRepository.randomDatabaseId();
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var proc = newProcedure( topologyService, leaderService, databaseManager );
 
@@ -444,7 +444,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseId = databaseManager.databaseIdRepository().get( "stopped database" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
         var topologyService = mock( CoreTopologyService.class );
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
 
         var proc = newProcedure( topologyService, leaderService, databaseManager );
 
@@ -460,7 +460,7 @@ class GetRoutingTableProcedureForSingleDCTest
         when( topologyService.coreTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseCoreTopology.EMPTY );
         when( topologyService.readReplicaTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseReadReplicaTopology.EMPTY );
 
-        var leaderService = new DefaultLeaderService( leaderIsMemberId( 0 ), topologyService );
+        var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
         var config = Config.defaults();
 
         var proc = newProcedure( topologyService, leaderService, config );
@@ -549,6 +549,11 @@ class GetRoutingTableProcedureForSingleDCTest
         when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, raftId, cores ) );
         when( topologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, readReplicas ) );
+    }
+
+    private LeaderService newLeaderService( LeaderLocatorForDatabase leaderLocator, CoreTopologyService coreTopologyService )
+    {
+        return new DefaultLeaderService( leaderLocator, coreTopologyService, nullLogProvider() );
     }
 
     private static class ClusterView

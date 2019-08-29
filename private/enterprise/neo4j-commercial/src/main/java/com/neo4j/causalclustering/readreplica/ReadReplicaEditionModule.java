@@ -148,7 +148,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
-        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config );
+        LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
+        return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config, logProvider );
     }
 
     @Override

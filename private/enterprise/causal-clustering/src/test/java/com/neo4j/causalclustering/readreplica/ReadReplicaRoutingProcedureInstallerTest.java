@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class ReadReplicaRoutingProcedureInstallerTest
 {
@@ -35,7 +36,7 @@ class ReadReplicaRoutingProcedureInstallerTest
         DatabaseManager<?> databaseManager = mock( DatabaseManager.class );
         ConnectorPortRegister portRegister = mock( ConnectorPortRegister.class );
         ReadReplicaRoutingProcedureInstaller installer =
-                new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, Config.defaults() );
+                new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, Config.defaults(), nullLogProvider() );
         GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
 
         installer.install( procedures );

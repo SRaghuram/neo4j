@@ -25,7 +25,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
-import static java.lang.String.format;
 
 /**
  * Implements the Raft Consensus Algorithm.
@@ -119,7 +118,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     @Override
     public MemberId getLeader() throws NoLeaderFoundException
     {
-        return outcomeApplier.getLeader();
+        return outcomeApplier.getLeader().orElseThrow( NoLeaderFoundException::new );
     }
 
     @Override
@@ -173,7 +172,13 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     @Override
     public String toString()
     {
-        return format( "RaftInstance{role=%s, term=%d, currentMembers=%s}", currentRole, term(), votingMembers() );
+        return "RaftMachine{" +
+               "myself=" + myself +
+               ", currentRole=" + currentRole +
+               ", term=" + term() +
+               ", votingMembers=" + votingMembers() +
+               ", leader=" + outcomeApplier.getLeader() +
+               '}';
     }
 
     public long term()
