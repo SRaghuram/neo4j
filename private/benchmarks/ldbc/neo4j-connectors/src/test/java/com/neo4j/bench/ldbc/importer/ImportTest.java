@@ -581,7 +581,7 @@ public class ImportTest
                         ProgressMonitorFactory.NONE,
                         NullLogProvider.getInstance(),
                         false,
-                        new ConsistencyFlags( true, false, true, true ) );
+                        new ConsistencyFlags( true, false, false, true, true ) );
         assertTrue( result.isSuccessful() );
     }
 }

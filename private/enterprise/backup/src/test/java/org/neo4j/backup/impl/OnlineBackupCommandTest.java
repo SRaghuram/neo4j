@@ -62,7 +62,7 @@ public class OnlineBackupCommandTest
     // Parameters and helpers
     private final Config config = Config.defaults();
     private OnlineBackupRequiredArguments requiredArguments;
-    private final ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
+    private final ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true, true );
 
     private Path backupDirectory;
     private Path reportDirectory;
@@ -142,6 +142,7 @@ public class OnlineBackupCommandTest
                 "                          [--additional-config=<config-file-path>]%n" +
                 "                          [--cc-graph[=<true|false>]]%n" +
                 "                          [--cc-indexes[=<true|false>]]%n" +
+                "                          [--cc-index-structure[=<true|false>]]%n" +
                 "                          [--cc-label-scan-store[=<true|false>]]%n" +
                 "                          [--cc-property-owners[=<true|false>]]%n" +
                 "%n" +
@@ -192,6 +193,8 @@ public class OnlineBackupCommandTest
                 "                                           types and tokens. [default:true]%n" +
                 "  --cc-indexes=<true|false>                Perform consistency checks on%n" +
                 "                                           indexes. [default:true]%n" +
+                "  --cc-index-structure=<true|false>        Perform structure checks on indexes.%n" +
+                "                                           [default:true]%n" +
                 "  --cc-label-scan-store=<true|false>       Perform consistency checks on the%n" +
                 "                                           label scan store. [default:true]%n" +
                 "  --cc-property-owners=<true|false>        Perform additional consistency checks%n" +
