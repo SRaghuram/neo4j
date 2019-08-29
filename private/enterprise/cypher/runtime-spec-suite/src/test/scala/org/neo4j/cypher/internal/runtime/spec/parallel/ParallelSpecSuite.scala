@@ -124,7 +124,7 @@ class ParallelRuntimeParallelAggregationTest extends AggregationTestBase(ENTERPR
 class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(PARALLEL)
 
 // NODE HASH JOIN
-class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
+//class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 
 // REACTIVE
 class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.PARALLEL, PARALLEL)
