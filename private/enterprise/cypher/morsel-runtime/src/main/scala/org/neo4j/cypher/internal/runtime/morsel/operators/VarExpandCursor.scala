@@ -133,7 +133,7 @@ class VarExpandCursor(fromNode: Long,
   }
 
   def toNode: Long = {
-    if (selectionCursors.isEmpty) {
+    if (selectionCursors.hasNeverSeenData) {
       fromNode
     } else {
       selectionCursors.get(pathLength-1).otherNodeReference()
@@ -182,20 +182,35 @@ object VarExpandCursor {
   }
 }
 
+/**
+  * Random access data structure which grows dynamically as elements are added.
+  */
 class GrowingArray[T <: AnyRef] {
 
   private var array: Array[AnyRef] = new Array[AnyRef](4)
-  private var size: Int = 0
+  private var highWaterMark: Int = 0
 
+  /**
+    * Set an element at a given index, and grows the underlying structure if needed.
+    */
   def set(index: Int, t: T): Unit = {
     ensureCapacity(index+1)
     array(index) = t
   }
 
+  /**
+    * Get the element at a given index.
+    */
   def get(index: Int): T = {
     array(index).asInstanceOf[T]
   }
 
+  /**
+    * Get the element at a given index. If the element at that index is `null`,
+    * instead compute a new element, set it at the index, and return it.
+    *
+    * This is useful for storing resources that can be reused depending on their index.
+    */
   def computeIfAbsent(index: Int, compute: () => T): T = {
     ensureCapacity(index+1)
     var t = array(index)
@@ -206,19 +221,27 @@ class GrowingArray[T <: AnyRef] {
     t.asInstanceOf[T]
   }
 
+  /**
+    * Apply the given function `f` once for each element.
+    *
+    * If there are gaps, `f` will be called with `null` as argument.
+    */
   def foreach(f: T => Unit): Unit = {
     var i = 0
-    while (i < size) {
+    while (i < highWaterMark) {
       f(get(i))
       i += 1
     }
   }
 
-  def isEmpty: Boolean = size == 0
+  /**
+    * Return `true` if any element has ever been set.
+    */
+  def hasNeverSeenData: Boolean = highWaterMark == 0
 
   private def ensureCapacity(size: Int): Unit = {
-    if (this.size < size) {
-      this.size = size
+    if (this.highWaterMark < size) {
+      this.highWaterMark = size
     }
 
     if (array.length < size) {
