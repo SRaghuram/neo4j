@@ -153,4 +153,19 @@ class UnionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonS
 
     result.toList should equal(expected)
   }
+
+  test("Should work when doing union ending in update") {
+
+    val query =
+      """
+        |CREATE (a:A)
+        |UNION
+        |CREATE (b:B)
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val expected = List()
+
+    result.toList should equal(expected)
+  }
 }
