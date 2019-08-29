@@ -72,24 +72,43 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
  */
 public class HalfAppliedConstraintRecoveryIT
 {
+    private static final String NAME = "MyConstraint";
     private static final Label LABEL = TestLabels.LABEL_ONE;
     private static final String KEY = "key";
     private static final String KEY2 = "key2";
+
     private static final BiConsumer<GraphDatabaseAPI,Transaction> UNIQUE_CONSTRAINT_CREATOR =
-            ( db, tx ) -> tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
+            ( db, tx ) ->
+            tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).withName( NAME ).create();
 
-    private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR =
-            ( db, tx ) -> tx.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ") IS NODE KEY" );
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR =( db, tx ) ->
+            db.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).withName( NAME ).create();
 
-    private static final BiConsumer<GraphDatabaseAPI,Transaction> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR =
-            ( db, tx ) -> tx.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ", n." + KEY2 + ") IS NODE KEY" );
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR =( db, tx ) ->
+            db.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).assertPropertyIsNodeKey( KEY2 ).withName( NAME ).create();
+
     private static final BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> REAPPLY =
             ( db, txs ) -> apply( db, txs.subList( txs.size() - 1, txs.size() ) );
+
     private DatabaseManagementService managementService;
 
     private static BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> recreate( BiConsumer<GraphDatabaseAPI,Transaction> constraintCreator )
     {
         return ( db, txs ) -> createConstraint( db, constraintCreator );
+    }
+
+    /**
+     * Creating a constraint will not adopt any orphaned constraint indexes that happens to match their schema.
+     * Instead an AlreadyIndexesException will be thrown, and it is up to the human operator to drop those orphaned indexes.
+     * This method injects that index-drop operation to simulate that behaviour.
+     */
+    private static BiConsumer<GraphDatabaseAPI,Transaction> dropIndexAnd( BiConsumer<GraphDatabaseAPI,Transaction> createConstraint )
+    {
+        return ( db, txs ) ->
+        {
+            db.schema().getIndexByName( NAME ).drop();
+            createConstraint.accept( db, txs );
+        };
     }
 
     @Rule
@@ -107,7 +126,7 @@ public class HalfAppliedConstraintRecoveryIT
     @Test
     public void recoverFromAndRecreateHalfConstraintAppliedBeforeCrash() throws Exception
     {
-        recoverFromHalfConstraintAppliedBeforeCrash( recreate( UNIQUE_CONSTRAINT_CREATOR ), UNIQUE_CONSTRAINT_CREATOR, false );
+        recoverFromHalfConstraintAppliedBeforeCrash( recreate( dropIndexAnd( UNIQUE_CONSTRAINT_CREATOR ) ), UNIQUE_CONSTRAINT_CREATOR, false );
     }
 
     @Test
@@ -119,7 +138,7 @@ public class HalfAppliedConstraintRecoveryIT
     @Test
     public void recoverFromAndRecreateHalfNodeKeyConstraintAppliedBeforeCrash() throws Exception
     {
-        recoverFromHalfConstraintAppliedBeforeCrash( recreate( NODE_KEY_CONSTRAINT_CREATOR ), NODE_KEY_CONSTRAINT_CREATOR, false );
+        recoverFromHalfConstraintAppliedBeforeCrash( recreate( dropIndexAnd( NODE_KEY_CONSTRAINT_CREATOR ) ), NODE_KEY_CONSTRAINT_CREATOR, false );
     }
 
     @Test
@@ -131,7 +150,7 @@ public class HalfAppliedConstraintRecoveryIT
     @Test
     public void recoverFromAndRecreateHalfCompositeNodeKeyConstraintAppliedBeforeCrash() throws Exception
     {
-        recoverFromHalfConstraintAppliedBeforeCrash( recreate( COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR ), COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR, true );
+        recoverFromHalfConstraintAppliedBeforeCrash( recreate( dropIndexAnd( COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR ) ), COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR, true );
     }
 
     private void recoverFromHalfConstraintAppliedBeforeCrash( BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> applier,
