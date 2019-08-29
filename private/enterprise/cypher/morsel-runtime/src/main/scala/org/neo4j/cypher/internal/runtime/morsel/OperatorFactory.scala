@@ -281,14 +281,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.Top(_, sortItems, limit) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))
-        val argumentDepth = physicalPlan.applyPlans(id)
-        val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
-        new TopMergeOperator(argumentStateMapId,
-                             WorkIdentity.fromPlan(plan),
-                             ordering,
-                             argumentSlot,
-                             converters.toCommandExpression(plan.id, limit))
+        TopOperator(WorkIdentity.fromPlan(plan),
+                    ordering,
+                    converters.toCommandExpression(plan.id, limit)).reducer(argumentStateMapId)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
@@ -381,24 +377,21 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val id = plan.id
         val slots = physicalPlan.slotConfigurations(id)
         generateSlotAccessorFunctions(slots)
+        val argumentDepth = physicalPlan.applyPlans(id)
+        val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
 
         plan match {
           case plans.Sort(_, sortItems) =>
-            val argumentDepth = physicalPlan.applyPlans(id)
-            val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
             val ordering = sortItems.map(translateColumnOrder(slots, _))
             new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, bufferId, ordering)
 
           case plans.Top(_, sortItems, limit) =>
-            val argumentDepth = physicalPlan.applyPlans(id)
-            val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
             val ordering = sortItems.map(translateColumnOrder(slots, _))
-            new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, bufferId, ordering)
+            TopOperator(WorkIdentity.fromPlan(plan),
+                        ordering,
+                        converters.toCommandExpression(plan.id, limit)).mapper(argumentSlot, bufferId)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
-            val argumentDepth = physicalPlan.applyPlans(id)
-            val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
-
             val aggregators = Array.newBuilder[Aggregator]
             val expressions = Array.newBuilder[Expression]
             aggregationExpression.foreach {
@@ -410,13 +403,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
             AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
                                           aggregators.result())
-              .mapper(argumentSlotOffset,
+              .mapper(argumentSlot,
                       bufferId,
                       expressions.result())
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
-            val argumentDepth = physicalPlan.applyPlans(id)
-            val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
             val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
 
             val aggregators = Array.newBuilder[Aggregator]
@@ -429,7 +420,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             }
 
             AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
-              .mapper(argumentSlotOffset, bufferId, expressions.result())
+              .mapper(argumentSlot, bufferId, expressions.result())
 
         }
     }
