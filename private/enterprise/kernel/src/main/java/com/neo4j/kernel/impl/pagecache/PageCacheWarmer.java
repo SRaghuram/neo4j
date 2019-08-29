@@ -35,6 +35,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.FileIsNotMappedException;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
+import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
@@ -71,19 +72,21 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private final JobScheduler scheduler;
     private final File databaseDirectory;
     private final File profilesDirectory;
+    private final Log log;
     private final ProfileRefCounts refCounts;
     private volatile boolean stopped;
     private ExecutorService executor;
     private PageLoaderFactory pageLoaderFactory;
     private Config config;
 
-    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config )
+    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config, Log log )
     {
         this.fs = fs;
         this.pageCache = pageCache;
         this.scheduler = scheduler;
         this.databaseDirectory = databaseDirectory;
         this.profilesDirectory = new File( databaseDirectory, Profile.PROFILE_DIR );
+        this.log = log;
         this.refCounts = new ProfileRefCounts();
         this.config = config;
     }
@@ -125,9 +128,11 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         try
         {
             Pattern whitelist = Pattern.compile( config.get( pagecache_warmup_prefetch_whitelist ) );
+            log.info( "Warming up page cache by pre-fetching files matching regex: %s", whitelist.pattern() );
             pageCache.listExistingMappings().parallelStream()
-                    .filter( pagedFile -> whitelist.matcher( pagedFile.file().toString() ).matches() )
+                    .filter( pagedFile -> whitelist.matcher( pagedFile.file().toString() ).find() )
                     .forEach( this::touchAllPages );
+            log.info( "Warming of page cache completed" );
         }
         catch ( IOException e )
         {
@@ -137,6 +142,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 
     private void touchAllPages( PagedFile pagedFile )
     {
+        log.debug( "Pre-fetching %s", pagedFile.file().getName() );
         try ( PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK ) )
         {
             while ( cursor.next() )
