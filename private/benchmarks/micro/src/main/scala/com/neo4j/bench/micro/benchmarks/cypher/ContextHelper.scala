@@ -54,7 +54,8 @@ object ContextHelper extends MockitoSugar {
              cursors: CursorFactory,
              txBridge: ThreadToStatementContextBridge,
              lifeSupport: LifeSupport,
-             workerManager: WorkerManagement): EnterpriseRuntimeContext = {
+             workerManager: WorkerManagement,
+             noDatabaseAccess: Boolean = false): EnterpriseRuntimeContext = {
     EnterpriseRuntimeContext(
       planContext,
       schemaRead,
@@ -64,6 +65,7 @@ object ContextHelper extends MockitoSugar {
       debugOptions,
       runtimeConfig,
       runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport, workerManager),
-      compileExpressions = useCompiledExpressions)
+      compileExpressions = useCompiledExpressions,
+      noDatabaseAccess = noDatabaseAccess)
   }
 }

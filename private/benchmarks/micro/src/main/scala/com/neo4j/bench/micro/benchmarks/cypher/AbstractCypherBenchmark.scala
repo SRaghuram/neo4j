@@ -137,7 +137,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          cursors               : CursorFactory,
                          txBridge              : ThreadToStatementContextBridge,
                          lifeSupport           : LifeSupport,
-                         workerManager         : WorkerManagement): EnterpriseRuntimeContext =
+                         workerManager         : WorkerManagement,
+                         noDatabaseAccess      : Boolean = false): EnterpriseRuntimeContext =
     ContextHelper.create(
       codeStructure = GeneratedQueryStructure,
       planContext = planContext,
@@ -148,7 +149,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       cursors = cursors,
       txBridge = txBridge,
       lifeSupport = lifeSupport,
-      workerManager = workerManager)
+      workerManager = workerManager,
+      noDatabaseAccess = noDatabaseAccess)
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(
