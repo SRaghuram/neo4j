@@ -15,7 +15,7 @@ import com.neo4j.bench.common.util.Jvm;
 /**
  * Profilers implementing this interface will be invoked periodically, during benchmark run.
  * By default, every 5 seconds. This can by change. You can add {@link FixedRate} annotation
- * to overwritten {@link ScheduledProfiler#onSchedule(Tick, ForkDirectory, BenchmarkGroup, Benchmark, Parameters, Jvm, Pid)} method.
+ * to profiler implementation.
  *
  */
 @FixedRate
