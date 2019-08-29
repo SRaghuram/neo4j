@@ -404,11 +404,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
               .withLHS(
                 includeSomewhere.aPlan("Expand(Into)")
                   .containingArgument("(n)-[:Knows]->(s)")
-                  .withRows(0)
-                  .withDBHits(0)
                   .onTopOf(aPlan("CartesianProduct")
-                    .withRows(0)
-                    .withDBHits(0)
                     .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
                       .containingArgument(":User(name,surname), cache[n.name], cache[n.surname]")
                       .withRows(0)
@@ -424,23 +420,15 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             or
             includeSomewhere.aPlan("AntiConditionalApply")
               .withLHS(
-                includeSomewhere.aPlan("Filter")
-                  .containingArgumentRegex(".*s.name = .*".r, ".*s.surname = .*".r, ".*:User.*".r)
-                  .withRows(0)
-                  .withDBHits(0)
-                  .onTopOf(aPlan("Expand(All)")
-                    .containingArgument("(n)-[:Knows]->(s)")
-                    .withRows(0)
-                    .withDBHits(0)
-                    .onTopOf(
-                      aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                        .containingArgument(":User(name,surname), cache[n.name], cache[n.surname]")
-                        .withRows(0)
-                        .withExactVariables("n")
-                    )
+                includeSomewhere.aPlan("Expand(All)")
+                  .onTopOf(
+                    includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                      .containingArgument(":User(name,surname), cache[n.name], cache[n.surname]")
+                      .withRows(0)
+                      .withExactVariables("n")
                   )
               )
-          )
+            )
         )
       }))
 
