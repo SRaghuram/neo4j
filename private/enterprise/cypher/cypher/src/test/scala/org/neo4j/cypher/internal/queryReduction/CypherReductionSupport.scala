@@ -193,7 +193,8 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
                                                       txContextWrapper.kernelTransaction.schemaRead(),
                                                       MasterCompiler.CLOCK,
                                                       Set(),
-                                                      enterprise)
+                                                      enterprise,
+                                                      false)
 
     val logicalQuery = LogicalQuery(logicalPlanState.logicalPlan,
                                     logicalPlanState.queryText,

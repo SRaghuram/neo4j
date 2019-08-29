@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, NoDbAccessExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.CypherException
 import org.neo4j.exceptions.CantCompileQueryException
@@ -48,18 +48,19 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(physicalPlan.logicalPlan)
       }
+      
+      val baseConverters = List(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(context.tokenContext))
 
-      val converters =
-        if (context.compileExpressions) {
-          new ExpressionConverters(
-            new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
-            SlottedExpressionConverters(physicalPlan),
-            CommunityExpressionConverter(context.tokenContext))
+      val allConverters =
+        if (context.noDatabaseAccess) {
+          NoDbAccessExpressionConverter(context.tokenContext) +: baseConverters
+        } else if (context.compileExpressions) {
+          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly) +: baseConverters
         } else {
-          new ExpressionConverters(
-            SlottedExpressionConverters(physicalPlan),
-            CommunityExpressionConverter(context.tokenContext))
+          baseConverters
         }
+      
+      val converters = new ExpressionConverters(allConverters:_*)
 
       val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
       val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)

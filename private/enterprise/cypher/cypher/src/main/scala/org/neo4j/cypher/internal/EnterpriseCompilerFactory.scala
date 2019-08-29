@@ -95,7 +95,8 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     debugOptions: Set[String],
                                     config: CypherRuntimeConfiguration,
                                     runtimeEnvironment: RuntimeEnvironment,
-                                    compileExpressions: Boolean) extends RuntimeContext
+                                    compileExpressions: Boolean,
+                                    noDatabaseAccess: Boolean) extends RuntimeContext
 
 /**
   * Manager of EnterpriseRuntimeContexts.
@@ -110,7 +111,8 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                       schemaRead: SchemaRead,
                       clock: Clock,
                       debugOptions: Set[String],
-                      compileExpressions: Boolean): EnterpriseRuntimeContext =
+                      compileExpressions: Boolean,
+                      noDatabaseAccess: Boolean): EnterpriseRuntimeContext =
     EnterpriseRuntimeContext(tokenContext,
                              schemaRead,
                              codeStructure,
@@ -119,7 +121,8 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                              debugOptions,
                              config,
                              runtimeEnvironment,
-                             compileExpressions)
+                             compileExpressions, 
+                             noDatabaseAccess)
 
   override def assertAllReleased(): Unit = {
     runtimeEnvironment.getQueryExecutor(parallelExecution = true, Set.empty).assertAllReleased()
