@@ -208,7 +208,11 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
-    override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
+    override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                             stateFactory: StateFactory,
+                             queryContext: QueryContext,
+                             state: QueryState,
+                             resources: QueryResources): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker))
       this
     }

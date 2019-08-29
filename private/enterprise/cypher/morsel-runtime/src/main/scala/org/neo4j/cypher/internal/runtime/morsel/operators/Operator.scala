@@ -109,7 +109,11 @@ trait Operator extends HasWorkIdentity {
    *                      This is used e.g. to create buffers, or in many places just to access the memory tracker
     * @return the new execution state for this operator.
     */
-  def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState
+  def createState(argumentStateCreator: ArgumentStateMapCreator,
+                  stateFactory: StateFactory,
+                  queryContext: QueryContext,
+                  state: QueryState,
+                  resources: QueryResources): OperatorState
 }
 
 /**
@@ -202,7 +206,11 @@ trait StreamingOperator extends Operator with OperatorState {
                           resources: QueryResources,
                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = this
+  override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                           stateFactory: StateFactory,
+                           queryContext: QueryContext,
+                           state: QueryState,
+                           resources: QueryResources): OperatorState = this
 }
 
 trait MiddleOperator extends HasWorkIdentity {

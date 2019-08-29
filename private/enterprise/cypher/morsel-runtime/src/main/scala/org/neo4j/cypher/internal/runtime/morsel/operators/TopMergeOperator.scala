@@ -35,7 +35,11 @@ class TopMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
   private val comparator: Comparator[MorselExecutionContext] = MorselSorting.createComparator(orderBy)
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
+  override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                           stateFactory: StateFactory,
+                           queryContext: QueryContext,
+                           state: QueryState,
+                           resources: QueryResources): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
     this
   }

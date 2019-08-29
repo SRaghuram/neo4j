@@ -33,7 +33,11 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            refsToCopy: Array[(Int, Int)],
                            cachedPropertiesToCopy: Array[(Int, Int)]) extends Operator with OperatorState {
 
-  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = {
+  override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                           stateFactory: StateFactory,
+                           queryContext: QueryContext,
+                           state: QueryState,
+                           resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
       new HashTableFactory(lhsOffsets, stateFactory.memoryTracker))

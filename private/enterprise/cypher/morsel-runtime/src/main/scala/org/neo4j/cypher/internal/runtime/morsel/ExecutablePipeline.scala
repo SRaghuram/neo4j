@@ -50,7 +50,7 @@ case class ExecutablePipeline(id: PipelineId,
     }
 
     new PipelineState(this,
-                      start.createState(executionState, stateFactory),
+                      start.createState(executionState, stateFactory, queryContext, queryState, resources),
                       middleTasks,
                       outputOperatorStateFor,
                       executionState)

@@ -39,7 +39,11 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): OperatorState = {
+  override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                           stateFactory: StateFactory,
+                           queryContext: QueryContext,
+                           state: QueryState,
+                           resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory))
     new OptionalOperatorState
   }

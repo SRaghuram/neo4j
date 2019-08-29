@@ -117,7 +117,11 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     extends Operator
       with ReduceOperatorState[Array[Updater], AggregatingAccumulator] {
 
-    override def createState(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
+    override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                             stateFactory: StateFactory,
+                             queryContext: QueryContext,
+                             state: QueryState,
+                             resources: QueryResources): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker))
       this
     }
