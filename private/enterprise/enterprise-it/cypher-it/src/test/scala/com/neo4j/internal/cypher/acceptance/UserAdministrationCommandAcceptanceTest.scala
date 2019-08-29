@@ -426,6 +426,15 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      executeOnSystem("neo4j", "neo", "DROP USER neo4j IF EXISTS")
+      // THEN
+    } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
   }
 
   test("should fail when dropping non-existing user") {

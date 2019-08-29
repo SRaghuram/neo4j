@@ -591,6 +591,22 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
   }
 
+  test("should do nothing when creating an already existing database using if not exists with max number of databases reached") {
+    // GIVEN
+    val config = Config.defaults()
+    config.set(CommercialEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
+    setup(config)
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
+
+    // WHEN
+    execute("CREATE DATABASE foo IF NOT EXISTS")
+
+    // THEN
+    execute("SHOW DATABASE foo").toList should be(List(db("foo", offlineStatus)))
+  }
+
   test("should fail when creating a database with invalid name") {
     setup(defaultConfig)
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -736,7 +752,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo")))
 
     // WHEN
-    execute("DROP DATABASE foo")
+    execute("DROP DATABASE foo IF EXISTS")
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set.empty)

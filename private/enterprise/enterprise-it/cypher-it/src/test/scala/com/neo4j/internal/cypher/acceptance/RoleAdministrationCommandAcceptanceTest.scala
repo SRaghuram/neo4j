@@ -331,6 +331,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
+      // THEN
+    } should have message "Failed to create a role as copy of 'foo': Role does not exist."
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -338,6 +350,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create a role as copy of '': Role does not exist."
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
@@ -412,6 +425,21 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
+  }
+
+  test("should do nothing when creating existing role from non-existing role using if exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE bar")
+    execute("GRANT ROLE bar TO neo4j")
+    val barWithUser = bar ++ Map("member" -> "neo4j")
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(barWithUser))
+
+    // WHEN
+    execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(barWithUser))
   }
 
   test("should fail when creating role when not on system database") {
