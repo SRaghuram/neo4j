@@ -23,7 +23,6 @@ import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -33,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
@@ -47,7 +46,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public abstract class SnbInteractiveExecutionTest
 {
     static class DatabaseAndUrl implements AutoCloseable

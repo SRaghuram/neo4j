@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Predicate;
 
@@ -15,14 +14,14 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SkipThreadLeakageGuard
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class ReadReplicaEditionModuleTest
 {
     @Inject

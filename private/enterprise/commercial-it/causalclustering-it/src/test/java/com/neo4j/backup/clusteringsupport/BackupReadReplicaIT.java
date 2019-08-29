@@ -24,7 +24,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
@@ -39,7 +39,8 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.function.Predicates.awaitEx;
 
-@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class BackupReadReplicaIT

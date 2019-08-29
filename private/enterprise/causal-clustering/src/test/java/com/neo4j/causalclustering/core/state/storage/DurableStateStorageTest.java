@@ -22,16 +22,16 @@ import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+@EphemeralTestDirectoryExtension
+@ExtendWith( LifeExtension.class )
 class DurableStateStorageTest
 {
     @Inject

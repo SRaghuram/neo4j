@@ -6,7 +6,6 @@
 package com.neo4j.kernel.impl.enterprise.configuration;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +13,7 @@ import java.nio.file.Files;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.neoTransactionLogsEnabled;
@@ -22,7 +21,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class MetricsSettingsMigratorTest
 {
     @Inject

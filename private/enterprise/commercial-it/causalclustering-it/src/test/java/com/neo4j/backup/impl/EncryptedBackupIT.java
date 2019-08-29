@@ -52,10 +52,9 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
@@ -68,7 +67,8 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class EncryptedBackupIT
 {
     @Inject

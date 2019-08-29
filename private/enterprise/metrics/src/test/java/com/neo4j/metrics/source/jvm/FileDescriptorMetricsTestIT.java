@@ -13,7 +13,6 @@ import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.Objects;
@@ -22,7 +21,7 @@ import java.util.function.BiPredicate;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
@@ -33,7 +32,7 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class FileDescriptorMetricsTestIT
 {
     @Inject

@@ -19,7 +19,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-@ExtendWith( {TestDirectoryExtension.class, LifeExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( LifeExtension.class )
 class SegmentedRaftLogCursorIT
 {
     @Inject

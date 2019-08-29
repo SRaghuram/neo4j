@@ -17,7 +17,6 @@ import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Collections;
 import java.util.Set;
@@ -31,7 +30,7 @@ import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.string.UTF8;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
@@ -55,7 +54,7 @@ import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class SystemGraphRealmIT
 {
     private SystemGraphRealmTestHelper.TestDatabaseManager dbManager;

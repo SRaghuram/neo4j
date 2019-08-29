@@ -30,7 +30,6 @@ import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +42,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
@@ -68,7 +67,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class AddProfilesIT
 {
     @Inject

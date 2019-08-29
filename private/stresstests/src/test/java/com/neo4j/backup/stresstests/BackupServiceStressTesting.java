@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.stresstests.Control;
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import com.neo4j.helper.Workload;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.List;
@@ -27,7 +26,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.utils.DumpUtils;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.DaemonThreadFactory;
 
@@ -46,7 +45,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class BackupServiceStressTesting
 {
     private static final String DEFAULT_HOSTNAME = "localhost";

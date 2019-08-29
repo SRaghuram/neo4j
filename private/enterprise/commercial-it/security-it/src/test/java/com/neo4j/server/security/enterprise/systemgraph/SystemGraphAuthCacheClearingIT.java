@@ -16,7 +16,6 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.platform.commons.JUnitException;
 
 import java.io.IOException;
@@ -38,7 +37,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.is;
@@ -50,7 +49,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class SystemGraphAuthCacheClearingIT
 {
 

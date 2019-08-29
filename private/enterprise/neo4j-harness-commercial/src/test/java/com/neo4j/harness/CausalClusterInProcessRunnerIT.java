@@ -10,17 +10,16 @@ import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class CausalClusterInProcessRunnerIT
 {
     @Inject

@@ -10,14 +10,13 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
@@ -25,7 +24,7 @@ import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueO
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class SegmentedRaftLogRotationTruncationPruneTest
 {
     @Inject

@@ -25,7 +25,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 
-@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
 class CompositeConstraintIT
 {

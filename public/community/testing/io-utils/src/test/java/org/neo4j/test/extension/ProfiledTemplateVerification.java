@@ -19,9 +19,9 @@
  */
 package org.neo4j.test.extension;
 
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class ProfiledTemplateVerification extends ProfiledTestTemplate
 {
 }

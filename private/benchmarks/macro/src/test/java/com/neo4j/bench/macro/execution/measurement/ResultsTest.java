@@ -13,7 +13,6 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -25,7 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
@@ -34,7 +33,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class ResultsTest
 {
     @Inject

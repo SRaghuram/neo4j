@@ -42,11 +42,10 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.RandomExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -58,7 +57,8 @@ import static org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler
 import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class, RandomExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( { LifeExtension.class, RandomExtension.class} )
 class TransactionLogAnalyzerTest
 {
     @Inject

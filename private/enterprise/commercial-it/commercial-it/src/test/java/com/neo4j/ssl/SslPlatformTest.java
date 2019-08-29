@@ -12,10 +12,9 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.ssl.SecureServer.RESPONSE;
@@ -31,7 +30,7 @@ import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
  * This test depends on the statically linked uber-jar with boring ssl: http://netty.io/wiki/forked-tomcat-native.html.
  * The uber-jar comes from io.netty:netty-tcnative-boringssl-static maven dependency;
  */
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class SslPlatformTest
 {
     private static final byte[] REQUEST = {1, 2, 3, 4};

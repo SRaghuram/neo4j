@@ -52,7 +52,7 @@ import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
@@ -77,7 +77,8 @@ import static org.neo4j.kernel.api.exceptions.Status.Transaction.BookmarkTimeout
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMERCIAL;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class BookmarkIT
 {
     @Inject

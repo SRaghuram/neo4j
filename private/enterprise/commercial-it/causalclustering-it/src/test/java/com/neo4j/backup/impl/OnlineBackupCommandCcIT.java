@@ -46,7 +46,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -72,7 +72,8 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
-@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class OnlineBackupCommandCcIT

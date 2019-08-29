@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.file.WatchKey;
@@ -26,7 +25,7 @@ import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.time.Duration.ofSeconds;
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteFile;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class MultiDatabaseFileWatchIT
 {
     @Inject

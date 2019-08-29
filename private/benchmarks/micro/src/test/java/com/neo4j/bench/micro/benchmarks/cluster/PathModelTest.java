@@ -12,7 +12,6 @@ import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,14 +20,14 @@ import java.util.List;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.StrictMath.abs;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class PathModelTest
 {
 

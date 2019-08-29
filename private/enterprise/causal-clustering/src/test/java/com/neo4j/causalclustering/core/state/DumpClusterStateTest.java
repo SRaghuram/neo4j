@@ -27,7 +27,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -37,7 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
-@ExtendWith( {TestDirectoryExtension.class, LifeExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( LifeExtension.class )
 class DumpClusterStateTest
 {
     @Inject

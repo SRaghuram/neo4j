@@ -15,10 +15,9 @@ import java.util.List;
 import org.neo4j.internal.batchimport.DataStatistics;
 import org.neo4j.internal.batchimport.DataStatistics.RelationshipTypeCount;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -26,7 +25,8 @@ import static java.util.stream.StreamSupport.stream;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, RandomExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( RandomExtension.class )
 class RelationshipTypeDistributionStorageTest
 {
     @Inject

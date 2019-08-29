@@ -29,7 +29,6 @@ import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +41,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
@@ -50,7 +49,7 @@ import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePat
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class RunWorkloadCommandIT
 {
     private static final String LOAD_CSV_WORKLOAD = "cineasts_csv";

@@ -40,7 +40,6 @@ import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
@@ -63,7 +62,7 @@ import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -79,7 +78,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class SubmitTestRunsAndPlansIT
 {
     @RegisterExtension

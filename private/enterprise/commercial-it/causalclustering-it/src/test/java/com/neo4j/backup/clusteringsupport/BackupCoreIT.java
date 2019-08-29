@@ -23,7 +23,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
@@ -33,7 +33,8 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.back
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class BackupCoreIT

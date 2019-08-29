@@ -13,16 +13,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+@EphemeralTestDirectoryExtension
+@ExtendWith( LifeExtension.class )
 public class SegmentedRaftLogContractTest extends RaftLogContractTest
 {
     @Inject

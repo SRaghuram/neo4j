@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.common.CausalClusteringTestHelpers;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.Server;
 import io.netty.channel.ChannelHandler;
@@ -37,6 +36,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -50,11 +50,10 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
@@ -68,7 +67,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @SkipThreadLeakageGuard
-@ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class StoreCopyClientIT
 {
     @Inject

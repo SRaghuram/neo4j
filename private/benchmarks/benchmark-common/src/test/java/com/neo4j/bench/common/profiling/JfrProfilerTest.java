@@ -15,14 +15,13 @@ import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.common.util.TestDirectorySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode;
@@ -31,7 +30,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class JfrProfilerTest
 {
     @Inject

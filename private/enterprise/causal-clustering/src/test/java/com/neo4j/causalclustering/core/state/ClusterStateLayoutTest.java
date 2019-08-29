@@ -7,20 +7,19 @@ package com.neo4j.causalclustering.core.state;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.Set;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.internal.helpers.collection.Iterators.set;
 import static org.neo4j.io.fs.FileUtils.path;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class ClusterStateLayoutTest
 {
     private static final String DATABASE_NAME = "my_database";

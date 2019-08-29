@@ -27,17 +27,17 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( LifeExtension.class )
 class CsvOutputTest
 {
     @Inject

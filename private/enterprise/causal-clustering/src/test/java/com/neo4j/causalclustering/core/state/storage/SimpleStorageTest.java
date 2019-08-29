@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state.storage;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.UUID;
@@ -15,12 +14,12 @@ import java.util.UUID;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class SimpleStorageTest
 {
     @Inject

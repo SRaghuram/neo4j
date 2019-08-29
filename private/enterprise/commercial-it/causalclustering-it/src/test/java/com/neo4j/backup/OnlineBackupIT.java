@@ -34,7 +34,7 @@ import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -53,7 +53,8 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
 
-@ExtendWith( {TestDirectoryExtension.class, RandomExtension.class, SuppressOutputExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( {RandomExtension.class, SuppressOutputExtension.class} )
 class OnlineBackupIT
 {
     private static final String DB_NAME = DEFAULT_DATABASE_NAME;

@@ -11,7 +11,6 @@ import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode;
@@ -35,7 +34,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class DirectoryTest
 {
     private static final BenchmarkGroup GROUP_1 = new BenchmarkGroup( "group1" );

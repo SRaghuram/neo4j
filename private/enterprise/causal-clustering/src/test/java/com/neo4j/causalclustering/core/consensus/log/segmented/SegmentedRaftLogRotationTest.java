@@ -20,10 +20,9 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
@@ -31,7 +30,8 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( LifeExtension.class )
 class SegmentedRaftLogRotationTest
 {
     private static final int ROTATE_AT_SIZE_IN_BYTES = 100;

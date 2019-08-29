@@ -28,7 +28,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
@@ -47,7 +46,7 @@ import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePat
 import static java.lang.String.format;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class ConvenientLocalExecutionIT
 {
     // Required fields for running whole Workload or Single query

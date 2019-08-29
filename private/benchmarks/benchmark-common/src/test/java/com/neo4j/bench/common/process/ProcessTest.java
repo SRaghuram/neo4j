@@ -8,7 +8,6 @@ package com.neo4j.bench.common.process;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.util.Jvm;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -20,7 +19,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
@@ -28,7 +27,7 @@ import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class ProcessTest
 {
     @Inject

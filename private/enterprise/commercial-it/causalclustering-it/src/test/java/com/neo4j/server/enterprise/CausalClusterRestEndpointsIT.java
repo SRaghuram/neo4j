@@ -16,7 +16,7 @@ import java.util.Map;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.getLeader;
@@ -64,7 +64,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( PER_CLASS )
-@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class CausalClusterRestEndpointsIT
 {
     private static final String KNOWN_DB = DEFAULT_DATABASE_NAME;

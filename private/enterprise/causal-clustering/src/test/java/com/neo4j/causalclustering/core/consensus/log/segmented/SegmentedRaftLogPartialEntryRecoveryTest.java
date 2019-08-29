@@ -5,10 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.UUID;
-
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -19,7 +15,10 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
@@ -27,9 +26,8 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
@@ -43,7 +41,7 @@ import static org.neo4j.logging.NullLogProvider.getInstance;
  * do not cause a problem. This is guaranteed by rotating after recovery and making sure that half written
  * entries at the end do not stop recovery from proceeding.
  */
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
 class SegmentedRaftLogPartialEntryRecoveryTest
 {
     @Inject

@@ -7,7 +7,6 @@ package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
 import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
@@ -17,16 +16,15 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.community.CommunityLockManger;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.extension.DbmsExtension;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class ForsetiServiceLoadingTest
 {
     @Inject

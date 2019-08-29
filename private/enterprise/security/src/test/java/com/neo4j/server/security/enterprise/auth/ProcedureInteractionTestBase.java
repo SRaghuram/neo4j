@@ -58,7 +58,7 @@ import org.neo4j.procedure.TerminationGuard;
 import org.neo4j.procedure.UserFunction;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.concurrent.ThreadingExtension;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
@@ -94,7 +94,7 @@ import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
-@ExtendWith( {TestDirectoryExtension.class, ThreadingExtension.class} )
+@ExtendWith( {TestDirectorySupportExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>
 {
     static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";

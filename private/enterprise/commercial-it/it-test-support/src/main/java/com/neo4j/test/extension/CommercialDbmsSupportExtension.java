@@ -19,7 +19,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DbmsSupportExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 
@@ -34,10 +34,10 @@ public class CommercialDbmsSupportExtension extends DbmsSupportExtension impleme
 
         // Create and manage TestDirectoryExtension our self
         // The caveat is that the order of postProcessTestInstance and beforeAll changes if you change TestInstance.Lifecycle
-        TestDirectoryExtension testDirectoryExtension = new TestDirectoryExtension();
-        testDirectoryExtension.postProcessTestInstance( testInstance, context );
-        testDirectoryExtension.prepare( context );
-        getStore( context ).put( TEST_DIRECTORY_EXTENSION_KEY, testDirectoryExtension );
+        TestDirectorySupportExtension testDirectorySupportExtension = new TestDirectorySupportExtension();
+        testDirectorySupportExtension.postProcessTestInstance( testInstance, context );
+        testDirectorySupportExtension.prepare( context );
+        getStore( context ).put( TEST_DIRECTORY_EXTENSION_KEY, testDirectorySupportExtension );
 
         TestDirectory testDirectory = getTestDirectory( context );
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
@@ -65,8 +65,9 @@ public class CommercialDbmsSupportExtension extends DbmsSupportExtension impleme
         DatabaseManagementService dbms = getStore( context ).remove( DBMS, DatabaseManagementService.class );
         dbms.shutdown();
 
-        TestDirectoryExtension testDirectoryExtension = getStore( context ).remove( TEST_DIRECTORY_EXTENSION_KEY, TestDirectoryExtension.class );
-        testDirectoryExtension.afterEach( context );
+        TestDirectorySupportExtension testDirectorySupportExtension =
+                getStore( context ).remove( TEST_DIRECTORY_EXTENSION_KEY, TestDirectorySupportExtension.class );
+        testDirectorySupportExtension.afterEach( context );
     }
 
     @Override

@@ -25,7 +25,7 @@ import java.util.stream.IntStream;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.micro.data.DataGeneratorTestUtil.assertGraphStatsAreConsistentWithBuilderConfiguration;
@@ -35,7 +35,8 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static org.neo4j.graphdb.Label.label;
 
-@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class DataGeneratorDataCharacteristicsIT
 {
     @Inject

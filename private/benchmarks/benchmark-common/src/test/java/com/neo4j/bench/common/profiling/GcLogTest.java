@@ -10,7 +10,6 @@ import com.neo4j.bench.common.profiling.GcLog.GcLogEvent;
 import com.neo4j.bench.common.util.JsonUtil;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +19,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
@@ -29,7 +28,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class GcLogTest
 {
     @Inject

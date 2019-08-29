@@ -7,7 +7,6 @@ package com.neo4j.bench.ldbc;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +16,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
@@ -27,7 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class EnterpriseSanityCheckTest
 {
     @Inject

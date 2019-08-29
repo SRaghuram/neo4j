@@ -29,10 +29,9 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.logging.Level;
 import org.neo4j.ssl.SslResourceBuilder;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Collections.emptyMap;
@@ -40,7 +39,8 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.graphdb.Label.label;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
 class SecureClusterIT
 {
     @Inject

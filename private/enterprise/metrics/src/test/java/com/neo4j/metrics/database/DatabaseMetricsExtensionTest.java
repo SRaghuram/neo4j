@@ -13,7 +13,6 @@ import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.metrics.global.MetricsManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Supplier;
 
@@ -43,7 +42,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
@@ -55,7 +54,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.function.Suppliers.singleton;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class DatabaseMetricsExtensionTest
 {
     @Inject

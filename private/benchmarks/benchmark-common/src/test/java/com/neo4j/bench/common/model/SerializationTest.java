@@ -10,7 +10,6 @@ import com.google.common.collect.Sets;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.JsonUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -20,7 +19,7 @@ import java.util.HashSet;
 import java.util.Map;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
@@ -31,7 +30,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class SerializationTest
 {
     @Inject

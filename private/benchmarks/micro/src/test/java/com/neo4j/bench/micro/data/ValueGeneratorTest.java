@@ -5,12 +5,11 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.common.util.TestDirectorySupport;
 import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.util.TestDirectorySupport;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +19,7 @@ import java.util.List;
 import java.util.SplittableRandom;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.micro.data.ArrayGenerator.DEFAULT_SIZE;
@@ -77,7 +76,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class ValueGeneratorTest
 {
     @Inject

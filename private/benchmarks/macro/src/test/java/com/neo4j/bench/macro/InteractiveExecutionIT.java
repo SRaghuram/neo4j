@@ -19,7 +19,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -27,13 +26,13 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class InteractiveExecutionIT
 {
     private static final String WORKLOAD = "zero";

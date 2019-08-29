@@ -7,7 +7,6 @@ package com.neo4j.bench.common.model;
 
 import com.google.common.collect.Lists;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,7 +24,7 @@ import static org.hamcrest.Matchers.equalTo;
 
 
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class Neo4jConfigTest
 {
     @Inject

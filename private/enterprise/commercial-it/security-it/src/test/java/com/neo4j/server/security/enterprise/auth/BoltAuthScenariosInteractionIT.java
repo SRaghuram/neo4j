@@ -20,7 +20,7 @@ import org.neo4j.test.extension.Inject;
 class BoltAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<BoltInteraction.BoltSubject>
 {
     @Inject
-    private EphemeralFileSystemAbstraction fileSystemRule;
+    private EphemeralFileSystemAbstraction fileSystem;
 
     BoltAuthScenariosInteractionIT()
     {
@@ -32,7 +32,7 @@ class BoltAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<Bo
     public NeoInteractionLevel<BoltInteraction.BoltSubject> setUpNeoServer( Map<Setting<?>,String> config )
     {
         return new BoltInteraction( config,
-                () -> new UncloseableDelegatingFileSystemAbstraction( fileSystemRule ) );
+                () -> new UncloseableDelegatingFileSystemAbstraction( fileSystem ) );
     }
 
     @Override

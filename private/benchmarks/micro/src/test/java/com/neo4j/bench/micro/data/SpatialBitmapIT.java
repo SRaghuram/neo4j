@@ -8,7 +8,6 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -18,21 +17,20 @@ import java.util.SplittableRandom;
 import org.neo4j.graphdb.spatial.Point;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
 import static com.neo4j.bench.micro.data.PointGenerator.circleGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.clusterGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.xFor;
 import static com.neo4j.bench.micro.data.PointGenerator.yFor;
-import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
-
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
 
 @SkipThreadLeakageGuard
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class SpatialBitmapIT
 {
     @Inject

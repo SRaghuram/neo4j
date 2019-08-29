@@ -60,11 +60,10 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -82,7 +81,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 
-@ExtendWith( {SuppressOutputExtension.class, RandomExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@TestDirectoryExtension
+@ExtendWith( {SuppressOutputExtension.class, RandomExtension.class } )
 @ResourceLock( Resources.SYSTEM_OUT )
 class BackupRetriesIT
 {

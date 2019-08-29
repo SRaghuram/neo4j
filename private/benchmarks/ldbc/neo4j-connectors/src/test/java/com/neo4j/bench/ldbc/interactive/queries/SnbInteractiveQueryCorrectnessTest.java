@@ -59,12 +59,7 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
 import com.neo4j.bench.ldbc.QueryGraphMaker;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
-
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
-import static com.neo4j.bench.ldbc.QueryGraphMaker.date;
-
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,14 +68,16 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
+import static com.neo4j.bench.ldbc.QueryGraphMaker.date;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
         SnbInteractiveQueryCorrectnessTestImplProvider<CONNECTION>
 {

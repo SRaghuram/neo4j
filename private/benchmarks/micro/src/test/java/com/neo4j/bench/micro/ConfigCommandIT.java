@@ -14,7 +14,6 @@ import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.List;
@@ -22,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Sets.newHashSet;
@@ -38,7 +37,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class ConfigCommandIT extends AnnotationsFixture
 {
     @Inject

@@ -8,18 +8,17 @@ package com.neo4j.causalclustering.core.consensus.log;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public abstract class RaftLogVerificationIT
 {
     @Inject
