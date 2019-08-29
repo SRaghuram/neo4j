@@ -42,6 +42,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -140,12 +141,12 @@ class QueryLoggerIT
         CommercialLoginContext mats = login( "mats", "neo4j" );
 
         // run query
-        executeQuery( mats, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap(), ResourceIterator::close );
-        executeQuery( mats, "CREATE (:Label)", emptyMap(), ResourceIterator::close );
+        executeQuery( mats, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap() );
+        executeQuery( mats, "CREATE (:Label)", emptyMap() );
 
         // switch user, run query
         CommercialLoginContext andres = login( "andres", "neo4j" );
-        executeQuery( andres, "MATCH (n:Label) RETURN n", emptyMap(), ResourceIterator::close );
+        executeQuery( andres, "MATCH (n:Label) RETURN n", emptyMap() );
 
         dbManagementService.shutdown();
 
@@ -171,8 +172,7 @@ class QueryLoggerIT
         getUserManager().setUserPassword( "neo4j", password( "123" ), false );
 
         CommercialLoginContext subject = login( "neo4j", "123" );
-        executeQuery( subject, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap(),
-                ResourceIterator::close );
+        executeQuery( subject, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap() );
 
         // Set meta data and execute query in transaction
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, subject ) )
@@ -222,7 +222,7 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
-        assertThat( logLines.get( 0 ), endsWith( String.format( " ms: %s - %s - {}", connectionAndUserDetails(), QUERY ) ) );
+        assertThat( logLines.get( 0 ), endsWith( String.format( " ms: %s - %s - {}", connectionAndDatabaseDetails(), QUERY ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
 
@@ -300,7 +300,7 @@ class QueryLoggerIT
         assertThat( logLines.get( 0 ), endsWith( String.format(
                 " ms: %s - %s - {props: {name: 'Roland', position: 'Gunslinger', followers: ['Jake', 'Eddie', 'Susannah']}}"
                         + " - {}",
-                connectionAndUserDetails(),
+                connectionAndDatabaseDetails(),
                 query ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
@@ -320,7 +320,7 @@ class QueryLoggerIT
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ), endsWith( String.format(
                 " ms: %s - %s - {} - runtime=slotted - {}",
-                connectionAndUserDetails(),
+                connectionAndDatabaseDetails(),
                 query ) ) );
     }
 
@@ -339,7 +339,7 @@ class QueryLoggerIT
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ),
-                endsWith( String.format( " ms: %s - %s - {ids: [0, 1, 2]} - {}", connectionAndUserDetails(), query ) ) );
+                endsWith( String.format( " ms: %s - %s - {ids: [0, 1, 2]} - {}", connectionAndDatabaseDetails(), query ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
     }
 
@@ -445,19 +445,19 @@ class QueryLoggerIT
     }
 
     @Test
-    void shouldNotLogPassword() throws Exception
+    void shouldNotLogPasswordWhenChanging() throws Exception
     {
         databaseManagementService = databaseBuilder
                 .setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
         GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
 
         CommercialAuthManager authManager = facade.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         CommercialLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
 
-        String query = "CALL dbms.security.changePassword('abc123')";
+        String query = "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc123'";
         try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
         {
             Result res = tx.execute( query );
@@ -469,12 +469,78 @@ class QueryLoggerIT
             databaseManagementService.shutdown();
         }
 
-        List<String> logLines = readAllUserQueryLines( logFilename );
-        assertEquals( 1, logLines.size() );
-        assertThat( logLines.get( 0 ),
-                containsString(  "CALL dbms.security.changePassword('******')") ) ;
-        assertThat( logLines.get( 0 ), not( containsString( "abc123" ) ) );
-        assertThat( logLines.get( 0 ), containsString( neo.subject().username() ) );
+        List<String> logLines = readAllLines( logFilename );
+        var lastEntry = logLines.size() - 1;
+        var obfuscatedQuery = "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'";
+        assertThat( logLines.get( lastEntry ),
+                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+    }
+
+    @Test
+    void shouldNotLogPasswordWhenChangedByAdmin() throws Exception
+    {
+        databaseManagementService = databaseBuilder
+                .setConfig( log_queries, LogQueryLevel.INFO )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
+        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
+        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+
+        executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "CREATE USER foo SET PASSWORD '123abc'" );
+
+        CommercialAuthManager authManager = facade.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
+        CommercialLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
+
+        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
+        {
+            Result res = tx.execute( "ALTER USER foo SET PASSWORD 'abc123'" );
+            res.close();
+            tx.commit();
+        }
+        finally
+        {
+            databaseManagementService.shutdown();
+        }
+
+        List<String> logLines = readAllLines( logFilename );
+        var lastEntry = logLines.size() - 1;
+        var obfuscatedQuery = "ALTER USER foo SET PASSWORD '******'";
+        assertThat( logLines.get( lastEntry ),
+                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+    }
+
+    @Test
+    void shouldNotLogPasswordForCreate() throws Exception
+    {
+        databaseManagementService = databaseBuilder
+                .setConfig( log_queries, LogQueryLevel.INFO )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
+        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
+        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+
+        executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
+
+        CommercialAuthManager authManager = facade.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
+        CommercialLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
+
+        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
+        {
+            Result res = tx.execute( "CREATE USER foo SET PASSWORD \"abc123\"" );
+            res.close();
+            tx.commit();
+        }
+        finally
+        {
+            databaseManagementService.shutdown();
+        }
+
+        List<String> logLines = readAllLines( logFilename );
+        var lastEntry = logLines.size() - 1;
+        var obfuscatedQuery = "CREATE USER foo SET PASSWORD '******'";
+        assertThat( logLines.get( lastEntry ),
+                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
@@ -577,12 +643,12 @@ class QueryLoggerIT
         return db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
     }
 
-    private static String connectionAndUserDetails()
+    private static String connectionAndDatabaseDetails()
     {
-        return connectionAndUserDetails( DEFAULT_DATABASE_NAME );
+        return connectionAndDatabaseDetails( DEFAULT_DATABASE_NAME );
     }
 
-    private static String connectionAndUserDetails( String databaseName )
+    private static String connectionAndDatabaseDetails( String databaseName )
     {
         return EMBEDDED_CONNECTION.asConnectionDetails() + "\t" + databaseName + " - ";
     }
@@ -602,7 +668,7 @@ class QueryLoggerIT
     private List<String> readAllUserQueryLines( File logFilename ) throws IOException
     {
         return readAllLines( logFilename ).stream()
-                .filter( l -> !l.contains( connectionAndUserDetails( SYSTEM_DATABASE_NAME ) ) )
+                .filter( l -> !l.contains( connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ) ) )
                 .collect( Collectors.toList() );
     }
 
@@ -632,13 +698,25 @@ class QueryLoggerIT
         return logLines;
     }
 
-    private void executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params,
-            Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    private void executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params )
     {
+        Consumer<ResourceIterator<Map<String,Object>>> resultConsumer = ResourceIterator::close;
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? emptyMap() : params;
             resultConsumer.accept( tx.execute( call, p ) );
+            tx.commit();
+        }
+    }
+
+    private void executeSystemCommandSuperUser( String query )
+    {
+        GraphDatabaseFacade facade = (GraphDatabaseFacade) databaseManagementService.database( SYSTEM_DATABASE_NAME );
+
+        Consumer<ResourceIterator<Map<String,Object>>> resultConsumer = ResourceIterator::close;
+        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.implicit, LoginContext.AUTH_DISABLED ) )
+        {
+            resultConsumer.accept( tx.execute( query, emptyMap() ) );
             tx.commit();
         }
     }
