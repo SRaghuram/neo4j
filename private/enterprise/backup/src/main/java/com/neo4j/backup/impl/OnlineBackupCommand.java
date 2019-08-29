@@ -101,6 +101,7 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withConsistencyCheck( checkConsistency )
                 .withConsistencyCheckGraph( consistencyCheckOptions.isCheckGraph() )
                 .withConsistencyCheckIndexes( consistencyCheckOptions.isCheckIndexes() )
+                .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
                 .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
                 .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
                 .build();

@@ -602,7 +602,7 @@ class ImportTest
                         ProgressMonitorFactory.NONE,
                         NullLogProvider.getInstance(),
                         false,
-                        new ConsistencyFlags( true, true, true, true ) );
+                        new ConsistencyFlags( true, true, true, true, true ) );
         if ( !result.isSuccessful() )
         {
             try

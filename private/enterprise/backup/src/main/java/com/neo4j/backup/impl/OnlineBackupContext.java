@@ -95,6 +95,7 @@ public class OnlineBackupContext
         private boolean consistencyCheck = true;
         private boolean consistencyCheckGraph = true;
         private boolean consistencyCheckIndexes = true;
+        private boolean consistencyCheckIndexStructure = true;
         private boolean consistencyCheckLabelScanStore = true;
         private boolean consistencyCheckPropertyOwners;
 
@@ -161,6 +162,12 @@ public class OnlineBackupContext
             return this;
         }
 
+        public Builder withConsistencyCheckIndexStructure( Boolean consistencyCheckIndexStructure )
+        {
+            this.consistencyCheckIndexStructure = consistencyCheckIndexStructure;
+            return this;
+        }
+
         public Builder withConsistencyCheckLabelScanStore( Boolean consistencyCheckLabelScanStore )
         {
             this.consistencyCheckLabelScanStore = consistencyCheckLabelScanStore;
@@ -212,7 +219,8 @@ public class OnlineBackupContext
 
         private ConsistencyFlags buildConsistencyFlags()
         {
-            return new ConsistencyFlags( consistencyCheckGraph, consistencyCheckIndexes, consistencyCheckLabelScanStore, consistencyCheckPropertyOwners );
+            return new ConsistencyFlags( consistencyCheckGraph, consistencyCheckIndexes, consistencyCheckIndexStructure, consistencyCheckLabelScanStore,
+                    consistencyCheckPropertyOwners );
         }
     }
 }

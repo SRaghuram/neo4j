@@ -53,8 +53,8 @@ class OnlineBackupCommandTest
                         "USAGE%n" + "%n" +
                         "backup [--check-consistency] [--fallback-to-full] [--verbose]%n" +
                         "       [--additional-config=<path>] --backup-dir=<path>%n" +
-                        "       [--check-graph=<true/false>] [--check-indexes=<true/false>]%n" +
-                        "       [--check-label-scan-store=<true/false>]%n" +
+                        "       [--check-graph=<true/false>] [--check-index-structure=<true/false>]%n" +
+                        "       [--check-indexes=<true/false>] [--check-label-scan-store=<true/false>]%n" +
                         "       [--check-property-owners=<true/false>] [--database=<database>]%n" +
                         "       [--from=<host:port>] [--pagecache=<size>] [--report-dir=<path>]%n%n"
                         + "DESCRIPTION%n" + "%n" +
@@ -88,6 +88,9 @@ class OnlineBackupCommandTest
                         "                              Default: true%n" +
                         "      --check-indexes=<true/false>%n" +
                         "                            Perform consistency checks on indexes.%n" +
+                        "                              Default: true%n" +
+                        "      --check-index-structure=<true/false>%n" +
+                        "                            Perform structure checks on indexes.%n" +
                         "                              Default: true%n" +
                         "      --check-label-scan-store=<true/false>%n" +
                         "                            Perform consistency checks on the label scan store.%n" +
