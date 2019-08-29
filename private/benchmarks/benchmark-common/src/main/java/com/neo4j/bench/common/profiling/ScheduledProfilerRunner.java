@@ -13,15 +13,13 @@ import com.neo4j.bench.common.profiling.ScheduledProfiler.FixedRate;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static java.lang.String.format;
+import java.util.stream.Stream;
 
 public class ScheduledProfilerRunner
 {
@@ -97,40 +95,20 @@ public class ScheduledProfilerRunner
 
     private FixedRateValue getFixedRate( ScheduledProfiler scheduledProfiler )
     {
-        Method intfMethod = findIntfMethod();
-        FixedRate defaultFixedRate = intfMethod.getAnnotation( FixedRate.class );
-        try
-        {
-            Method method =
-                    scheduledProfiler.getClass().getMethod( intfMethod.getName(), intfMethod.getParameterTypes() );
-            FixedRate fixedRate = method.getAnnotation( ScheduledProfiler.FixedRate.class );
-            if ( fixedRate == null )
-            {
-                return new FixedRateValue( defaultFixedRate.period(), defaultFixedRate.timeUnit() );
-            }
-            else
-            {
-                return new FixedRateValue( fixedRate.period(), fixedRate.timeUnit() );
-            }
-        }
-        catch ( NoSuchMethodException | SecurityException e )
-        {
-            throw new RuntimeException( format( "failed to introspect class %s", scheduledProfiler.getClass() ), e );
-        }
-    }
-
-    private Method findIntfMethod()
-    {
-        Class<ScheduledProfiler> intf = ScheduledProfiler.class;
-        List<Method> intfMethods = Arrays.stream( intf.getMethods() )
-                .filter( method -> method.getAnnotation( FixedRate.class ) != null )
-                .collect( Collectors.toList() );
-
-        if ( intfMethods.size() > 1 )
-        {
-            throw new RuntimeException( format( "%s has to many methods", intf ) );
-        }
-        return intfMethods.get( 0 );
+        return Arrays.stream( scheduledProfiler.getClass().getMethods() )
+                .filter( method -> "onSchedule".equals( method.getName() ) )
+                .flatMap( method ->
+                    {
+                        FixedRate fixedRate = method.getAnnotation( FixedRate.class );
+                        if ( fixedRate != null )
+                        {
+                            return Stream.of( fixedRate );
+                        }
+                        return Stream.empty();
+                    })
+                .findFirst()
+                .map( fixedRate -> new FixedRateValue( fixedRate.period(), fixedRate.timeUnit() ) )
+                .orElseGet( () -> new FixedRateValue( 5, TimeUnit.SECONDS ) );
     }
 
     static class FixedRateValue
