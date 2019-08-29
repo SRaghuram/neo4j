@@ -45,10 +45,10 @@ public class DeleteUserStressIT
     public void setup()
     {
         adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "neo4j" ) );
-        try ( Session session = adminDriver.session();
+        try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) );
               Transaction tx = session.beginTransaction() )
         {
-            tx.run( "CALL dbms.security.changePassword('abc')" ).consume();
+            tx.run( "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc'" ).consume();
             tx.success();
         }
         adminDriver.close();
@@ -102,15 +102,15 @@ public class DeleteUserStressIT
 
         for (; ; )
         {
-            try ( Session session = adminDriver.session();
+            try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) );
                   Transaction tx = session.beginTransaction() )
             {
-                tx.run( "CALL dbms.security.deleteUser('pontus')" ).consume();
+                tx.run( "DROP USER pontus" ).consume();
                 tx.success();
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( "User 'pontus' does not exist." ) )
+                if ( !e.getMessage().equals( "Failed to delete the specified user 'pontus': User does not exist." ) )
                 {
                     errors.add( e );
                 }
@@ -126,7 +126,7 @@ public class DeleteUserStressIT
             try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ));
                   Transaction tx = session.beginTransaction() )
             {
-                tx.run( "CALL dbms.security.createUser('pontus', 'sutnop', false)" ).consume();
+                tx.run( "CREATE USER pontus SET PASSWORD 'sutnop' CHANGE NOT REQUIRED" ).consume();
                 tx.success();
             }
             catch ( ClientException e )

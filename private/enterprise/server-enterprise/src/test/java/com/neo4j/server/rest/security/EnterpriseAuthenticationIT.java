@@ -50,7 +50,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
         HTTP.RawPayload payload = HTTP.RawPayload.quotedJson(
                 "{'statements':[{'statement':'CALL dbms.security.listRoles()'}]}" );
         HTTP.Response response = HTTP.withBasicAuth( "neo4j", "secret" )
-                .request( method, txCommitURL(), payload );
+                .request( method, txCommitURL( "system" ), payload );
 
         // Then
         assertThat(response.status(), equalTo(200));

@@ -104,8 +104,7 @@ public class AuthProceduresBase
     protected UserResult userResultForSubject()
     {
         String username = securityContext.subject().username();
-        boolean changeReq = securityContext.subject().getAuthenticationResult().equals( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
-        return new UserResult( username, securityContext.roles(), changeReq, false );
+        return new UserResult( username, securityContext.roles(), false, false );
     }
 
     public static class UserResult

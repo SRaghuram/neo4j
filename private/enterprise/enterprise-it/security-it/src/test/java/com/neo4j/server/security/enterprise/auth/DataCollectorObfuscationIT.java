@@ -47,6 +47,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
     void shouldOmitDBMSQueriesInDbStatsRetrieve()
     {
         // given
+        var oldSecret = "abc";
         String secret = "abc123";
         String sillySecret = ".changePassword(\\'si\"lly\\')";
         String otherSillySecret = "other$silly";
@@ -56,23 +57,20 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
 
         // when
         assertSuccess( adminSubject, "CALL db.stats.collect('QUERIES')", ResourceIterator::close );
-        assertEmpty( adminSubject, format( "CALL dbms.security.changePassword('%s')", secret ) );
-        assertEmpty( adminSubject, format( "CALL dbms.security.changeUserPassword('readSubject', '%s')", secret ) );
-        assertEmpty( adminSubject, format( "CALL dbms.security.changeUserPassword('editorSubject', '%s', true)", secret ) );
-        assertEmpty( adminSubject, format( "CALL dbms.security.createUser('userA', '%s')", secret ) );
-        assertEmpty( adminSubject, format( "CALL dbms.security.createUser('userB', '%s', true)", secret ) );
-        assertEmpty( adminSubject, "CALL dbms.security.suspendUser('userB')" );
-        assertSuccess( adminSubject, "call dbms.security.listRoles()", ResourceIterator::close );
-        assertEmpty( adminSubject, "CALL dbms.security.createRole('monkey')" );
+        assertSystemCommandSuccess( adminSubject, format( "ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", oldSecret, secret ) );
+        assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.changeUserPassword('readSubject', '%s')", secret ) );
+        assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.changeUserPassword('editorSubject', '%s', true)", secret ) );
+        assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.createUser('userA', '%s')", secret ) );
+        assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.createUser('userB', '%s', true)", secret ) );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('userB')" );
+        assertSystemCommandSuccess( adminSubject, "call dbms.security.listRoles()", ResourceIterator::close );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createRole('monkey')" );
         assertSuccess( adminSubject, "CALL dbms.killQuery('query-1234')", ResourceIterator::close );
         assertEmpty( adminSubject, "CALL dbms.setTXMetaData({prop: 'itsAProp'})" );
-        assertFail( adminSubject, format( "CALL dbms.security.changeUserPassword(null, '%s')", secret ), "" );
-        assertFail( adminSubject, format( "CALL dbms.security.changeUserPassword('malformedUser, '%s')", secret ), "" );
-        assertEmpty( adminSubject, format( "EXPLAIN CALL dbms.security.changePassword('%s')", secret ) );
-        assertEmpty( adminSubject, format( "CALL dbms.security.changePassword('%s')", sillySecret ) );
-        assertSuccess( adminSubject, format( "CALL dbms.security.changeUserPassword('writeSubject','%s') " +
-                                             "CALL dbms.security.changeUserPassword('readSubject','%s') RETURN 1",
-                                             sillySecret, otherSillySecret ), ResourceIterator::close );
+        assertSystemCommandFail( adminSubject, format( "CALL dbms.security.changeUserPassword(null, '%s')", secret ), "" );
+        assertSystemCommandFail( adminSubject, format( "CALL dbms.security.changeUserPassword('malformedUser, '%s')", secret ), "" );
+        assertSystemCommandSuccess( adminSubject, format( "EXPLAIN CALL dbms.security.changePassword('%s')", secret ) );
+        assertSystemCommandSuccess( adminSubject, format( "ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", secret, sillySecret ) );
         assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
 
         // then

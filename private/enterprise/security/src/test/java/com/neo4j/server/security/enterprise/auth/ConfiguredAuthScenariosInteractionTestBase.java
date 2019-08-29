@@ -52,7 +52,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
                 SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME )
         );
-        assertSuccess( adminSubject, "CALL dbms.security.listUsers",
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listUsers",
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
         try ( Transaction transaction1 = localGraph.beginTx() )
@@ -71,7 +71,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
                 SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME,
                 SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME
         ) );
-        assertSuccess( adminSubject, "CALL dbms.security.listUsers",
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listUsers",
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
         try ( Transaction transaction1 = localGraph.beginTx() )

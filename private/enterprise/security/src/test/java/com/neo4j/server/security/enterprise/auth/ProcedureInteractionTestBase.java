@@ -321,12 +321,12 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testFailDeleteUser( S subject, String username, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.deleteUser('" + username + "')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.deleteUser('" + username + "')", errMsg );
     }
 
     void testFailDeleteRole( S subject, String roleName, String errMsg )
     {
-        assertFail( subject, "CALL dbms.security.deleteRole('" + roleName + "')", errMsg );
+        assertSystemCommandFail( subject, "CALL dbms.security.deleteRole('" + roleName + "')", errMsg );
     }
 
     void testSuccessfulListUsers( S subject, Object[] users )
