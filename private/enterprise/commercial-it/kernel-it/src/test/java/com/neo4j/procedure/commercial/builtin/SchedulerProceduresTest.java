@@ -9,6 +9,7 @@ import com.neo4j.test.extension.CommercialDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
@@ -26,20 +27,28 @@ class SchedulerProceduresTest
     @Test
     void shouldListActiveGroups()
     {
-        try ( Result result = db.execute( "CALL dbms.scheduler.groups" ) )
+        try ( Transaction tx = db.beginTx() )
         {
-            assertTrue( result.hasNext() );
-            while ( result.hasNext() )
+            try ( Result result = db.execute( "CALL dbms.scheduler.groups" ) )
             {
-                assertThat( (Long) result.next().get( "threads" ), greaterThan( 0L ) );
+                assertTrue( result.hasNext() );
+                while ( result.hasNext() )
+                {
+                    assertThat( (Long) result.next().get( "threads" ), greaterThan( 0L ) );
+                }
             }
+            tx.commit();
         }
     }
 
     @Test
     void shouldProfileGroup()
     {
-        String result = db.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
-        assertThat( result, containsString( "morsel.Worker.run" ) );
+        try ( Transaction tx = db.beginTx() )
+        {
+            String result = db.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
+            assertThat( result, containsString( "morsel.Worker.run" ) );
+            tx.commit();
+        }
     }
 }
