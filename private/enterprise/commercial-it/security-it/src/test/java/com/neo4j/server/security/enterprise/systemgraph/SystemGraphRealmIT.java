@@ -342,8 +342,8 @@ class SystemGraphRealmIT
 
         ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
         ResourcePrivilege readRelPrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL );
-        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), RelTypeSegment.ALL );
+        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL );
+        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL );
         ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
         ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
         ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL );
@@ -429,7 +429,7 @@ class SystemGraphRealmIT
         // Give Alice match privileges in 'neo4j'
         ResourcePrivilege readPrivilege = new ResourcePrivilege( GRANT, Action.READ,
                 new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDB.beginTx() )
         {
@@ -458,7 +458,7 @@ class SystemGraphRealmIT
 
         // Alice should NOT have read privileges in 'foo'
         assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
-        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.FIND, new Resource.GraphResource(), LabelSegment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, "foo" ) ) );
 
         realm.stop();
 

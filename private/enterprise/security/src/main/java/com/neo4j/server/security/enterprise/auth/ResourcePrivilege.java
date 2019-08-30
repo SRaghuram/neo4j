@@ -144,7 +144,7 @@ public class ResourcePrivilege
     public enum Action
     {
         /** MATCH element and read labels */
-        FIND,
+        TRAVERSE,
 
         /** Read properties of element */
         READ,

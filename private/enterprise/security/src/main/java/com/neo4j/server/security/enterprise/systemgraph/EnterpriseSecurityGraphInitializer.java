@@ -237,9 +237,9 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.FIND, new GraphResource(), LabelSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, Action.TRAVERSE, new GraphResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.FIND, new GraphResource(), RelTypeSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, Action.TRAVERSE, new GraphResource(), RelTypeSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
                         new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,

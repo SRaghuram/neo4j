@@ -259,15 +259,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.FIND.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role

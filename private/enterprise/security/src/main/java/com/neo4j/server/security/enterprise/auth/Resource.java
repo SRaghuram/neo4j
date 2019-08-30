@@ -30,7 +30,7 @@ public interface Resource
         @Override
         public void assertValidCombination( Action action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ ) || action.equals( Action.FIND )) )
+            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ ) || action.equals( Action.TRAVERSE )) )
             {
                 throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }

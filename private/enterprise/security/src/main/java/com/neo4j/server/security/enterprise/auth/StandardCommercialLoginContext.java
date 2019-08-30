@@ -583,7 +583,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
 
                 switch ( privilege.getAction() )
                 {
-                case FIND:
+                case TRAVERSE:
                     anyRead.put( privilegeType, true );
                     if ( segment instanceof LabelSegment )
                     {
@@ -611,7 +611,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                     }
                     else
                     {
-                        throw new IllegalStateException( "Unsupported segment qualifier for find privilege: " + segment.getClass().getSimpleName() );
+                        throw new IllegalStateException( "Unsupported segment qualifier for traverse privilege: " + segment.getClass().getSimpleName() );
                     }
 
                     break;

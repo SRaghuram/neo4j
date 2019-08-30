@@ -24,8 +24,8 @@ class ResourcePrivilegeTest
     {
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
-            new ResourcePrivilege( privilegeType, Action.FIND, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.FIND, new GraphResource(), RelTypeSegment.ALL );
+            new ResourcePrivilege( privilegeType, Action.TRAVERSE, new GraphResource(), LabelSegment.ALL );
+            new ResourcePrivilege( privilegeType, Action.TRAVERSE, new GraphResource(), RelTypeSegment.ALL );
 
             new ResourcePrivilege( privilegeType, Action.READ, new GraphResource(), LabelSegment.ALL );
             new ResourcePrivilege( privilegeType, Action.READ, new GraphResource(), RelTypeSegment.ALL );
@@ -49,18 +49,18 @@ class ResourcePrivilegeTest
     {
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.FIND, new TokenResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.FIND, new SchemaResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.FIND, new SystemResource(), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SystemResource(), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.FIND, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.FIND, new TokenResource(), RelTypeSegment.ALL ) );
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), RelTypeSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.FIND, new SchemaResource(), RelTypeSegment.ALL ) );
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), RelTypeSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.FIND, new SystemResource(), RelTypeSegment.ALL ) );
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SystemResource(), RelTypeSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.FIND, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
 
             assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.READ, new TokenResource(), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.READ, new SchemaResource(), LabelSegment.ALL ) );
