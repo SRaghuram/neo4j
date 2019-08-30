@@ -16,6 +16,28 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
+  test("Optional Match over or-union query should retain incoming arguments") {
+    graph.createIndex("Person", "name")
+    graph.createIndex("Person", "number")
+    createLabeledNode(Map("name" -> "x", "number" -> 0), "Person")
+    createLabeledNode(Map("name" -> "y", "number" -> 1), "Person")
+    createLabeledNode(Map("name" -> "z", "number" -> 2), "Person")
+    val with34 = Configs.InterpretedAndSlotted
+    val without34 = Configs.InterpretedAndSlotted - Configs.Cost3_4
+    Map(
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'x' OR n.number = 1 RETURN variable, n.name, n.number" -> (Seq(Seq(100, "x", 0), Seq(100, "y", 1)), without34),
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'X' OR n.number = 1 RETURN variable, n.name, n.number" -> (Seq(Seq(100, "y", 1)), without34),
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'x' OR n.number = -1 RETURN variable, n.name, n.number" -> (Seq(Seq(100, "x", 0)), without34),
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'X' OR n.number = -1 RETURN variable, n.name, n.number" -> (Seq(Seq(100, null, null)), with34)
+    ).foreach {
+      case (query: String, (res: Seq[Seq[Any]], config: TestConfiguration)) =>
+        val expected = res.map(v => Map("variable" -> v.head, "n.name" -> v(1), "n.number" -> v(2)))
+        val result = executeWith(config, query)
+        result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Distinct").onTopOf(aPlan("Union").onTopOf(aPlan("NodeIndexSeekByRange"))))
+        result.toList should equal(expected)
+    }
+  }
+
   test("should handle negative node id gracefully") {
     createNode("id" -> 0)
     for (i <- 1 to 1000) createNode("id" -> i)
