@@ -455,6 +455,7 @@ object SlotAllocation {
            _: SetRelationshipProperty |
            _: SetRelationshipPropertiesFromMap |
            _: SetProperty |
+           _: SetPropertiesFromMap |
            _: RemoveLabels =>
         source
 
