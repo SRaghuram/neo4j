@@ -339,6 +339,19 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("bar", "secondPassword", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should get syntax exception when using both replace and if not exists") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("CREATE OR REPLACE USER foo IF NOT EXISTS SET PASSWORD 'pass'")
+    }
+
+    // THEN
+    exception.getMessage should include("Failed to create the specified user 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
+  }
+
   test("should fail when creating user when not on system database") {
     the[DatabaseAdministrationException] thrownBy {
       // WHEN

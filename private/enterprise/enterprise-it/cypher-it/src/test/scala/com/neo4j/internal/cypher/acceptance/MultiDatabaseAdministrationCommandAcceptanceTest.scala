@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
-import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException}
+import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -698,6 +698,19 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     execute("SHOW DATABASES").toList.size should equal(2)
     execute("SHOW DATABASE `foo`").toList should be(List.empty)
+  }
+
+  test("should get syntax exception when using both replace and if not exists") {
+    // GIVEN
+    setup(defaultConfig)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute("CREATE OR REPLACE DATABASE foo IF NOT EXISTS")
+    }
+
+    // THEN
+    exception.getMessage should include("Failed to create the specified database 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
   test("should fail when creating a database when not on system database") {

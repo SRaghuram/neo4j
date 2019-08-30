@@ -7,7 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException}
+import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
@@ -440,6 +440,27 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(barWithUser))
+  }
+
+  test("should get syntax exception when using both replace and if not exists") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exceptionCreate = the[SyntaxException] thrownBy {
+      execute("CREATE OR REPLACE ROLE foo IF NOT EXISTS")
+    }
+
+    // THEN
+    exceptionCreate.getMessage should include("Failed to create the specified role 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    // WHEN
+    val exceptionCopy = the[SyntaxException] thrownBy {
+      execute("CREATE OR REPLACE ROLE foo IF NOT EXISTS AS COPY OF bar")
+    }
+
+    // THEN
+    exceptionCopy.getMessage should include("Failed to create the specified role 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
   test("should fail when creating role when not on system database") {
