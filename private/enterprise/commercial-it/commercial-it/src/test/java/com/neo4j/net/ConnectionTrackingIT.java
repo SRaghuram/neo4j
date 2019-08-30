@@ -5,12 +5,10 @@
  */
 package com.neo4j.net;
 
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -36,22 +34,23 @@ import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
 import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.bolt.v2.messaging.Neo4jPackV2;
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingAction;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
@@ -67,12 +66,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
@@ -86,7 +86,8 @@ import static org.neo4j.test.server.HTTP.withBasicAuth;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
-public class ConnectionTrackingIT
+@TestDirectoryExtension
+class ConnectionTrackingIT
 {
     private static final String NEO4J_USER_PWD = "test";
     private static final String OTHER_USER = "otherUser";
@@ -95,30 +96,40 @@ public class ConnectionTrackingIT
     private static final List<String> LIST_CONNECTIONS_PROCEDURE_COLUMNS = Arrays.asList(
             "connectionId", "connectTime", "connector", "username", "userAgent", "serverAddress", "clientAddress" );
 
-    @ClassRule
-    public static final Neo4jRule neo4j = new CommercialNeo4jRule()
-            .withConfig( auth_enabled, true )
-            .withConfig( HttpConnector.enabled, true )
-            .withConfig( HttpsConnector.enabled, true )
-            .withConfig( webserver_max_threads, 50 ) // higher than the amount of concurrent requests tests execute
-            .withConfig( online_backup_enabled, false );
-
-    private static long dummyNodeId;
-
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Set<TransportConnection> connections = ConcurrentHashMap.newKeySet();
     private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV2() );
 
-    @BeforeClass
-    public static void beforeAll()
+    @Inject
+    private TestDirectory dir;
+
+    private GraphDatabaseAPI db;
+    private InProcessNeo4j neo4j;
+    private long dummyNodeId;
+
+    @BeforeEach
+    void setUp()
     {
+        neo4j = new CommercialInProcessNeo4jBuilder( dir.directory() )
+                .withConfig( neo4j_home, dir.directory().toPath().toAbsolutePath() )
+                .withConfig( auth_enabled, true )
+                .withConfig( HttpConnector.enabled, true )
+                .withConfig( HttpsConnector.enabled, true )
+                .withConfig( webserver_max_threads, 50 ) /* higher than the amount of concurrent requests tests execute*/
+                .withConfig( online_backup_enabled, false )
+                .build();
+        neo4j.start();
+        db = (GraphDatabaseAPI) neo4j.defaultDatabaseService();
+
         changeDefaultPasswordForUserNeo4j( NEO4J_USER_PWD );
         createNewUser( OTHER_USER, OTHER_USER_PWD );
         dummyNodeId = createDummyNode();
+
+        closeAcceptedConnections();
     }
 
-    @After
-    public void afterEach() throws Exception
+    @AfterEach
+    void afterEach() throws Exception
     {
         for ( TransportConnection connection : connections )
         {
@@ -130,55 +141,52 @@ public class ConnectionTrackingIT
             {
             }
         }
-        for ( TrackedNetworkConnection connection : acceptedConnectionsFromConnectionTracker() )
-        {
-            try
-            {
-                connection.close();
-            }
-            catch ( Exception ignore )
-            {
-            }
-        }
+        closeAcceptedConnections();
         executor.shutdownNow();
         terminateAllTransactions();
         awaitNumberOfAcceptedConnectionsToBe( 0 );
+
+        neo4j.close();
+    }
+
+    private void closeAcceptedConnections()
+    {
+        acceptedConnectionsFromConnectionTracker().forEach( TrackedNetworkConnection::close );
     }
 
     @Test
-    public void shouldListNoConnectionsWhenIdle() throws Exception
+    void shouldListNoConnectionsWhenIdle() throws Exception
     {
         verifyConnectionCount( HTTP, null, 0 );
         verifyConnectionCount( HTTPS, null, 0 );
         verifyConnectionCount( BOLT, null, 0 );
     }
-
     @Test
-    public void shouldListUnauthenticatedHttpConnections() throws Exception
+    void shouldListUnauthenticatedHttpConnections() throws Exception
     {
         testListingOfUnauthenticatedConnections( 5, 0, 0 );
     }
 
     @Test
-    public void shouldListUnauthenticatedHttpsConnections() throws Exception
+    void shouldListUnauthenticatedHttpsConnections() throws Exception
     {
         testListingOfUnauthenticatedConnections( 0, 2, 0 );
     }
 
     @Test
-    public void shouldListUnauthenticatedBoltConnections() throws Exception
+    void shouldListUnauthenticatedBoltConnections() throws Exception
     {
         testListingOfUnauthenticatedConnections( 0, 0, 4 );
     }
 
     @Test
-    public void shouldListUnauthenticatedConnections() throws Exception
+    void shouldListUnauthenticatedConnections() throws Exception
     {
         testListingOfUnauthenticatedConnections( 3, 2, 7 );
     }
 
     @Test
-    public void shouldListAuthenticatedHttpConnections() throws Exception
+    void shouldListAuthenticatedHttpConnections() throws Exception
     {
         lockNodeAndExecute( dummyNodeId, () ->
         {
@@ -198,7 +206,7 @@ public class ConnectionTrackingIT
     }
 
     @Test
-    public void shouldListAuthenticatedHttpsConnections() throws Exception
+    void shouldListAuthenticatedHttpsConnections() throws Exception
     {
         lockNodeAndExecute( dummyNodeId, () ->
         {
@@ -218,7 +226,7 @@ public class ConnectionTrackingIT
     }
 
     @Test
-    public void shouldListAuthenticatedBoltConnections() throws Exception
+    void shouldListAuthenticatedBoltConnections() throws Exception
     {
         lockNodeAndExecute( dummyNodeId, () ->
         {
@@ -238,7 +246,7 @@ public class ConnectionTrackingIT
     }
 
     @Test
-    public void shouldListAuthenticatedConnections() throws Exception
+    void shouldListAuthenticatedConnections() throws Exception
     {
         lockNodeAndExecute( dummyNodeId, () ->
         {
@@ -263,19 +271,19 @@ public class ConnectionTrackingIT
     }
 
     @Test
-    public void shouldKillHttpConnection() throws Exception
+    void shouldKillHttpConnection() throws Exception
     {
         testKillingOfConnections( neo4j.httpURI(), HTTP, 4 );
     }
 
     @Test
-    public void shouldKillHttpsConnection() throws Exception
+    void shouldKillHttpsConnection() throws Exception
     {
         testKillingOfConnections( neo4j.httpsURI(), HTTPS, 2 );
     }
 
     @Test
-    public void shouldKillBoltConnection() throws Exception
+    void shouldKillBoltConnection() throws Exception
     {
         testKillingOfConnections( neo4j.boltURI(), BOLT, 3 );
     }
@@ -332,31 +340,31 @@ public class ConnectionTrackingIT
         return connection;
     }
 
-    private static void awaitNumberOfAuthenticatedConnectionsToBe( int n ) throws InterruptedException
+    private void awaitNumberOfAuthenticatedConnectionsToBe( int n ) throws InterruptedException
     {
         assertEventually( "Unexpected number of authenticated connections",
-                ConnectionTrackingIT::authenticatedConnectionsFromConnectionTracker, hasSize( n ),
+                this::authenticatedConnectionsFromConnectionTracker, hasSize( n ),
                 1, MINUTES );
     }
 
-    private static void awaitNumberOfAcceptedConnectionsToBe( int n ) throws InterruptedException
+    private void awaitNumberOfAcceptedConnectionsToBe( int n ) throws InterruptedException
     {
         assertEventually( connections -> "Unexpected number of accepted connections: " + connections,
-                ConnectionTrackingIT::acceptedConnectionsFromConnectionTracker, hasSize( n ),
+                this::acceptedConnectionsFromConnectionTracker, hasSize( n ),
                 1, MINUTES );
     }
 
-    private static void verifyConnectionCount( TestConnector connector, String username, int expectedCount ) throws InterruptedException
+    private void verifyConnectionCount( TestConnector connector, String username, int expectedCount ) throws InterruptedException
     {
         verifyConnectionCount( connector, username, expectedCount, false );
     }
 
-    private static void verifyAuthenticatedConnectionCount( TestConnector connector, String username, int expectedCount ) throws InterruptedException
+    private void verifyAuthenticatedConnectionCount( TestConnector connector, String username, int expectedCount ) throws InterruptedException
     {
         verifyConnectionCount( connector, username, expectedCount, true );
     }
 
-    private static void verifyConnectionCount( TestConnector connector, String username, int expectedCount, boolean expectAuthenticated )
+    private void verifyConnectionCount( TestConnector connector, String username, int expectedCount, boolean expectAuthenticated )
             throws InterruptedException
     {
         assertEventually( connections -> "Unexpected number of listed connections: " + connections,
@@ -364,13 +372,12 @@ public class ConnectionTrackingIT
                 1, MINUTES );
     }
 
-    private static List<Map<String,Object>> listMatchingConnection( TestConnector connector, String username, boolean expectAuthenticated )
+    private List<Map<String,Object>> listMatchingConnection( TestConnector connector, String username, boolean expectAuthenticated )
     {
         List<Map<String,Object>> matchingRecords = new ArrayList<>();
-        GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
-        try ( Transaction transaction = graphDatabaseService.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            Result result = graphDatabaseService.execute( "CALL dbms.listConnections()" );
+            Result result = db.execute( "CALL dbms.listConnections()" );
             assertEquals( LIST_CONNECTIONS_PROCEDURE_COLUMNS, result.columns() );
             List<Map<String,Object>> records = result.stream().collect( toList() );
 
@@ -400,21 +407,20 @@ public class ConnectionTrackingIT
         return matchingRecords;
     }
 
-    private static List<TrackedNetworkConnection> authenticatedConnectionsFromConnectionTracker()
+    private List<TrackedNetworkConnection> authenticatedConnectionsFromConnectionTracker()
     {
         return acceptedConnectionsFromConnectionTracker().stream()
                 .filter( connection -> connection.username() != null )
                 .collect( toList() );
     }
 
-    private static List<TrackedNetworkConnection> acceptedConnectionsFromConnectionTracker()
+    private List<TrackedNetworkConnection> acceptedConnectionsFromConnectionTracker()
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) neo4j.defaultDatabaseService();
         NetworkConnectionTracker connectionTracker = db.getDependencyResolver().resolveDependency( NetworkConnectionTracker.class );
         return connectionTracker.activeConnections();
     }
 
-    private static void changeDefaultPasswordForUserNeo4j( String newPassword )
+    private void changeDefaultPasswordForUserNeo4j( String newPassword )
     {
         String changePasswordUri = neo4j.httpURI().resolve( "user/neo4j/password" ).toString();
         Response response = withBasicAuth( "neo4j", "neo4j" )
@@ -423,7 +429,7 @@ public class ConnectionTrackingIT
         assertEquals( 204, response.status() );
     }
 
-    private static void createNewUser( String username, String password )
+    private void createNewUser( String username, String password )
     {
         String uri = txCommitUri( false );
 
@@ -436,13 +442,12 @@ public class ConnectionTrackingIT
         assertEquals( 200, response2.status() );
     }
 
-    private static long createDummyNode()
+    private long createDummyNode()
     {
-        GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
-        try ( Transaction transaction = graphDatabaseService.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
             long id;
-            try ( Result result = graphDatabaseService.execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
+            try ( Result result = db.execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
             {
                 Map<String,Object> record = single( result );
                 id = (long) record.get( "i" );
@@ -452,9 +457,8 @@ public class ConnectionTrackingIT
         }
     }
 
-    private static void lockNodeAndExecute( long id, ThrowingAction<Exception> action ) throws Exception
+    private void lockNodeAndExecute( long id, ThrowingAction<Exception> action ) throws Exception
     {
-        GraphDatabaseService db = neo4j.defaultDatabaseService();
         try ( Transaction tx = db.beginTx() )
         {
             Node node = db.getNodeById( id );
@@ -526,8 +530,8 @@ public class ConnectionTrackingIT
                     .send( util.chunk( initMessage( "neo4j", NEO4J_USER_PWD ) ) )
                     .send( util.chunk( new RunMessage( "CALL dbms.killConnection('" + id + "')" ), PullAllMessage.INSTANCE ) );
 
-            MatcherAssert.assertThat( connection, util.eventuallyReceivesSelectedProtocolVersion() );
-            MatcherAssert.assertThat( connection, util.eventuallyReceives(
+            assertThat( connection, util.eventuallyReceivesSelectedProtocolVersion() );
+            assertThat( connection, util.eventuallyReceives(
                     msgSuccess(),
                     msgSuccess(),
                     msgRecord( eqRecord( any( Value.class ), equalTo( stringOrNoValue( user ) ), equalTo( stringValue( "Connection found" ) ) ) ),
@@ -567,14 +571,13 @@ public class ConnectionTrackingIT
         }
     }
 
-    private static void terminateAllTransactions()
+    private void terminateAllTransactions()
     {
-        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) neo4j.defaultDatabaseService()).getDependencyResolver();
-        KernelTransactions kernelTransactions = dependencyResolver.resolveDependency( KernelTransactions.class );
+        KernelTransactions kernelTransactions = db.getDependencyResolver().resolveDependency( KernelTransactions.class );
         kernelTransactions.activeTransactions().forEach( h -> h.markForTermination( Terminated ) );
     }
 
-    private static String txCommitUri( boolean encrypted )
+    private String txCommitUri( boolean encrypted )
     {
         URI baseUri = encrypted ? neo4j.httpsURI() : neo4j.httpURI();
         return baseUri.resolve( "db/neo4j/tx/commit" ).toString();
