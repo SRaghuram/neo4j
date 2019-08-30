@@ -34,7 +34,7 @@ class FilterExpression extends AbstractCypherBenchmark with ListExpressionsHelpe
   @Param(Array[String]())
   var FilterExpression_size: Int = _
 
-  override def description = "UNWIND 10000_element_list AS no_used RETURN filter(n in $x WHERE n > <literal>) AS result"
+  override def description = "UNWIND 10000_element_list AS no_used RETURN [n in $x WHERE n > <literal>] AS result"
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val listParameter = astParameter("x", symbols.CTAny)

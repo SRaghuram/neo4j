@@ -36,7 +36,7 @@ class ExtractExpression extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var ExtractExpression_size: Int = _
 
-  override def description = "UNWIND 10000_element_list AS no_used RETURN extract(n in $x | n + n) AS result"
+  override def description = "UNWIND 10000_element_list AS no_used RETURN [n in $x | n + n] AS result"
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val resultColumns = List("result")
