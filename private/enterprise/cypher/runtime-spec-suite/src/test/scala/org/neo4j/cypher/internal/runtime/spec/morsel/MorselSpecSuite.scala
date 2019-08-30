@@ -148,8 +148,10 @@ class MorselMiscNoFusingTest extends MiscTestBase(SINGLE_THREADED_NO_FUSING, MOR
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL)
 class MorselMemoryManagementTest extends MemoryManagementTestBase(SINGLE_THREADED, MORSEL)
                                  with WithSlotsMemoryManagementTestBase
+                                 with TopSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
 class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
                                          with WithSlotsMemoryManagementTestBase
+                                         with TopSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
 class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(SINGLE_THREADED, MORSEL)
 
 // WORKLOAD
