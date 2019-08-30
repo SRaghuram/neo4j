@@ -19,7 +19,7 @@ object MorselBlacklist {
         case _: NestedPlanExpression =>
           _ + "Nested plan expressions"
 
-        case _: ResolvedFunctionInvocation =>
+        case _: ResolvedFunctionInvocation if parallelExecution =>
           _ + "User-defined functions"
 
         case f: FunctionInvocation if f.function == Linenumber || f.function == Filename =>
