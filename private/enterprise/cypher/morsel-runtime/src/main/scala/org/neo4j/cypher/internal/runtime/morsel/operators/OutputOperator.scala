@@ -80,9 +80,11 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 
 // MORSEL BUFFER OUTPUT
 
-case class MorselBufferOutputOperator(bufferId: BufferId, planId: Id) extends OutputOperator {
+// we need the the id of the head plan of the next pipeline because that is where er attribute time spent
+// during prepare output in profiling.
+case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
-  override val workIdentity: WorkIdentity = WorkIdentityImpl(planId, s"Output morsel to $bufferId")
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselBufferOutputState(workIdentity, bufferId, executionState, pipelineId)
 }
@@ -107,9 +109,11 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
 
 // MORSEL ARGUMENT STATE BUFFER OUTPUT
 
-case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, planId: Id) extends OutputOperator {
+// we need the the id of the head plan of the next pipeline because that is where er attribute time spent
+// during prepare output in profiling.
+case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
-  override val workIdentity: WorkIdentity = WorkIdentityImpl(planId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
+  override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
                                          executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),

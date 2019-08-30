@@ -190,15 +190,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     pipeline
   }
 
-  private def outputToBuffer(pipeline: PipelineDefinitionBuild, plan: LogicalPlan): MorselBufferDefinitionBuild = {
+  private def outputToBuffer(pipeline: PipelineDefinitionBuild, nextPipelineHeadPlan: LogicalPlan): MorselBufferDefinitionBuild = {
     val output = stateDefinition.newBuffer(pipeline.id, slotConfigurations(pipeline.headPlan.id))
-    pipeline.outputDefinition = MorselBufferOutput(output.id, plan.id)
+    pipeline.outputDefinition = MorselBufferOutput(output.id, nextPipelineHeadPlan.id)
     output
   }
 
-  private def outputToApplyBuffer(pipeline: PipelineDefinitionBuild, argumentSlotOffset: Int, plan: LogicalPlan): ApplyBufferDefinitionBuild = {
+  private def outputToApplyBuffer(pipeline: PipelineDefinitionBuild, argumentSlotOffset: Int, nextPipelineHeadPlan: LogicalPlan): ApplyBufferDefinitionBuild = {
     val output = stateDefinition.newApplyBuffer(pipeline.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id))
-    pipeline.outputDefinition = MorselBufferOutput(output.id, plan.id)
+    pipeline.outputDefinition = MorselBufferOutput(output.id, nextPipelineHeadPlan.id)
     output
   }
 
