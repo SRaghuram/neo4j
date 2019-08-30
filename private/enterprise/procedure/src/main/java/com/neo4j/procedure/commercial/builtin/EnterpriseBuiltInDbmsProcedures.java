@@ -64,7 +64,6 @@ import org.neo4j.scheduler.ActiveGroup;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -79,7 +78,6 @@ import static org.neo4j.procedure.Mode.DBMS;
 @SuppressWarnings( "unused" )
 public class EnterpriseBuiltInDbmsProcedures
 {
-    private static final int HARD_CHAR_LIMIT = 2048;
 
     @Context
     public Log log;
@@ -92,41 +90,6 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public SecurityContext securityContext;
-
-    @Description( "Attaches a map of data to the transaction. The data will be printed when listing queries, and " +
-                  "inserted into the query log." )
-    @Procedure( name = "dbms.setTXMetaData", mode = DBMS )
-    public void setTXMetaData( @Name( value = "data" ) Map<String,Object> data )
-    {
-        securityContext.assertCredentialsNotExpired();
-        int totalCharSize = data.entrySet()
-                .stream()
-                .mapToInt( e -> e.getKey().length() + ((e.getValue() != null) ? e.getValue().toString().length() : 0) )
-                .sum();
-
-        if ( totalCharSize >= HARD_CHAR_LIMIT )
-        {
-            throw new IllegalArgumentException(
-                    format( "Invalid transaction meta-data, expected the total number of chars for " +
-                            "keys and values to be less than %d, got %d", HARD_CHAR_LIMIT, totalCharSize ) );
-        }
-
-        getCurrentTx().setMetaData( data );
-    }
-
-    @Description( "Provides attached transaction metadata." )
-    @Procedure( name = "dbms.getTXMetaData", mode = DBMS )
-    public Stream<MetadataResult> getTXMetaData()
-    {
-        securityContext.assertCredentialsNotExpired();
-        return Stream.of( getCurrentTx().getMetaData() ).map( MetadataResult::new );
-    }
-
-    private KernelTransaction getCurrentTx()
-    {
-        return graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
-                .getKernelTransactionBoundToThisThread( true, graph.databaseId() );
-    }
 
     @Description( "List all accepted network connections at this instance that are visible to the user." )
     @Procedure( name = "dbms.listConnections", mode = DBMS )
@@ -679,6 +642,12 @@ public class EnterpriseBuiltInDbmsProcedures
         return securityContext.isAdmin() || securityContext.subject().hasUsername( username );
     }
 
+    private KernelTransaction getCurrentTx()
+    {
+        return graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
+                .getKernelTransactionBoundToThisThread( true, graph.databaseId() );
+    }
+
     public static class QueryTerminationResult
     {
         public final String queryId;
@@ -722,16 +691,6 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.username = username;
             this.transactionsTerminated = transactionsTerminated;
-        }
-    }
-
-    public static class MetadataResult
-    {
-        public final Map<String,Object> metadata;
-
-        MetadataResult( Map<String,Object> metadata )
-        {
-            this.metadata = metadata;
         }
     }
 
