@@ -24,6 +24,7 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -114,63 +115,8 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     public synchronized void start()
     {
         stopped = false;
-        if ( config.get( pagecache_warmup_prefetch ) )
-        {
-            loadEverythingToPageCache(); //pre-fetch synchronous
-            stop(); //Pre-fetching runs during startup and can be stopped when complete, disabling profiling
-        }
-        else
-        {
-            executor = buildExecutorService( scheduler );
-            pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
-        }
-    }
-
-    private void loadEverythingToPageCache()
-    {
-        try
-        {
-            Pattern whitelist = Pattern.compile( config.get( pagecache_warmup_prefetch_whitelist ) );
-            log.info( "Warming up page cache by pre-fetching files matching regex: %s", whitelist.pattern() );
-            List<JobHandle> handles = new ArrayList<>();
-            for ( PagedFile pagedFile : pageCache.listExistingMappings() )
-            {
-                if ( whitelist.matcher( pagedFile.file().toString() ).find() )
-                {
-                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, () -> touchAllPages( pagedFile ) ) );
-                }
-            }
-            for ( JobHandle handle : handles )
-            {
-                handle.waitTermination();
-            }
-            log.info( "Warming of page cache completed" );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Could not list existing mappings in page cache", e );
-        }
-        catch ( ExecutionException | InterruptedException e )
-        {
-            throw new RuntimeException( "Got interrupted while warming up page cache", e );
-        }
-    }
-
-    private void touchAllPages( PagedFile pagedFile )
-    {
-        log.debug( "Pre-fetching %s", pagedFile.file().getName() );
-        try ( PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK ) )
-        {
-            while ( cursor.next() && !stopped )
-            {
-                // Iterate over all pages
-            }
-            pageCache.reportEvents();
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Could not prefetch all pages into page cache", e );
-        }
+        executor = buildExecutorService( scheduler );
+        pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
     }
 
     public void stop()
@@ -191,7 +137,8 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     }
 
     /**
-     * Reheat the page cache based on existing profiling data, or do nothing if no profiling data is available.
+     * Reheat the page cache.
+     * If prefetch is configured everything is fetched, otherwise fetches based on existing profiling data, or do nothing if no profiling data is available.
      *
      * @return An {@link OptionalLong} of the number of pages loaded in, or {@link OptionalLong#empty()} if the
      * reheating was stopped early via {@link #stop()}.
@@ -203,6 +150,71 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         {
             return OptionalLong.empty();
         }
+
+        if ( config.get( pagecache_warmup_prefetch ) )
+        {
+            return OptionalLong.of( loadEverything() );
+        }
+        else
+        {
+            return OptionalLong.of( loadEverythingFromProfile() );
+        }
+    }
+
+    private long loadEverything()
+    {
+        try
+        {
+            Pattern whitelist = Pattern.compile( config.get( pagecache_warmup_prefetch_whitelist ) );
+            log.info( "Warming up page cache by pre-fetching files matching regex: %s", whitelist.pattern() );
+            List<JobHandle> handles = new ArrayList<>();
+            LongAdder totalPageCounter = new LongAdder();
+            for ( PagedFile pagedFile : pageCache.listExistingMappings() )
+            {
+                if ( whitelist.matcher( pagedFile.file().toString() ).find() )
+                {
+                    handles.add( scheduler.schedule( Group.FILE_IO_HELPER, () -> totalPageCounter.add( touchAllPages( pagedFile ) ) ) );
+                }
+            }
+            for ( JobHandle handle : handles )
+            {
+                handle.waitTermination();
+            }
+            log.info( "Warming of page cache completed" );
+
+            return totalPageCounter.sum();
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Could not list existing mappings in page cache", e );
+        }
+        catch ( ExecutionException | InterruptedException e )
+        {
+            throw new RuntimeException( "Got interrupted while warming up page cache", e );
+        }
+    }
+
+    private long touchAllPages( PagedFile pagedFile )
+    {
+        log.debug( "Pre-fetching %s", pagedFile.file().getName() );
+        try ( PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK ) )
+        {
+            long pages = 0;
+            while ( !stopped && cursor.next() )
+            {
+                pages++; // Iterate over all pages
+            }
+            pageCache.reportEvents();
+            return pages;
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Could not prefetch all pages into page cache", e );
+        }
+    }
+
+    private long loadEverythingFromProfile() throws IOException
+    {
         long pagesLoaded = 0;
         List<PagedFile> pagedFilesInDatabase = pageCache.listExistingMappings();
         Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
@@ -217,7 +229,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 // The database is allowed to map and unmap files while we are trying to heat it up.
             }
         }
-        return OptionalLong.of( pagesLoaded );
+        return pagesLoaded;
     }
 
     /**

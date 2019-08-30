@@ -24,7 +24,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
@@ -41,6 +44,8 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.extension.Inject;
@@ -57,8 +62,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_prefetch_whitelist;
+import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
+import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
@@ -424,10 +435,13 @@ class PageCacheWarmerTest
                         .build();
                 PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config, log );
                 warmer.start();
+                long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
+
+                pageCache.reportEvents();
+                assertEquals( numPages, cacheTracer.faults() );
+                assertEquals( numPages, pagesLoadedReportedByWarmer );
             }
-            pageCache.reportEvents();
-            assertEquals( numPages, cacheTracer.faults() );
         }
     }
 
@@ -452,10 +466,13 @@ class PageCacheWarmerTest
                 Config config = Config.defaults( pagecache_warmup_prefetch, true );
                 PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config, log );
                 warmer.start();
+                long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
+
+                pageCache.reportEvents();
+                assertEquals( numPagesFile1 + numPagesFile2, cacheTracer.faults() );
+                assertEquals( numPagesFile1 + numPagesFile2, pagesLoadedReportedByWarmer );
             }
-            pageCache.reportEvents();
-            assertEquals( numPagesFile1 + numPagesFile2, cacheTracer.faults() );
         }
     }
 
@@ -487,11 +504,14 @@ class PageCacheWarmerTest
                         .build();
                 PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config, log );
                 warmer.start();
+                long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
-            }
-            pageCache.reportEvents();
 
-            assertEquals( numPagesFile1 + numPagesFile3, cacheTracer.faults() );
+                pageCache.reportEvents();
+                assertEquals( numPagesFile1 + numPagesFile3, cacheTracer.faults() );
+                assertEquals( numPagesFile1 + numPagesFile3, pagesLoadedReportedByWarmer );
+
+            }
         }
     }
 
@@ -512,6 +532,7 @@ class PageCacheWarmerTest
                         .build();
                 PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config, log );
                 warmer.start();
+                warmer.reheat();
                 warmer.stop();
             }
             var matcher = inLog( PageCacheWarmer.class );
@@ -520,6 +541,53 @@ class PageCacheWarmerTest
                     matcher.debug( "Pre-fetching %s", testfile.getName() ),
                     matcher.info( "Warming of page cache completed" )
             );
+        }
+    }
+
+    @Test
+    void isStoppableWhileReheating() throws IOException, ExecutionException, InterruptedException
+    {
+        try ( PageCache pageCacheOrig = pageCacheExtension.getPageCache( fs, cfg ) )
+        {
+            //Setup
+            PageCache pageCache = spy( pageCacheOrig );
+            PagedFile pagedFile = mock( PagedFile.class );
+            PageCursor cursor = mock( PageCursor.class );
+            doReturn( List.of( pagedFile ) ).when( pageCache ).listExistingMappings();
+            when( pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK  ) ).thenReturn( cursor );
+            when( pagedFile.file() ).thenReturn( new File( "testfile" ) );
+
+            AtomicBoolean startedFetching = new AtomicBoolean( false );
+            Semaphore lock = new Semaphore( 0 );
+            when( cursor.next() ).then( invocationOnMock ->
+            {
+                if ( !startedFetching.getAndSet( true ) )
+                {
+                    lock.release(); //we are fetching stuff inside reheat(), ready to be stopped
+                }
+                Thread.sleep( 100 );
+                return true;
+            } );
+
+            Config config = Config.defaults( pagecache_warmup_prefetch, true );
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.storeDir(), config, log );
+
+            warmer.start();
+            JobHandle handle = scheduler.schedule( Group.FILE_IO_HELPER, () ->
+            {
+                try
+                {
+                    long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
+                    assertThat( pagesLoadedReportedByWarmer, greaterThan( 0L )  );
+                }
+                catch ( IOException e )
+                {
+                    e.printStackTrace();
+                }
+            } );
+            lock.acquire(); //wait until we are warming
+            warmer.stop();
+            handle.waitTermination();
         }
     }
 
