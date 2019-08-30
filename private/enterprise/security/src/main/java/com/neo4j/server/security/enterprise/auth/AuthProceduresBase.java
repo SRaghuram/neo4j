@@ -11,17 +11,8 @@ import com.neo4j.server.security.enterprise.log.SecurityLog;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
-import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.KernelTransactionHandle;
-import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.api.net.NetworkConnectionTracker;
-import org.neo4j.kernel.api.net.TrackedNetworkConnection;
-import org.neo4j.kernel.impl.api.KernelTransactions;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.Context;
 
@@ -44,52 +35,6 @@ public class AuthProceduresBase
     public EnterpriseUserManager userManager;
 
     // ----------------- helpers ---------------------
-
-    protected void kickoutUser( String username, String reason )
-    {
-        try
-        {
-            terminateTransactionsForValidUser( username );
-            terminateConnectionsForValidUser( username );
-        }
-        catch ( Exception e )
-        {
-            securityLog.error( securityContext.subject(), "failed to terminate running transaction and bolt connections for " +
-                    "user `%s` following %s: %s", username, reason, e.getMessage() );
-            throw e;
-        }
-    }
-
-    protected void terminateTransactionsForValidUser( String username )
-    {
-        KernelTransaction currentTx = getCurrentTx();
-        getActiveTransactions()
-                .stream()
-                .filter( tx ->
-                     tx.subject().hasUsername( username ) &&
-                    !tx.isUnderlyingTransaction( currentTx )
-                ).forEach( tx -> tx.markForTermination( Status.Transaction.Terminated ) );
-    }
-
-    protected void terminateConnectionsForValidUser( String username )
-    {
-        NetworkConnectionTracker connectionTracker = graph.getDependencyResolver().resolveDependency( NetworkConnectionTracker.class );
-        connectionTracker.activeConnections()
-                .stream()
-                .filter( connection -> Objects.equals( username, connection.username() ) )
-                .forEach( TrackedNetworkConnection::close );
-    }
-
-    private Set<KernelTransactionHandle> getActiveTransactions()
-    {
-        return graph.getDependencyResolver().resolveDependency( KernelTransactions.class ).activeTransactions();
-    }
-
-    private KernelTransaction getCurrentTx()
-    {
-        return graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
-                .getKernelTransactionBoundToThisThread( true, graph.databaseId() );
-    }
 
     public static class StringResult
     {

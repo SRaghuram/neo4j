@@ -315,28 +315,6 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testFailDeleteUser( adminSubject, "adminSubject", "Failed to delete the specified user 'adminSubject': Deleting yourself is not allowed." );
     }
 
-    @Test
-    void shouldTerminateTransactionsOnUserDeletion() throws Throwable
-    {
-        shouldTerminateTransactionsForUser( writeSubject, "dbms.security.deleteUser( '%s' )" );
-    }
-
-    @Test
-    void shouldTerminateConnectionsOnUserDeletion() throws Exception
-    {
-        TransportConnection conn = startBoltSession( "writeSubject", "abc" );
-
-        Map<String,Long> boltConnections = countBoltConnectionsByUsername();
-        assertThat( boltConnections.get( "writeSubject" ), equalTo( IS_EMBEDDED ? 1L : 2L ) );
-
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.deleteUser( 'writeSubject' )" );
-
-        boltConnections = countBoltConnectionsByUsername();
-        assertThat( boltConnections.get( "writeSubject" ), equalTo( null ) );
-
-        conn.disconnect();
-    }
-
     //---------- suspend user -----------
 
     @Test
@@ -373,28 +351,6 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertSystemCommandFail( adminSubject, "CALL dbms.security.suspendUser('adminSubject')",
                 "Suspending yourself (user 'adminSubject') is not allowed." );
-    }
-
-    @Test
-    void shouldTerminateTransactionsOnUserSuspension() throws Throwable
-    {
-        shouldTerminateTransactionsForUser( writeSubject, "dbms.security.suspendUser( '%s' )" );
-    }
-
-    @Test
-    void shouldTerminateConnectionsOnUserSuspension() throws Exception
-    {
-        TransportConnection conn = startBoltSession( "writeSubject", "abc" );
-
-        Map<String,Long> boltConnections = countBoltConnectionsByUsername();
-        assertThat( boltConnections.get( "writeSubject" ), equalTo( IS_EMBEDDED ? 1L : 2L ) );
-
-        assertEmpty( adminSubject, "CALL dbms.security.suspendUser( 'writeSubject' )" );
-
-        boltConnections = countBoltConnectionsByUsername();
-        assertThat( boltConnections.get( "writeSubject" ), equalTo( null ) );
-
-        conn.disconnect();
     }
 
     //---------- activate user -----------

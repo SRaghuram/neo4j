@@ -582,25 +582,6 @@ public abstract class ProcedureInteractionTestBase<S>
     }
 
     // --------------------- helpers -----------------------
-    void shouldTerminateTransactionsForUser( S subject, String procedure ) throws Throwable
-    {
-        DoubleLatch latch = new DoubleLatch( 2 );
-        ThreadedTransaction<S> userThread = new ThreadedTransaction<>( neo, latch );
-        userThread.executeCreateNode( threading(), subject );
-        latch.startAndWaitForAllToStart();
-
-        assertEmpty( adminSubject, "CALL " + format( procedure, neo.nameOf( subject ) ) );
-
-        Map<String,Long> transactionsByUser = countTransactionsByUsername();
-
-        assertThat( transactionsByUser.get( neo.nameOf( subject ) ), equalTo( null ) );
-
-        latch.finishAndWaitForAllToFinish();
-
-        userThread.closeAndAssertExplicitTermination();
-
-        assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
-    }
 
     private Map<String,Long> countTransactionsByUsername()
     {
