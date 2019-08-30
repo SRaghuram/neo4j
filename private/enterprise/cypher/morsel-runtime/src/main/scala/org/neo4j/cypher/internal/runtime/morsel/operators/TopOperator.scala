@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFa
 import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryMemoryTracker, WithHeapUsageEstimation}
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryMemoryTracker}
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -139,6 +139,10 @@ case class TopOperator(workIdentity: WorkIdentity,
           outputRow.moveToNextRow()
         }
 
+        if (!sortedInputPerArgument.hasNext) {
+          accumulator.deallocateMemory()
+        }
+
         outputRow.finishedWriting()
       }
 
@@ -163,7 +167,7 @@ object TopOperator {
       if (limit <= 0) {
         ZeroTable(argumentRowId, argumentRowIdsForReducers)
       } else {
-        new ConcurrentTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
+        new ConcurrentTopTable(argumentRowId, argumentRowIdsForReducers, comparator, limit)
       }
   }
 
@@ -182,6 +186,8 @@ object TopOperator {
       rows
     }
 
+    def deallocateMemory(): Unit
+
     protected def getTopRows: java.util.Iterator[MorselExecutionContext]
   }
 
@@ -190,38 +196,50 @@ object TopOperator {
     override protected def getTopRows: util.Iterator[MorselExecutionContext] = util.Collections.emptyIterator()
 
     override def update(data: MorselExecutionContext): Unit =
-      throw new IllegalStateException("Top table update() should never be called with LIMIT 0")
+      error()
+
+    override def deallocateMemory(): Unit =
+      error()
+
+    private def error() =
+      throw new IllegalStateException("Top table method should never be called with LIMIT 0")
   }
 
   class StandardTopTable(override val argumentRowId: Long,
                          override val argumentRowIdsForReducers: Array[Long],
                          memoryTracker: QueryMemoryTracker,
                          comparator: Comparator[MorselExecutionContext],
-                         limit: Int) extends TopTable with WithHeapUsageEstimation {
+                         limit: Int) extends TopTable {
 
     private val topTable = new DefaultComparatorTopTable(comparator, limit)
+    private var totalTopHeapUsage = 0L
 
     override def update(morsel: MorselExecutionContext): Unit = {
+      // NOTE: this is pessimistic, it assumes that every incoming row is kept in the top table
+      val morselHeapUsage = morsel.estimatedHeapUsage
+      memoryTracker.allocated(morselHeapUsage)
+      totalTopHeapUsage += morselHeapUsage
+
       while (morsel.isValidRow) {
         topTable.add(morsel.shallowCopy())
         morsel.moveToNextRow()
       }
     }
 
+    override def deallocateMemory(): Unit = {
+      memoryTracker.deallocated(totalTopHeapUsage)
+    }
+
     override protected def getTopRows: util.Iterator[MorselExecutionContext] = {
       topTable.sort()
       topTable.iterator()
     }
-
-    // TODO track heap usage
-    override def estimatedHeapUsage: Long = ???
   }
 
   class ConcurrentTopTable(override val argumentRowId: Long,
                            override val argumentRowIdsForReducers: Array[Long],
-                           memoryTracker: QueryMemoryTracker,
                            comparator: Comparator[MorselExecutionContext],
-                           limit: Int) extends TopTable with WithHeapUsageEstimation {
+                           limit: Int) extends TopTable {
 
     private val topTableByThread = new ConcurrentHashMap[Long, DefaultComparatorTopTable[MorselExecutionContext]]
 
@@ -233,6 +251,8 @@ object TopOperator {
         morsel.moveToNextRow()
       }
     }
+
+    override def deallocateMemory(): Unit = {}
 
     override protected def getTopRows: util.Iterator[MorselExecutionContext] = {
       val topTables = topTableByThread.values().iterator()
@@ -248,9 +268,6 @@ object TopOperator {
         mergedTopTable.iterator()
       }
     }
-
-    // TODO track heap usage
-    override def estimatedHeapUsage: Long = ???
   }
 
 }
