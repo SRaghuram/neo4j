@@ -9,23 +9,32 @@ import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.time.FakeClock;
 
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 class StoreSizeMetricsIT
 {
     @Inject
@@ -33,15 +42,18 @@ class StoreSizeMetricsIT
 
     private DatabaseManagementService managementService;
     private File metricsFolder;
+    private FakeClock clock;
 
     @BeforeEach
     void setUp()
     {
+        clock = new FakeClock();
         metricsFolder = testDirectory.directory( "metrics" );
 
         managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setConfig( MetricsSettings.metricsEnabled, true )
                 .setConfig( MetricsSettings.neoStoreSizeEnabled, true )
+                .setClock( clock )
                 .build();
     }
 
@@ -60,5 +72,62 @@ class StoreSizeMetricsIT
             String metricsName = String.format( "neo4j.%s.store.size.total", name );
             assertEventually( msg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( 0L ), 1, MINUTES );
         }
+    }
+
+    @Test
+    void shouldGrowWhenAddingData() throws Exception
+    {
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+
+        String firstMsg = db.databaseName() + " store has some size at startup";
+        String metricsName = String.format( "neo4j.%s.store.size.total", db.databaseName() );
+
+        checkPoint( db );
+        tick();
+
+        assertEventually( firstMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( 0L ), 1, MINUTES );
+        long size = readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) );
+
+        addSomeData( db );
+        checkPoint( db );
+        tick();
+
+        String secondMsg = db.databaseName() + " store grown after adding data";
+        assertEventually( secondMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( size ), 1, MINUTES );
+    }
+
+    private void checkPoint( GraphDatabaseAPI db ) throws IOException
+    {
+        db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint( new SimpleTriggerInfo( "test" ) );
+    }
+
+    private void addSomeData( GraphDatabaseAPI db )
+    {
+        for ( int reps = 0; reps < 3; reps++ )
+        {
+            try ( var transaction = db.beginTx() )
+            {
+                Label label = Label.label( "Label" );
+                RelationshipType relationshipType = RelationshipType.withName( "REL" );
+                long[] largeValue = new long[1024];
+                for ( int i = 0; i < 1000; i++ )
+                {
+                    Node node = db.createNode( label );
+                    node.setProperty( "Niels", "Borh" );
+                    node.setProperty( "Albert", largeValue );
+                    for ( int j = 0; j < 30; j++ )
+                    {
+                        Relationship rel = node.createRelationshipTo( node, relationshipType );
+                        rel.setProperty( "Max", "Planck" );
+                    }
+                }
+                transaction.commit();
+            }
+        }
+    }
+
+    private void tick()
+    {
+        clock.forward( StoreSizeMetrics.UPDATE_INTERVAL.plusMillis( 1 ) );
     }
 }

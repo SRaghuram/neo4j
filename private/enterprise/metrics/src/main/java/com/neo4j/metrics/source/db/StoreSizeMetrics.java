@@ -9,8 +9,8 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -21,14 +21,17 @@ import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.codahale.metrics.MetricRegistry.name;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Documented( ".Database store size metrics" )
 public class StoreSizeMetrics extends LifecycleAdapter
 {
+    public static final Duration UPDATE_INTERVAL = Duration.ofMinutes( 10 );
+
     private static final String PREFIX = "store.size";
 
     @Documented( "The total size of the database store" )
-    public static final String TOTAL_STORE_SIZE = name( PREFIX, "total" );
+    private static final String TOTAL_STORE_SIZE = name( PREFIX, "total" );
 
     private final MetricRegistry registry;
     private final String totalStoreSize;
@@ -54,7 +57,7 @@ public class StoreSizeMetrics extends LifecycleAdapter
     {
         if ( updateValuesHandle == null )
         {
-            updateValuesHandle = scheduler.scheduleRecurring( Group.FILE_IO_HELPER, this::updateCachedValues, 10, TimeUnit.MINUTES );
+            updateValuesHandle = scheduler.scheduleRecurring( Group.FILE_IO_HELPER, this::updateCachedValues, UPDATE_INTERVAL.toMillis(), MILLISECONDS );
         }
         registry.register( totalStoreSize, (Gauge<Long>) () -> cachedStoreTotalSize );
     }
