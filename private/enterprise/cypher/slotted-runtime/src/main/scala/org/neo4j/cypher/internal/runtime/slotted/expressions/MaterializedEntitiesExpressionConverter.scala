@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, KeysFunction, LabelsFunction, NullInNullOutExpression}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NullInNullOutExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.commands.values.KeyToken
 import org.neo4j.cypher.internal.runtime.interpreted.commands.values.TokenType.PropertyKey
@@ -23,7 +23,7 @@ import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
 
-case class NoDbAccessExpressionConverter(tokenContext: TokenContext) extends ExpressionConverter {
+case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) extends ExpressionConverter {
 
   override def toCommandExpression(id: Id, expression: ast.Expression, self: ExpressionConverters): Option[commandexpressions.Expression] = {
     val result = expression match {
@@ -52,16 +52,16 @@ case class NoDbAccessExpressionConverter(tokenContext: TokenContext) extends Exp
         invocation.arguments.head match {
           case property: ast.Property =>
             val propertyKey = getPropertyKey(property.propertyKey)
-            NoDbAccessPropertyExists(self.toCommandExpression(id, property.map), propertyKey)
+            MaterializedEntityPropertyExists(self.toCommandExpression(id, property.map), propertyKey)
         }
-      case Keys => NoDbAccessKeysFunction(self.toCommandExpression(id, invocation.arguments.head))
-      case Labels => NoDbAccessLabelsFunction(self.toCommandExpression(id, invocation.arguments.head))
+      case Keys => MaterializedEntityKeysFunction(self.toCommandExpression(id, invocation.arguments.head))
+      case Labels => MaterializedEntityLabelsFunction(self.toCommandExpression(id, invocation.arguments.head))
       case _ => null 
     }
 
   private def toCommandProperty(id: Id, e: ast.LogicalProperty, self: ExpressionConverters): commandexpressions.Expression =
     e match {
-      case Property(map, propertyKey) => NoDbAccessProperty(self.toCommandExpression(id, map), getPropertyKey(propertyKey))
+      case Property(map, propertyKey) => MaterializedEntityProperty(self.toCommandExpression(id, map), getPropertyKey(propertyKey))
       case _ => null
     }
 
@@ -74,14 +74,14 @@ case class NoDbAccessExpressionConverter(tokenContext: TokenContext) extends Exp
 
   private def hasLabels(id: Id, e: ast.HasLabels, self: ExpressionConverters) = e.labels.map {
     l =>
-      NoDbAccessHasLabel(self.toCommandExpression(id, e.expression),
+      MaterializedEntityHasLabel(self.toCommandExpression(id, e.expression),
         commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
   } reduceLeft {
     predicates.And(_, _)
   }
 }
 
-case class NoDbAccessProperty(mapExpr: commandexpressions.Expression, propertyKey: KeyToken) extends commandexpressions.Expression
+case class MaterializedEntityProperty(mapExpr: commandexpressions.Expression, propertyKey: KeyToken) extends commandexpressions.Expression
   with Product with Serializable {
 
   private val property = commandexpressions.Property(mapExpr, propertyKey)
@@ -93,7 +93,7 @@ case class NoDbAccessProperty(mapExpr: commandexpressions.Expression, propertyKe
   }
 
   override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression
-  = f(NoDbAccessProperty(mapExpr.rewrite(f), propertyKey.rewrite(f)))
+  = f(MaterializedEntityProperty(mapExpr.rewrite(f), propertyKey.rewrite(f)))
 
   override def children = Seq(mapExpr, propertyKey)
 
@@ -102,7 +102,7 @@ case class NoDbAccessProperty(mapExpr: commandexpressions.Expression, propertyKe
   override def toString = s"$mapExpr.${propertyKey.name}"
 }
 
-case class NoDbAccessPropertyExists(variable: commandexpressions.Expression, propertyKey: KeyToken) extends Predicate {
+case class MaterializedEntityPropertyExists(variable: commandexpressions.Expression, propertyKey: KeyToken) extends Predicate {
 
   private val propertyExists = commands.predicates.PropertyExists(variable, propertyKey)
 
@@ -117,14 +117,14 @@ case class NoDbAccessPropertyExists(variable: commandexpressions.Expression, pro
   override def containsIsNull = false
 
   override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression
-  = f(NoDbAccessPropertyExists(variable.rewrite(f), propertyKey.rewrite(f)))
+  = f(MaterializedEntityPropertyExists(variable.rewrite(f), propertyKey.rewrite(f)))
 
   override def arguments: Seq[commandexpressions.Expression] = Seq(variable)
 
   override def children: Seq[AstNode[_]] = Seq(variable, propertyKey)
 }
 
-case class NoDbAccessHasLabel(entity: commandexpressions.Expression, label: KeyToken) extends Predicate {
+case class MaterializedEntityHasLabel(entity: commandexpressions.Expression, label: KeyToken) extends Predicate {
 
   override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = entity(m, state) match {
 
@@ -148,8 +148,8 @@ case class NoDbAccessHasLabel(entity: commandexpressions.Expression, label: KeyT
 
   override def toString = s"$entity:${label.name}"
 
-  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression
-  = f(NoDbAccessHasLabel(entity.rewrite(f), label.typedRewrite[KeyToken](f)))
+  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression =
+    f(MaterializedEntityHasLabel(entity.rewrite(f), label.typedRewrite[KeyToken](f)))
 
   override def children: Seq[commandexpressions.Expression] = Seq(label, entity)
 
@@ -158,7 +158,7 @@ case class NoDbAccessHasLabel(entity: commandexpressions.Expression, label: KeyT
   override def containsIsNull = false
 }
 
-case class NoDbAccessKeysFunction(expr: Expression) extends NullInNullOutExpression(expr) {
+case class MaterializedEntityKeysFunction(expr: Expression) extends NullInNullOutExpression(expr) {
 
   override def compute(value: AnyValue, ctx: ExecutionContext, state: QueryState): ListValue = {
     value match {
@@ -168,14 +168,14 @@ case class NoDbAccessKeysFunction(expr: Expression) extends NullInNullOutExpress
     }
   }
 
-  override def rewrite(f: Expression => Expression): Expression = f(NoDbAccessKeysFunction(expr.rewrite(f)))
+  override def rewrite(f: Expression => Expression): Expression = f(MaterializedEntityKeysFunction(expr.rewrite(f)))
 
   override def arguments: Seq[Expression] = Seq(expr)
 
   override def children: Seq[AstNode[_]] = Seq(expr)
 }
 
-case class NoDbAccessLabelsFunction(nodeExpr: Expression) extends NullInNullOutExpression(nodeExpr) {
+case class MaterializedEntityLabelsFunction(nodeExpr: Expression) extends NullInNullOutExpression(nodeExpr) {
 
   override def compute(value: AnyValue, m: ExecutionContext, state: QueryState): AnyValue = {
     value match {
@@ -184,7 +184,7 @@ case class NoDbAccessLabelsFunction(nodeExpr: Expression) extends NullInNullOutE
     }
   }
 
-  override def rewrite(f: Expression => Expression): Expression = f(NoDbAccessLabelsFunction(nodeExpr.rewrite(f)))
+  override def rewrite(f: Expression => Expression): Expression = f(MaterializedEntityLabelsFunction(nodeExpr.rewrite(f)))
 
   override def arguments: Seq[Expression] = Seq(nodeExpr)
 

@@ -114,7 +114,7 @@ class ExecutionEngineInputDataStreamTest
       ))
   }
 
-  test("operations on streamed nodes (in NoDbAccess mode)") {
+  test("operations on streamed nodes (in Materialized Entities mode)") {
     val q = query(
       input(varFor("x")),
       return_(
@@ -126,7 +126,7 @@ class ExecutionEngineInputDataStreamTest
     )
 
     execute(
-      prepare(q, noDbAccess),
+      prepare(q, materializedEntities),
       noParams,
       iteratorInputRaw(Iterator(
         Array(node(1, Seq("A"), map("p" -> "a", "l" -> arr(1, 2, 3)))),
@@ -142,7 +142,7 @@ class ExecutionEngineInputDataStreamTest
       ))
   }
 
-  test("operations on streamed relationships (in NoDbAccess mode)") {
+  test("operations on streamed relationships (in Materialized Entities mode)") {
     val q = query(
       input(varFor("x")),
       return_(
@@ -153,7 +153,7 @@ class ExecutionEngineInputDataStreamTest
     )
 
     execute(
-      prepare(q, noDbAccess),
+      prepare(q, materializedEntities),
       noParams,
       iteratorInputRaw(Iterator(
         Array(relationship(10, node(1, Seq("A"), map()), node(4, Seq("B"), map()), "A", map("p" -> "a", "l" -> arr(1, 2, 3)))),
@@ -187,10 +187,10 @@ class ExecutionEngineInputDataStreamTest
     SemanticAnalysis(warn = true, Cypher9Comparability, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
       AstRewriting(RewriterStepSequencer.newPlain, IfNoParameter, innerVariableNamer = new GeneratingNamer())
 
-  private val noDbAccess = QueryOptions.default.copy(
+  private val materializedEntities = QueryOptions.default.copy(
     runtime = CypherRuntimeOption.slotted,
     expressionEngine = CypherExpressionEngineOption.interpreted,
-    noDatabaseAccess = true,
+    materializedEntitiesMode = true,
   )
 
   private def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =

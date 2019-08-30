@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, NoDbAccessExpressionConverter, SlottedExpressionConverters}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, MaterializedEntitiesExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.CypherException
 import org.neo4j.exceptions.CantCompileQueryException
@@ -53,7 +53,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
 
       val allConverters =
         if (context.noDatabaseAccess) {
-          NoDbAccessExpressionConverter(context.tokenContext) +: baseConverters
+          MaterializedEntitiesExpressionConverter(context.tokenContext) +: baseConverters
         } else if (context.compileExpressions) {
           new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly) +: baseConverters
         } else {
