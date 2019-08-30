@@ -6,8 +6,6 @@
 package com.neo4j.bench.common.profiling.nmt;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,18 +19,17 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith( TestDirectoryExtension.class )
+@TestDirectoryExtension
 public class NativeMemoryTrackingSummaryReportTest
 {
 
