@@ -20,6 +20,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -29,6 +30,7 @@ import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.api.tracer.DefaultTracer;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -217,7 +219,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public JobScheduler scheduler()
         {
-            return null;
+            return JobSchedulerFactory.createScheduler();
         }
 
         @Override
@@ -237,7 +239,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public FileSystemAbstraction fileSystem()
         {
-            return null;
+            return new DefaultFileSystemAbstraction();
         }
 
         @Override
