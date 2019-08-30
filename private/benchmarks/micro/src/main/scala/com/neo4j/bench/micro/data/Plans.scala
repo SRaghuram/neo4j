@@ -179,10 +179,13 @@ object Plans {
     ReduceExpression(astVariable(accumulator), init, astVariable(variable), list, expression)(Pos)
 
   def astExtract(variable: String, list: Expression, expression: Expression): Expression =
-    ExtractExpression(astVariable(variable), list, None, Some(expression))(Pos)
+    astListComprehension(variable, list, None, Some(expression))
 
   def astFilter(variable: String, list: Expression, predicate: Expression): Expression =
-    expressions.FilterExpression(astVariable(variable), list, Some(predicate))(Pos)
+    astListComprehension(variable, list, Some(predicate), None)
+
+  def astListComprehension(variable: String, list: Expression, predicate: Option[Expression], extractExpression: Option[Expression]): Expression =
+    expressions.ListComprehension(astVariable(variable), list, predicate, extractExpression)(Pos)
 
   def astAny(variable: String, list: Expression, predicate: Expression): Expression =
     expressions.AnyIterablePredicate(astVariable(variable), list, Some(predicate))(Pos)
