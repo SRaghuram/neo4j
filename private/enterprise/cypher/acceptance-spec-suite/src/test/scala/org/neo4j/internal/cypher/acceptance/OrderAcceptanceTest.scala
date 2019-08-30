@@ -777,7 +777,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN u.name, b.title
         |ORDER BY u.name, b.title
       """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialSort").onTopOf(
