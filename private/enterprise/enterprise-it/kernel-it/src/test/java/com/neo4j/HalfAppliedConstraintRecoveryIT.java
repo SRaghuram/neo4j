@@ -150,7 +150,8 @@ public class HalfAppliedConstraintRecoveryIT
     @Test
     public void recoverFromAndRecreateHalfCompositeNodeKeyConstraintAppliedBeforeCrash() throws Exception
     {
-        recoverFromHalfConstraintAppliedBeforeCrash( recreate( dropIndexAnd( COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR ) ), COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR, true );
+        recoverFromHalfConstraintAppliedBeforeCrash( recreate( dropIndexAnd( COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR ) ),
+                COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR, true );
     }
 
     private void recoverFromHalfConstraintAppliedBeforeCrash( BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> applier,
