@@ -269,6 +269,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         } else {
           subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
         }
+        queryContext.transactionalContext.transaction.thawLocks()
 
         // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
         _hasEnded = true
@@ -277,7 +278,6 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         waiters.clear()
       } finally {
         tracer.stopQuery()
-        queryContext.transactionalContext.transaction.thawLocks()
       }
     } else if (newCount < 0) {
       throw new IllegalStateException("Cannot count below 0")

@@ -50,6 +50,8 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
         )
       }
     }
+
+    executor.shutdownNow()
   }
 
 }
