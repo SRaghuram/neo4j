@@ -84,7 +84,7 @@ abstract class BaseRoutingProcedureIT
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
             var error = assertThrows( ClientException.class, () -> performRead( driver, databaseName ) );
-            assertThat( error.getMessage(), containsString( "Database does not exist" ) );
+            assertThat( error.getMessage(), containsString( "database does not exist" ) );
         }
     }
 
