@@ -10,11 +10,9 @@ import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -53,10 +51,12 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.util.Collections.emptyMap;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -64,10 +64,9 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
@@ -79,16 +78,13 @@ import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
-public class QueryLoggerIT
+@TestDirectoryExtension
+class QueryLoggerIT
 {
-    // It is imperative that this test executes using a real filesystem; otherwise rotation failures will not be
-    // detected on Windows.
-    @Rule
-    public final DefaultFileSystemRule fileSystem = new DefaultFileSystemRule();
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
-    @Rule
-    public final ExpectedException expectedException = ExpectedException.none();
+    @Inject
+    private FileSystemAbstraction fileSystem;
+    @Inject
+    private TestDirectory testDirectory;
 
     private DatabaseManagementServiceBuilder databaseBuilder;
     private static final String QUERY = "CREATE (n:Foo {bar: 'baz'})";
@@ -100,20 +96,20 @@ public class QueryLoggerIT
     private DatabaseManagementService databaseManagementService;
     private DatabaseManagementService dbManagementService;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         logsDirectory = new File( testDirectory.storeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
         databaseBuilder = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem.get() ) )
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
                 .setInternalLogProvider( inMemoryLog )
                 .impermanent();
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( db != null )
         {
@@ -126,7 +122,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogCustomUserName() throws Throwable
+    void shouldLogCustomUserName() throws Throwable
     {
         // turn on query logging
         databaseBuilder.setConfig( auth_enabled, true )
@@ -163,7 +159,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogTXMetaDataInQueryLog() throws Throwable
+    void shouldLogTXMetaDataInQueryLog() throws Throwable
     {
         // turn on query logging
         databaseBuilder.setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() );
@@ -215,7 +211,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogQuerySlowerThanThreshold() throws Exception
+    void shouldLogQuerySlowerThanThreshold() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -231,7 +227,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogQueryStart() throws Exception
+    void shouldLogQueryStart() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -247,7 +243,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldIgnoreThreshold() throws Exception
+    void shouldIgnoreThreshold() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -264,7 +260,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldObeyLevelChangeDuringRuntime() throws Exception
+    void shouldObeyLevelChangeDuringRuntime() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -281,7 +277,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogParametersWhenNestedMap() throws Exception
+    void shouldLogParametersWhenNestedMap() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -310,7 +306,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogRuntime() throws Exception
+    void shouldLogRuntime() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -329,7 +325,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldLogParametersWhenList() throws Exception
+    void shouldLogParametersWhenList() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() ).build();
@@ -348,7 +344,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void disabledQueryLogging()
+    void disabledQueryLogging()
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
                 .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() ).build();
@@ -360,7 +356,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void disabledQueryLogRotation() throws Exception
+    void disabledQueryLogRotation() throws Exception
     {
         final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
         final File logFilename = new File( logsDirectory, "query.log" );
@@ -382,15 +378,14 @@ public class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        assertFalse( "There should not exist a shifted log file because rotation is disabled",
-                shiftedLogFilename1.exists() );
+        assertFalse( shiftedLogFilename1.exists(), "There should not exist a shifted log file because rotation is disabled" );
 
         List<String> lines = readAllLines( logFilename );
         assertEquals( 100, lines.size() );
     }
 
     @Test
-    public void queryLogRotation()
+    void queryLogRotation()
     {
         final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
@@ -414,7 +409,7 @@ public class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        File[] queryLogs = fileSystem.get().listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
+        File[] queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, greaterThanOrEqualTo( 2 ) );
 
         List<String> loggedQueries = Arrays.stream( queryLogs )
@@ -439,7 +434,7 @@ public class QueryLoggerIT
 
         databaseManagementService.shutdown();
 
-        queryLogs = fileSystem.get().listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
+        queryLogs = fileSystem.listFiles( logsDirectory, ( dir, name ) -> name.startsWith( "query.log" ) );
         assertThat( "Expect to have more then one query log file.", queryLogs.length, lessThan( 100 ) );
 
         loggedQueries = Arrays.stream( queryLogs )
@@ -450,7 +445,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void shouldNotLogPassword() throws Exception
+    void shouldNotLogPassword() throws Exception
     {
         databaseManagementService = databaseBuilder
                 .setConfig( log_queries, LogQueryLevel.INFO )
@@ -483,7 +478,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void canBeEnabledAndDisabledAtRuntime() throws Exception
+    void canBeEnabledAndDisabledAtRuntime() throws Exception
     {
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
                 .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() ).build();
@@ -522,7 +517,7 @@ public class QueryLoggerIT
     }
 
     @Test
-    public void logQueriesWithSystemTimeZoneIsConfigured()
+    void logQueriesWithSystemTimeZoneIsConfigured()
     {
         TimeZone defaultTimeZone = TimeZone.getDefault();
         try
@@ -596,7 +591,7 @@ public class QueryLoggerIT
     {
         try
         {
-            return readAllLines( fileSystem.get(), logFilename );
+            return readAllLines( fileSystem, logFilename );
         }
         catch ( IOException e )
         {
@@ -613,7 +608,7 @@ public class QueryLoggerIT
 
     private List<String> readAllLines( File logFilename ) throws IOException
     {
-        return readAllLines( fileSystem.get(), logFilename );
+        return readAllLines( fileSystem, logFilename );
     }
 
     private static List<String> readAllLines( FileSystemAbstraction fs, File logFilename ) throws IOException
@@ -637,8 +632,8 @@ public class QueryLoggerIT
         return logLines;
     }
 
-    public void executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params,
-            Consumer<ResourceIterator<Map<String, Object>>> resultConsumer )
+    void executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params,
+            Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
         {
