@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import org.neo4j.causalclustering.catchup.storecopy.LocalDatabase;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
-import org.neo4j.causalclustering.core.IdentityModule;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -50,7 +49,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
     }
 
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            ClusterStateDirectory clusterStateDirectory, IdentityModule identityModule, Dependencies dependencies, LocalDatabase db )
+            ClusterStateDirectory clusterStateDirectory, Dependencies dependencies, LocalDatabase db )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
@@ -60,7 +59,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslHazelcastDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, clusterStateDirectory, db );
+        return new ClusteringModule( discoveryServiceFactory, platformModule, clusterStateDirectory, db );
     }
 
     @Override
