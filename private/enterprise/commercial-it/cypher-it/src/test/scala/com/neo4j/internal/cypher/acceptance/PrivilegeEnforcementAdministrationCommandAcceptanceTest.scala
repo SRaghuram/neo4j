@@ -2713,7 +2713,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // THEN
     executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
       row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
-    }, executeBefore = () => graph.createNode(Label.label("A"))) should be(1)
+    }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 3)))
 
@@ -2724,7 +2724,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // THEN
     executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
       row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
-    }, executeBefore = () => graph.createNode(Label.label("A"))) should be(1)
+    }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 4)))
 
@@ -2735,7 +2735,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     // THEN
     executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
       row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
-    }, executeBefore = () => graph.createNode(Label.label("A"))) should be(1)
+    }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
 
     execute(countQuery).toList should be(List(Map("count" -> 5)))
   }

@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
@@ -115,7 +115,7 @@ public class ListQueriesProcedureTest
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             // when
             Map<String,Object> data = getQueryListing( query );
@@ -178,7 +178,7 @@ public class ListQueriesProcedureTest
         String query = "MATCH (n) WITH n ORDER BY n SET n.v = n.v + 1";
         final Node node;
         Object allocatedBytes;
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             node = test.resource();
             // when
@@ -190,7 +190,7 @@ public class ListQueriesProcedureTest
             assertThat( allocatedBytes, (Matcher) allOf( instanceOf( Long.class ), greaterThan( 0L ) ) );
         }
 
-        try ( Resource<Node> test = test( () -> node, query ) )
+        try ( Resource<Node> test = test( tx -> node, query ) )
         {
             // when
             Map<String,Object> data = getQueryListing( query );
@@ -212,13 +212,13 @@ public class ListQueriesProcedureTest
         db.executeTransactionally( query );
 
         Set<Long> locked = new HashSet<>();
-        try ( Resource<Node> test = test( () ->
+        try ( Resource<Node> test = test( tx ->
         {
             for ( int i = 0; i < 5; i++ )
             {
-                locked.add( db.createNode( label( "X" ) ).getId() );
+                locked.add( tx.createNode( label( "X" ) ).getId() );
             }
-            return db.createNode( label( "Y" ) );
+            return tx.createNode( label( "Y" ) );
         }, query ) )
         {
             // when
@@ -274,14 +274,14 @@ public class ListQueriesProcedureTest
         // given
         String query1 = "MATCH (x:X) SET x.v = 1";
         String query2 = "MATCH (y:Y) SET y.v = 2 WITH count(y) AS y MATCH (z:Z) SET z.v = y";
-        try ( Resource<Node> test = test( () ->
+        try ( Resource<Node> test = test( tx ->
         {
             for ( int i = 0; i < 5; i++ )
             {
-                db.createNode( label( "X" ) );
+                tx.createNode( label( "X" ) );
             }
-            db.createNode( label( "Y" ) );
-            return db.createNode( label( "Z" ) );
+            tx.createNode( label( "Y" ) );
+            return tx.createNode( label( "Z" ) );
         }, query1, query2 ) )
         {
             // when
@@ -325,7 +325,7 @@ public class ListQueriesProcedureTest
     {
         // given
         String query = "MATCH (n) SET n.v = n.v + 1";
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             // when
             Map<String,Object> data = getQueryListing( query );
@@ -386,9 +386,9 @@ public class ListQueriesProcedureTest
             tx.commit();
         }
         ensureIndexesAreOnline();
-        try ( Resource<Node> test = test( () ->
+        try ( Resource<Node> test = test( tx ->
         {
-            Node node = db.createNode( label( "Node" ) );
+            Node node = tx.createNode( label( "Node" ) );
             node.setProperty( "value", 5L );
             return node;
         }, QUERY ) )
@@ -417,7 +417,7 @@ public class ListQueriesProcedureTest
         Map<String,Object> data;
 
         // when
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -434,7 +434,7 @@ public class ListQueriesProcedureTest
         Map<String,Object> data;
 
         // when
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -443,7 +443,7 @@ public class ListQueriesProcedureTest
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -452,7 +452,7 @@ public class ListQueriesProcedureTest
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -469,7 +469,7 @@ public class ListQueriesProcedureTest
         Map<String,Object> data;
 
         // when
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -487,7 +487,7 @@ public class ListQueriesProcedureTest
         Map<String,Object> data;
 
         // when
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -497,7 +497,7 @@ public class ListQueriesProcedureTest
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -506,7 +506,7 @@ public class ListQueriesProcedureTest
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
-        try ( Resource<Node> test = test( db::createNode, query ) )
+        try ( Resource<Node> test = test( Transaction::createNode, query ) )
         {
             data = getQueryListing( query );
         }
@@ -520,9 +520,9 @@ public class ListQueriesProcedureTest
         // given
         final String QUERY1 = "MATCH (n:" + label + "{" + property + ":5}) USING INDEX n:" + label + "(" + property +
                 ") SET n." + property + " = 3";
-        try ( Resource<Node> test = test( () ->
+        try ( Resource<Node> test = test( tx ->
         {
-            Node node = db.createNode( label( label ) );
+            Node node = tx.createNode( label( label ) );
             node.setProperty( property, 5L );
             return node;
         }, QUERY1 ) )
@@ -545,9 +545,9 @@ public class ListQueriesProcedureTest
         final String QUERY2 = "MATCH (n:" + label + "{" + property + ":3}) USING INDEX n:" + label + "(" + property +
                 ") MATCH (u:" + label + "{" + property + ":4}) USING INDEX u:" + label + "(" + property +
                 ") CREATE (n)-[:KNOWS]->(u)";
-        try ( Resource<Node> test = test( () ->
+        try ( Resource<Node> test = test( tx ->
         {
-            Node node = db.createNode( label( label ) );
+            Node node = tx.createNode( label( label ) );
             node.setProperty( property, 4L );
             return node;
         }, QUERY2 ) )
@@ -619,7 +619,7 @@ public class ListQueriesProcedureTest
         }
     }
 
-    private <T extends PropertyContainer> Resource<T> test( Supplier<T> setup, String... queries )
+    private <T extends PropertyContainer> Resource<T> test( Function<Transaction, T> setup, String... queries )
             throws InterruptedException, ExecutionException
     {
         CountDownLatch resourceLocked = new CountDownLatch( 1 );
@@ -628,7 +628,7 @@ public class ListQueriesProcedureTest
         T resource;
         try ( Transaction tx = db.beginTx() )
         {
-            resource = setup.get();
+            resource = setup.apply(tx);
             tx.commit();
         }
         threads.execute( parameter ->

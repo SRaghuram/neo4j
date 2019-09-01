@@ -52,7 +52,7 @@ class CompositeConstraintIT
 
         try ( Transaction transaction = database.beginTx() )
         {
-            Node node = database.createNode( label );
+            Node node = transaction.createNode( label );
             node.setProperty( "b", (short) 3 );
             node.setProperty( "a", new double[]{0.6, 0.4, 0.2} );
             transaction.commit();
@@ -69,7 +69,7 @@ class CompositeConstraintIT
 
         try ( Transaction transaction = database.beginTx() )
         {
-            Node node = database.createNode( label );
+            Node node = transaction.createNode( label );
             node.setProperty( "a", (short) 7 );
             node.setProperty( "b", new double[]{0.7, 0.5, 0.3} );
             transaction.commit();

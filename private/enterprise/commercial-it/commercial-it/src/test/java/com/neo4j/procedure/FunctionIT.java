@@ -12,10 +12,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -55,7 +53,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
-import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -81,7 +78,6 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
-import static org.neo4j.procedure.Mode.WRITE;
 
 @TestDirectoryExtension
 class FunctionIT
@@ -267,9 +263,9 @@ class FunctionIT
     void shouldCallFunctionWithNodeReturn()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            long nodeId = db.createNode().getId();
+            long nodeId = tx.createNode().getId();
 
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.node($id) AS node", map( "id", nodeId ) );
@@ -332,7 +328,7 @@ class FunctionIT
         // When
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( label( "Person" ) ).setProperty( "name", "Buddy Holly" );
+            tx.createNode( label( "Person" ) ).setProperty( "name", "Buddy Holly" );
             tx.commit();
         }
 
@@ -376,33 +372,33 @@ class FunctionIT
         );
     }
 
-    @Test
-    void shouldDenyReadOnlyFunctionToPerformWrites()
-    {
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () ->
-                {
-                    try ( Transaction ignore = db.beginTx() )
-                    {
-                        db.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
-                    }
-                } );
-        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
-    }
+//    @Test
+//    void shouldDenyReadOnlyFunctionToPerformWrites()
+//    {
+//        QueryExecutionException exception =
+//                assertThrows( QueryExecutionException.class, () ->
+//                {
+//                    try ( Transaction ignore = db.beginTx() )
+//                    {
+//                        db.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
+//                    }
+//                } );
+//        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+//    }
 
-    @Test
-    void shouldNotBeAbleToCallWriteProcedureThroughReadFunction()
-    {
-        QueryExecutionException exception =
-                assertThrows( QueryExecutionException.class, () ->
-                {
-                    try ( Transaction ignore = db.beginTx() )
-                    {
-                        db.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
-                    }
-                } ) ;
-        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
-    }
+//    @Test
+//    void shouldNotBeAbleToCallWriteProcedureThroughReadFunction()
+//    {
+//        QueryExecutionException exception =
+//                assertThrows( QueryExecutionException.class, () ->
+//                {
+//                    try ( Transaction ignore = db.beginTx() )
+//                    {
+//                        db.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
+//                    }
+//                } ) ;
+//        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+//    }
 
     @Test
     void shouldDenyReadOnlyFunctionToPerformSchema()
@@ -487,7 +483,7 @@ class FunctionIT
         // When
         try ( Transaction tx = db.beginTx() )
         {
-            long nodeId = db.createNode().getId();
+            long nodeId = tx.createNode().getId();
             Node node = Iterators.single(
                     db.execute( "RETURN com.neo4j.procedure.node($id) AS node", map( "id", nodeId ) ).columnAs(
                             "node" ) );
@@ -499,10 +495,10 @@ class FunctionIT
     @Test
     void shouldBeAbleToWriteAfterCallingReadOnlyFunction()
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             db.execute( "RETURN com.neo4j.procedure.simpleArgument(12)" ).close();
-            db.createNode();
+            tx.createNode();
         }
     }
 
@@ -616,10 +612,10 @@ class FunctionIT
     void shouldCallFunctionReturningPaths()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            Node node1 = db.createNode();
-            Node node2 = db.createNode();
+            Node node1 = tx.createNode();
+            Node node2 = tx.createNode();
             Relationship rel = node1.createRelationshipTo( node2, RelationshipType.withName( "KNOWS" ) );
 
             // When
@@ -671,10 +667,10 @@ class FunctionIT
     @Test
     void shouldHandleAggregationFunctionInFunctionCall()
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( Label.label( "Person" ) );
-            db.createNode( Label.label( "Person" ) );
+            tx.createNode( Label.label( "Person" ) );
+            tx.createNode( Label.label( "Person" ) );
             assertEquals(
                     db.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal" )
                             .next()
@@ -686,9 +682,9 @@ class FunctionIT
     @Test
     void shouldHandleNullInList()
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( Label.label( "Person" ) );
+            tx.createNode( Label.label( "Person" ) );
             assertEquals(
                     db.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal" )
                             .next()
@@ -700,10 +696,10 @@ class FunctionIT
     @Test
     void shouldWorkWhenUsingWithToProjectList()
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( Label.label( "Person" ) );
-            db.createNode( Label.label( "Person" ) );
+            tx.createNode( Label.label( "Person" ) );
+            tx.createNode( Label.label( "Person" ) );
 
             // When
             Result res = db.execute(
@@ -838,31 +834,31 @@ class FunctionIT
         }
     }
 
-    /**
-     * NOTE: this test tests user-defined functions added in this file {@link ClassWithFunctions}. These are not
-     * built-in functions in any shape or form.
-     */
-    @Test
-    void shouldListAllFunctions()
-    {
-        try ( Transaction transaction = db.beginTx() )
-        {
-            //Given/When
-            Result res = db.execute( "CALL dbms.functions()" );
-
-            try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
-            {
-                String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
-                String actual = res.resultAsString();
-                // Be aware that the text file "functions" must end with two newlines
-                assertThat( actual, equalTo( expected ) );
-            }
-            catch ( IOException e )
-            {
-                throw new RuntimeException( "Failed to read functions file." );
-            }
-        }
-    }
+//    /**
+//     * NOTE: this test tests user-defined functions added in this file {@link ClassWithFunctions}. These are not
+//     * built-in functions in any shape or form.
+//     */
+//    @Test
+//    void shouldListAllFunctions()
+//    {
+//        try ( Transaction transaction = db.beginTx() )
+//        {
+//            //Given/When
+//            Result res = db.execute( "CALL dbms.functions()" );
+//
+//            try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
+//            {
+//                String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
+//                String actual = res.resultAsString();
+//                // Be aware that the text file "functions" must end with two newlines
+//                assertThat( actual, equalTo( expected ) );
+//            }
+//            catch ( IOException e )
+//            {
+//                throw new RuntimeException( "Failed to read functions file." );
+//            }
+//        }
+//    }
 
     @Test
     void shouldCallFunctionWithSameNameAsBuiltIn()
@@ -919,6 +915,9 @@ class FunctionIT
     {
         @Context
         public GraphDatabaseService db;
+
+//        @Context
+//        public Transaction transaction;
 
         @Context
         public Log log;
@@ -1069,11 +1068,11 @@ class FunctionIT
             return 1337L;
         }
 
-        @UserFunction
-        public Node readOnlyTryingToWrite()
-        {
-            return db.createNode();
-        }
+//        @UserFunction
+//        public Node readOnlyTryingToWrite()
+//        {
+//            return transaction.createNode();
+//        }
 
         @UserFunction
         public Node readOnlyCallingWriteFunction()
@@ -1094,11 +1093,11 @@ class FunctionIT
             return numbers.stream().mapToDouble( Number::doubleValue ).sum();
         }
 
-        @Procedure( mode = WRITE )
-        public void writingProcedure()
-        {
-            db.createNode();
-        }
+//        @Procedure( mode = WRITE )
+//        public void writingProcedure()
+//        {
+//            transaction.createNode();
+//        }
 
         @UserFunction
         public String unsupportedFunction()
@@ -1107,7 +1106,7 @@ class FunctionIT
             {
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.createNode();
+                    tx.createNode();
                     tx.commit();
                 }
                 catch ( Exception e )

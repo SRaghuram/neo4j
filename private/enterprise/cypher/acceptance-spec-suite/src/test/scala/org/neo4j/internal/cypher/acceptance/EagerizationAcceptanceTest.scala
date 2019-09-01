@@ -17,6 +17,7 @@ import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature}
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.procedure.Context
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -206,7 +207,7 @@ class EagerizationAcceptanceTest
 
     // Correct! Eagerization happens as part of query context operation
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      executeBefore = () => counter.reset(),
+      executeBefore = tx => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.toSet should equal(Set(Map("rel.foo" -> 0), Map("rel.foo" -> 1), Map("rel.foo" -> 2), Map("rel.foo" -> 3)))
@@ -248,7 +249,7 @@ class EagerizationAcceptanceTest
 
     // Correct! Eagerization happens as part of query context operation
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      executeBefore = () => counter.reset(),
+      executeBefore = tx => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     counter.counted should equal(4)
@@ -352,7 +353,7 @@ class EagerizationAcceptanceTest
 
     // Correct! No eagerization necessary
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      executeBefore = () => counter.reset(),
+      executeBefore = _ => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.size should equal(2)
@@ -718,10 +719,10 @@ class EagerizationAcceptanceTest
     createNode()
     createNode()
 
-    val executeBefore: () => Unit = () => {
-      graph.createNode()
-      graph.createNode()
-      graph.createNode()
+    def executeBefore(tx: InternalTransaction) : Unit = {
+      tx.createNode()
+      tx.createNode()
+      tx.createNode()
     }
 
     val query = "MATCH () CREATE () RETURN count(*)"

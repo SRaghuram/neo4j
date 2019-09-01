@@ -42,13 +42,13 @@ class IdReuseTest
         long rolledBackNodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            rolledBackNodeId = db.createNode().getId();
+            rolledBackNodeId = tx.createNode().getId();
 
             tx.rollback();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode();
+            tx.createNode();
 
             tx.commit();
         }
@@ -59,7 +59,7 @@ class IdReuseTest
         long reusedNodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            reusedNodeId = db.createNode().getId();
+            reusedNodeId = tx.createNode().getId();
 
             tx.commit();
         }
@@ -76,8 +76,8 @@ class IdReuseTest
         Node node2;
         try ( Transaction tx = db.beginTx() )
         {
-            node1 = db.createNode();
-            node2 = db.createNode();
+            node1 = tx.createNode();
+            node2 = tx.createNode();
 
             tx.commit();
         }
@@ -160,8 +160,8 @@ class IdReuseTest
 
             idMaintenanceController.maintenance();
 
-            Node node1 = db.createNode( testLabel );
-            Node node2 = db.createNode( testLabel );
+            Node node1 = transaction.createNode( testLabel );
+            Node node2 = transaction.createNode( testLabel );
 
             Relationship relationshipTo = node1.createRelationshipTo( node2, TestRelationshipType.MARKER );
 
@@ -203,8 +203,8 @@ class IdReuseTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Node node1 = db.createNode( label );
-            Node node2 = db.createNode( label );
+            Node node1 = transaction.createNode( label );
+            Node node2 = transaction.createNode( label );
 
             Relationship relationshipTo = node1.createRelationshipTo( node2, TestRelationshipType.MARKER );
             transaction.commit();

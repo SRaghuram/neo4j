@@ -31,7 +31,7 @@ public class TxFactory
         PathBuilder pathBuilder = createBuilder( txSize );
         try ( Transaction tx = db.beginTx() )
         {
-            pathBuilder.build( db );
+            pathBuilder.build( tx );
             tx.commit();
         }
     }
@@ -201,16 +201,16 @@ public class TxFactory
             return this;
         }
 
-        void build( GraphDatabaseService db )
+        void build( Transaction tx )
         {
             Map<String,Object> nodeProperties = createNodeProperties();
             Map<String,Object> relationshipProperties = createRelationshipProperties();
             Label[] nodeLabels = createNodeLabels();
 
-            Node prevNode = createNode( db, nodeProperties, nodeLabels );
+            Node prevNode = createNode( tx, nodeProperties, nodeLabels );
             for ( int i = 1; i < nodesInPath; i++ )
             {
-                Node currentNode = createNode( db, nodeProperties, nodeLabels );
+                Node currentNode = createNode( tx, nodeProperties, nodeLabels );
                 Relationship link = prevNode.createRelationshipTo( currentNode, RelationshipType.withName( "THIS_IS_A_LABEL_TYPE" ) );
                 fillRelationship( link, relationshipProperties );
                 prevNode = currentNode;
@@ -227,9 +227,9 @@ public class TxFactory
             relationshipProperties.forEach( link::setProperty );
         }
 
-        private Node createNode( GraphDatabaseService db, Map<String,Object> nodeProperties, Label[] nodeLabels )
+        private Node createNode( Transaction tx, Map<String,Object> nodeProperties, Label[] nodeLabels )
         {
-            Node node = db.createNode( nodeLabels );
+            Node node = tx.createNode( nodeLabels );
             nodeProperties.forEach( node::setProperty );
             return node;
         }

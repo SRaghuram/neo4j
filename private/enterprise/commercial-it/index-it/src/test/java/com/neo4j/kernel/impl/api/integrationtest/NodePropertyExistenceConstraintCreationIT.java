@@ -67,13 +67,13 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
     }
 
     @Override
-    void createOffendingDataInRunningTx( GraphDatabaseService db )
+    void createOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
-        db.createNode( label( KEY ) );
+        tx.createNode( label( KEY ) );
     }
 
     @Override
-    void removeOffendingDataInRunningTx( GraphDatabaseService db )
+    void removeOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
         try ( ResourceIterator<Node> nodes = db.findNodes( label( KEY ) ) )
         {

@@ -84,7 +84,7 @@ class CoreReplicationIT
         // when
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( label( "boo" ) );
+            Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -122,7 +122,7 @@ class CoreReplicationIT
         // when the leader commits a write transaction,
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( label( "boo" ) );
+            Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -283,7 +283,7 @@ class CoreReplicationIT
         // when
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( label( "boo" ) );
+            Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -311,7 +311,7 @@ class CoreReplicationIT
         cluster.start();
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( label( "boo" ) );
+            Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );

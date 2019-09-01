@@ -21,6 +21,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Transaction;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
@@ -88,6 +89,11 @@ public class CreateNodes extends AbstractCoreBenchmark
             txBatch.advance();
         }
 
+        Transaction transaction()
+        {
+            return txBatch.transaction();
+        }
+
         @TearDown
         public void tearDown()
         {
@@ -107,7 +113,7 @@ public class CreateNodes extends AbstractCoreBenchmark
     public void createNode( TxState txState )
     {
         txState.advance();
-        db().createNode();
+        txState.transaction().createNode();
     }
 
     /**
@@ -122,6 +128,6 @@ public class CreateNodes extends AbstractCoreBenchmark
     public void createNodeWithLabel( TxState txState )
     {
         txState.advance();
-        db().createNode( LABEL );
+        txState.transaction().createNode( LABEL );
     }
 }

@@ -131,7 +131,7 @@ class CommercialGraphDatabaseBackupIT
         {
             for ( var i = 0; i < count; i++ )
             {
-                db.createNode( label( "Person" ) ).setProperty( "id", i );
+                tx.createNode( label( "Person" ) ).setProperty( "id", i );
             }
             tx.commit();
         }

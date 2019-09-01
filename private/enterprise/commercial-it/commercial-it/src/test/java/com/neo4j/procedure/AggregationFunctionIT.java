@@ -287,10 +287,10 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            nodes.add( db.createNode() );
-            nodes.add( db.createNode() );
-            nodes.add( db.createNode() );
-            nodes.add( db.createNode() );
+            nodes.add( tx.createNode() );
+            nodes.add( tx.createNode() );
+            nodes.add( tx.createNode() );
+            nodes.add( tx.createNode() );
             tx.commit();
         }
 

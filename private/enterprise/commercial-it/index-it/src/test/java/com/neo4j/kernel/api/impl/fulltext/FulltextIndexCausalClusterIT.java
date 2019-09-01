@@ -106,10 +106,10 @@ class FulltextIndexCausalClusterIT
     {
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node1 = db.createNode( LABEL );
+            Node node1 = tx.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
             node1.setProperty( EC_PROP, true );
-            Node node2 = db.createNode( LABEL );
+            Node node2 = tx.createNode( LABEL );
             node2.setProperty( PROP2, "This is a related integration test." );
             node2.setProperty( EC_PROP, true );
             Relationship rel = node1.createRelationshipTo( node2, REL );
@@ -157,10 +157,10 @@ class FulltextIndexCausalClusterIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node1 = db.createNode( LABEL );
+            Node node1 = tx.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
             node1.setProperty( EC_PROP, true );
-            Node node2 = db.createNode( LABEL );
+            Node node2 = tx.createNode( LABEL );
             node2.setProperty( PROP2, "This is a related integration test." );
             node2.setProperty( EC_PROP, true );
             Relationship rel = node1.createRelationshipTo( node2, REL );

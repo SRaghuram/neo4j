@@ -103,14 +103,14 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     }
 
     @Override
-    void createOffendingDataInRunningTx( GraphDatabaseService db )
+    void createOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
-        db.createNode( label( KEY ) ).setProperty( PROP, DUPLICATED_VALUE );
-        db.createNode( label( KEY ) ).setProperty( PROP, DUPLICATED_VALUE );
+        tx.createNode( label( KEY ) ).setProperty( PROP, DUPLICATED_VALUE );
+        tx.createNode( label( KEY ) ).setProperty( PROP, DUPLICATED_VALUE );
     }
 
     @Override
-    void removeOffendingDataInRunningTx( GraphDatabaseService db )
+    void removeOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
         try ( ResourceIterator<Node> nodes = db.findNodes( label( KEY ), PROP, DUPLICATED_VALUE ) )
         {
@@ -260,10 +260,10 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
-            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
-            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
-            db.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            tx.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            tx.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            tx.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
+            tx.createNode( label( KEY ) ).setProperty( PROP, "smurf" );
             tx.commit();
         }
 

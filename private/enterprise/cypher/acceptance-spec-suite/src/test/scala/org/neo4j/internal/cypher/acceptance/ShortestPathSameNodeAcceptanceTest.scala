@@ -23,10 +23,10 @@ import org.neo4j.values.virtual.VirtualValues
 class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CypherComparisonSupport {
 
   def setupModel(db: GraphDatabaseCypherService) {
-    db.inTx {
-      val a = db.getGraphDatabaseService.createNode()
-      val b = db.getGraphDatabaseService.createNode()
-      val c = db.getGraphDatabaseService.createNode()
+    db.withTx { tx =>
+      val a = tx.createNode()
+      val b = tx.createNode()
+      val c = tx.createNode()
       a.createRelationshipTo(b, RelationshipType.withName("KNOWS"))
       b.createRelationshipTo(c, RelationshipType.withName("KNOWS"))
     }

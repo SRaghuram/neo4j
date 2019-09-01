@@ -140,19 +140,19 @@ public class EagerProcedureIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            createChainOfNodesWithLabelAndProperty( nodes, "FOLLOWS", "User", "key", "value" );
+            createChainOfNodesWithLabelAndProperty( tx, nodes, "FOLLOWS", "User", "key", "value" );
             tx.commit();
         }
     }
 
-    private void createChainOfNodesWithLabelAndProperty( int length, String relationshipName, String labelName, String property, String value )
+    private void createChainOfNodesWithLabelAndProperty( Transaction tx, int length, String relationshipName, String labelName, String property, String value )
     {
         RelationshipType relationshipType = RelationshipType.withName( relationshipName );
         Label label = Label.label( labelName );
         Node prev = null;
         for ( int i = 0; i < length; i++ )
         {
-            Node node = db.createNode( label );
+            Node node = tx.createNode( label );
             node.setProperty( property, value );
             if ( !property.equals( "name" ) )
             {

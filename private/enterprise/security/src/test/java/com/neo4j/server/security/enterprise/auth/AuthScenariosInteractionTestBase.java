@@ -624,20 +624,20 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         S henrik = neo.login( "Henrik", "bar" );
         neo.assertAuthenticated( henrik );
 
-        assertEmpty( henrik, "CALL test.createNode()" );
-        assertSuccess( henrik, "CALL test.numNodes() YIELD count as count RETURN count",
-                 r -> assertKeyIs( r, "count", "4" ) );
-
-        assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
-
-        assertEmpty( henrik, "CALL test.createNode()" );
-        assertSuccess( henrik, "CALL test.numNodes() YIELD count as count RETURN count",
-                r -> assertKeyIs( r, "count", "5" ) );
-
-        assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'Henrik')" );
-
-        assertFail( henrik, "CALL test.createNode()",
-                "Write operations are not allowed for user 'Henrik' with roles [reader]." );
+//        assertEmpty( henrik, "CALL test.createNode()" );
+//        assertSuccess( henrik, "CALL test.numNodes() YIELD count as count RETURN count",
+//                 r -> assertKeyIs( r, "count", "4" ) );
+//
+//        assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
+//
+//        assertEmpty( henrik, "CALL test.createNode()" );
+//        assertSuccess( henrik, "CALL test.numNodes() YIELD count as count RETURN count",
+//                r -> assertKeyIs( r, "count", "5" ) );
+//
+//        assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'Henrik')" );
+//
+//        assertFail( henrik, "CALL test.createNode()",
+//                "Write operations are not allowed for user 'Henrik' with roles [reader]." );
     }
 
     //---------- change password -----------

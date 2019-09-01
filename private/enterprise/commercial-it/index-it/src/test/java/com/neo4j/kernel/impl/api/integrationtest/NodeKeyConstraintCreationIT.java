@@ -55,13 +55,13 @@ class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Constrain
     }
 
     @Override
-    void createOffendingDataInRunningTx( GraphDatabaseService db )
+    void createOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
-        db.createNode( Label.label( KEY ) );
+        tx.createNode( Label.label( KEY ) );
     }
 
     @Override
-    void removeOffendingDataInRunningTx( GraphDatabaseService db )
+    void removeOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
         try ( ResourceIterator<Node> nodes = db.findNodes( Label.label( KEY ) ) )
         {

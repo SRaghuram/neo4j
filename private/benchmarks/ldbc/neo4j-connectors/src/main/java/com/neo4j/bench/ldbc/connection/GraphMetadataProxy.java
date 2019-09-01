@@ -32,7 +32,7 @@ public class GraphMetadataProxy
             }
             catch ( DbException e )
             {
-                node = db.createNode( Nodes.GraphMetaData );
+                node = tx.createNode( Nodes.GraphMetaData );
                 node.setProperty( GraphMetadata.ID, GraphMetadata.ID_VALUE );
             }
             if ( proxy.hasCommentHasCreatorMinDateAtResolution() )

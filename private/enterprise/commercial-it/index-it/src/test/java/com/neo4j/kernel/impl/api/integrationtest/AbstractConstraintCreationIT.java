@@ -44,10 +44,10 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -78,9 +78,9 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
     abstract void dropConstraint( SchemaWrite writeOps, Constraint constraint ) throws Exception;
 
-    abstract void createOffendingDataInRunningTx( GraphDatabaseService db );
+    abstract void createOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx );
 
-    abstract void removeOffendingDataInRunningTx( GraphDatabaseService db );
+    abstract void removeOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx );
 
     abstract DESCRIPTOR makeDescriptor( int typeId, int propertyKeyId );
 
@@ -344,7 +344,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            createOffendingDataInRunningTx( db );
+            createOffendingDataInRunningTx( tx );
             tx.commit();
         }
 
@@ -377,7 +377,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // given
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            createOffendingDataInRunningTx( db );
+            createOffendingDataInRunningTx( tx );
             tx.commit();
         }
 
@@ -395,7 +395,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            removeOffendingDataInRunningTx( db );
+            removeOffendingDataInRunningTx( tx );
             tx.commit();
         }
 
@@ -428,7 +428,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
                 try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
                 {
                     executorService.submit( constraintCreation ).get();
-                    db.createNode();
+                    tx.createNode();
                     tx.commit();
                 }
             } );

@@ -54,7 +54,7 @@ class StoreMigrationTest
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {
-            Node node = database.createNode();
+            Node node = transaction.createNode();
             node.setProperty( "key", "value" );
             transaction.commit();
         }

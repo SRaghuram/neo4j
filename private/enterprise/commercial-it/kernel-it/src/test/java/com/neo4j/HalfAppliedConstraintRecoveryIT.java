@@ -315,7 +315,7 @@ public class HalfAppliedConstraintRecoveryIT
         {
             for ( String value : values )
             {
-                Node node = db.createNode( LABEL );
+                Node node = tx.createNode( LABEL );
                 node.setProperty( KEY, value );
                 node.setProperty( KEY2, value );
             }

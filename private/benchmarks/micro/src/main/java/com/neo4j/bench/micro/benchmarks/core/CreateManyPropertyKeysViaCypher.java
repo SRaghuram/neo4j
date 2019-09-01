@@ -123,7 +123,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
                 {
                     node.delete();
                 }
-                node = db.createNode();
+                node = txBatch.transaction().createNode();
             }
         }
 

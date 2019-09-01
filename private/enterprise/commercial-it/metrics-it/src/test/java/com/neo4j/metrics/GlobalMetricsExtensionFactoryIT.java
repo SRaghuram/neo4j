@@ -141,7 +141,7 @@ class GlobalMetricsExtensionFactoryIT
         GraphDatabaseService nullTracerDatabase = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = nullTracerDatabase.beginTx() )
         {
-            Node node = nullTracerDatabase.createNode();
+            Node node = tx.createNode();
             node.setProperty( "all", "is well" );
             tx.commit();
         }
@@ -173,7 +173,7 @@ class GlobalMetricsExtensionFactoryIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Node node = db.createNode( Label.label( "Label" ) );
+                Node node = tx.createNode( Label.label( "Label" ) );
                 node.setProperty( "name", UUID.randomUUID().toString() );
                 tx.commit();
             }

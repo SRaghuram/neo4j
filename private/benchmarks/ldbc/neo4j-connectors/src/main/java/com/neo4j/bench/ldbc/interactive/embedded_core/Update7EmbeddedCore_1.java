@@ -42,7 +42,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node comment = connection.db().createNode( Nodes.Comment, Nodes.Message );
+        Node comment = connection.getTransaction().get().createNode( Nodes.Comment, Nodes.Message );
         comment.setProperty( Message.ID, operation.commentId() );
         long creationDate = dateUtil.utcToFormat( operation.creationDate().getTime() );
         comment.setProperty( Message.CREATION_DATE, creationDate );

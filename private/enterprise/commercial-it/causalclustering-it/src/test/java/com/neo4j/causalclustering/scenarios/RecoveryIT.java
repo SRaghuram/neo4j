@@ -123,7 +123,7 @@ class RecoveryIT
             var prop = "val" + i;
             cluster.coreTx( ( db, tx ) ->
             {
-                var node = db.createNode( label( "demo" ) );
+                var node = tx.createNode( label( "demo" ) );
                 node.setProperty( "server", prop );
                 tx.commit();
             } );

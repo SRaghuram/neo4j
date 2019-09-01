@@ -30,6 +30,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
@@ -142,6 +143,11 @@ public class CreateNodesWithCompositeIndex extends AbstractCoreBenchmark
             txBatch.advance();
         }
 
+        Transaction transaction()
+        {
+            return txBatch.transaction();
+        }
+
         Object nextValue( SplittableRandom rng )
         {
             return values.next( rng );
@@ -166,7 +172,7 @@ public class CreateNodesWithCompositeIndex extends AbstractCoreBenchmark
     public void createNode( TxState txState, RNGState rngState )
     {
         txState.advance();
-        Node node = db().createNode( LABEL );
+        Node node = txState.transaction().createNode( LABEL );
         for ( int i = 0; i < txState.keys.length; i++ )
         {
             node.setProperty( txState.keys[i], txState.nextValue( rngState.rng ) );

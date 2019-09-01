@@ -98,7 +98,7 @@ class CausalClusterMetricIT
         // when
         var coreMember = cluster.coreTx( ( db, tx ) ->
         {
-            var node = db.createNode( label( "boo" ) );
+            var node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );

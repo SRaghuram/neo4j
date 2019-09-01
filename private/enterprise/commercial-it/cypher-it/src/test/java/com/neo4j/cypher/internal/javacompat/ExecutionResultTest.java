@@ -428,7 +428,7 @@ class ExecutionResultTest
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode();
+            tx.createNode();
 
             tx.commit();
         }
@@ -461,7 +461,7 @@ class ExecutionResultTest
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode();
+            tx.createNode();
             tx.commit();
         }
     }

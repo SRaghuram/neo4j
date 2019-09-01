@@ -31,7 +31,7 @@ public class Update1EmbeddedCore_0 extends Neo4jUpdate1<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = connection.db().createNode( Nodes.Person );
+        Node person = connection.getTransaction().get().createNode( Nodes.Person );
         person.setProperty( Person.ID, operation.personId() );
         person.setProperty( Person.FIRST_NAME, operation.personFirstName() );
         person.setProperty( Person.LAST_NAME, operation.personLastName() );

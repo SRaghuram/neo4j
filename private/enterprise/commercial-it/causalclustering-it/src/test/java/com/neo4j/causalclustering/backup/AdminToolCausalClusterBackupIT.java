@@ -87,10 +87,10 @@ class AdminToolCausalClusterBackupIT
 
     private static void createSomeData( GraphDatabaseService db, Transaction tx )
     {
-        Node node1 = db.createNode( label( "Person" ) );
+        Node node1 = tx.createNode( label( "Person" ) );
         node1.setProperty( "id", 1 );
 
-        Node node2 = db.createNode( label( "Person" ) );
+        Node node2 = tx.createNode( label( "Person" ) );
         node2.setProperty( "id", 2 );
 
         node1.createRelationshipTo( node2, withName( "KNOWS" ) );

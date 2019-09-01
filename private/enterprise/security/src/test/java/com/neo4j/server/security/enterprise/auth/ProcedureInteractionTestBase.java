@@ -650,6 +650,9 @@ public abstract class ProcedureInteractionTestBase<S>
         @Context
         public GraphDatabaseService db;
 
+//        @Context
+//        public Transaction transaction;
+
         @Context
         public Log log;
 
@@ -805,7 +808,8 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.createNode", mode = WRITE )
         public void createNode()
         {
-            db.createNode();
+            db.execute( "CREATE n()" );
+//            tx.createNode();
         }
 
         @Procedure( name = "test.waitForLatch", mode = READ )
@@ -848,7 +852,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 doubleLatch.start();
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.createNode( Label.label( "VeryUniqueLabel" ) );
+                    tx.createNode( Label.label( "VeryUniqueLabel" ) );
                     tx.commit();
                 }
                 catch ( Exception e )

@@ -196,7 +196,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             expectedDifferentResults: TestConfiguration = Configs.Empty,
                             planComparisonStrategy: PlanComparisonStrategy = DoNotComparePlans,
                             resultAssertionInTx: Option[RewindableExecutionResult => Unit] = None,
-                            executeBefore: () => Unit = () => {},
+                            executeBefore: InternalTransaction => Unit = _ => {},
                             executeExpectedFailures: Boolean = true,
                             params: Map[String, Any] = Map.empty): RewindableExecutionResult = {
     if (expectSucceed.scenarios.nonEmpty) {
@@ -253,7 +253,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       }
 
       val baseScenario = TestScenario(Planners.Cost, Runtimes.Interpreted)
-      executeBefore()
+      inTx(tx => executeBefore(tx))
       val baseResult = innerExecuteTransactionally(s"CYPHER ${baseScenario.preparserOptions} $query", params)
       baseResult
     }
@@ -290,14 +290,14 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   private def executeScenario(scenario: TestScenario,
                               query: String,
                               expectedToSucceed: Boolean,
-                              executeBefore: () => Unit,
+                              executeBefore: InternalTransaction => Unit,
                               params: Map[String, Any],
                               resultAssertionInTx: Option[RewindableExecutionResult => Unit],
                               executeExpectedFailures: Boolean,
                               shouldRollback: Boolean = true): Option[(TestScenario, RewindableExecutionResult)] = {
 
     def execute(tx: InternalTransaction) = {
-      executeBefore()
+      executeBefore(tx)
       val queryWithPreparserOptions = s"CYPHER ${scenario.preparserOptions} $query"
       val tryRes =
         if (expectedToSucceed || executeExpectedFailures) {

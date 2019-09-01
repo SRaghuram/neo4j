@@ -67,7 +67,7 @@ class CreateNodesWithProperties extends Workload
         {
             cluster.coreTx( ( db, tx ) ->
             {
-                Node node = db.createNode( label );
+                Node node = tx.createNode( label );
                 for ( int i = 1; i <= 8; i++ )
                 {
                     node.setProperty( prop( i ), randomValues.nextValue().asObject() );

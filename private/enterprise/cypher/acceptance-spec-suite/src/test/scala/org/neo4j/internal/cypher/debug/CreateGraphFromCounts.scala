@@ -68,7 +68,7 @@ trait CreateGraphFromCounts {
       }
     }
 
-    graph.inTx {
+    graph.withTx { tx =>
       val nodeMap = scala.collection.mutable.Map[String, ArrayBuffer[Node]]()
       for (nodeLabel <- row.data.nodes) {
         nodeLabel.label match {
@@ -76,13 +76,13 @@ trait CreateGraphFromCounts {
             val labelName = ""
             val nodes = nodeMap.getOrElseUpdate(labelName, new ArrayBuffer)
             for (_ <- 0 until 10) {
-              nodes += graph.createNode()
+              nodes += tx.createNode()
             }
           case Some(labelName) =>
             val label = Label.label(labelName)
             val nodes = nodeMap.getOrElseUpdate(labelName, new ArrayBuffer)
             for (_ <- 0L until 10) {
-              nodes += graph.createNode(label)
+              nodes += tx.createNode(label)
             }
         }
       }

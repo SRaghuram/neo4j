@@ -261,8 +261,8 @@ class DatabaseMetricsExtensionIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node node1 = db.createNode();
-            Node node2 = db.createNode();
+            Node node1 = tx.createNode();
+            Node node2 = tx.createNode();
             node1.createRelationshipTo( node2, withName( "any" ) );
             tx.commit();
         }
@@ -279,7 +279,7 @@ class DatabaseMetricsExtensionIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Node node = db.createNode( Label.label( "Label" ) );
+                Node node = tx.createNode( Label.label( "Label" ) );
                 node.setProperty( "name", UUID.randomUUID().toString() );
                 tx.commit();
             }

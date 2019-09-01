@@ -244,7 +244,7 @@ class OnlineBackupIT
                 Node previousNode = null;
                 for ( int j = 0; j < nodesInTransaction; j++ )
                 {
-                    Node node = db.createNode( label );
+                    Node node = tx.createNode( label );
                     node.setProperty( property, random.nextString() );
                     if ( previousNode == null )
                     {

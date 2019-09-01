@@ -112,7 +112,7 @@ class HalfCreatedConstraintIT
         {
             for ( int i = 0; i < 10; i++ )
             {
-                Node node = database.createNode( marker );
+                Node node = transaction.createNode( marker );
                 node.setProperty( property, "a" );
             }
             transaction.commit();

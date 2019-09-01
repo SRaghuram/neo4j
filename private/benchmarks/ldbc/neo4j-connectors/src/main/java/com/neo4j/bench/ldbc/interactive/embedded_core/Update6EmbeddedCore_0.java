@@ -29,7 +29,7 @@ public class Update6EmbeddedCore_0 extends Neo4jUpdate6<Neo4jConnectionState>
     public LdbcNoResult execute( Neo4jConnectionState connection, LdbcUpdate6AddPost operation ) throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node post = connection.db().createNode( Nodes.Post, Nodes.Message );
+        Node post = connection.getTransaction().get().createNode( Nodes.Post, Nodes.Message );
         post.setProperty( Message.ID, operation.postId() );
         if ( !operation.imageFile().isEmpty() )
         {

@@ -41,7 +41,6 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
-
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Collections.emptyMap;
@@ -496,7 +495,7 @@ public class DataGenerator
         {
             for ( int n = 0; n < nodes; n++ )
             {
-                long nodeId = db.createNode().getId();
+                long nodeId = tx.createNode().getId();
                 nodeIds[n] = nodeId;
                 if ( ++txStateCounter % TX_SIZE == 0 )
                 {

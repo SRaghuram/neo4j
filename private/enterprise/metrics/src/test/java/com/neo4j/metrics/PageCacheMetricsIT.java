@@ -64,7 +64,7 @@ class PageCacheMetricsIT
         Label testLabel = Label.label( "testLabel" );
         try ( Transaction transaction = database.beginTx() )
         {
-            Node node = database.createNode( testLabel );
+            Node node = transaction.createNode( testLabel );
             node.setProperty( "property", "value" );
             transaction.commit();
         }

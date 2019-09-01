@@ -339,9 +339,9 @@ class BackupIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( Label.label( "Label" ) );
+            Node node = tx.createNode( Label.label( "Label" ) );
             node.setProperty( "Key", "Value" );
-            db.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
+            tx.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
             tx.commit();
         }
 
@@ -352,9 +352,9 @@ class BackupIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Node node = db.createNode( Label.label( "Label" ) );
+                Node node = tx.createNode( Label.label( "Label" ) );
                 node.setProperty( "Key", "Value" );
-                db.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
+                tx.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
                 tx.commit();
             }
             executeBackupWithoutFallbackToFull( db );
@@ -379,7 +379,7 @@ class BackupIT
             {
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.createNode( indexedLabels.get( random.nextInt( numberOfIndexedLabels ) ) ).setProperty( "prop", random.nextValueAsObject() );
+                    tx.createNode( indexedLabels.get( random.nextInt( numberOfIndexedLabels ) ) ).setProperty( "prop", random.nextValueAsObject() );
                     tx.commit();
                 }
             }
@@ -591,7 +591,7 @@ class BackupIT
 
         try ( Transaction transaction = db.beginTx() )
         {
-            Node node = db.createNode();
+            Node node = transaction.createNode();
             node.addLabel( markerLabel );
             transaction.commit();
         }
@@ -902,17 +902,17 @@ class BackupIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            node = db.createNode();
+            node = tx.createNode();
             for ( int i = 0; i < defaultDenseNodeThreshold - 1; i++ )
             {
-                node.createRelationshipTo( db.createNode(), theOtherType );
+                node.createRelationshipTo( tx.createNode(), theOtherType );
             }
-            node.createRelationshipTo( db.createNode(), typeToDelete );
+            node.createRelationshipTo( tx.createNode(), typeToDelete );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            node.createRelationshipTo( db.createNode(), theOtherType );
+            node.createRelationshipTo( tx.createNode(), theOtherType );
             for ( Relationship relationship : node.getRelationships( Direction.BOTH, typeToDelete ) )
             {
                 relationship.delete();
@@ -1054,9 +1054,9 @@ class BackupIT
         DbRepresentation representation;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             node.setProperty( "backup", "Is great" );
-            db.createNode().createRelationshipTo( node, RelationshipType.withName( "LOVES" ) );
+            tx.createNode().createRelationshipTo( node, RelationshipType.withName( "LOVES" ) );
             tx.commit();
         }
         finally
@@ -1189,11 +1189,11 @@ class BackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             int threshold = dense_node_threshold.defaultValue();
             for ( int i = 0; i < threshold * 2; i++ )
             {
-                node.createRelationshipTo( db.createNode(), TEST );
+                node.createRelationshipTo( tx.createNode(), TEST );
             }
             tx.commit();
         }
@@ -1204,9 +1204,9 @@ class BackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( Label.label( "Me" ) );
+            Node node = tx.createNode( Label.label( "Me" ) );
             node.setProperty( "myKey", "myValue" );
-            db.createNode( Label.label( "NotMe" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
+            tx.createNode( Label.label( "NotMe" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
             tx.commit();
         }
     }
@@ -1293,7 +1293,7 @@ class BackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( Label.label( LABEL ) ).setProperty( PROPERTY, random.nextString() );
+            tx.createNode( Label.label( LABEL ) ).setProperty( PROPERTY, random.nextString() );
             tx.commit();
         }
     }

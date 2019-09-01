@@ -31,9 +31,9 @@ class NodePropertyExistenceConstrainVerificationIT extends PropertyExistenceCons
     }
 
     @Override
-    void createOffender( GraphDatabaseService db, String key )
+    void createOffender( org.neo4j.graphdb.Transaction tx, String key )
     {
-        Node node = db.createNode();
+        Node node = tx.createNode();
         node.addLabel( label( key ) );
     }
 

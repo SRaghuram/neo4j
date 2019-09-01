@@ -141,7 +141,7 @@ class TransactionLogsMetricsIT
         {
             try ( Transaction tx = databaseAPI.beginTx() )
             {
-                Node node = databaseAPI.createNode( Label.label( "Label" ) );
+                Node node = tx.createNode( Label.label( "Label" ) );
                 node.setProperty( "name", randomAlphabetic( 256 ) );
                 tx.commit();
             }

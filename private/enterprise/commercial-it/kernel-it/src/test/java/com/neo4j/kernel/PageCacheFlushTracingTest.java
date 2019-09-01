@@ -36,7 +36,7 @@ class PageCacheFlushTracingTest
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {
-            database.createNode();
+            transaction.createNode();
             transaction.commit();
         }
         managementService.shutdown();

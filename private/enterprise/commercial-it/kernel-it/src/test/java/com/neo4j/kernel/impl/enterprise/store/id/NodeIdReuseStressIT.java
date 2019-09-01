@@ -85,7 +85,7 @@ class NodeIdReuseStressIT
         {
             for ( int i = 0; i < INITIAL_NODE_COUNT; i++ )
             {
-                db.createNode();
+                tx.createNode();
             }
             tx.commit();
         }
@@ -139,7 +139,7 @@ class NodeIdReuseStressIT
             {
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.createNode();
+                    tx.createNode();
                     tx.commit();
                 }
 

@@ -125,7 +125,7 @@ class RelationshipIdReuseStressIT
         {
             for ( int i = 1; i <= NUMBER_OF_CITIES; i++ )
             {
-                createLabeledNamedNode( cityLabel, "city" + i );
+                createLabeledNamedNode( transaction, cityLabel, "city" + i );
             }
             transaction.commit();
         }
@@ -137,7 +137,7 @@ class RelationshipIdReuseStressIT
         {
             for ( int i = 1; i <= NUMBER_OF_BANDS; i++ )
             {
-                createLabeledNamedNode( bandLabel, "band" + i );
+                createLabeledNamedNode( transaction, bandLabel, "band" + i );
             }
             transaction.commit();
         }
@@ -175,9 +175,9 @@ class RelationshipIdReuseStressIT
                 findNode( bandLabel, NAME_PROPERTY, "band" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_BANDS + 1 )) );
     }
 
-    private void createLabeledNamedNode( Label label, String name )
+    private void createLabeledNamedNode( Transaction tx, Label label, String name )
     {
-        Node node = embeddedDatabase.createNode( label );
+        Node node = tx.createNode( label );
         node.setProperty( NAME_PROPERTY, name );
     }
 

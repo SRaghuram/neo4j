@@ -468,7 +468,7 @@ class ReadReplicaReplicationIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            var node = db.createNode( Label.label( "L" ) );
+            var node = tx.createNode( Label.label( "L" ) );
             for ( var i = 0; i < 10; i++ )
             {
                 node.setProperty( "prop-" + i, "this is a quite long string to get to the log limit soonish" );
@@ -483,7 +483,7 @@ class ReadReplicaReplicationIT
         {
             coreGraphDatabase = cluster.coreTx( ( db, tx ) ->
             {
-                var node = db.createNode( Label.label( "L" ) );
+                var node = tx.createNode( Label.label( "L" ) );
                 for ( var i = 0; i < 10; i++ )
                 {
                     node.setProperty( "prop-" + i, "this is a quite long string to get to the log limit soonish" );

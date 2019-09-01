@@ -76,7 +76,7 @@ class ClusterIndexProcedureIT
         // node created just to be able to use dataMatchesEventually as a barrier
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            Node person = db.createNode( Label.label( "Person" ) );
+            Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
             tx.commit();
         } );
@@ -107,7 +107,7 @@ class ClusterIndexProcedureIT
         // node created just to be able to use dataMatchesEventually as a barrier
         cluster.coreTx( ( db, tx ) ->
         {
-            Node person = db.createNode( Label.label( "Person" ) );
+            Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
             tx.commit();
         } );
@@ -138,7 +138,7 @@ class ClusterIndexProcedureIT
         // node created just to be able to use dataMatchesEventually as a barrier
         cluster.coreTx( ( db, tx ) ->
         {
-            Node person = db.createNode( Label.label( "Person" ) );
+            Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
             tx.commit();
         } );

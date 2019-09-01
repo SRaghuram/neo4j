@@ -25,10 +25,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.actors.Actor;
 import org.neo4j.test.extension.actors.ActorsExtension;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @CommercialDbmsExtension
@@ -47,7 +47,7 @@ abstract class PropertyExistenceConstraintVerificationIT
 
     abstract Executable constraintCreationMethod() throws Exception;
 
-    abstract void createOffender( GraphDatabaseService db, String key );
+    abstract void createOffender( Transaction tx, String key );
 
     abstract Executable offenderCreationMethod() throws Exception;
 
@@ -58,7 +58,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         // given
         try ( Transaction tx = db.beginTx() )
         {
-            createOffender( db, KEY );
+            createOffender( tx, KEY );
             tx.commit();
         }
 
@@ -122,7 +122,7 @@ abstract class PropertyExistenceConstraintVerificationIT
             Future<Void> constraintCreation;
             try ( Transaction tx = db.beginTx() )
             {
-                createOffender( db, KEY );
+                createOffender( tx, KEY );
 
                 constraintCreation = thread.submit( createConstraint( helper ) );
                 thread.untilWaitingIn( constraintCreationMethod() );
@@ -151,7 +151,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                createOffender( db, KEY );
+                createOffender( tx, KEY );
                 tx.commit();
             }
             return null;

@@ -69,14 +69,14 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.size should equal(3)
   }
 
-  test("should create node with loop using Core API") {
-    registerTestProcedures()
-
-    executeWith(Configs.InterpretedAndSlotted, "CALL org.neo4j.createNodeWithLoop( 'Node', 'Rel' ) YIELD node RETURN count(node)")
-
-    val result = executeSingle("MATCH (n)-->(n) RETURN n")
-    result.size should equal(1)
-  }
+//  test("should create node with loop using Core API") {
+//    registerTestProcedures()
+//
+//    executeWith(Configs.InterpretedAndSlotted, "CALL org.neo4j.createNodeWithLoop( 'Node', 'Rel' ) YIELD node RETURN count(node)")
+//
+//    val result = executeSingle("MATCH (n)-->(n) RETURN n")
+//    result.size should equal(1)
+//  }
 
   test("should find shortest path using Graph Algos Dijkstra") {
     registerTestProcedures()

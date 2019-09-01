@@ -331,7 +331,7 @@ public class LucenePartitionedIndexStressTesting
             {
                 for ( int i = 0; i < BATCH_SIZE; i++ )
                 {
-                    Node node = db.createNode( Label.label( LABEL ) );
+                    Node node = transaction.createNode( Label.label( LABEL ) );
 
                     String stringValue = stringValueSupplier.get();
                     long longValue = longSupplier.getAsLong();

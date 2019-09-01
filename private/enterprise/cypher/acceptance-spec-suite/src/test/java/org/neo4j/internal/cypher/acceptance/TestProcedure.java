@@ -113,15 +113,15 @@ public class TestProcedure
         return result.stream().map( NodeResult::new );
     }
 
-    @Procedure( name = "org.neo4j.createNodeWithLoop", mode = WRITE )
-    @Description( "org.neo4j.createNodeWithLoop" )
-    public Stream<NodeResult> createNodeWithLoop(
-            @Name( "nodeLabel" ) String label, @Name( "relType" ) String relType )
-    {
-        Node node = db.createNode( Label.label( label ) );
-        node.createRelationshipTo( node, RelationshipType.withName( relType ) );
-        return Stream.of( new NodeResult( node ) );
-    }
+//    @Procedure( name = "org.neo4j.createNodeWithLoop", mode = WRITE )
+//    @Description( "org.neo4j.createNodeWithLoop" )
+//    public Stream<NodeResult> createNodeWithLoop(
+//            @Name( "nodeLabel" ) String label, @Name( "relType" ) String relType )
+//    {
+//        Node node = tx.createNode( Label.label( label ) );
+//        node.createRelationshipTo( node, RelationshipType.withName( relType ) );
+//        return Stream.of( new NodeResult( node ) );
+//    }
 
     @Procedure( name = "org.neo4j.graphAlgosDijkstra" )
     @Description( "org.neo4j.graphAlgosDijkstra" )

@@ -27,7 +27,7 @@ public class Update4EmbeddedCore_0_1_2 extends Neo4jUpdate4<Neo4jConnectionState
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node forum = connection.db().createNode( Nodes.Forum );
+        Node forum = connection.getTransaction().get().createNode( Nodes.Forum );
         forum.setProperty( Forum.ID, operation.forumId() );
         forum.setProperty( Forum.TITLE, operation.forumTitle() );
         forum.setProperty( Forum.CREATION_DATE, dateUtil.utcToFormat( operation.creationDate().getTime() ) );

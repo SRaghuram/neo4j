@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.kernel.api.procedure.GlobalProcedures
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -21,7 +22,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    graph.inTx(createSomeNodes())
+    graph.withTx(tx => createSomeNodes(tx))
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
     graph.createIndex("Awesome", "prop1", "prop2")
@@ -33,7 +34,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   // Invoked once before the Tx and once in the same Tx
-  def createSomeNodes(): Unit = {
+  def createSomeNodes(tx: InternalTransaction): Unit = {
     graph.execute(
       """
       CREATE (:Awesome {prop1: 40, prop2: 5})-[:R]->()

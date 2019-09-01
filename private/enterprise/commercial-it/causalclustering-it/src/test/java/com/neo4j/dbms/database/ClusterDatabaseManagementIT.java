@@ -370,7 +370,7 @@ class ClusterDatabaseManagementIT
 
         cluster.coreTx( databaseName, ( db, tx ) ->
         {
-            db.createNode( firstLabel );
+            tx.createNode( firstLabel );
             tx.commit();
         } );
 
@@ -390,7 +390,7 @@ class ClusterDatabaseManagementIT
 
         cluster.coreTx( databaseName, ( db, tx ) ->
         {
-            db.createNode( secondLabel );
+            tx.createNode( secondLabel );
             tx.commit();
         } );
 

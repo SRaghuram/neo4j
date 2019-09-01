@@ -169,7 +169,7 @@ class BackupRetriesIT
                 Node previousNode = null;
                 for ( int j = 0; j < nodesInTxCount; j++ )
                 {
-                    Node currentNode = createNode( db, j );
+                    Node currentNode = createNode( tx, j );
                     createRelationship( previousNode, currentNode );
                     previousNode = currentNode;
                 }
@@ -195,9 +195,9 @@ class BackupRetriesIT
         }
     }
 
-    private static Node createNode( GraphDatabaseService db, int idx )
+    private static Node createNode( Transaction tx, int idx )
     {
-        Node node = db.createNode( label( "Person" ), label( "Employee" ) );
+        Node node = tx.createNode( label( "Person" ), label( "Employee" ) );
         node.setProperty( "id", idx );
         node.setProperty( "name", "Person-" + idx );
         node.setProperty( "surname", "Employee-" + idx );

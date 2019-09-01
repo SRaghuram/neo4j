@@ -49,7 +49,7 @@ class ClusterLeaderStepDownIT
         //Do some work to make sure the cluster is operating normally.
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( Label.label( "bam" ) );
+            Node node = tx.createNode( Label.label( "bam" ) );
             node.setProperty( "bam", "bam" );
             tx.commit();
         } );

@@ -99,7 +99,7 @@ class ClusterFactoryIT
             cluster.start();
             cluster.coreTx( ( coreGraphDatabase, transaction ) ->
             {
-                coreGraphDatabase.createNode( uniqueLabel );
+                transaction.createNode( uniqueLabel );
                 transaction.commit();
             } );
             return cluster;

@@ -57,15 +57,15 @@ class RelationshipPropertyExistenceConstraintCreationIT
     }
 
     @Override
-    void createOffendingDataInRunningTx( GraphDatabaseService db )
+    void createOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
-        Node start = db.createNode();
-        Node end = db.createNode();
+        Node start = tx.createNode();
+        Node end = tx.createNode();
         start.createRelationshipTo( end, withName( KEY ) );
     }
 
     @Override
-    void removeOffendingDataInRunningTx( GraphDatabaseService db )
+    void removeOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
         Iterable<Relationship> relationships = db.getAllRelationships();
         for ( Relationship relationship : relationships )

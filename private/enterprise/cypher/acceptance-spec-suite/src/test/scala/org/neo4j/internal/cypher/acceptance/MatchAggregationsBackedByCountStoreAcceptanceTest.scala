@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryPlanTestSupport, QueryStatisticsTestSupport}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 class MatchAggregationsBackedByCountStoreAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport with QueryPlanTestSupport {
@@ -32,7 +33,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n) RETURN count(n)"
 
     // Then
@@ -42,7 +43,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("capitalized COUNTS nodes using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n) RETURN COUNT(n)"
 
     // Then
@@ -52,7 +53,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store with count(*)") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n) RETURN count(*)"
 
     // Then
@@ -62,7 +63,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts labeled nodes using count store") {
     // Given
-    val executeBefore = () => setupModel(label1 = "Admin")
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx, label1 = "Admin")
     val query = "MATCH (n:User) RETURN count(n)"
 
     // Then
@@ -72,7 +73,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store and projection expression") {
     // Given
-    val executeBefore = () => setupModel(label1 = "Admin")
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx, label1 = "Admin")
     val query = "MATCH (n:User) RETURN count(n) > 0"
 
     // Then
@@ -82,7 +83,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store and projection expression with variable") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n) RETURN count(n)/2.0*5 as someNum"
 
     // Then
@@ -92,7 +93,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r]->() RETURN count(r)"
 
     // Then
@@ -102,7 +103,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type using count store with count(*)") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-->() RETURN count(*)"
 
     // Then
@@ -112,7 +113,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r:KNOWS]->() RETURN count(r)"
 
     // Then
@@ -122,7 +123,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type using count store with count(*)") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r:KNOWS]->() RETURN count(*)"
 
     // Then
@@ -132,7 +133,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type and labeled source node using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (:User)-[r]->() RETURN count(r)"
 
     // Then
@@ -142,7 +143,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type and labeled source node using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()<-[r:KNOWS]-(:User) RETURN count(r)"
 
     // Then
@@ -152,7 +153,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type and labeled destination node using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r]->(:User) RETURN count(r)"
 
     // Then
@@ -162,7 +163,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type and labeled destination node using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r:KNOWS]->(:User) RETURN count(r)"
 
     // Then
@@ -172,7 +173,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type and labeled source and destination without using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (:User)-[r:KNOWS]->(:User) RETURN count(r)"
 
     // Then
@@ -182,7 +183,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type and labeled source and destination without using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (:User)-[r]->(:User) RETURN count(r)"
 
     // Then
@@ -192,7 +193,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, reverse direction and labeled source node using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (:User)<-[r:KNOWS]-() RETURN count(r)"
 
     // Then
@@ -202,7 +203,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, reverse direction and labeled destination node using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()<-[r:KNOWS]-(:User) RETURN count(r)"
 
     // Then
@@ -212,7 +213,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, any direction and labeled source node without using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (:User)-[r:KNOWS]-() RETURN count(r)"
 
     // Then
@@ -222,7 +223,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, any direction and labeled destination node without using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r:KNOWS]-(:User) RETURN count(r)"
 
     // Then
@@ -232,7 +233,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, any direction and no labeled nodes without using count store") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH ()-[r:KNOWS]-() RETURN count(r)"
 
     // Then
@@ -242,7 +243,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (n:User) RETURN count(n)"
 
     // Then
@@ -253,7 +254,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts labeled nodes using count store considering transaction state (test1)") {
     // Given
-    val executeBefore = () => inTXModification(label1 = "Admin", label2 = "User")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, label1 = "Admin", label2 = "User")
     val query = "MATCH (n:User) RETURN count(n)"
 
     // Then
@@ -264,7 +265,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts labeled nodes using count store considering transaction state (test2)") {
     // Given
-    val executeBefore = () => inTXModification(label1 = "Admin", label2 = "User")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, label1 = "Admin", label2 = "User")
     val query = "MATCH (n:Admin) RETURN count(n)"
 
     // Then
@@ -275,7 +276,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts labeled nodes using count store considering transaction state containing newly created label (test1)") {
     // Given
-    val executeBefore = () => inTXModification(label3 = "Admin")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, label3 = "Admin")
     val query = "MATCH (n:Admin) RETURN count(n)"
 
     // Then
@@ -287,7 +288,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts labeled nodes using count store considering transaction state containing newly created label (test2)") {
     // Given
-    val executeBefore = () => inTXModification(label3 = "Admin")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, label3 = "Admin")
     val query = "MATCH (n:User) RETURN count(n)"
 
     // Then
@@ -298,7 +299,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store and projection expression considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification(label1 = "Admin")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, label1 = "Admin")
     val query = "MATCH (n:User) RETURN count(n) > 1"
 
     // Then
@@ -309,7 +310,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts nodes using count store and projection expression with variable considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (n) RETURN count(n)/3*5 as someNum"
 
     // Then
@@ -320,7 +321,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()-[r]->() RETURN count(r)"
 
     // Then
@@ -331,7 +332,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()-[r:KNOWS]->() RETURN count(r)"
 
     // Then
@@ -342,7 +343,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with multiple types using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification(type2 = "FOLLOWS", type3 = "FRIEND_OF")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, type2 = "FOLLOWS", type3 = "FRIEND_OF")
     val query = "MATCH ()-[r:KNOWS|FOLLOWS]->() RETURN count(r)"
 
     // Then
@@ -353,7 +354,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships using count store and projection with expression considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()-[r]->() RETURN count(r) > 2"
 
     // Then
@@ -364,7 +365,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships using count store and projection with expression and variable considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()-[r]->() RETURN count(r)/3*5 as someNum"
 
     // Then
@@ -375,7 +376,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships using count store and horizon with further query") {
     // Given
-    val executeBefore = () => inTXModification(label2 = "Admin", label3 = "Person")
+    def executeBefore(tx:InternalTransaction):Unit = inTXModification(tx, label2 = "Admin", label3 = "Person")
     val query = """
                   |MATCH (:User)-[r:KNOWS]->() WITH count(r) as userKnows
                   |MATCH (n)-[r:KNOWS]->() WITH count(r) as otherKnows, n, userKnows WHERE otherKnows <> userKnows
@@ -409,7 +410,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 //  MATCH (n:X)-[r:Y]->() WITH count(r) as rcount MATCH (n)-[r:Y]->() WHERE count(r) = rcount RETURN rcount, labels(n)
   test("counts relationships with type using count store considering transaction state and multiple types in model") {
     // Given
-    val executeBefore = () => inTXModification(type2 = "FOLLOWS")
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, type2 = "FOLLOWS")
     val query = "MATCH ()-[r:KNOWS]->() RETURN count(r)"
 
     // Then
@@ -420,7 +421,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type and labeled source using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (:User)-[r:KNOWS]->() RETURN count(r)"
 
     // Then
@@ -431,7 +432,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, reverse direction and labeled source using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (:User)<-[r:KNOWS]-() RETURN count(r)"
 
     // Then
@@ -442,7 +443,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type and labeled source using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (:User)-[r]->() RETURN count(r)"
 
     // Then
@@ -453,7 +454,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type and labeled destination using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()-[r:KNOWS]->(:User) RETURN count(r)"
 
     // Then
@@ -464,7 +465,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type, reverse direction and labeled destination using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()<-[r:KNOWS]-(:User) RETURN count(r)"
 
     // Then
@@ -475,7 +476,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type and labeled destination using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH ()-[r]->(:User) RETURN count(r)"
 
     // Then
@@ -486,7 +487,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with type and labeled source and destination without using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (:User)-[r:KNOWS]->(:User) RETURN count(r)"
 
     // Then
@@ -497,7 +498,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("counts relationships with unspecified type and labeled source and destination without using count store considering transaction state") {
     // Given
-    val executeBefore = () => inTXModification()
+    def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx)
     val query = "MATCH (:User)-[r]->(:User) RETURN count(r)"
 
     // Then
@@ -543,7 +544,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store on two unlabeled nodes") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n), (m) RETURN count(n)"
 
     // Then
@@ -553,7 +554,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store on two unlabeled nodes and count(*)") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n), (m) RETURN count(*)"
 
     // Then
@@ -563,7 +564,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store on one labeled node and one unlabeled") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n:User),(m) RETURN count(n)"
 
     // Then
@@ -573,7 +574,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store on one labeled node and one unlabeled and count(*)") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n:User),(m) RETURN count(*)"
 
     // Then
@@ -583,7 +584,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store on two labeled nodes") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n:User),(m:User) RETURN count(n)"
 
     // Then
@@ -593,7 +594,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store with many nodes") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n:User),(m),(o:User),(p) RETURN count(*)"
 
     // Then
@@ -603,7 +604,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   test("count store with many but odd number of nodes") {
     // Given
-    val executeBefore = () => setupModel()
+    def executeBefore(tx: InternalTransaction): Unit = setupModel(tx)
     val query = "MATCH (n:User),(m),(o:User),(p), (q) RETURN count(*)"
 
     // Then
@@ -611,7 +612,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     compareCount(query, 108, executeBefore = executeBefore)
   }
 
-  private def setupModel(label1: String = "User",
+  private def setupModel(tx: InternalTransaction,
+                         label1: String = "User",
                  label2: String = "User",
                  type1: String = "KNOWS"): Unit = {
     graph.execute(
@@ -636,7 +638,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
       """.stripMargin)
   }
 
-  private def inTXModification(label1: String = "User",
+  private def inTXModification(tx: InternalTransaction,
+                               label1: String = "User",
                        label2: String = "User",
                        label3: String = "User",
                        type2: String = "KNOWS",
@@ -657,7 +660,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
                            expectSucceed: TestConfiguration = Configs.FromCountStore,
                            expectedLogicalPlan: String = "NodeCountFromCountStore",
                            assertCountInTransaction: Boolean = false,
-                           executeBefore: () => Unit = () => {}): Unit = {
+                           executeBefore: InternalTransaction => Unit = _ => {}): Unit = {
 
     val resultAssertionInTx: Option[RewindableExecutionResult => Unit] =
       if (assertCountInTransaction) {

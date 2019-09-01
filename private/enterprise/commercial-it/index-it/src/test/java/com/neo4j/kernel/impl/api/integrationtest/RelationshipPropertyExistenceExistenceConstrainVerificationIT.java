@@ -12,6 +12,7 @@ import java.lang.reflect.Executable;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.kernel.impl.newapi.Operations;
 
@@ -32,10 +33,10 @@ class RelationshipPropertyExistenceExistenceConstrainVerificationIT extends Prop
     }
 
     @Override
-    public void createOffender( GraphDatabaseService db, String key )
+    public void createOffender( Transaction tx, String key )
     {
-        Node start = db.createNode();
-        Node end = db.createNode();
+        Node start = tx.createNode();
+        Node end = tx.createNode();
         Relationship relationship = start.createRelationshipTo( end, withName( key ) );
     }
 

@@ -95,7 +95,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     {
         try ( var transaction = db.beginTx() )
         {
-            createTestData( db );
+            createTestData( transaction );
             transaction.commit();
         }
     }

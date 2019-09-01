@@ -22,6 +22,11 @@ public class TxBatch
         this.txSize = 0;
     }
 
+    public Transaction transaction()
+    {
+        return tx;
+    }
+
     public boolean advance()
     {
         if ( null == tx )

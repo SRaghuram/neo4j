@@ -98,8 +98,8 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                Node nodeA = db.createNode();
-                Node nodeB = db.createNode();
+                Node nodeA = transaction.createNode();
+                Node nodeB = transaction.createNode();
                 String type = String.valueOf( i % 10 );
                 nodeA.setProperty( type, stringGenerator.next( rng ) );
                 nodeA.createRelationshipTo( nodeB, RelationshipType.withName( type ) );

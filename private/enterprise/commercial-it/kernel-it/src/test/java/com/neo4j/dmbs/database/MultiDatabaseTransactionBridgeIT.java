@@ -45,17 +45,6 @@ class MultiDatabaseTransactionBridgeIT
     }
 
     @Test
-    void nodeCreateOnSystemDbInsideOtherDbTransaction()
-    {
-        GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
-        try ( Transaction transaction = db.beginTx() )
-        {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, systemDb::createNode );
-            assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
-        }
-    }
-
-    @Test
     void lookupNodeOnSystemDbInsideOtherDbTransaction()
     {
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
@@ -106,7 +95,7 @@ class MultiDatabaseTransactionBridgeIT
         Node systemNode;
         try ( Transaction transaction = systemDb.beginTx() )
         {
-            systemNode = systemDb.createNode();
+            systemNode = transaction.createNode();
             transaction.commit();
         }
         try ( Transaction transaction = db.beginTx() )

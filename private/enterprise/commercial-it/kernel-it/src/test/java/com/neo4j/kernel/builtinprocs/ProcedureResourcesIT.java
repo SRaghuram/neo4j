@@ -93,9 +93,9 @@ class ProcedureResourcesIT
         String unusedPropKey = "unusedPropKey";
         try ( Transaction tx = db.beginTx() )
         {
-            Node node1 = db.createNode( unusedLabel );
+            Node node1 = tx.createNode( unusedLabel );
             node1.setProperty( unusedPropKey, "value" );
-            Node node2 = db.createNode( unusedLabel );
+            Node node2 = tx.createNode( unusedLabel );
             node2.setProperty( unusedPropKey, 1 );
             node1.createRelationshipTo( node2, unusedRelType );
             tx.commit();

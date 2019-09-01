@@ -42,9 +42,9 @@ class GraphDbStructureGuideTest
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
-        db.createNode( label("Person") );
-        db.createNode( label("Party") );
-        db.createNode( label("Animal") );
+        tx.createNode( label("Person") );
+        tx.createNode( label("Party") );
+        tx.createNode( label("Animal") );
         int personLabelId;
         int partyLabelId;
         int animalLabelId;
@@ -87,8 +87,8 @@ class GraphDbStructureGuideTest
     {
         // GIVEN
         DbStructureVisitor visitor = mock( DbStructureVisitor.class );
-        Node lhs = db.createNode();
-        Node rhs = db.createNode();
+        Node lhs = tx.createNode();
+        Node rhs = tx.createNode();
         lhs.createRelationshipTo( rhs, withName( "KNOWS" ) );
         lhs.createRelationshipTo( rhs, withName( "LOVES" ) );
         lhs.createRelationshipTo( rhs, withName( "FAWNS_AT" ) );

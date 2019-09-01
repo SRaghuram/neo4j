@@ -121,9 +121,9 @@ class FulltextIndexBackupIT
         long relId2;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node3 = db.createNode( LABEL );
+            Node node3 = tx.createNode( LABEL );
             node3.setProperty( PROP, "Additional data." );
-            Node node4 = db.createNode( LABEL );
+            Node node4 = tx.createNode( LABEL );
             node4.setProperty( PROP, "Even more additional data." );
             Relationship rel = node3.createRelationshipTo( node4, REL );
             rel.setProperty( PROP, "Knows of" );
@@ -165,9 +165,9 @@ class FulltextIndexBackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node node1 = db.createNode( LABEL );
+            Node node1 = tx.createNode( LABEL );
             node1.setProperty( PROP, "This is an integration test." );
-            Node node2 = db.createNode( LABEL );
+            Node node2 = tx.createNode( LABEL );
             node2.setProperty( PROP, "This is a related integration test." );
             Relationship relationship = node1.createRelationshipTo( node2, REL );
             relationship.setProperty( PROP, "They relate" );

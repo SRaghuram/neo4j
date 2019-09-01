@@ -510,11 +510,11 @@ class OnlineBackupCommandCcIT
         {
             cluster.coreTx( ( db, tx ) ->
             {
-                Node node = db.createNode( label( "Person" ) );
+                Node node = tx.createNode( label( "Person" ) );
                 node.setProperty( "id", ThreadLocalRandom.current().nextLong() );
                 node.setProperty( "first_name", UUID.randomUUID().toString() );
                 node.setProperty( "last_name", UUID.randomUUID().toString() );
-                db.createNode( label( "Person" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
+                tx.createNode( label( "Person" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
                 tx.commit();
             } );
         }

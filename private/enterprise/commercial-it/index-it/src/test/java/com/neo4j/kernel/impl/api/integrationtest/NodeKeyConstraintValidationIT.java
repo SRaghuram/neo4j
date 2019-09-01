@@ -53,7 +53,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
         {
             try ( org.neo4j.graphdb.Transaction transaction = db.beginTx() )
             {
-                Node node = db.createNode( label );
+                Node node = transaction.createNode( label );
                 node.setProperty( "property1", "1" );
                 node.setProperty( "property2", "2" );
                 transaction.commit();
@@ -66,7 +66,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
         {
             try ( org.neo4j.graphdb.Transaction transaction = db.beginTx() )
             {
-                Node node = db.createNode( label );
+                Node node = transaction.createNode( label );
                 node.setProperty( "property1", "1" );
                 node.setProperty( "property2", "2" );
                 node.setProperty( "property3", "3" );

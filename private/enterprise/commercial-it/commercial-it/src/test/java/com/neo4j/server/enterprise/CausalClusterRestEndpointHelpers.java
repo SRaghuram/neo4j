@@ -57,7 +57,7 @@ final class CausalClusterRestEndpointHelpers
         GraphDatabaseService db = getLeader( cluster ).defaultDatabaseService();
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( Label.label( "MyNode" ) );
+            tx.createNode( Label.label( "MyNode" ) );
             tx.commit();
         }
     }

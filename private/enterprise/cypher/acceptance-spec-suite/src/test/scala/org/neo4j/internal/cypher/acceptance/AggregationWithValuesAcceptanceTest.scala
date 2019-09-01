@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 import scala.collection.immutable
 
@@ -16,14 +17,14 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    graph.inTx(createSomeNodes())
+    graph.withTx( tx => createSomeNodes(tx))
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
     graph.createIndex("Awesome", "prop3")
   }
 
   // Invoked once before the Tx and once in the same Tx
-  def createSomeNodes(): Unit = {
+  def createSomeNodes(tx: InternalTransaction): Unit = {
     graph.execute(
       """
       CREATE (:Awesome {prop1: 40, prop2: 4})-[:R]->()

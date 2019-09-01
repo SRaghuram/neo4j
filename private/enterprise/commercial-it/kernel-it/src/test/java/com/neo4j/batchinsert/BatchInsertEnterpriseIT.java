@@ -163,10 +163,10 @@ public class BatchInsertEnterpriseIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node start = db.createNode( Labels.One );
+            Node start = tx.createNode( Labels.One );
             someProperties( 5 ).forEach( start::setProperty );
 
-            Node end = db.createNode( Labels.Two );
+            Node end = tx.createNode( Labels.Two );
             someProperties( 5 ).forEach( end::setProperty );
 
             Relationship rel = start.createRelationshipTo( end, MyRelTypes.TEST );

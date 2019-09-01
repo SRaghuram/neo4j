@@ -123,7 +123,7 @@ class RecordFormatsMigrationIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node start = db.createNode( LABEL );
+            Node start = tx.createNode( LABEL );
             start.setProperty( PROPERTY, VALUE );
             tx.commit();
         }

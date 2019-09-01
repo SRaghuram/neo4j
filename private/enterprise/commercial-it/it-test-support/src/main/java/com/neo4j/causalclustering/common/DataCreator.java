@@ -46,8 +46,8 @@ public class DataCreator
         {
             for ( int i = 0; i < size; i++ )
             {
-                Node node1 = db.createNode( LABEL );
-                Node node2 = db.createNode( LABEL );
+                Node node1 = tx.createNode( LABEL );
+                Node node2 = tx.createNode( LABEL );
 
                 node1.setProperty( NODE_PROPERTY_1, nodeProperty1Value() );
                 node1.setProperty( NODE_PROPERTY_2, "node1" );
@@ -69,7 +69,7 @@ public class DataCreator
         {
             last = cluster.coreTx( ( db, tx ) ->
             {
-                Node node = db.createNode( label );
+                Node node = tx.createNode( label );
                 node.setProperty( propertyPair.get().first(), propertyPair.get().other() );
                 tx.commit();
             } );

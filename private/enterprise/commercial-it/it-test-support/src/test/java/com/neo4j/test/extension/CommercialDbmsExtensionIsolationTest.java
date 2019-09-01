@@ -25,7 +25,7 @@ class CommercialDbmsExtensionIsolationTest
         try ( Transaction tx = db.beginTx() )
         {
             assertFalse( db.getAllNodes().iterator().hasNext() );
-            db.createNode();
+            tx.createNode();
             tx.commit();
         }
     }

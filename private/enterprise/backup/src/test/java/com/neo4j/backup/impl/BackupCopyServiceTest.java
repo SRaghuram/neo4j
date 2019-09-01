@@ -185,7 +185,7 @@ class BackupCopyServiceTest
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( label( "Cat" ) ).setProperty( "name", "Tom" );
+            tx.createNode( label( "Cat" ) ).setProperty( "name", "Tom" );
             tx.commit();
         }
         finally

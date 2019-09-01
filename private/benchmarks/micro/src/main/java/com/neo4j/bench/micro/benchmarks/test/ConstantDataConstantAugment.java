@@ -84,7 +84,7 @@ public class ConstantDataConstantAugment extends BaseDatabaseBenchmark
                 GraphDatabaseService db = ManagedStore.newDb( storeAndConfig.store(), storeAndConfig.config() );
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.createNode();
+                    tx.createNode();
                     tx.commit();
                 }
                 ManagedStore.getManagementService().shutdown();

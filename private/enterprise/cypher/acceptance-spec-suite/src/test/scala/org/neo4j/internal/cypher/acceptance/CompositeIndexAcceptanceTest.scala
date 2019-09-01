@@ -11,6 +11,7 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.kernel.GraphDatabaseQueryService
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.{CoordinateReferenceSystem, DurationValue, Values}
 import org.scalatest.matchers.{MatchResult, Matcher}
 
@@ -1115,8 +1116,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
     createNodes()
 
-    def createMe(): Unit = {
-      createNodesInTxState()
+    def createMe(tx: InternalTransaction): Unit = {
+      createNodesInTxState(tx)
       // Values that should not be valid for the query
       graph.execute(
         """
@@ -1317,7 +1318,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should use composite index and get correct value for STARTS WITH when all string values match") {
     graph.createIndex("Awesome", "prop1", "prop2")
 
-    def createMe(): Unit = {
+    def createMe(tx: InternalTransaction): Unit = {
       graph.execute(
         """
           |CREATE (:Awesome {prop1: 'foo', prop2: 'alligator'})
@@ -1530,8 +1531,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     var nodes = Set.empty[Node]
 
-    def createMe(): Unit = {
-      createNodesInTxState()
+    def createMe(tx: InternalTransaction): Unit = {
+      createNodesInTxState(tx)
     }
     nodes = Set(
       createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
@@ -1558,8 +1559,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     var nodes = Set.empty[Node]
 
-    def createMe(): Unit = {
-      createNodesInTxState()
+    def createMe(tx:InternalTransaction): Unit = {
+      createNodesInTxState(tx)
     }
     nodes = Set(
       createLabeledNode(Map("prop1" -> 45, "prop2" -> "hello"), "Awesome"),
@@ -1610,7 +1611,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       """.stripMargin )
     )
 
-  private def createNodesInTxState(): Unit =
+  private def createNodesInTxState(tx: InternalTransaction): Unit =
     graph.execute(
       """
         |CREATE (:Awesome {prop1: 40, prop2: 3, prop5: 'a'})

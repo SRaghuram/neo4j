@@ -68,7 +68,7 @@ public class DeferringLocksIT
         final Node node;
         try ( Transaction tx = db.beginTx() )
         {
-            node = db.createNode();
+            node = tx.createNode();
             tx.commit();
         }
 
@@ -106,7 +106,7 @@ public class DeferringLocksIT
         final Node node;
         try ( Transaction tx = db.beginTx() )
         {
-            node = db.createNode();
+            node = tx.createNode();
             node.setProperty( PROPERTY_KEY, VALUE_1 );
             tx.commit();
         }
@@ -146,7 +146,7 @@ public class DeferringLocksIT
         final long nodeId;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             nodeId = node.getId();
             node.setProperty( PROPERTY_KEY, VALUE_1 );
             tx.commit();
@@ -202,7 +202,7 @@ public class DeferringLocksIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                createNodeWithProperty( LABEL, PROPERTY_KEY, VALUE_1 );
+                createNodeWithProperty( tx, LABEL, PROPERTY_KEY, VALUE_1 );
                 assertNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
 
                 tx.commit();
@@ -232,7 +232,7 @@ public class DeferringLocksIT
         // WHEN
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.createNode( LABEL );
+            Node node = tx.createNode( LABEL );
             node.setProperty( PROPERTY_KEY, VALUE_1 );
 
             assertNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
@@ -263,9 +263,9 @@ public class DeferringLocksIT
         }
     }
 
-    private Node createNodeWithProperty( Label label, String key, Object value )
+    private Node createNodeWithProperty( Transaction tx, Label label, String key, Object value )
     {
-        Node node = db.createNode( label );
+        Node node = tx.createNode( label );
         node.setProperty( key, value );
         return node;
     }

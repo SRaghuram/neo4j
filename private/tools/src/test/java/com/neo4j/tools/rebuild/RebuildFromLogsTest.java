@@ -27,6 +27,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -118,7 +119,7 @@ class RebuildFromLogsTest
         GraphDatabaseAPI db = db( copyLayout );
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            db.createNode();
+            tx.createNode();
             tx.commit();
         }
         finally
@@ -139,7 +140,7 @@ class RebuildFromLogsTest
         long txId;
         try
         {
-            for ( Transaction transaction : workLog.transactions() )
+            for ( Operation transaction : workLog.transactions() )
             {
                 transaction.applyTo( prototype );
             }
@@ -160,28 +161,28 @@ class RebuildFromLogsTest
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }
 
-    enum Transaction
+    enum Operation
     {
         CREATE_NODE
                 {
                     @Override
-                    void applyTx( GraphDatabaseService graphDb )
+                    void applyTx( GraphDatabaseService graphDb, Transaction tx )
                     {
-                        graphDb.createNode();
+                        tx.createNode();
                     }
                 },
         CREATE_NODE_WITH_PROPERTY
                 {
                     @Override
-                    void applyTx( GraphDatabaseService graphDb )
+                    void applyTx( GraphDatabaseService graphDb, Transaction tx )
                     {
-                        graphDb.createNode().setProperty( name(), "value" );
+                        tx.createNode().setProperty( name(), "value" );
                     }
                 },
         SET_PROPERTY( CREATE_NODE )
                 {
                     @Override
-                    void applyTx( GraphDatabaseService graphDb )
+                    void applyTx( GraphDatabaseService graphDb, Transaction tx )
                     {
                         firstNode( graphDb ).setProperty( name(), "value" );
                     }
@@ -189,7 +190,7 @@ class RebuildFromLogsTest
         CHANGE_PROPERTY( CREATE_NODE_WITH_PROPERTY )
                 {
                     @Override
-                    void applyTx( GraphDatabaseService graphDb )
+                    void applyTx( GraphDatabaseService graphDb, Transaction tx )
                     {
                         ResourceIterable<Node> nodes = graphDb.getAllNodes();
                         try ( ResourceIterator<Node> iterator = nodes.iterator() )
@@ -212,9 +213,9 @@ class RebuildFromLogsTest
             return Iterables.firstOrNull( graphDb.getAllNodes() );
         }
 
-        private final Transaction[] dependencies;
+        private final Operation[] dependencies;
 
-        Transaction( Transaction... dependencies )
+        Operation( Operation... dependencies )
         {
             this.dependencies = dependencies;
         }
@@ -223,23 +224,23 @@ class RebuildFromLogsTest
         {
             try ( org.neo4j.graphdb.Transaction tx = graphDb.beginTx() )
             {
-                applyTx( graphDb );
+                applyTx( graphDb, tx );
 
                 tx.commit();
             }
         }
 
-        void applyTx( GraphDatabaseService graphDb )
+        void applyTx( GraphDatabaseService graphDb, Transaction tx )
         {
         }
     }
 
     static class WorkLog
     {
-        static final WorkLog BASE = new WorkLog( EnumSet.noneOf( Transaction.class ) );
-        final EnumSet<Transaction> transactions;
+        static final WorkLog BASE = new WorkLog( EnumSet.noneOf( Operation.class ) );
+        final EnumSet<Operation> transactions;
 
-        WorkLog( EnumSet<Transaction> transactions )
+        WorkLog( EnumSet<Operation> transactions )
         {
             this.transactions = transactions;
         }
@@ -264,19 +265,19 @@ class RebuildFromLogsTest
             return transactions.toString();
         }
 
-        Transaction[] transactions()
+        Operation[] transactions()
         {
-            return transactions.toArray( new Transaction[0] );
+            return transactions.toArray( new Operation[0] );
         }
 
         static Set<WorkLog> combinations()
         {
             Set<WorkLog> combinations = Collections.newSetFromMap( new LinkedHashMap<>() );
-            for ( Transaction transaction : Transaction.values() )
+            for ( Operation transaction : Operation.values() )
             {
                 combinations.add( BASE.extend( transaction ) );
             }
-            for ( Transaction transaction : Transaction.values() )
+            for ( Operation transaction : Operation.values() )
             {
                 for ( WorkLog combination : new ArrayList<>( combinations ) )
                 {
@@ -286,9 +287,9 @@ class RebuildFromLogsTest
             return combinations;
         }
 
-        private WorkLog extend( Transaction transaction )
+        private WorkLog extend( Operation transaction )
         {
-            EnumSet<Transaction> base = EnumSet.copyOf( transactions );
+            EnumSet<Operation> base = EnumSet.copyOf( transactions );
             Collections.addAll( base, transaction.dependencies );
             base.add( transaction );
             return new WorkLog( base );

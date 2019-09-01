@@ -94,7 +94,7 @@ public class BoltV4TransportCommercialIT
         {
             for ( int i = 30; i <= 40; i++ )
             {
-                gds.createNode( Label.label( "L" + i ) );
+                tx.createNode( Label.label( "L" + i ) );
             }
             tx.commit();
         }

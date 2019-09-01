@@ -371,7 +371,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         {
             try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
             {
-                db.createNode( Label.label( label ) );
+                tx.createNode( Label.label( label ) );
                 tx.commit();
             }
         } );

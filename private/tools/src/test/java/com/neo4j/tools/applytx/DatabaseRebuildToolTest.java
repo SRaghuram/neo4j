@@ -206,7 +206,7 @@ class DatabaseRebuildToolTest
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Node node = db.createNode( label( "Label_" + (i % 2) ) );
+                Node node = tx.createNode( label( "Label_" + (i % 2) ) );
                 setProperties( node, i );
                 nodes[i] = node;
                 tx.commit();

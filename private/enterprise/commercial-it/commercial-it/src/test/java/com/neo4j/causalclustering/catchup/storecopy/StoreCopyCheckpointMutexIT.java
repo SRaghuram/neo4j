@@ -165,7 +165,7 @@ class StoreCopyCheckpointMutexIT
     {
         try ( var tx = db.beginTx() )
         {
-            db.createNode( LABEL ).setProperty( PROP_KEY, 1 );
+            tx.createNode( LABEL ).setProperty( PROP_KEY, 1 );
             tx.commit();
         }
     }

@@ -88,7 +88,7 @@ class VersionContextIT
         {
             try ( Transaction transaction = database.beginTx() )
             {
-                database.createNode();
+                transaction.createNode();
                 transaction.commit();
             }
         }

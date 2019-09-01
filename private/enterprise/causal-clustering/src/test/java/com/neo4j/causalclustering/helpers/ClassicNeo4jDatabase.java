@@ -138,8 +138,8 @@ public class ClassicNeo4jDatabase
             {
                 try ( Transaction tx = db.beginTx() )
                 {
-                    Node node1 = db.createNode( Label.label( "Label-" + i ) );
-                    Node node2 = db.createNode( Label.label( "Label-" + i ) );
+                    Node node1 = tx.createNode( Label.label( "Label-" + i ) );
+                    Node node2 = tx.createNode( Label.label( "Label-" + i ) );
                     node1.createRelationshipTo( node2, RelationshipType.withName( "REL-" + i ) );
                     tx.commit();
                 }

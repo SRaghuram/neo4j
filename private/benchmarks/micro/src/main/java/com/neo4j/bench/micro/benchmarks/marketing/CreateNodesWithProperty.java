@@ -28,6 +28,7 @@ import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
@@ -100,6 +101,11 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
             txBatch.advance();
         }
 
+        Transaction transaction()
+        {
+            return txBatch.transaction();
+        }
+
         @TearDown
         public void tearDown()
         {
@@ -127,7 +133,7 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
     public void createNode( TxState txState, RNGState rngState )
     {
         txState.advance();
-        withProperties( db().createNode(), txState.valueGeneratorFun, rngState.rng );
+        withProperties( txState.transaction().createNode(), txState.valueGeneratorFun, rngState.rng );
     }
 
     /**
@@ -142,7 +148,7 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
     public void createNodeWithLabel( TxState txState, RNGState rngState )
     {
         txState.advance();
-        withProperties( db().createNode( LABEL ), txState.valueGeneratorFun, rngState.rng );
+        withProperties( txState.transaction().createNode( LABEL ), txState.valueGeneratorFun, rngState.rng );
     }
 
     /**
@@ -157,7 +163,7 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
     public void createNodeWithSchemaLabel( TxState txState, RNGState rngState )
     {
         txState.advance();
-        withProperties( db().createNode( SCHEMA_LABEL ), txState.valueGeneratorFun, rngState.rng );
+        withProperties( txState.transaction().createNode( SCHEMA_LABEL ), txState.valueGeneratorFun, rngState.rng );
     }
 
     /**
@@ -172,6 +178,6 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
     public void createNodeWithLabelAndSchemaLabel( TxState txState, RNGState rngState )
     {
         txState.advance();
-        withProperties( db().createNode( SCHEMA_LABEL, LABEL ), txState.valueGeneratorFun, rngState.rng );
+        withProperties( txState.transaction().createNode( SCHEMA_LABEL, LABEL ), txState.valueGeneratorFun, rngState.rng );
     }
 }

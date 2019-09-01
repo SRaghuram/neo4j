@@ -152,7 +152,7 @@ public class ParallelRuntimeStressIT
         Node previous = null;
         for ( int i = 0; i < N_NODES; i++ )
         {
-            Node node = db.createNode( LABEL );
+            Node node = tx.createNode( LABEL );
             if ( previous != null )
             {
                 previous.createRelationshipTo( node, R );

@@ -141,8 +141,8 @@ class TokenReplicationStressIT
                     String propertyKey = "Property_" + tokenId;
                     RelationshipType type = RelationshipType.withName( "RELATIONSHIP_" + tokenId );
 
-                    Node node1 = db.createNode( label );
-                    Node node2 = db.createNode( label );
+                    Node node1 = tx.createNode( label );
+                    Node node2 = tx.createNode( label );
 
                     node1.setProperty( propertyKey, tokenId );
                     node2.setProperty( propertyKey, tokenId );

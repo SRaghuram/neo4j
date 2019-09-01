@@ -81,7 +81,7 @@ public class ConsistencyCheckServiceRecordFormatIT
             for ( int i = 0; i < size; i++ )
             {
                 Label label = (i % 2 == 0) ? TestLabel.FOO : TestLabel.BAR;
-                Node current = db.createNode( label );
+                Node current = tx.createNode( label );
                 current.setProperty( "value", ThreadLocalRandom.current().nextLong() );
 
                 if ( previous != null )

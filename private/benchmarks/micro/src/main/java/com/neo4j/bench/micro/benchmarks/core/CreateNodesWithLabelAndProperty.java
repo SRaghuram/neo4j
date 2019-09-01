@@ -27,6 +27,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
@@ -140,6 +141,11 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
             txBatch.advance();
         }
 
+        Transaction transaction()
+        {
+            return txBatch.transaction();
+        }
+
         Object nextValue( SplittableRandom rng )
         {
             return values.next( rng );
@@ -164,6 +170,6 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
     public void createNodeWithLabelAndProperty( TxState txState, RNGState rngState )
     {
         txState.advance();
-        db().createNode( LABEL ).setProperty( KEY, txState.nextValue( rngState.rng ) );
+        txState.transaction().createNode( LABEL ).setProperty( KEY, txState.nextValue( rngState.rng ) );
     }
 }

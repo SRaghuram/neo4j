@@ -16,11 +16,10 @@ import java.util.UUID;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -67,9 +66,9 @@ class SystemGraphDbmsModelTest
         HashMap<String,DatabaseState> expectedCreated = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( "A", true, expectedCreated );
-            makeDatabaseNode( "B", true, expectedCreated );
-            makeDatabaseNode( "C", false, expectedCreated );
+            makeDatabaseNode( tx, "A", true, expectedCreated );
+            makeDatabaseNode( tx, "B", true, expectedCreated );
+            makeDatabaseNode( tx, "C", false, expectedCreated );
             tx.commit();
         }
 
@@ -83,9 +82,9 @@ class SystemGraphDbmsModelTest
         HashMap<String,DatabaseState> expectedDeleted = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDeletedDatabaseNode( "D", expectedDeleted );
-            makeDeletedDatabaseNode( "E", expectedDeleted );
-            makeDeletedDatabaseNode( "F", expectedDeleted );
+            makeDeletedDatabaseNode( tx, "D", expectedDeleted );
+            makeDeletedDatabaseNode( tx, "E", expectedDeleted );
+            makeDeletedDatabaseNode( tx, "F", expectedDeleted );
             tx.commit();
         }
 
@@ -101,17 +100,17 @@ class SystemGraphDbmsModelTest
         HashMap<String,DatabaseState> expected = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( "A", true, expected );
-            makeDatabaseNode( "B", false, expected );
-            makeDeletedDatabaseNode( "C", expected );
+            makeDatabaseNode( tx, "A", true, expected );
+            makeDatabaseNode( tx, "B", false, expected );
+            makeDeletedDatabaseNode( tx,"C", expected );
             tx.commit();
         }
 
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( "D", true, expected );
-            makeDeletedDatabaseNode( "E", expected );
-            makeDeletedDatabaseNode( "F", expected );
+            makeDatabaseNode( tx, "D", true, expected );
+            makeDeletedDatabaseNode( tx, "E", expected );
+            makeDeletedDatabaseNode( tx, "F", expected );
             tx.commit();
         }
 
@@ -119,10 +118,10 @@ class SystemGraphDbmsModelTest
         assertEquals( expected, dbmsModel.getDatabaseStates() );
     }
 
-    private void makeDatabaseNode( String databaseName, boolean online, HashMap<String,DatabaseState> expected )
+    private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<String,DatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
-        Node node = db.createNode( DATABASE_LABEL );
+        Node node = tx.createNode( DATABASE_LABEL );
         node.setProperty( "name", databaseName );
         node.setProperty( "status", online ? "online" : "offline" );
         node.setProperty( "uuid", uuid.toString() );
@@ -130,10 +129,10 @@ class SystemGraphDbmsModelTest
         expected.put( databaseName, online ? new DatabaseState( id, STARTED ) : new DatabaseState( id, STOPPED ) );
     }
 
-    private void makeDeletedDatabaseNode( String databaseName, HashMap<String,DatabaseState> expected )
+    private void makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<String,DatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
-        Node node = db.createNode( DELETED_DATABASE_LABEL );
+        Node node = tx.createNode( DELETED_DATABASE_LABEL );
         node.setProperty( "name", databaseName );
         node.setProperty( "uuid", uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );

@@ -293,7 +293,7 @@ class RestoreDatabaseCommandIT
         {
             for ( int i = 0; i < nodesToCreate; i++ )
             {
-                db.createNode();
+                tx.createNode();
             }
             tx.commit();
         }

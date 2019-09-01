@@ -347,11 +347,11 @@ class CatchupServerIT
     {
         try ( Transaction tx = graphDb.beginTx() )
         {
-            Node node = graphDb.createNode();
+            Node node = tx.createNode();
             node.addLabel( LABEL );
             node.setProperty( PROP_NAME, "Neo" );
             node.setProperty( PROP, Math.random() * 10000 );
-            graphDb.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
+            tx.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
             tx.commit();
         }
     }

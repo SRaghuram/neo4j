@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekByRange
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.{Node, ResourceIterator}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -50,16 +51,16 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
     createLabeledNode(Map("name" -> "Stefanie"), "User")
     createLabeledNode(Map("name" -> "Craig"), "User")
 
-      val executeBefore = () => {
-        drain(graph.execute("MATCH (u:User {name: 'Craig'}) SET u.name = 'Steven'"))
-        drain(graph.execute("MATCH (u:User {name: 'Stephan'}) DELETE u"))
-        drain(graph.execute("MATCH (u:User {name: 'Stefanie'}) SET u.name = 'steffi'"))
-      }
+    def prepare(tx: InternalTransaction): Unit = {
+      drain(graph.execute("MATCH (u:User {name: 'Craig'}) SET u.name = 'Steven'"))
+      drain(graph.execute("MATCH (u:User {name: 'Stephan'}) DELETE u"))
+      drain(graph.execute("MATCH (u:User {name: 'Stefanie'}) SET u.name = 'steffi'"))
+    }
 
-      executeWith(Configs.CachedProperty, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = executeBefore,
-        resultAssertionInTx = Some(result => {
-          result.toSet should equal(Set(Map("name" -> "Stefan"),Map("name" -> "Steven")))
-        }))
+    executeWith(Configs.CachedProperty, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = prepare,
+      resultAssertionInTx = Some(result => {
+        result.toSet should equal(Set(Map("name" -> "Stefan"), Map("name" -> "Steven")))
+      }))
   }
 
   private def drain(iter: ResourceIterator[_]): Unit = {

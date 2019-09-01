@@ -129,7 +129,7 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                database.createNode();
+                transaction.createNode();
             }
         } );
 
@@ -164,7 +164,7 @@ class TransactionGuardIT
         {
             fakeClock.forward( 26, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            database.createNode();
+            transaction.createNode();
             transaction.rollback();
         }
 
@@ -174,7 +174,7 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 28, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                database.createNode();
+                transaction.createNode();
             }
         } );
         assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );

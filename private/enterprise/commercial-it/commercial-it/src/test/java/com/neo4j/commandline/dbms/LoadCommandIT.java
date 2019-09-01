@@ -68,7 +68,7 @@ class LoadCommandIT extends AbstractCommandIT
         var destinationPath = databaseLayout.getStoreLayout().storeDirectory().toPath();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
-            databaseAPI.createNode( marker );
+            transaction.createNode( marker );
             transaction.commit();
         }
         managementService.shutdownDatabase( databaseName );
@@ -97,7 +97,7 @@ class LoadCommandIT extends AbstractCommandIT
         var destinationPath = databaseLayout.getStoreLayout().storeDirectory().toPath();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
-            databaseAPI.createNode( marker );
+            transaction.createNode( marker );
             transaction.commit();
         }
         managementService.shutdownDatabase( databaseName );
@@ -121,7 +121,7 @@ class LoadCommandIT extends AbstractCommandIT
         var destinationPath = databaseLayout.getStoreLayout().storeDirectory().toPath();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
-            databaseAPI.createNode( marker );
+            transaction.createNode( marker );
             transaction.commit();
         }
         managementService.shutdownDatabase( databaseName );

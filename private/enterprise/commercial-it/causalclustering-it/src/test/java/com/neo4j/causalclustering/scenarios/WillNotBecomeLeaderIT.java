@@ -59,7 +59,7 @@ class WillNotBecomeLeaderIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode( label( "boo" ) );
+            Node node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );

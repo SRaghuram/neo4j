@@ -87,8 +87,8 @@ class TransactionalWorkload extends Workload
         boolean successful = true;
         try ( Transaction tx = db.beginTx() )
         {
-            Node node1 = db.createNode( LABEL );
-            Node node2 = db.createNode( LABEL );
+            Node node1 = tx.createNode( LABEL );
+            Node node2 = tx.createNode( LABEL );
 
             node1.setProperty( ID_PROPERTY, nodesCreated );
             node2.setProperty( ID_PROPERTY, nodesCreated + 1 );
