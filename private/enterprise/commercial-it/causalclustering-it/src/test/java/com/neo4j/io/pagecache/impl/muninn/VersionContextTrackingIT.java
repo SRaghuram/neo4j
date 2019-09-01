@@ -140,7 +140,7 @@ class VersionContextTrackingIT
         {
             cluster.coreTx( ( coreGraphDatabase, transaction ) ->
             {
-                coreGraphDatabase.createNode();
+                transaction.createNode();
                 transaction.commit();
             } );
         }

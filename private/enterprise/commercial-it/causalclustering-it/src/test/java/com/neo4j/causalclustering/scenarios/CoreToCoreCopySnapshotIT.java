@@ -204,7 +204,7 @@ class CoreToCoreCopySnapshotIT
             {
                 last = cluster.coreTx( ( db, tx ) ->
                 {
-                    Node node = db.createNode();
+                    Node node = tx.createNode();
                     node.setProperty( "that's a bam", randomAlphanumeric( 1024 ) );
                     tx.commit();
                 } );

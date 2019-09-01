@@ -67,7 +67,7 @@ class IdFilesSanityCheckIT
         {
             for ( var i = 0; i < nodeCount; i++ )
             {
-                nodes.add( db.createNode() );
+                nodes.add( tx.createNode() );
             }
             tx.commit();
         } );

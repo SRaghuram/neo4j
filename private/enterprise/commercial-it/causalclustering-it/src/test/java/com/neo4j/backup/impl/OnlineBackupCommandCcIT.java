@@ -421,9 +421,9 @@ class OnlineBackupCommandCcIT
         {
             cluster.coreTx( ( coreGraphDatabase, transaction ) ->
             {
-                Node node = coreGraphDatabase.createNode();
+                Node node = transaction.createNode();
                 node.setProperty( "data", data );
-                coreGraphDatabase.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
+                transaction.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
                 transaction.commit();
             } );
         }

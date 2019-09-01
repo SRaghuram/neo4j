@@ -147,7 +147,7 @@ class CoreFallBehindIT
         {
             cluster.coreTx( SYSTEM_DATABASE_NAME, ( db, tx ) ->
             {
-                db.createNode();
+                tx.createNode();
                 tx.commit();
             } );
         }

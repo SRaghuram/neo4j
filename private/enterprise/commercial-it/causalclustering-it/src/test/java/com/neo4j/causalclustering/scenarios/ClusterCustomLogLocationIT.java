@@ -52,7 +52,7 @@ class ClusterCustomLogLocationIT
         {
             cluster.coreTx( ( db, tx ) ->
             {
-                db.createNode();
+                tx.createNode();
                 tx.commit();
             } );
         }

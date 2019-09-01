@@ -64,7 +64,7 @@ class ClusterShutdownIT
     {
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
         {
-            node.set( coreGraphDatabase.createNode() );
+            node.set( transaction.createNode() );
             transaction.commit();
         } );
     }

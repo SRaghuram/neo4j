@@ -105,7 +105,7 @@ class CoreReplicationIT
         // when
         try ( Transaction tx = follower.beginTx() )
         {
-            WriteOperationsNotAllowedException ex = assertThrows( WriteOperationsNotAllowedException.class, follower::createNode );
+            WriteOperationsNotAllowedException ex = assertThrows( WriteOperationsNotAllowedException.class, tx::createNode );
             assertThat( ex.getMessage(), containsString( "No write operations are allowed" ) );
         }
     }
@@ -172,7 +172,7 @@ class CoreReplicationIT
         // given
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            db.createNode();
+            tx.createNode();
             tx.commit();
         } );
 
@@ -208,7 +208,7 @@ class CoreReplicationIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -217,7 +217,7 @@ class CoreReplicationIT
         cluster.newCoreMember().start();
         CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -233,7 +233,7 @@ class CoreReplicationIT
         // given
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -244,7 +244,7 @@ class CoreReplicationIT
 
         CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
@@ -263,7 +263,7 @@ class CoreReplicationIT
         {
             last = cluster.coreTx( ( db, tx ) ->
             {
-                Node node = db.createNode();
+                Node node = tx.createNode();
                 node.setProperty( "foobar", "baz_bat" );
                 tx.commit();
             } );
@@ -325,7 +325,7 @@ class CoreReplicationIT
             {
                 cluster.coreTx( ( db, tx ) ->
                 {
-                    db.createNode();
+                    tx.createNode();
                     tx.commit();
 
                     cluster.removeCoreMember( cluster.getMemberWithAnyRole( Role.FOLLOWER, Role.CANDIDATE ) );

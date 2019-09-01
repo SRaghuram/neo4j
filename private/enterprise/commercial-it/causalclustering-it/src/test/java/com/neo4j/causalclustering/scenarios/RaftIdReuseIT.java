@@ -74,9 +74,9 @@ class RaftIdReuseIT
 
         CoreClusterMember clusterMember = cluster.coreTx( ( db, tx ) ->
         {
-            Node node1 = db.createNode();
-            Node node2 = db.createNode();
-            Node node3 = db.createNode();
+            Node node1 = tx.createNode();
+            Node node2 = tx.createNode();
+            Node node3 = tx.createNode();
 
             node1id.setValue( node1.getId() );
             node2id.setValue( node2.getId() );
@@ -126,7 +126,7 @@ class RaftIdReuseIT
         // The ids available should be actually reused, so check that a new node gets one of the above deleted ids
         CoreClusterMember newCreationLeader = cluster.coreTx( ( db, tx ) ->
         {
-            Node node = db.createNode();
+            Node node = tx.createNode();
             assertTrue( node.getId() == first.getValue() || node.getId() == second.getValue(),
                     String.format( "Created node had id %d, should be %d or %d", node.getId(), first.getValue(), second.getValue() ) );
 
@@ -171,8 +171,8 @@ class RaftIdReuseIT
         final MutableLong node2id = new MutableLong();
         CoreClusterMember reuseLeader = cluster.coreTx( ( db, tx ) ->
         {
-            Node node1 = db.createNode();
-            Node node2 = db.createNode();
+            Node node1 = tx.createNode();
+            Node node2 = tx.createNode();
 
             node1id.setValue( node1.getId() );
             node2id.setValue( node2.getId() );
@@ -213,13 +213,13 @@ class RaftIdReuseIT
     {
         return cluster.coreTx( ( db, tx ) ->
         {
-            Node node1 = db.createNode();
+            Node node1 = tx.createNode();
             first.setValue( node1.getId() );
 
-            Node node2 = db.createNode();
+            Node node2 = tx.createNode();
             second.setValue( node2.getId() );
 
-            db.createNode();
+            tx.createNode();
 
             tx.commit();
         } );

@@ -113,7 +113,7 @@ class ReadReplicaReplicationIT
         {
             try ( var tx = readReplica.beginTx() )
             {
-                var node = readReplica.createNode();
+                var node = tx.createNode();
                 node.setProperty( NODE_PROPERTY_1, "baz_bat" );
                 node.addLabel( DataCreator.LABEL );
                 tx.commit();
@@ -365,7 +365,7 @@ class ReadReplicaReplicationIT
 
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
         {
-            coreGraphDatabase.createNode();
+            transaction.createNode();
             transaction.commit();
         } );
 

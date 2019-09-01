@@ -44,7 +44,7 @@ class CausalClusteringRolesIT
 
         assertThrows( WriteOperationsNotAllowedException.class, () ->
         {
-            db.createNode();
+            tx.createNode();
             tx.commit();
         } );
     }

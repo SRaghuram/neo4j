@@ -114,7 +114,7 @@ public class ClusterFormationIT
         {
             try ( Transaction tx = leader.beginTx() )
             {
-                leader.createNode();
+                tx.createNode();
                 tx.commit();
             }
         } );

@@ -35,8 +35,8 @@ public class ExecuteTransactionCommand extends DatabaseManagerCommand
 
         try ( Transaction transaction = databaseFacade.beginTx() )
         {
-            Node node1 = databaseFacade.createNode();
-            Node node2 = databaseFacade.createNode();
+            Node node1 = transaction.createNode();
+            Node node2 = transaction.createNode();
             node1.setProperty( "a", "b" );
             node2.setProperty( "c", "d" );
             node1.createRelationshipTo( node2, RelationshipType.withName( "some" ) );

@@ -97,8 +97,8 @@ class IdReuse
                     cluster.coreTx( ( db, tx ) -> {
                         for ( int j = 0; j < 1_000; j++ )
                         {
-                            Node start = db.createNode();
-                            Node end = db.createNode();
+                            Node start = tx.createNode();
+                            Node end = tx.createNode();
                             start.createRelationshipTo( end, RELATIONSHIP_TYPE );
                         }
                         tx.commit();
@@ -128,8 +128,8 @@ class IdReuse
             try
             {
                 cluster.coreTx( ( db, tx ) -> {
-                    Node nodeStart = db.createNode();
-                    Node nodeEnd = db.createNode();
+                    Node nodeStart = tx.createNode();
+                    Node nodeEnd = tx.createNode();
                     nodeStart.createRelationshipTo( nodeEnd, RELATIONSHIP_TYPE );
                     tx.commit();
                 } );

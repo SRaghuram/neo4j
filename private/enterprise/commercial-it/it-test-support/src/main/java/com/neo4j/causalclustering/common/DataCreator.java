@@ -84,7 +84,7 @@ public class DataCreator
         {
             last = cluster.coreTx( ( db, tx ) ->
             {
-                db.createNode();
+                tx.createNode();
                 tx.commit();
             } );
         }
