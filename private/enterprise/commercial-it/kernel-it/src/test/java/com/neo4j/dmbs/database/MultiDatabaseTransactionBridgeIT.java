@@ -67,17 +67,6 @@ class MultiDatabaseTransactionBridgeIT
     }
 
     @Test
-    void lookupTokensOnSystemDbInsideOtherDbTransaction()
-    {
-        GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
-        try ( Transaction transaction = db.beginTx() )
-        {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, transaction::getAllLabels );
-            assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
-        }
-    }
-
-    @Test
     void beginTransactionOnSystemDbInsideOtherDbTransaction()
     {
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
