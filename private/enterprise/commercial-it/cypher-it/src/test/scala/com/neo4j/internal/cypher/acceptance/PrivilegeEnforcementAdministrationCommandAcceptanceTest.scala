@@ -2356,6 +2356,54 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
         |()-[:B {id: 3, foo: 4}]->()
       """.stripMargin)
 
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((null, null))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ{*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((null, null))
+    }) should be(2)
+  }
+
+  test("should not be able to read properties using properties() function when denied read privilege for all reltypes and all properties") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
     // WHEN
@@ -2392,6 +2440,60 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should read correct properties when denied read privilege for all reltypes and specific property") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected2 = List(
+      (1, null),
+      (3, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
+
+  }
+
+  test("should read correct properties using properties() function when denied read privilege for all reltypes and specific property") {
 
     // GIVEN
     setupUserWithCustomRole()
@@ -2458,6 +2560,60 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
         |()-[:B {id: 3, foo: 4}]->()
       """.stripMargin)
 
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {*} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    val expected2 = List(
+      (3, 4),
+      (null, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
+
+  }
+
+  test("should read correct properties using properties() function when denied read privilege for specific reltype and all properties") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
     // WHEN
@@ -2512,6 +2668,60 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
         |()-[:B {id: 3, foo: 4}]->()
       """.stripMargin)
 
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    val expected2 = List(
+      (1, null),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
+
+  }
+
+  test("should read correct properties using properties() function when denied read privilege for specific reltype and specific property") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
     // WHEN
@@ -2554,6 +2764,93 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should read correct properties with several grants and denies on read relationships") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2, bar: 5}]->(),
+        |()-[:B {id: 3, foo: 4, bar: 6}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo, r.bar ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {id} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, null, null),
+      (3, null, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {id} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    val expected2 = List(
+      (3, null, null),
+      (null, null, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected2(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {foo} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    val expected3 = List(
+      (3, null, null),
+      (null, 2, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected3(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {bar} ON GRAPH * RELATIONSHIPS B TO custom")
+
+    // THEN
+    val expected4 = List(
+      (3, null, null),
+      (null, 2, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected4(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected5 = List(
+      (3, 4, null),
+      (null, 2, 5)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo"), row.getNumber("r.bar")) should be(expected5(index))
+    }) should be(2)
+
+  }
+
+  test("should read correct properties using properties() function with several grants and denies on read relationships") {
 
     // GIVEN
     setupUserWithCustomRole()
@@ -2926,6 +3223,56 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
         |()-[:B {id: 3, foo: 4}]->()
       """.stripMargin)
 
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+  }
+
+  test("should not be able to read properties using properties() function when denied match privilege for all reltypes and all properties") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
     // WHEN
@@ -2964,6 +3311,57 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should read correct properties when denied match privilege for all reltypes and specific property") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query,
+      resultHandler = (_, _) => {
+        fail("should get no result")
+      }) should be(0)
+
+  }
+
+  test("should read correct properties using properties() function when denied match privilege for all reltypes and specific property") {
 
     // GIVEN
     setupUserWithCustomRole()
@@ -3027,6 +3425,55 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
         |()-[:B {id: 3, foo: 4}]->()
       """.stripMargin)
 
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3, 4))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3,4))
+    }) should be(1)
+
+  }
+
+  test("should read correct properties using properties() function when denied match privilege for specific reltype and all properties") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
     // WHEN
@@ -3064,6 +3511,55 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should read correct properties when denied match privilege for specific reltype and specific property") {
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """
+        |CREATE ()-[:A {id: 1, foo: 2}]->(),
+        |()-[:B {id: 3, foo: 4}]->()
+      """.stripMargin)
+
+    val query = "MATCH ()-[r]->() RETURN r.id, r.foo ORDER BY r.id"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    val expected1 = List(
+      (1, 2),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected1(index))
+    }) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3, 4))
+    }) should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3, 4))
+    }) should be(1)
+
+  }
+
+  test("should read correct properties using properties() function when denied match privilege for specific reltype and specific property") {
 
     // GIVEN
     setupUserWithCustomRole()
