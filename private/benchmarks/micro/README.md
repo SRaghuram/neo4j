@@ -14,6 +14,16 @@ Available Commands
 Running Locally
 --------------
 
+From IntelliJ, you can add a main method to any class you want to run locally:
+
+```
+def main(args: Array[String]): Unit = {
+    Main.run(classOf[YourClass])
+}
+```
+
+From command line:
+
         $ java -jar target/micro-benchmarks.jar help run
         NAME
                 bench run - runs benchmarks
