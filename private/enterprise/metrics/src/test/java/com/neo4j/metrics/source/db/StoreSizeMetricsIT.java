@@ -112,7 +112,7 @@ class StoreSizeMetricsIT
                 long[] largeValue = new long[1024];
                 for ( int i = 0; i < 1000; i++ )
                 {
-                    Node node = db.createNode( label );
+                    Node node = transaction.createNode( label );
                     node.setProperty( "Niels", "Borh" );
                     node.setProperty( "Albert", largeValue );
                     for ( int j = 0; j < 30; j++ )
