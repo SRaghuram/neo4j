@@ -22,6 +22,7 @@ import java.util.Collections;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.SystemGraphInitializer;
+import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -33,6 +34,7 @@ import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -164,11 +166,8 @@ class EnterpriseLoginContextTest
 
         loginContext.subject().logout();
 
-        securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
         // Then
-        assertFalse( securityContext.mode().allowsReads() );
-        assertFalse( securityContext.mode().allowsWrites() );
-        assertFalse( securityContext.mode().allowsSchemaWrites() );
+        assertThrows( AuthorizationViolationException.class, () -> loginContext.authorize( token, DEFAULT_DATABASE_NAME ) );
     }
 
     private EnterpriseLoginContext login() throws InvalidAuthTokenException

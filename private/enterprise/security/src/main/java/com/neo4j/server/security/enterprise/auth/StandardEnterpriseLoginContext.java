@@ -29,9 +29,11 @@ import java.util.stream.Stream;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.LabelSet;
+import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
+import org.neo4j.kernel.api.exceptions.Status;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
@@ -79,6 +81,10 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     @Override
     public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
     {
+        if ( !shiroSubject.isAuthenticated() )
+        {
+            throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED, Status.Security.Unauthorized );
+        }
         StandardAccessMode mode = mode( idLookup, dbName );
         return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles, mode.isAdmin() );
     }
