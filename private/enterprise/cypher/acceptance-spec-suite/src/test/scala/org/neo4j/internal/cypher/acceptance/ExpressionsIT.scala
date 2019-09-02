@@ -1990,6 +1990,79 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(Values.TRUE)
   }
 
+  test("filter basic") {
+    //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aa"]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"), Some(startsWith(bar, literalString("aa"))), None))
+
+    //Then
+    evaluate(compiled, 1) should equal(list(stringValue("aa"), stringValue("aaa")))
+  }
+
+  test("filter accessing outer scope") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map("foo" -> stringValue("aa")))
+
+    //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH foo]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"), Some(startsWith(bar, varFor("foo"))), None))
+
+    //Then
+    evaluate(compiled, 1, Array.empty, context) should equal(list(stringValue("aa"), stringValue("aaa")))
+  }
+
+  test("filter on null") {
+    //When, [bar IN null WHERE bar STARTS WITH 'aa']
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, nullLiteral, Some(startsWith(bar, varFor("aa"))), None))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
+  }
+
+  test("filter with null predicate") {
+    //When, [bar IN null WHERE bar STARTS WITH null]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"), Some(startsWith(bar, nullLiteral)), None))
+
+    //Then
+    evaluate(compiled, 1) should equal(list())
+  }
+
+  test("filter accessing same variable in inner and outer") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
+
+    //When,  [bar IN foo WHERE size(bar) = size(foo)]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, varFor("foo"),
+      Some(equals(function("size", bar), function("size", varFor("foo")))), None))
+
+    //Then
+    evaluate(compiled, 1, Array.empty, context) should equal(VirtualValues.list(stringValue("aaa")))
+  }
+
+  test("filter accessing the same parameter in inner and outer") {
+    val list = VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))
+
+    //When,  [bar IN $a WHERE size(bar) = size($a)]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, parameter(0),
+      Some(equals(function("size", bar), function("size", parameter(0)))), None))
+
+    //Then
+    evaluate(compiled, 1, params(list)) should equal(VirtualValues.list(stringValue("aaa")))
+  }
+
+  test("filter on empty list") {
+    //When, [bar IN [] WHERE bar = 42]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOf(), Some(equals(bar, literalInt(42))), None))
+
+    //Then
+    evaluate(compiled, 1) should equal(EMPTY_LIST)
+  }
+
   test("nested list expressions basic") {
 
     //When
@@ -2117,6 +2190,70 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //Then
     evaluate(compiledTrue, 2, Array.empty, context) should equal(booleanValue(true))
     evaluate(compiledFalse, 2, Array.empty, context) should equal(booleanValue(false))
+  }
+
+  test("extract basic") {
+    //When, [bar IN ["a", "aa", "aaa"] | size(bar)]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"), None, Some(function("size", bar))))
+
+    //Then
+    evaluate(compiled, 1) should equal(list(intValue(1), intValue(2), intValue(3)))
+  }
+
+  test("extract accessing outer scope") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
+
+    //When, [bar IN [1, 2, 3] | bar + foo]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfInt(1, 2, 3), None,
+      Some(add(varFor("foo"), bar))))
+
+    //Then
+    evaluate(compiled, 1, Array.empty, context) should equal(list(intValue(11), intValue(12), intValue(13)))
+  }
+
+  test("extract on null") {
+    //When, [bar IN null | size(bar)]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, nullLiteral, None, Some(function("size", bar))))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
+  }
+
+  test("extract accessing same variable in inner and outer") {
+    //Given
+    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
+
+    //When, [bar IN foo | size(foo)]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, varFor("foo"), None, Some(function("size", varFor("foo")))))
+
+    //Then
+    evaluate(compiled, 1, Array.empty, context) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+  }
+
+  test("extract accessing the same parameter in inner and outer") {
+    //Given
+    val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
+
+    //When, [bar IN $a | size($a)]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, parameter(0), None, Some(function("size", parameter(0)))))
+
+    //Then
+    evaluate(compiled, 1, params(list)) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+  }
+
+  test("extract on empty list") {
+    //When, [bar IN [] | bar = 42]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOf(), None, Some(equals(bar, literalInt(42)))))
+
+    //Then
+    evaluate(compiled, 1) should equal(EMPTY_LIST)
   }
 
   test("reduce basic") {
@@ -3511,7 +3648,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                        params: Array[AnyValue] = Array.empty,
                        context: ExecutionContext = ctx): AnyValue =
     compiled.evaluate(context, query, params, cursors, new Array(nExpressionSlots))
-  
+
   private def parameter(offset: Int): Expression = ParameterFromSlot(offset, s"a$offset", CTAny)
 
   private def params(values: AnyValue*): Array[AnyValue] = values.toArray
