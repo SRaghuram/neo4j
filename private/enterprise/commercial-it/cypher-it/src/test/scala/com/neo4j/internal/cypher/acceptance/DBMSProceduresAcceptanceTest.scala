@@ -32,7 +32,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     val result = execute( "EXPLAIN CALL dbms.security.createUser('Alice', 'foo')" )
 
     //THEN
-    result.executionPlanDescription() should haveAsRoot.aPlan( "CALL dbms.security.createUser('Alice', 'foo')" )
+    result.executionPlanDescription() should haveAsRoot.aPlan( "dbms.security.createUser" )
   }
 
   test("should execute dbms.security.createUser with return values on system") {
