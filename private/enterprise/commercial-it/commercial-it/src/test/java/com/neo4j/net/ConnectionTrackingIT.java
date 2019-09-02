@@ -6,9 +6,11 @@
 package com.neo4j.net;
 
 import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -40,6 +42,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.impl.api.KernelTransactions;
@@ -83,6 +86,7 @@ import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
 @TestDirectoryExtension
+@TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class ConnectionTrackingIT
 {
     private static final String NEO4J_USER_PWD = "test";
@@ -103,8 +107,8 @@ class ConnectionTrackingIT
     private InProcessNeo4j neo4j;
     private long dummyNodeId;
 
-    @BeforeEach
-    void setUp()
+    @BeforeAll
+    void beforeAll()
     {
         neo4j = new CommercialInProcessNeo4jBuilder( dir.directory() )
                 .withConfig( neo4j_home, dir.directory().toPath().toAbsolutePath() )
@@ -120,12 +124,18 @@ class ConnectionTrackingIT
         changeDefaultPasswordForUserNeo4j( NEO4J_USER_PWD );
         createNewUser( OTHER_USER, OTHER_USER_PWD );
         dummyNodeId = createDummyNode();
+        IOUtils.closeAllSilently( acceptedConnectionsFromConnectionTracker() );
+    }
 
-        closeAcceptedConnections();
+    @AfterAll
+    void afterAll()
+    {
+        executor.shutdownNow();
+        neo4j.close();
     }
 
     @AfterEach
-    void afterEach() throws Exception
+    void afterEach() throws InterruptedException
     {
         for ( TransportConnection connection : connections )
         {
@@ -137,17 +147,9 @@ class ConnectionTrackingIT
             {
             }
         }
-        closeAcceptedConnections();
-        executor.shutdownNow();
+        IOUtils.closeAllSilently( acceptedConnectionsFromConnectionTracker() );
         terminateAllTransactions();
         awaitNumberOfAcceptedConnectionsToBe( 0 );
-
-        neo4j.close();
-    }
-
-    private void closeAcceptedConnections()
-    {
-        acceptedConnectionsFromConnectionTracker().forEach( TrackedNetworkConnection::close );
     }
 
     @Test
