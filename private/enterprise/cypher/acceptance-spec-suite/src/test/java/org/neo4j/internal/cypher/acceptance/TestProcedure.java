@@ -31,9 +31,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.Evaluator;
-import org.neo4j.graphdb.traversal.Evaluators;
-import org.neo4j.graphdb.traversal.TraversalDescription;
-import org.neo4j.graphdb.traversal.Uniqueness;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -177,22 +174,22 @@ public class TestProcedure
         }
     }
 
-    @Procedure( "org.neo4j.movieTraversal" )
-    @Description( "org.neo4j.movieTraversal" )
-    public Stream<PathResult> movieTraversal( @Name( "start" ) Node start )
-    {
-        TraversalDescription td =
-                db.traversalDescription()
-                        .breadthFirst()
-                        .relationships( RelationshipType.withName( "ACTED_IN" ), Direction.BOTH )
-                        .relationships( RelationshipType.withName( "PRODUCED" ), Direction.BOTH )
-                        .relationships( RelationshipType.withName( "DIRECTED" ), Direction.BOTH )
-                        .evaluator( Evaluators.fromDepth( 3 ) )
-                        .evaluator( new LabelEvaluator( "Western", 1, 3 ) )
-                        .uniqueness( Uniqueness.NODE_GLOBAL );
-
-        return td.traverse( start ).stream().map( PathResult::new );
-    }
+//    @Procedure( "org.neo4j.movieTraversal" )
+//    @Description( "org.neo4j.movieTraversal" )
+//    public Stream<PathResult> movieTraversal( @Name( "start" ) Node start )
+//    {
+//        TraversalDescription td =
+//                transaction.traversalDescription()
+//                        .breadthFirst()
+//                        .relationships( RelationshipType.withName( "ACTED_IN" ), Direction.BOTH )
+//                        .relationships( RelationshipType.withName( "PRODUCED" ), Direction.BOTH )
+//                        .relationships( RelationshipType.withName( "DIRECTED" ), Direction.BOTH )
+//                        .evaluator( Evaluators.fromDepth( 3 ) )
+//                        .evaluator( new LabelEvaluator( "Western", 1, 3 ) )
+//                        .uniqueness( Uniqueness.NODE_GLOBAL );
+//
+//        return td.traverse( start ).stream().map( PathResult::new );
+//    }
 
     @Procedure( "org.neo4j.internalTypes" )
     public Stream<InternalTypeResult> internal( @Name( value = "text", defaultValue = "Dog" ) TextValue text,

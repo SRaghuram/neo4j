@@ -23,7 +23,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    graph.inTx(tx => createSomeNodes(tx))
+    graph.withTx(tx => createSomeNodes(tx))
     graph.createIndex("Awesome", "prop1")
     graph.createIndex("Awesome", "prop2")
     graph.createIndex("Awesome", "prop1", "prop2")
@@ -183,7 +183,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     // This is supported because internally all kernel indexes which support ordering will just scan and filter to serve contains
     test(s"$cypherToken: Order by index backed property should plan with provided order (contains scan)") {
-      graph.inTx( tx => createStringyNodes(tx))
+      graph.withTx( tx => createStringyNodes(tx))
 
       val result = executeWith(Configs.CachedProperty,
         s"MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'cat' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
@@ -202,7 +202,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     // This is supported because internally all kernel indexes which support ordering will just scan and filter to serve ends with
     test(s"$cypherToken: Order by index backed property should plan with provided order (ends with scan)") {
-      graph.inTx(tx => createStringyNodes(tx))
+      graph.withTx(tx => createStringyNodes(tx))
 
       val result = executeWith(Configs.NodeIndexEndsWithScan,
         s"MATCH (n:Awesome) WHERE n.prop3 ENDS WITH 'og' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",

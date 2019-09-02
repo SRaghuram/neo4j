@@ -78,50 +78,50 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 //    result.size should equal(1)
 //  }
 
-  test("should find shortest path using Graph Algos Dijkstra") {
-    registerTestProcedures()
+//  test("should find shortest path using Graph Algos Dijkstra") {
+//    registerTestProcedures()
+//
+//    executeSingle(
+//      """
+//        |CREATE (s:Start)
+//        |CREATE (e:End)
+//        |CREATE (n1)
+//        |CREATE (n2)
+//        |CREATE (n3)
+//        |CREATE (n4)
+//        |CREATE (n5)
+//        |CREATE (s)-[:Rel {weight:5}]->(n1)
+//        |CREATE (s)-[:Rel {weight:7}]->(n2)
+//        |CREATE (s)-[:Rel {weight:1}]->(n3)
+//        |CREATE (n1)-[:Rel {weight:2}]->(n2)
+//        |CREATE (n1)-[:Rel {weight:6}]->(n4)
+//        |CREATE (n3)-[:Rel {weight:1}]->(n4)
+//        |CREATE (n4)-[:Rel {weight:1}]->(n5)
+//        |CREATE (n5)-[:Rel {weight:1}]->(e)
+//        |CREATE (n2)-[:Rel {weight:2}]->(e)
+//        |""".stripMargin)
+//
+//    val result = executeWith(Configs.InterpretedAndSlotted,
+//      "MATCH (s:Start),(e:End) CALL org.neo4j.graphAlgosDijkstra( s, e, 'Rel', 'weight' ) YIELD node RETURN node")
+//
+//    result.size should equal(5) // s -> n3 -> n4 -> n5 -> e
+//  }
 
-    executeSingle(
-      """
-        |CREATE (s:Start)
-        |CREATE (e:End)
-        |CREATE (n1)
-        |CREATE (n2)
-        |CREATE (n3)
-        |CREATE (n4)
-        |CREATE (n5)
-        |CREATE (s)-[:Rel {weight:5}]->(n1)
-        |CREATE (s)-[:Rel {weight:7}]->(n2)
-        |CREATE (s)-[:Rel {weight:1}]->(n3)
-        |CREATE (n1)-[:Rel {weight:2}]->(n2)
-        |CREATE (n1)-[:Rel {weight:6}]->(n4)
-        |CREATE (n3)-[:Rel {weight:1}]->(n4)
-        |CREATE (n4)-[:Rel {weight:1}]->(n5)
-        |CREATE (n5)-[:Rel {weight:1}]->(e)
-        |CREATE (n2)-[:Rel {weight:2}]->(e)
-        |""".stripMargin)
-
-    val result = executeWith(Configs.InterpretedAndSlotted,
-      "MATCH (s:Start),(e:End) CALL org.neo4j.graphAlgosDijkstra( s, e, 'Rel', 'weight' ) YIELD node RETURN node")
-
-    result.size should equal(5) // s -> n3 -> n4 -> n5 -> e
-  }
-
-  test("should use traversal API") {
-    registerTestProcedures()
-
-    // Given
-    executeSingle(TestGraph.movies)
-    executeSingle("MATCH (c:Person) WHERE c.name in ['Clint Eastwood', 'Gene Hackman'] SET c:Western")
-
-    // When
-    val result = executeWith(Configs.InterpretedAndSlotted,
-      """MATCH (k:Person {name:'Keanu Reeves'})
-                 |CALL org.neo4j.movieTraversal(k) YIELD path RETURN last(nodes(path)).name AS name""".stripMargin)
-
-    // Then
-    result.toList should equal(List(Map("name" -> "Clint Eastwood")))
-  }
+//  test("should use traversal API") {
+//    registerTestProcedures()
+//
+//    // Given
+//    executeSingle(TestGraph.movies)
+//    executeSingle("MATCH (c:Person) WHERE c.name in ['Clint Eastwood', 'Gene Hackman'] SET c:Western")
+//
+//    // When
+//    val result = executeWith(Configs.InterpretedAndSlotted,
+//      """MATCH (k:Person {name:'Keanu Reeves'})
+//                 |CALL org.neo4j.movieTraversal(k) YIELD path RETURN last(nodes(path)).name AS name""".stripMargin)
+//
+//    // Then
+//    result.toList should equal(List(Map("name" -> "Clint Eastwood")))
+//  }
 
   test("should use correct temporal types") {
     registerTestProcedures()
