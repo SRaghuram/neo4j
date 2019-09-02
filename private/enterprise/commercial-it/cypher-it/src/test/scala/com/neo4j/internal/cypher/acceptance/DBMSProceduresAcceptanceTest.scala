@@ -26,6 +26,15 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should explain dbms.security.createUser on system") {
+    // WHEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    val result = execute( "EXPLAIN CALL dbms.security.createUser('Alice', 'foo')" )
+
+    //THEN
+    result.executionPlanDescription() should haveAsRoot.aPlan( "CALL dbms.security.createUser('Alice', 'foo')" )
+  }
+
   test("should execute dbms.security.createUser with return values on system") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
