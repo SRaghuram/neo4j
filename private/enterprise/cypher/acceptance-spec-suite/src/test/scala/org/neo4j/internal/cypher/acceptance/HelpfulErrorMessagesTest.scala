@@ -64,32 +64,32 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("should provide sensible error message for removed toInt() function") {
     val query = "RETURN toInt('1')"
-    failWithError(Configs.All, query, Seq("The function toInt() is no longer supported. You can achieve the same result using toInteger()"))
+    failWithError(Configs.All, query, Seq("The function toInt() is no longer supported. Please use toInteger() instead"))
   }
 
   test("should provide sensible error message for removed lower() function") {
     val query = "RETURN lower('BAR')"
-    failWithError(Configs.All, query, Seq("The function lower() is no longer supported. You can achieve the same result using toLower()"))
+    failWithError(Configs.All, query, Seq("The function lower() is no longer supported. Please use toLower() instead"))
   }
 
   test("should provide sensible error message for removed upper() function") {
     val query = "RETURN upper('foo')"
-    failWithError(Configs.All, query, Seq("The function upper() is no longer supported. You can achieve the same result using toUpper()"))
+    failWithError(Configs.All, query, Seq("The function upper() is no longer supported. Please use toUpper() instead"))
   }
 
   test("should provide sensible error message for removed rels() function") {
     val query = "MATCH p = ()-->() RETURN rels(p) AS r"
-    failWithError(Configs.All, query, Seq("The function rels() is no longer supported. You can achieve the same result using relationships()"))
+    failWithError(Configs.All, query, Seq("The function rels() is no longer supported. Please use relationships() instead"))
   }
 
   test("should provide sensible error message for filter") {
     val query = "WITH [1,2,3] AS list RETURN filter(x IN list WHERE x % 2 = 1) AS odds"
-    failWithError(Configs.All, query, Seq("Filter is no longer supported. You can achieve the same result using list comprehension"))
+    failWithError(Configs.All, query, Seq("Filter is no longer supported. Please use list comprehension instead"))
   }
 
   test("should provide sensible error message for extract") {
     val query = "WITH [1,2,3] AS list RETURN extract(x IN list | x * 10) AS tens"
-    failWithError(Configs.All, query, Seq("Extract is no longer supported. You can achieve the same result using list comprehension"))
+    failWithError(Configs.All, query, Seq("Extract is no longer supported. Please use list comprehension instead"))
   }
 
   test("should give correct error message with invalid number literal in a subtract") {
