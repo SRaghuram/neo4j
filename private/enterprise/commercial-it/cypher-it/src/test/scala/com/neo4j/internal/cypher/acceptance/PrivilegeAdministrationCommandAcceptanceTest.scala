@@ -7,8 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.exceptions.DatabaseAdministrationException
-import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.exceptions.{DatabaseAdministrationException, SyntaxException}
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
@@ -36,9 +35,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "REVOKE DENY READ {prop} ON GRAPH * NODES * FROM custom" -> 1,
 
       "GRANT MATCH {prop} ON GRAPH * NODES * TO custom" -> 2,
-      "REVOKE GRANT MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1,
+//      "REVOKE GRANT MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
       "DENY MATCH {prop} ON GRAPH * NODES * TO custom" -> 2,
-      "REVOKE DENY MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1,
+//      "REVOKE DENY MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
 
       "GRANT READ {a,b,c} ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
     ))
@@ -1429,7 +1428,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different label qualifier with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege different label qualifier with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1477,7 +1477,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different relationship type qualifier with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege different relationship type qualifier with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1525,7 +1526,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different element type qualifier with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege different element type qualifier with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1616,7 +1618,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different property with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege different property with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1671,7 +1674,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege different databases with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege different databases with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -1913,7 +1917,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2015,7 +2020,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-      test(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges on elements with REVOKE $revokeType") {
+      ignore(s"should revoke correct $grantOrDeny MATCH privilege from different traverse, read and MATCH privileges on elements with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2091,7 +2097,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
       }
 
-       test(s"should revoke correct $grantOrDeny elements privilege when granted as nodes + relationships with REVOKE $revokeType") {
+      test(s"should revoke correct $grantOrDeny elements privilege when granted as nodes + relationships with REVOKE $revokeType") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2113,7 +2119,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * ELEMENTS * FROM custom")
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH * ELEMENTS * FROM custom") // TODO: Change back to MATCH once REVOKE MATCH exists again
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2148,7 +2154,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * ELEMENTS A FROM custom")
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH * ELEMENTS A FROM custom") // TODO: Change back to MATCH once REVOKE MATCH exists again
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2178,7 +2184,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {foo} ON GRAPH * ELEMENTS * FROM custom")
+        executeOnSystem("neo4j", "abc", s"REVOKE $revokeType READ {foo} ON GRAPH * ELEMENTS * FROM custom") // TODO: Change back to MATCH once REVOKE MATCH exists again
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2188,7 +2194,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         ))
 
         // WHEN
-        executeOnSystem("neo4j", "abc", s"REVOKE $revokeType MATCH {bar} ON GRAPH * FROM custom")
+        executeOnSystem("neo4j", "abc", s"REVOKE $revokeType READ {bar} ON GRAPH * FROM custom") // TODO: Change back to MATCH once REVOKE MATCH exists again
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -2219,10 +2225,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         // THEN
         execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
 
-        // WHEN
-        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM wrongRole")
-        // THEN
-        execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
+        // TODO: add REVOKE $revokeType MATCH back when it exists again
       }
 
       test(s"should do nothing when revoking $grantOrDeny privilege not granted to role with REVOKE $revokeType") {
@@ -2243,13 +2246,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
         // WHEN
         execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM role")
+
         // THEN
         execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
 
-        // WHEN
-        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES A (*) FROM role")
-        // THEN
-        execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        // TODO: add REVOKE $revokeType MATCH back when it exists again
       }
 
       test(s"should do nothing when revoking $grantOrDeny traversal privilege with missing database with REVOKE $revokeType") {
@@ -2284,7 +2285,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
       }
 
-      test(s"should do nothing when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
+      ignore(s"should do nothing when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2320,7 +2322,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           s"This is an administration command and it should be executed against the system database: REVOKE ${revokeType}READ"
       }
 
-      test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
+      ignore(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
+        // TODO: enable once REVOKE MATCH exists again
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES * (*) FROM custom")
@@ -2380,7 +2383,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
-      test(s"should revoke both grant and deny when revoking match $segmentName privilege") {
+      ignore(s"should revoke both grant and deny when revoking match $segmentName privilege") {
+        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
@@ -2406,6 +2410,25 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           segmentFunction(traverse("DENIED").role("custom"), "A").map
         ))
       }
+  }
+
+  test("Should fail trying to revoke match privilege") {
+    // TODO: remove once REVOKE MATCH exists again
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute(s"GRANT MATCH {prop} ON GRAPH * NODES A (*) TO custom")
+    val expected = Set(traverse().role("custom").node("A").map, read().role("custom").property("prop").node("A").map)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      execute(s"REVOKE MATCH {prop} ON GRAPH * NODES A (*) FROM custom")
+    }
+
+    // THEN
+    exception.getMessage should include("REVOKE MATCH is not a valid command, use REVOKE READ and REVOKE TRAVERSE instead.")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
   }
 
   // helper variable, methods and class

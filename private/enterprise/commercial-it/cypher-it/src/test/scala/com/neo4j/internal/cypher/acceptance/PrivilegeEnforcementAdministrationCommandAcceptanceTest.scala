@@ -229,7 +229,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE MATCH {name} ON GRAPH * ELEMENTS B FROM custom")
+    execute("REVOKE READ {name} ON GRAPH * ELEMENTS B FROM custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {

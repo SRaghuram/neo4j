@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
@@ -358,20 +359,10 @@ class SecurityAdministrationCommandLoggingIT
     }
 
     @Test
-    void shouldLogRevokeReadMatch() throws IOException
+    void shouldLogRevokeRead() throws IOException
     {
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
-        execute( adminContext, "GRANT MATCH {*} ON GRAPH * TO foo" );
-        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * NODES A,B TO foo" );
-        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * RELATIONSHIPS A,B TO foo" );
-
-        // WHEN
-        execute( adminContext, "REVOKE MATCH {bar,baz} ON GRAPH * RELATIONSHIPS A,B FROM foo" );
-        execute( adminContext, "REVOKE MATCH {bar,baz} ON GRAPH * NODES A,B FROM foo" );
-        execute( adminContext, "REVOKE MATCH {*} ON GRAPH * FROM foo" );
-
-        // GIVEN
         execute( adminContext, "GRANT READ {*} ON GRAPH * TO foo" );
         execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * NODES A,B TO foo" );
         execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * RELATIONSHIPS A,B TO foo" );
@@ -383,13 +374,33 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 13 ) );
+        assertThat( logLines, hasSize( 7 ) );
+        assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
+        assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+    }
+
+    @Disabled
+    void shouldLogRevokeMatch() throws IOException
+    {
+        // TODO: enable once REVOKE MATCH exists again
+        // GIVEN
+        execute( adminContext, "CREATE ROLE foo" );
+        execute( adminContext, "GRANT MATCH {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * NODES A,B TO foo" );
+        execute( adminContext, "GRANT MATCH {bar,baz} ON GRAPH * RELATIONSHIPS A,B TO foo" );
+
+        // WHEN
+        execute( adminContext, "REVOKE MATCH {bar,baz} ON GRAPH * RELATIONSHIPS A,B FROM foo" );
+        execute( adminContext, "REVOKE MATCH {bar,baz} ON GRAPH * NODES A,B FROM foo" );
+        execute( adminContext, "REVOKE MATCH {*} ON GRAPH * FROM foo" );
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines, hasSize( 7 ) );
         assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE MATCH {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
-        assertThat( logLines.get( 10 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 11 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
-        assertThat( logLines.get( 12 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
     @Test
