@@ -1,29 +1,37 @@
  {
-  "variables": {
-    "aws_access_key": "",
-    "aws_secret_key": ""
-  },
-  "builders": [{
-    "type": "amazon-ebs",
-    "access_key": "{{user `aws_access_key`}}",
-    "secret_key": "{{user `aws_secret_key`}}",
-    "region": "eu-north-1",
-    "source_ami": "ami-03f8f3eb89dcfe553",
-    "instance_type": "t3.micro",
-    "ssh_username": "ec2-user",
-    "ami_name" : "benchmarking {{timestamp}}",
-    "ami_description" : "Benchmarking runs worker in AWS Batch",
-    "tags" : {
-      "team" : "benchmarking",
-      "project" : "new infrastructure"
-    }
-  }],
+   "variables": {
+     "aws_access_key": "",
+     "aws_secret_key": "",
+     "neo4jcommit" : "{{ env `neo4jCommit` }}",
+     "stage" : "{{ env `stage` }}"
+   },
+   "builders": [{
+     "type": "amazon-ebs",
+     "access_key": "{{user `aws_access_key`}}",
+     "secret_key": "{{user `aws_secret_key`}}",
+     "region": "eu-north-1",
+     "source_ami": "ami-03f8f3eb89dcfe553",
+     "instance_type": "t3.micro",
+     "ssh_username": "ec2-user",
+     "ami_name": "benchmarking {{timestamp}}",
+     "ami_description": "Benchmarking AMI which runs worker in AWS Batch",
+     "tags": {
+       "team": "benchmarking",
+       "project": "infrastructure",
+       "neo4jcommit" : "{{ user `neo4jcommit` }}",
+       "stage" : "{{ user `stage`}}"
+     }
+   }],
 
-  "provisioners": [
-    {
-      "type" : "ansible",
-      "playbook_file" : "src/main/ami/benchmark-run-batch-worker/playbook.yml"
-    }
-  ]
+   "provisioners": [{
+     "type": "ansible",
+     "playbook_file": "ami/benchmark-run-batch-worker/playbook.yml",
+     "user": "ec2-user"
+   }],
 
-}
+   "post-processors": [{
+     "type": "manifest",
+     "output": "manifest.json"
+   }]
+
+ }
