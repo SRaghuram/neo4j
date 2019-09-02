@@ -63,7 +63,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   override def filterCancelledArguments(morsel: MorselExecutionContext,
                                         isCancelled: STATE => Boolean): IndexedSeq[Long] = {
     if (isCancelled(controller.state)) {
-      morsel.moveToRow(morsel.getFirstRow)
+      morsel.resetToFirstRow()
       morsel.finishedWriting()
       IndexedSeq(TopLevelArgument.VALUE)
     } else {

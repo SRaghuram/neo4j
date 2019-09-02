@@ -119,15 +119,14 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                          state: QueryState,
                                          resources: QueryResources,
                                          operatorExecutionEvent: OperatorProfileEvent): Unit = {
-    val rowBefore = output.getCurrentRow
-    produceOutput(output, context, state, resources)
-    operatorExecutionEvent.rows(output.getCurrentRow - rowBefore)
+    val numberOfOutputedRows = produceOutput(output, context, state, resources)
+    operatorExecutionEvent.rows(numberOfOutputedRows)
   }
 
   protected def produceOutput(output: MorselExecutionContext,
                               context: QueryContext,
                               state: QueryState,
-                              resources: QueryResources): Unit = {
+                              resources: QueryResources): Int = {
     //TODO this is not really needed since all we are doing in the expressions is accessing the ExecutionContext
     val queryState = new OldQueryState(context,
                                        resources = null,
@@ -160,6 +159,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       output.moveToNextRow()
     }
     state.flowControl.addServed(served)
+    served
   }
 }
 

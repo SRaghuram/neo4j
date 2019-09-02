@@ -44,14 +44,19 @@ object MorselSorting {
   }
 
   def createMorselIndexesArray(row: MorselExecutionContext): Array[Integer] = {
-    val firstRow = row.getFirstRow
+    val currentRow = row.getCurrentRow
     val rows = row.getValidRows
     val indexes = new Array[Integer](rows)
     var i = 0
+    row.resetToFirstRow()
     while (i < rows) {
-      indexes(i) = i + firstRow
+      assert(row.isValidRow)
+      indexes(i) = row.getCurrentRow
+      row.moveToNextRow()
       i += 1
     }
+    assert(!row.isValidRow)
+    row.moveToRow(currentRow)
     indexes
   }
 
@@ -67,7 +72,7 @@ object MorselSorting {
     // TODO: Do this without creating extra arrays
     val tempMorsel = new Morsel(new Array[Long](numInputRows * inputRow.getLongsPerRow),
                                 new Array[AnyValue](numInputRows * inputRow.getRefsPerRow))
-    val outputRow = MorselExecutionContext(tempMorsel, inputRow.getLongsPerRow, inputRow.getRefsPerRow, numInputRows)
+    val outputRow = MorselExecutionContext(tempMorsel, inputRow.slots, numInputRows)
 
     while (outputRow.isValidRow) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)

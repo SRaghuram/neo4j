@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.execution.{FilteringMorselExecutionContext, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
 
 import scala.collection.mutable.ArrayBuffer
@@ -223,30 +223,37 @@ object ArgumentStateMap {
     */
   def filter(morsel: MorselExecutionContext,
              predicate: MorselExecutionContext => Boolean): Unit = {
+    val currentRow = morsel.getCurrentRow // Save current row
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
 
-    val readingRow = morsel.shallowCopy()
-    readingRow.resetToFirstRow()
+    if (filteringMorsel.hasCancelledRows) {
+      filterLoop(filteringMorsel, predicate)
+    } else {
+      filterLoopRaw(filteringMorsel, predicate)
+    }
+    filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
+  }
 
-    val writingRow = readingRow.shallowCopy()
-    var newCurrentRow = -1
-
-    while (readingRow.isValidRow) {
-      if (readingRow.getCurrentRow == morsel.getCurrentRow)
-        newCurrentRow = writingRow.getCurrentRow
-
-      if (predicate(readingRow)) {
-        writingRow.copyFrom(readingRow)
-        writingRow.moveToNextRow()
+  private def filterLoop(filteringMorsel: FilteringMorselExecutionContext,
+                         predicate: MorselExecutionContext => Boolean): Unit = {
+    filteringMorsel.resetToFirstRow()
+    while (filteringMorsel.isValidRow) {
+      if (!predicate(filteringMorsel)) {
+        filteringMorsel.cancelCurrentRow()
       }
-      readingRow.moveToNextRow()
+      filteringMorsel.moveToNextRow()
     }
+  }
 
-    if (newCurrentRow == -1 && morsel.getCurrentRow > morsel.getLastRow) {
-      newCurrentRow = writingRow.getCurrentRow
+  private def filterLoopRaw(filteringMorsel: FilteringMorselExecutionContext,
+                            predicate: MorselExecutionContext => Boolean): Unit = {
+    filteringMorsel.resetToFirstRawRow()
+    while (filteringMorsel.isValidRawRow) {
+      if (!predicate(filteringMorsel)) {
+        filteringMorsel.cancelCurrentRow()
+      }
+      filteringMorsel.moveToNextRawRow()
     }
-
-    morsel.moveToRow(newCurrentRow)
-    morsel.finishedWritingUsing(writingRow)
   }
 
   /**
@@ -263,77 +270,143 @@ object ArgumentStateMap {
                            morsel: MorselExecutionContext,
                            onArgument: (Long, Long) => FILTER_STATE,
                            onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+    val currentRow = morsel.getCurrentRow // Save current row
 
-    val readingRow = morsel.shallowCopy()
-    readingRow.resetToFirstRow()
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
 
-    val writingRow = readingRow.shallowCopy()
-    var newCurrentRow = -1
+    if (filteringMorsel.hasCancelledRows) {
+      filterLoop(argumentSlotOffset, filteringMorsel, onArgument, onRow)
+    } else {
+      filterLoopRaw(argumentSlotOffset, filteringMorsel, onArgument, onRow)
+    }
 
-    while (readingRow.isValidRow) {
-      val arg = readingRow.getArgumentAt(argumentSlotOffset)
-      val start: Int = readingRow.getCurrentRow
-      while (readingRow.isValidRow && readingRow.getArgumentAt(argumentSlotOffset) == arg) {
-        readingRow.moveToNextRow()
+    filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
+  }
+
+  private def filterLoop[FILTER_STATE](argumentSlotOffset: Int,
+                                       filteringMorsel: FilteringMorselExecutionContext,
+                                       onArgument: (Long, Long) => FILTER_STATE,
+                                       onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+    filteringMorsel.resetToFirstRow()
+
+    while (filteringMorsel.isValidRow) {
+      val arg = filteringMorsel.getArgumentAt(argumentSlotOffset)
+      val start: Int = filteringMorsel.getCurrentRow
+      while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg) {
+        filteringMorsel.moveToNextRow()
       }
-      val end: Int = readingRow.getCurrentRow
-      readingRow.moveToRow(start)
+      val end: Int = filteringMorsel.getCurrentRow
+      filteringMorsel.moveToRawRow(start)
 
       val filterState = onArgument(arg, end - start)
-      while (readingRow.getCurrentRow < end) {
-        if (readingRow.getCurrentRow == morsel.getCurrentRow)
-          newCurrentRow = writingRow.getCurrentRow
-
-        if (onRow(filterState, readingRow)) {
-          writingRow.copyFrom(readingRow)
-          writingRow.moveToNextRow()
+      while (filteringMorsel.getCurrentRow < end) {
+        if (!onRow(filterState, filteringMorsel)) {
+          filteringMorsel.cancelCurrentRow()
         }
-        readingRow.moveToNextRow()
+        filteringMorsel.moveToNextRow()
       }
     }
+  }
 
-    if (newCurrentRow == -1 && morsel.getCurrentRow > morsel.getLastRow) {
-      newCurrentRow = writingRow.getCurrentRow
+  private def filterLoopRaw[FILTER_STATE](argumentSlotOffset: Int,
+                                          filteringMorsel: FilteringMorselExecutionContext,
+                                          onArgument: (Long, Long) => FILTER_STATE,
+                                          onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+    filteringMorsel.resetToFirstRawRow()
+
+    while (filteringMorsel.isValidRawRow) {
+      val arg = filteringMorsel.getArgumentAt(argumentSlotOffset)
+      val start: Int = filteringMorsel.getCurrentRow
+      while (filteringMorsel.isValidRawRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg) {
+        filteringMorsel.moveToNextRawRow()
+      }
+      val end: Int = filteringMorsel.getCurrentRow
+      filteringMorsel.moveToRawRow(start)
+
+      val filterState = onArgument(arg, end - start)
+      while (filteringMorsel.getCurrentRow < end) {
+        if (!onRow(filterState, filteringMorsel)) {
+          filteringMorsel.cancelCurrentRow()
+        }
+        filteringMorsel.moveToNextRawRow()
+      }
     }
-
-    morsel.moveToRow(newCurrentRow)
-    morsel.finishedWritingUsing(writingRow)
   }
 
   def filterCancelledArguments(argumentSlotOffset: Int,
                                morsel: MorselExecutionContext,
                                isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
+    val currentRow = morsel.getCurrentRow // Save current row
 
-    val readingRow = morsel.shallowCopy()
-    readingRow.resetToFirstRow()
-    val writingRow = readingRow.shallowCopy()
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
+
+    val cancelled =
+      if (filteringMorsel.hasCancelledRows) {
+        filterCancelledArgumentsLoop(argumentSlotOffset, filteringMorsel, isCancelledCheck)
+      } else {
+        filterCancelledArgumentsLoopRaw(argumentSlotOffset, filteringMorsel, isCancelledCheck)
+      }
+
+    filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
+
+    cancelled
+  }
+
+  private def filterCancelledArgumentsLoop(argumentSlotOffset: Int,
+                                           filteringMorsel: FilteringMorselExecutionContext,
+                                           isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
+    filteringMorsel.resetToFirstRow()
+
     val cancelled = new ArrayBuffer[Long]
-    var newCurrentRow = -1
 
-    while (readingRow.isValidRow) {
-      val arg = readingRow.getArgumentAt(argumentSlotOffset)
+    while (filteringMorsel.isValidRow) {
+      val arg = filteringMorsel.getArgumentAt(argumentSlotOffset)
       val isCancelled = isCancelledCheck(arg)
-      if (isCancelled)
+      if (isCancelled) {
         cancelled += arg
 
-      while (readingRow.isValidRow && readingRow.getArgumentAt(argumentSlotOffset) == arg) {
-        if (readingRow.getCurrentRow == morsel.getCurrentRow)
-          newCurrentRow = writingRow.getCurrentRow
+        // Cancel all rows up to the next argument
+        do {
+          filteringMorsel.cancelCurrentRow()
+          filteringMorsel.moveToNextRow()
+        } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
 
-        if (!isCancelled) {
-          writingRow.copyFrom(readingRow)
-          writingRow.moveToNextRow()
-        }
-        readingRow.moveToNextRow()
+      } else {
+        // We should keep this argument. Skip ahead to the next argument.
+        do {
+          filteringMorsel.moveToNextRow()
+        } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
       }
     }
+    cancelled
+  }
 
-    if (newCurrentRow == -1 && morsel.getCurrentRow > morsel.getLastRow) {
-      newCurrentRow = writingRow.getCurrentRow
+  private def filterCancelledArgumentsLoopRaw(argumentSlotOffset: Int,
+                                              filteringMorsel: FilteringMorselExecutionContext,
+                                              isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
+    filteringMorsel.resetToFirstRawRow()
+
+    val cancelled = new ArrayBuffer[Long]
+
+    while (filteringMorsel.isValidRawRow) {
+      val arg = filteringMorsel.getArgumentAt(argumentSlotOffset)
+      val isCancelled = isCancelledCheck(arg)
+      if (isCancelled) {
+        cancelled += arg
+
+        // Cancel all rows up to the next argument
+        do {
+          filteringMorsel.cancelCurrentRow()
+          filteringMorsel.moveToNextRawRow()
+        } while (filteringMorsel.isValidRawRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
+
+      } else {
+        // We should keep this argument. Skip ahead to the next argument.
+        do {
+          filteringMorsel.moveToNextRawRow()
+        } while (filteringMorsel.isValidRawRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
+      }
     }
-
-    morsel.moveToRow(newCurrentRow)
-    morsel.finishedWritingUsing(writingRow)
     cancelled
   }
 

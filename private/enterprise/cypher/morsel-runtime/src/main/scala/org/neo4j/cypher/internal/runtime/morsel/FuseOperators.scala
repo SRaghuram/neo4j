@@ -47,6 +47,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
       case (ReduceOutput(_,plans.Aggregation(_,groupingExpressions,_)), Some(_), Seq()) if groupingExpressions.nonEmpty => false
       case _ => true
     }
+//    val needsFilteringMorsel = needsMorsel && unhandledMiddlePlans.exists {
+//      case _: Limit => true
+//      case _: Selection => true
+//      case _ => false
+//    }
+    val needsFilteringMorsel = true
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
     val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle).toArray
     ExecutablePipeline(p.id,
@@ -56,7 +62,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                        physicalPlan.slotConfigurations(p.headPlan.id),
                        p.inputBuffer,
                        operatorFactory.createOutput(unhandledOutput),
-                       needsMorsel)
+                       needsMorsel,
+                       needsFilteringMorsel)
   }
 
   private def fuseOperators(pipeline: PipelineDefinition): (Option[Operator], Seq[LogicalPlan], OutputDefinition) = {

@@ -20,17 +20,15 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object MorselExecutionContext {
-  def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int) = new MorselExecutionContext(morsel,
-    numberOfLongs, numberOfReferences, 0, 0, SlotConfiguration.empty)
-  def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int, validRows: Int) = new MorselExecutionContext(morsel,
-    numberOfLongs, numberOfReferences, validRows, 0, SlotConfiguration.empty)
+  def apply(morsel: Morsel, slots: SlotConfiguration, maxNumberOfRows: Int) =
+    new MorselExecutionContext(morsel, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
 
-  val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), 0, 0, 0, 0, SlotConfiguration.empty)
+  val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), SlotConfiguration.empty, 0)
 
   def createInitialRow(): MorselExecutionContext =
     new MorselExecutionContext(
       Morsel.create(INITIAL_SLOT_CONFIGURATION, 1),
-      INITIAL_SLOT_CONFIGURATION.numberOfLongs, INITIAL_SLOT_CONFIGURATION.numberOfReferences, 1, 0, INITIAL_SLOT_CONFIGURATION) {
+      INITIAL_SLOT_CONFIGURATION, 1, 0, 0, 1) {
       //TODO hmm...
 
       //it is ok to asked for a cached value even though nothing is allocated for it
@@ -39,71 +37,72 @@ object MorselExecutionContext {
     }
 }
 
-class MorselExecutionContext(private val morsel: Morsel,
-                             private val longsPerRow: Int,
-                             private val refsPerRow: Int,
-                             // The number of valid rows in the morsel
-                             private var validRows: Int,
-                             private var currentRow: Int,
-                             val slots: SlotConfiguration,
-                             val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
-
-  // The index of the first valid row
-  private var firstRow: Int = 0
+class MorselExecutionContext(private[execution] final val morsel: Morsel,
+                             final val slots: SlotConfiguration,
+                             private[execution] final val maxNumberOfRows: Int,
+                             private[execution] var currentRow: Int = 0,
+                             private[execution] var startRow: Int = 0,
+                             private[execution] var endRow: Int = 0,
+                             final val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
+  protected final val longsPerRow: Int = slots.numberOfLongs
+  protected final val refsPerRow: Int = slots.numberOfReferences
 
   // ARGUMENT COLUMNS
 
-  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
+  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow)
 
+  @inline protected def numberOfRows: Int = endRow - startRow
+
+  @inline
   def moveToNextRow(): Unit = {
     currentRow += 1
   }
 
-  def getValidRows: Int = validRows
+  @inline def getValidRows: Int = numberOfRows
 
-  def getFirstRow: Int = firstRow
+  @inline def getFirstRow: Int = startRow
 
-  def getLastRow: Int = firstRow + validRows - 1
+  @inline def getLastRow: Int = endRow - 1
 
-  def getCurrentRow: Int = currentRow
+  @inline def getCurrentRow: Int = currentRow
 
-  def getLongsPerRow: Int = longsPerRow
+  @inline def getLongsPerRow: Int = longsPerRow
 
-  def getRefsPerRow: Int = refsPerRow
+  @inline def getRefsPerRow: Int = refsPerRow
 
-  def moveToRow(row: Int): Unit = currentRow = row
+  @inline def moveToRow(row: Int): Unit = currentRow = row
 
-  def resetToFirstRow(): Unit = currentRow = firstRow
-  def resetToBeforeFirstRow(): Unit = currentRow = firstRow - 1
-  def setToAfterLastRow(): Unit = currentRow = getLastRow + 1
+  @inline def resetToFirstRow(): Unit = currentRow = startRow
+  @inline def resetToBeforeFirstRow(): Unit = currentRow = startRow - 1
+  @inline def setToAfterLastRow(): Unit = currentRow = endRow
 
-  def isValidRow: Boolean = currentRow >= firstRow && currentRow <= getLastRow
-  def hasNextRow: Boolean = currentRow < getLastRow
+  @inline def isValidRow: Boolean = currentRow >= startRow && currentRow < endRow
+  @inline def hasNextRow: Boolean = currentRow < endRow - 1
 
   /**
     * Check if there is at least one valid row of data
     */
-  def hasData: Boolean = validRows > 0
+  @inline def hasData: Boolean = getValidRows > 0
 
   /**
     * Check if the morsel is empty
     */
-  def isEmpty: Boolean = !hasData
+  @inline def isEmpty: Boolean = !hasData
 
   /**
     * Adapt the valid rows of the morsel so that the last valid row is the previous one according to the current position.
     * This usually happens after one operator finishes writing to a morsel.
     */
-  def finishedWriting(): Unit = validRows = currentRow - firstRow
+  @inline def finishedWriting(): Unit = endRow = currentRow
 
   /**
     * Set the valid rows of the morsel to the current position of another morsel
     */
-  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = validRows = {
-    if (this.firstRow != otherContext.firstRow) {
+  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = {
+    if (this.startRow != otherContext.startRow) {
       throw new IllegalStateException("Cannot write to a context from a context with a different first row.")
     }
-    otherContext.currentRow - otherContext.firstRow
+    endRow = otherContext.currentRow
   }
 
   /**
@@ -113,18 +112,17 @@ class MorselExecutionContext(private val morsel: Morsel,
     */
   def view(start: Int, end: Int): MorselExecutionContext = {
     val view = shallowCopy()
-    view.firstRow = start
+    view.startRow = start
     view.currentRow = start
-    view.validRows = end - start
+    view.endRow = end
     view
   }
 
-
   def copyRowsFrom(input: MorselExecutionContext, nInputRows: Int): Unit = {
     if (longsPerRow > 0)
-      System.arraycopy(input.morsel.longs, 0, morsel.longs, firstRow * longsPerRow, nInputRows * longsPerRow)
+      System.arraycopy(input.morsel.longs, 0, morsel.longs, startRow * longsPerRow, nInputRows * longsPerRow)
     if (refsPerRow > 0)
-      System.arraycopy(input.morsel.refs, 0, morsel.refs, firstRow * refsPerRow, nInputRows * refsPerRow)
+      System.arraycopy(input.morsel.refs, 0, morsel.refs, startRow * refsPerRow, nInputRows * refsPerRow)
   }
 
   override def copyTo(target: ExecutionContext, fromLongOffset: Int = 0, fromRefOffset: Int = 0, toLongOffset: Int = 0, toRefOffset: Int = 0): Unit =
@@ -163,7 +161,7 @@ class MorselExecutionContext(private val morsel: Morsel,
   }
 
   override def toString: String = {
-    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}](longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow $prettyCurrentRow)"
+    s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}](longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, maxRows=$maxNumberOfRows, currentRow=$currentRow startRow=$startRow endRow=$endRow $prettyCurrentRow)"
   }
 
   def prettyCurrentRow: String =
@@ -175,13 +173,13 @@ class MorselExecutionContext(private val morsel: Morsel,
     }
 
   def prettyString: Seq[String] = {
-    val longStrings = morsel.longs.slice(firstRow*longsPerRow, validRows*longsPerRow).map(String.valueOf)
-    val refStrings = morsel.refs.slice(firstRow*refsPerRow, validRows*refsPerRow).map(String.valueOf)
+    val longStrings = morsel.longs.slice(startRow*longsPerRow, numberOfRows*longsPerRow).map(String.valueOf)
+    val refStrings = morsel.refs.slice(startRow*refsPerRow, numberOfRows*refsPerRow).map(String.valueOf)
 
     def widths(strings: Array[String], nCols: Int): Array[Int] = {
       val widths = new Array[Int](nCols)
       for {
-        row <- 0 until (validRows-firstRow)
+        row <- 0 until (numberOfRows-startRow)
         col <- 0 until nCols
       } {
         widths(col) = math.max(widths(col), strings(row * nCols + col).length)
@@ -194,8 +192,8 @@ class MorselExecutionContext(private val morsel: Morsel,
 
     val rows = new ArrayBuffer[String]
     val sb = new mutable.StringBuilder()
-    for (row <- 0 until (validRows-firstRow)) {
-      sb ++= (if ((firstRow + row) == currentRow) " * " else "   ")
+    for (row <- 0 until (numberOfRows-startRow)) {
+      sb ++= (if ((startRow + row) == currentRow) " * " else "   ")
 
       for (col <- 0 until longsPerRow) {
         val width = longWidths(col)
@@ -209,11 +207,14 @@ class MorselExecutionContext(private val morsel: Morsel,
         sb ++= ("%" + width + "s").format(refStrings(row * refsPerRow + col))
         sb += ' '
       }
+      addPrettyRowMarker(sb, startRow + row)
       rows += sb.result()
       sb.clear()
     }
     rows
   }
+
+  protected def addPrettyRowMarker(sb: mutable.StringBuilder, row: Int): Unit = {}
 
   /**
     * Copies the whole row from input to this.
@@ -294,9 +295,9 @@ class MorselExecutionContext(private val morsel: Morsel,
     * also be accounted for.
     */
   override def estimatedHeapUsage: Long = {
-    var usage = longsPerRow * validRows * 8L
-    var i = firstRow * refsPerRow
-    while (i < ((firstRow + validRows) * refsPerRow)) {
+    var usage = longsPerRow * maxNumberOfRows * 8L
+    var i = startRow * refsPerRow
+    while (i < ((startRow + maxNumberOfRows) * refsPerRow)) {
       usage += morsel.refs(i).estimatedHeapUsage()
       i += 1
     }
@@ -333,9 +334,9 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def getLinenumber: Option[ResourceLinenumber] = fail()
 
-  private def longsAtCurrentRow: Int = currentRow * longsPerRow
+  private[execution] def longsAtCurrentRow: Int = currentRow * longsPerRow
 
-  private def refsAtCurrentRow: Int = currentRow * refsPerRow
+  private[execution] def refsAtCurrentRow: Int = currentRow * refsPerRow
 
   private def fail(): Nothing =
     throw new InternalException("Tried using a wrong context.")

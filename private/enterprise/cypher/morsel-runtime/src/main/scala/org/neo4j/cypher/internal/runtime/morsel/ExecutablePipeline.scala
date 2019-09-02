@@ -7,7 +7,8 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorState, _}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
@@ -24,7 +25,8 @@ case class ExecutablePipeline(id: PipelineId,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
                               outputOperator: OutputOperator,
-                              needsMorsel: Boolean = true) extends WorkIdentity {
+                              needsMorsel: Boolean = true,
+                              needsFilteringMorsel: Boolean = false) extends WorkIdentity {
 
   def createState(executionState: ExecutionState,
                   queryContext: QueryContext,
@@ -105,24 +107,39 @@ class PipelineState(val pipeline: ExecutablePipeline,
       } while (task != null && task.filterCancelledArguments(resources))
     } catch {
       case t: Throwable =>
+        if (DebugSupport.SCHEDULING.enabled)
+          DebugSupport.SCHEDULING.log(s"[nextTask] failed with $t")
+        else if (DebugSupport.WORKERS.enabled)
+          DebugSupport.WORKERS.log(s"[nextTask] failed with $t")
         throw NextTaskException(pipeline, t)
     }
     task
   }
 
   def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {
+      // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
       if (pipeline.needsMorsel) {
         val slots = pipeline.slots
-        val slotSize = slots.size()
         val morsel = Morsel.create(slots, state.morselSize)
-        new MorselExecutionContext(
-          morsel,
-          slotSize.nLongs,
-          slotSize.nReferences,
-          state.morselSize,
-          currentRow = 0,
-          slots,
-          producingWorkUnitEvent)
+        if (pipeline.needsFilteringMorsel) {
+          new FilteringMorselExecutionContext(
+            morsel,
+            slots,
+            state.morselSize,
+            0,
+            0,
+            state.morselSize,
+            producingWorkUnitEvent)
+        } else {
+          new MorselExecutionContext(
+            morsel,
+            slots,
+            state.morselSize,
+            currentRow = 0,
+            startRow = 0,
+            endRow = state.morselSize,
+            producingWorkUnitEvent)
+        }
       } else MorselExecutionContext.empty
   }
 
