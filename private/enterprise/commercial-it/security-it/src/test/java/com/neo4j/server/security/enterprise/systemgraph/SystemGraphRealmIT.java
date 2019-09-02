@@ -429,7 +429,8 @@ class SystemGraphRealmIT
         // Give Alice match privileges in 'neo4j'
         ResourcePrivilege readPrivilege = new ResourcePrivilege( GRANT, Action.READ,
                 new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE,
+                new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDB.beginTx() )
         {

@@ -49,12 +49,16 @@ class ResourcePrivilegeTest
     {
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SystemResource(), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class,
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class,
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), LabelSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class,
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SystemResource(), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
                     () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), RelTypeSegment.ALL ) );
+            assertThrows( InvalidArgumentsException.class,
+                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), RelTypeSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
                     () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), RelTypeSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
