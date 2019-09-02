@@ -72,7 +72,7 @@ class MultiDatabaseTransactionBridgeIT
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = db.beginTx() )
         {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, systemDb::getAllLabels );
+            TransactionFailureException exception = assertThrows( TransactionFailureException.class, transaction::getAllLabels );
             assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
         }
     }

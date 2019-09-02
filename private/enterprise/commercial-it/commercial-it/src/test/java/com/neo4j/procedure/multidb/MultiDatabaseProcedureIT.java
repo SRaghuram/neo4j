@@ -81,9 +81,9 @@ class MultiDatabaseProcedureIT
 
     private Set<String> getAllLabelNames( GraphDatabaseFacade facade )
     {
-        try ( Transaction ignored = facade.beginTx() )
+        try ( Transaction transaction = facade.beginTx() )
         {
-            return facade.getAllLabels().stream().map( Label::name ).collect( toSet() );
+            return transaction.getAllLabels().stream().map( Label::name ).collect( toSet() );
         }
     }
 
