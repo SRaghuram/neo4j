@@ -632,7 +632,7 @@ class QueryLoggerIT
         return logLines;
     }
 
-    void executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params,
+    private void executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params,
             Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
