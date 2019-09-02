@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Result.ResultVisitor;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -41,9 +42,9 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
     {
-        var query = String.format( "CREATE USER `%s` SET PASSWORD '%s' %s", username, password,
+        var query = String.format( "CREATE USER %s SET PASSWORD '%s' %s", escapeParameter( username ), password == null ? "" : password,
                 requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" );
-        runDDL( query, "dbms.security.createUser" );
+        runSystemCommand( query, "dbms.security.createUser" );
     }
 
     @SystemProcedure
@@ -63,9 +64,9 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
     {
-        var query = String.format( "ALTER USER `%s` SET PASSWORD '%s' %s", username, newPassword,
+        var query = String.format( "ALTER USER %s SET PASSWORD '%s' %s", escapeParameter( username ), newPassword == null ? "" : newPassword,
                 requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" );
-        runDDL( query, "dbms.security.createUser" );
+        runSystemCommand( query, "dbms.security.createUser" );
     }
 
     @Admin
@@ -74,8 +75,8 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.addRoleToUser", mode = DBMS )
     public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
-        var query = String.format( "GRANT ROLE `%s` TO `%s`", roleName, username );
-        runDDL( query, "dbms.security.addRoleToUser" );
+        var query = String.format( "GRANT ROLE %s TO %s", escapeParameter( roleName ), escapeParameter( username ) );
+        runSystemCommand( query, "dbms.security.addRoleToUser" );
     }
 
     @Admin
@@ -84,8 +85,8 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.removeRoleFromUser", mode = DBMS )
     public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
-        var query = String.format( "REVOKE ROLE `%s` FROM `%s`", roleName, username );
-        runDDL( query, "dbms.security.removeRoleFromUser" );
+        var query = String.format( "REVOKE ROLE %s FROM %s", escapeParameter( roleName ), escapeParameter( username ) );
+        runSystemCommand( query, "dbms.security.removeRoleFromUser" );
     }
 
     @Admin
@@ -94,9 +95,8 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.deleteUser", mode = DBMS )
     public void deleteUser( @Name( "username" ) String username ) throws ProcedureException
     {
-        var query = String.format( "DROP USER %s", username );
-        runDDL( query, "dbms.security.deleteUser" );
-        kickoutUser( username, "deletion" );
+        var query = String.format( "DROP USER %s", escapeParameter( username ) );
+        runSystemCommand( query, "dbms.security.deleteUser" );
     }
 
     @Admin
@@ -105,9 +105,8 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.suspendUser", mode = DBMS )
     public void suspendUser( @Name( "username" ) String username ) throws ProcedureException
     {
-        var query = String.format( "ALTER USER `%s` SET STATUS SUSPENDED", username );
-        runDDL( query, "dbms.security.suspendUser" );
-        kickoutUser( username, "suspension" );
+        var query = String.format( "ALTER USER %s SET STATUS SUSPENDED", escapeParameter( username ) );
+        runSystemCommand( query, "dbms.security.suspendUser" );
     }
 
     @Admin
@@ -118,8 +117,8 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
     {
-        var query = String.format( "ALTER USER `%s` SET STATUS ACTIVE", username );
-        runDDL( query, "dbms.security.activateUser" );
+        var query = String.format( "ALTER USER %s SET STATUS ACTIVE", escapeParameter( username ) );
+        runSystemCommand( query, "dbms.security.activateUser" );
     }
 
     @Admin
@@ -183,7 +182,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Description( "List all roles assigned to the specified user." )
     @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS )
-    public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException
+    public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
         var result = new HashSet<StringResult>();
         var visitor = new ResultVisitor<RuntimeException>()
@@ -201,6 +200,12 @@ public class UserManagementProcedures extends AuthProceduresBase
             }
         };
         queryForRoles( visitor, "dbms.security.listRolesForUser" );
+
+        if ( result.isEmpty() )
+        {
+            throw new InvalidArgumentsException( String.format( "User '%s' does not exist.", username ) );
+        }
+
         return result.stream();
     }
 
@@ -208,7 +213,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Description( "List all users currently assigned the specified role." )
     @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS )
-    public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws ProcedureException
+    public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws ProcedureException, InvalidArgumentsException
     {
         var result = new HashSet<StringResult>();
         var visitor = new ResultVisitor<RuntimeException>()
@@ -226,6 +231,12 @@ public class UserManagementProcedures extends AuthProceduresBase
             }
         };
         queryForRoles( visitor, "dbms.security.listUsersForRole" );
+
+        if ( result.isEmpty() )
+        {
+            throw new InvalidArgumentsException( String.format( "Role '%s' does not exist.", roleName ) );
+        }
+
         return result.stream();
     }
 
@@ -235,8 +246,8 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.createRole", mode = DBMS )
     public void createRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
-        var query = String.format( "CREATE ROLE `%s`", roleName );
-        runDDL( query, "dbms.security.createRole" );
+        var query = String.format( "CREATE ROLE %s", escapeParameter( roleName ) );
+        runSystemCommand( query, "dbms.security.createRole" );
     }
 
     @Admin
@@ -245,8 +256,8 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.deleteRole", mode = DBMS )
     public void deleteRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
-        var query = String.format( "DROP ROLE `%s`", roleName );
-        runDDL( query, "dbms.security.deleteRole" );
+        var query = String.format( "DROP ROLE %s", escapeParameter( roleName ) );
+        runSystemCommand( query, "dbms.security.deleteRole" );
     }
 
     private void queryForRoles( ResultVisitor<RuntimeException> visitor, String procedureName ) throws ProcedureException
@@ -281,7 +292,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         return roles;
     }
 
-    private void runDDL( String query, String procedureName ) throws ProcedureException
+    private void runSystemCommand( String query, String procedureName ) throws ProcedureException
     {
         try
         {
@@ -303,5 +314,10 @@ public class UserManagementProcedures extends AuthProceduresBase
                     String.format( "This is an administration command and it should be executed against the system database: %s", procedureName ) );
         }
         throw new ProcedureException( ProcedureCallFailed, e, e.getMessage() );
+    }
+
+    private String escapeParameter( String input )
+    {
+        return String.format("`%s`", input == null ? "" : input );
     }
 }
