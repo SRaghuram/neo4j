@@ -582,7 +582,8 @@ class PageCacheWarmerTest
                 }
                 catch ( IOException e )
                 {
-                    e.printStackTrace();
+                    lock.release(); //Release here to avoid deadlock if something goes wrong.
+                    throw new RuntimeException( "Failed during reheat", e );
                 }
             } );
             lock.acquire(); //wait until we are warming
