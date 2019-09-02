@@ -43,6 +43,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -77,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
 import static org.neo4j.graphdb.Label.label;
@@ -96,6 +98,7 @@ public class ProcedureIT
 
     private static List<Exception> exceptionsInProcedure = Collections.synchronizedList( new ArrayList<>() );
     private GraphDatabaseService db;
+    private GraphDatabaseService system;
     static boolean[] onCloseCalled;
     private DatabaseManagementService managementService;
 
@@ -108,6 +111,7 @@ public class ProcedureIT
         managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent()
                 .setConfig( plugin_dir, plugins.directory().toPath().toAbsolutePath() ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
+        system = managementService.database( SYSTEM_DATABASE_NAME );
         onCloseCalled = new boolean[2];
     }
 
@@ -1549,6 +1553,38 @@ public class ProcedureIT
         }
     }
 
+    @Test
+    void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContextDatabase()
+    {
+        // Given
+        try ( Transaction ignore = db.beginTx() )
+        {
+            // When
+            Result res = db.execute( "CALL com.neo4j.procedure.outputDependsOnDatabase()" );
+
+            // Then
+            assertTrue(res.hasNext());
+            Map<String,Object> results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "string" ), equalTo( DEFAULT_DATABASE_NAME ) );
+            assertThat( results.get( "aBoolean" ), equalTo( false ) );
+        }
+
+        // Given
+        try ( Transaction ignore = system.beginTx() )
+        {
+            // When
+            Result res = system.execute( "CALL com.neo4j.procedure.outputDependsOnDatabase()" );
+
+            // Then
+            assertTrue(res.hasNext());
+            Map<String,Object> results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "string" ), equalTo( SYSTEM_DATABASE_NAME ) );
+            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+        }
+    }
+
     public static class Output
     {
         public long someVal = 1337;
@@ -1742,6 +1778,13 @@ public class ProcedureIT
                 return Stream.of( new PrimitiveOutput( "Yay", 1, 1.0, true ) );
             }
             return Stream.of( new PrimitiveOutput( "Ney", 0, 0.0, false ) );
+        }
+
+        @SystemProcedure
+        @Procedure
+        public Stream<PrimitiveOutput> outputDependsOnDatabase()
+        {
+            return Stream.of( new PrimitiveOutput( callContext.databaseName(), 0, 0.0, callContext.isSystemDatabase() ) );
         }
 
         @Procedure
