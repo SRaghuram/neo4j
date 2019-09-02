@@ -12,6 +12,8 @@ object Configs {
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
+  def MorselSingleThreaded: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel))
+
   def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.Morsel))
 
   def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
@@ -66,7 +68,7 @@ object Configs {
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
   val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
-  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val Top                   : TestConfiguration = InterpretedRuntime + SlottedRuntime

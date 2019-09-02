@@ -148,7 +148,7 @@ case object AvgAggregator extends Aggregator {
   abstract class AvgStandardBase {
 
     protected def failMix() =
-      throw new CypherTypeException("avg() cannot mix numbers and durations")
+      throw new CypherTypeException("avg() cannot mix number and duration")
 
     protected def failType(value: AnyValue) =
       throw new CypherTypeException(s"avg() can only handle numerical values, duration, and null. Got $value")

@@ -75,7 +75,7 @@ case object SumAggregator extends Aggregator {
     }
 
     protected def failMix() =
-      throw new CypherTypeException("sum() cannot mix numbers and durations")
+      throw new CypherTypeException("sum() cannot mix number and duration")
 
     protected def failType(value: AnyValue) =
       throw new CypherTypeException(s"sum() can only handle numerical values, duration, and null. Got $value")
@@ -104,7 +104,7 @@ case object SumAggregator extends Aggregator {
 
     override def result: AnyValue =
       if (seenNumber && seenDuration)
-        throw new CypherTypeException("sum() cannot mix number and durations")
+        throw new CypherTypeException("sum() cannot mix number and duration")
       else if (seenDuration)
         sumDuration.get()
       else
