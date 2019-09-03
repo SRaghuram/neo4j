@@ -22,8 +22,9 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.DbmsExtension;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.FakeClock;
 
@@ -34,27 +35,30 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@TestDirectoryExtension
+@DbmsExtension( configurationCallback = "configure" )
 class StoreSizeMetricsIT
 {
     @Inject
     private TestDirectory testDirectory;
-
+    @Inject
     private DatabaseManagementService managementService;
+
     private File metricsFolder;
     private FakeClock clock;
+
+    @ExtensionCallback
+    private void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        clock = new FakeClock();
+        builder.setConfig( MetricsSettings.metricsEnabled, true );
+        builder.setConfig( MetricsSettings.neoStoreSizeEnabled, true );
+        builder.setClock( clock );
+    }
 
     @BeforeEach
     void setUp()
     {
-        clock = new FakeClock();
         metricsFolder = testDirectory.directory( "metrics" );
-
-        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() )
-                .setConfig( MetricsSettings.metricsEnabled, true )
-                .setConfig( MetricsSettings.neoStoreSizeEnabled, true )
-                .setClock( clock )
-                .build();
     }
 
     @AfterEach

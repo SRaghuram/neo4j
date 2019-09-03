@@ -11,6 +11,8 @@ import com.codahale.metrics.MetricRegistry;
 import java.io.File;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -69,26 +71,38 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
         if ( updateValuesHandle != null )
         {
-            updateValuesHandle.cancel( true );
+            updateValuesHandle.cancel( false );
             updateValuesHandle = null;
         }
     }
 
     private void updateCachedValues()
     {
-      cachedStoreTotalSize = getSize( databaseLayout.databaseDirectory() );
+      cachedStoreTotalSize = getSize( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
     }
 
-    private long getSize( File file )
+    //Paths may overlap
+    private long getSize( File... files )
     {
+        Set<File> visitedFiles = new HashSet<>();
+        return Arrays.stream( files ).mapToLong( file -> getSizeInternal( file, visitedFiles ) ).sum();
+    }
+
+    private long getSizeInternal( File file, Set<File> visitedFiles )
+    {
+        if ( !visitedFiles.add( file ) )
+        {
+            return 0L; //dont visit files twice
+        }
+
         if ( file.isDirectory() )
         {
-            File[] files = fileSystem.listFiles( file );
-            if ( files == null )
+            File[] filesInDir = fileSystem.listFiles( file );
+            if ( filesInDir == null || filesInDir.length == 0 )
             {
                 return 0L;
             }
-            return Arrays.stream( files ).mapToLong( this::getSize ).sum();
+            return Arrays.stream( filesInDir ).mapToLong( fileInDir -> getSizeInternal( fileInDir, visitedFiles ) ).sum();
         }
         return fileSystem.getFileSize( file );
     }

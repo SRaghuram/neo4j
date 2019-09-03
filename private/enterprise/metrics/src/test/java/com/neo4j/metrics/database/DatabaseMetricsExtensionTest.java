@@ -20,7 +20,6 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -30,7 +29,6 @@ import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.api.tracer.DefaultTracer;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
@@ -46,6 +44,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -172,7 +171,7 @@ class DatabaseMetricsExtensionTest
         }
     }
 
-    private static class DatabaseMetricsDependencies implements DatabaseMetricsExtensionFactory.Dependencies
+    private class DatabaseMetricsDependencies implements DatabaseMetricsExtensionFactory.Dependencies
     {
         private final Config config;
         private final MetricsManager metricsManager;
@@ -219,7 +218,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public JobScheduler scheduler()
         {
-            return JobSchedulerFactory.createScheduler();
+            return new CallingThreadJobScheduler();
         }
 
         @Override
@@ -239,7 +238,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public FileSystemAbstraction fileSystem()
         {
-            return new DefaultFileSystemAbstraction();
+            return testDirectory.getFileSystem();
         }
 
         @Override
