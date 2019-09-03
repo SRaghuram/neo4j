@@ -27,7 +27,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.indexes").toList should beListInOrder(
       beMapContaining(
         "id" -> 1,
-        "name" -> "index_1",
+        "name" -> "Uniqueness constraint on :User (name)",
         // "state" -> // we don't care about state
         "uniqueness" -> "UNIQUE",
         // "populationPercent" -> // we don't care about specific population percentage,
@@ -88,7 +88,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.indexes").toList should beListInOrder(
       beMapContaining(
         "id" -> 1,
-        "name" -> "index_1",
+        "name" -> "Index on :Foo (bar,baz)",
         // "state" -> // we don't care about state
         "uniqueness" -> "NONUNIQUE",
         // "populationPercent" -> // we don't care about specific population percentage,

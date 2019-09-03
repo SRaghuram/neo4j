@@ -460,7 +460,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // Then
     listResult.toList should equal(
       List(Map(
-        "id" -> 1,
+        "id" -> index.getId,
         "name" -> index.getName,
         "state" -> "ONLINE",
         "populationPercent" -> 100.0,
@@ -485,7 +485,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
-    val index = graph.getIndex("Person", Seq("name"))
+    val index = inTx(_ => kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")), tokenReader(t => t.propertyKey("name"))))
 
     // when
     val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
@@ -493,7 +493,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // then
     listResult.toList should equal(
       List(Map(
-        "id" -> 3,
+        "id" -> index.getId,
         "name" -> index.getName,
         "state" -> "ONLINE",
         "populationPercent" -> 100.0,
@@ -551,6 +551,10 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
     // Then
     result.columnAs("name").toList should equal(
-      List("index_1", "index_2", "index_3", "index_4", "index_5"))
+      List("Index on :A (bar)",
+        "Index on :A (foo)",
+        "Index on :A (prop)",
+        "Index on :B (foo)",
+        "Index on :C (foo)"))
   }
 }
