@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.ActorRef;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -18,7 +16,7 @@ public class ClusterClientViewMessage
 
     public ClusterClientViewMessage( Set<ActorRef> clusterClients )
     {
-        this.clusterClients = Collections.unmodifiableSet( new HashSet<>( clusterClients ) );
+        this.clusterClients = Set.copyOf( clusterClients );
     }
 
     public Set<ActorRef> clusterClients()
