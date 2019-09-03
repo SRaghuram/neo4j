@@ -128,34 +128,6 @@ object ContinuableOperatorTaskWithMorselGenerator {
   /**
     * Responsible for generating a tailored class for the OperatorTask, and composing an operator creating new instances of that class
     */
-//<<<<<<< HEAD
-//  def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
-//                      workIdentity: WorkIdentity,
-//                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): StreamingOperator = {
-//    val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
-//    val clazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, className(), Seq(staticWorkIdentity)))
-//    val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext], classOf[ArgumentStateMaps])
-//
-//    // TBD: Use inheritance (and create an anonymous class directly based on StreamingOperator) instead of composition?
-//    val taskFactory: CompiledTaskFactory = (dataRead, inputMorsel, argumentStateMaps) => {
-//      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy, argumentStateMaps))
-//    }
-//    val operatorStateFactory: CompiledOperatorStateFactory =
-//      if (argumentStates.nonEmpty) {
-//        (operator, argumentStateMapCreator, _) => {
-//          argumentStates.map { case (argumentStateMapId, argumentStateFactory) =>
-//            argumentStateMapCreator.createArgumentStateMap(argumentStateMapId, argumentStateFactory)
-//          }
-//          operator
-//        }
-//      } else {
-//        (operator, _, _) => {
-//          operator
-//        }
-//      }
-//
-//    new CompiledStreamingOperator(workIdentity, taskFactory, operatorStateFactory)
-//=======
   def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
                       workIdentity: WorkIdentity,
                       argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): CompiledStreamingOperator = {
