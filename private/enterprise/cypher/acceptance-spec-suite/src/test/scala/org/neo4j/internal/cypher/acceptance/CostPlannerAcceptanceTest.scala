@@ -232,7 +232,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
     val missesAfter = missCounter.count
     missesAfter should be > missesBefore
 
-    graph.inTx(deleteAllEntities())
+    deleteAllEntities()
   }
 
   class MissCounter() extends StringCacheMonitor {

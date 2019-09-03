@@ -188,7 +188,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     {
         try ( Transaction tx = connection.db().beginTx() )
         {
-            for ( Relationship relationship : connection.db().getAllRelationships() )
+            for ( Relationship relationship : tx.getAllRelationships() )
             {
                 if ( relationship.isType( Rels.POST_HAS_CREATOR ) )
                 {
@@ -234,7 +234,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         try ( Transaction tx = connection.db().beginTx() )
         {
             List<Relationship> hasMemberRelationships = new ArrayList<>();
-            for ( Relationship relationship : connection.db().getAllRelationships() )
+            for ( Relationship relationship : tx.getAllRelationships() )
             {
                 if ( relationship.isType( Rels.HAS_MEMBER ) )
                 {
@@ -389,7 +389,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         try ( Transaction tx = connection.db().beginTx() )
         {
             List<Relationship> messageIsLocatedInRelationships = new ArrayList<>();
-            for ( Relationship relationship : connection.db().getAllRelationships() )
+            for ( Relationship relationship : tx.getAllRelationships() )
             {
                 if ( relationship.isType( Rels.POST_IS_LOCATED_IN ) ||
                      relationship.isType( Rels.COMMENT_IS_LOCATED_IN ) )

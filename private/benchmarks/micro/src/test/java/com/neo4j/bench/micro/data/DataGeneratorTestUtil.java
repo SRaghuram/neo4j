@@ -178,9 +178,9 @@ public class DataGeneratorTestUtil
 
     private static int relationshipCount( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return Iterables.count( db.getAllRelationships() );
+            return Iterables.count( transaction.getAllRelationships() );
         }
     }
 
@@ -189,10 +189,10 @@ public class DataGeneratorTestUtil
             int outRelationshipsPerNode,
             double percentageTolerance )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
             // only run tests if graph actually has relationships
-            if ( Iterables.count( db.getAllRelationships() ) == 0 )
+            if ( Iterables.count( transaction.getAllRelationships() ) == 0 )
             {
                 return;
             }
@@ -250,9 +250,9 @@ public class DataGeneratorTestUtil
 
     private static int relationshipPropertyCount( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return propertyCount( db.getAllRelationships() );
+            return propertyCount( transaction.getAllRelationships() );
         }
     }
 
@@ -260,15 +260,15 @@ public class DataGeneratorTestUtil
     {
         return StreamSupport.stream( propertyContainers.spliterator(), false )
                             .map( n -> Iterables.count( n.getPropertyKeys() ) )
-                            .reduce( 0, ( acc, nodePropertyCount ) -> acc + nodePropertyCount );
+                            .reduce( 0, Integer::sum );
     }
 
     private static void assertRelationshipsAreCollocatedByStartNode( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
             long previousStartNodeId = -1;
-            for ( Relationship relationship : db.getAllRelationships() )
+            for ( Relationship relationship : transaction.getAllRelationships() )
             {
                 long currentStartNodeId = relationship.getStartNode().getId();
                 assertThat( currentStartNodeId,
@@ -280,10 +280,10 @@ public class DataGeneratorTestUtil
 
     private static void assertRelationshipsAreScatteredByStartNode( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
             long previousStartNodeId = -1;
-            for ( Relationship relationship : db.getAllRelationships() )
+            for ( Relationship relationship : transaction.getAllRelationships() )
             {
                 long currentStartNodeId = relationship.getStartNode().getId();
                 assertThat( currentStartNodeId,
@@ -303,9 +303,9 @@ public class DataGeneratorTestUtil
 
     private static List<ChainPosition> computeRelationshipPropertyChainsStats( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return computeChainsStats( db.getAllRelationships(), PropertyContainer::getPropertyKeys );
+            return computeChainsStats( transaction.getAllRelationships(), PropertyContainer::getPropertyKeys );
         }
     }
 

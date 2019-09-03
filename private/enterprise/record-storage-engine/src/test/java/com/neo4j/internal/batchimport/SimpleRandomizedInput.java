@@ -124,7 +124,7 @@ public class SimpleRandomizedInput implements Input
         try ( Transaction tx = db.beginTx() )
         {
             long actualRelationshipCount = 0;
-            for ( Relationship relationship : db.getAllRelationships() )
+            for ( Relationship relationship : tx.getAllRelationships() )
             {
                 RelationshipKey key = keyOf( relationship );
                 Set<InputEntity> matches = expectedRelationshipData.get( key );

@@ -67,7 +67,7 @@ class RelationshipPropertyExistenceConstraintCreationIT
     @Override
     void removeOffendingDataInRunningTx( org.neo4j.graphdb.Transaction tx )
     {
-        Iterable<Relationship> relationships = db.getAllRelationships();
+        Iterable<Relationship> relationships = tx.getAllRelationships();
         for ( Relationship relationship : relationships )
         {
             relationship.delete();

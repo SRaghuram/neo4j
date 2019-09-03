@@ -314,7 +314,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
     // given
     executeWith(Configs.InterpretedAndSlotted, query).toList
-    graph.inTx(deleteAllEntities())
+    deleteAllEntities()
     val initialTxCounts = graph.txCounts
 
     // when

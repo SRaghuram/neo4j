@@ -112,7 +112,7 @@ public class ReadAll extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public void allRelationships( TxState txState, Blackhole bh )
     {
-        assertCount( db().getAllRelationships(), RELATIONSHIP_COUNT, bh );
+        assertCount( txState.tx.getAllRelationships(), RELATIONSHIP_COUNT, bh );
     }
 
     public static void main( String... methods ) throws Exception
