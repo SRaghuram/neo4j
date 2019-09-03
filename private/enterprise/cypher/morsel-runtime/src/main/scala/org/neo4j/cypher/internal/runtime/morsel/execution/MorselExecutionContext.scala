@@ -51,7 +51,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow)
 
-  @inline protected def numberOfRows: Int = endRow - startRow
+  @inline def numberOfRows: Int = endRow - startRow
 
   @inline
   def moveToNextRow(): Unit = {

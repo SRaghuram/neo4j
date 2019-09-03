@@ -105,8 +105,7 @@ class FilteringMorselExecutionContext(morsel: Morsel,
   override def setToAfterLastRow(): Unit = currentRow = getLastRow + 1
 
   override def isValidRow: Boolean = {
-    // Since getFirstRow and getLastRow could be expensive, we only check it if the current row is cancelled
-    currentRow >= startRow && currentRow < endRow && (!isCancelled(currentRow) || (currentRow >= getFirstRow && currentRow < getLastRow))
+    currentRow >= startRow && currentRow < endRow && !isCancelled(currentRow)
   }
 
   override def hasNextRow: Boolean = {

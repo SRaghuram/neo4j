@@ -10,7 +10,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.execution.{Morsel, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.values.AnyValue
 
@@ -87,11 +87,21 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def build : (Morsel, MorselExecutionContext) = {
+    def build() : MorselExecutionContext = {
       val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
       val context = MorselExecutionContext(morsel, slots, rows)
-      (morsel, context)
+      context
+    }
+  }
+
+  class FilteringInput extends Input {
+    override def build(): FilteringMorselExecutionContext = {
+      val morsel = new Morsel(longs, refs)
+      val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
+      val context = MorselExecutionContext(morsel, slots, rows)
+      val filteringContext = FilteringMorselExecutionContext(context)
+      filteringContext
     }
   }
 
@@ -150,37 +160,44 @@ abstract class MorselUnitTest extends CypherFunSuite {
   class StatelessOperatorGiven(operator: StatelessOperator) extends Given with HasOneInput {
 
     def whenOperate(): ThenOutput = {
-      val (morsel, row) = input.build
+      val row = input.build
       operator.operate(row, context, state, resources)
-      new ThenOutput(morsel, row, input.longSlots, input.refSlots)
+      new ThenOutput(row, input.longSlots, input.refSlots)
     }
   }
 
-  class ThenOutput(outputMorsel: Morsel, outputRow: MorselExecutionContext, longSlots: Int, refSlots: Int) {
-    private var longPointer = 0
-    private var refPointer = 0
+  class ThenOutput(outputRow: MorselExecutionContext, longSlots: Int, refSlots: Int) {
     private var rowCount = 0
+    private val currentRow = outputRow.shallowCopy()
+    currentRow.resetToFirstRow()
 
     private def assertLongs(longs: Longs): Unit = {
       if (longs.longs.size != longSlots) {
         throw new IllegalArgumentException(s"Unexpected number of longs in assertion: ${longs.longs.size}. Expected: $longSlots.")
       }
-      outputMorsel.longs.slice(longPointer, longPointer + longs.longs.size) should equal(longs.longs)
-      longPointer += longs.longs.size
+      var i = 0
+      while (i < longSlots) {
+        currentRow.getLongAt(i) shouldEqual longs.longs(i)
+        i += 1
+      }
     }
 
     private def assertRefs(refs: Refs): Unit = {
       if (refs.refs.size != refSlots) {
         throw new IllegalArgumentException(s"Unexpected number of refs in assertion: ${refs.refs.size}. Expected: $refSlots.")
       }
-      outputMorsel.refs.slice(refPointer, refPointer + refs.refs.size) should equal(refs.refs)
-      refPointer += refs.refs.size
+      var i = 0
+      while (i < refSlots) {
+        currentRow.getRefAt(i) shouldEqual refs.refs(i)
+        i += 1
+      }
     }
 
     def shouldReturnRow(longs: Longs): this.type = {
       rowCount += 1
       assertLongs(longs)
       assertRefs(Refs())
+      currentRow.moveToNextRow()
       this
     }
 
@@ -204,10 +221,9 @@ abstract class MorselUnitTest extends CypherFunSuite {
   }
 
   class ThenContinuableOutput(task: ContinuableOperatorTask,
-                              outputMorsel: Morsel,
                               outputRow: MorselExecutionContext,
                               longSlots: Int,
-                              refSlots: Int) extends ThenOutput(outputMorsel, outputRow, longSlots, refSlots) {
+                              refSlots: Int) extends ThenOutput(outputRow, longSlots, refSlots) {
 
     override def shouldBeDone(): Unit = {
       super.shouldBeDone()
