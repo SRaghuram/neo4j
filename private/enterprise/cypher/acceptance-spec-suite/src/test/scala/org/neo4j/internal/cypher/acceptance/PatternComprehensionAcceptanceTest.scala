@@ -546,4 +546,22 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
       result.resultAsString() // should not throw
     })
   }
+
+  test("should handle pattern comprehension within map projection followed by ORDER BY") {
+    relate(createLabeledNode(Map("name" -> "a"), "Thing"),
+           createLabeledNode(Map("name" -> "item1"), "Thing2"), "Has")
+    relate(createLabeledNode(Map("name" -> "b"), "Thing"),
+           createLabeledNode(Map("name" -> "item2"), "Thing2"), "Has")
+
+    val result = executeWith(Configs.RollUpApply,
+                             """MATCH (n:`Thing`) WITH n
+                               |RETURN n{.name, Thing_Has_Thing2:[ (n)-[:Has]->(thing2:Thing2)| thing2.name ]}
+                               |ORDER BY n.name""".stripMargin)
+
+    //then
+    result.toList should equal(List(
+      Map("n" -> Map("Thing_Has_Thing2" -> List("item1"), "name" -> "a")),
+      Map("n" -> Map("Thing_Has_Thing2" -> List("item2"), "name" -> "b"))))
+
+  }
 }
