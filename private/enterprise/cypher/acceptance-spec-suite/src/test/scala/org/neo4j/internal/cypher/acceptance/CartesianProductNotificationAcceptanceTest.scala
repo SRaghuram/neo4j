@@ -86,7 +86,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     graph.inTx {
       val tracer = CompilationPhaseTracer.NO_TRACING
       val innerVariableNamer = new GeneratingNamer
-      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY)
+      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = false)
       val kernelTransaction = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).getKernelTransactionBoundToThisThread(true, graphOps.asInstanceOf[GraphDatabaseAPI].databaseId())
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,
