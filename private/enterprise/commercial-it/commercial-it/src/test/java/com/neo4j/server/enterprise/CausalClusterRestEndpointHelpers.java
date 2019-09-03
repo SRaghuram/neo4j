@@ -32,7 +32,6 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.net.http.HttpClient.newBuilder;
 import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpResponse.BodySubscribers.mapping;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
@@ -46,7 +45,6 @@ final class CausalClusterRestEndpointHelpers
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
     private static final HttpClient HTTP_CLIENT = newHttpClient();
-    private static final HttpClient REDIRECT_HTTP_CLIENT = newBuilder().followRedirects( HttpClient.Redirect.NORMAL ).build();
 
     private CausalClusterRestEndpointHelpers()
     {
@@ -114,17 +112,17 @@ final class CausalClusterRestEndpointHelpers
 
     static HttpResponse<Map<String,Object>> queryLegacyClusterEndpoint( Neo4j server )
     {
-        return sendGET( legacyClusterEndpoint( server ), ofJson(), true );
+        return sendGET( legacyClusterEndpoint( server ), ofJson() );
     }
 
     static HttpResponse<Boolean> queryLegacyClusterEndpoint( Neo4j server, String path )
     {
-        return sendGET( legacyClusterEndpoint( server, path ), ofBoolean(), true );
+        return sendGET( legacyClusterEndpoint( server, path ), ofBoolean() );
     }
 
     static HttpResponse<Map<String,Object>> queryLegacyClusterStatusEndpoint( Neo4j server )
     {
-        return sendGET( legacyClusterEndpoint( server, "status" ), ofJson(), true );
+        return sendGET( legacyClusterEndpoint( server, "status" ), ofJson() );
     }
 
     static HttpResponse<Boolean> queryAvailabilityEndpoint( Neo4j server, String databaseName )
@@ -189,20 +187,14 @@ final class CausalClusterRestEndpointHelpers
 
     private static <T> HttpResponse<T> sendGET( URI uri, BodyHandler<T> bodyHandler )
     {
-        return sendGET( uri, bodyHandler, false );
-    }
-
-    private static <T> HttpResponse<T> sendGET( URI uri, BodyHandler<T> bodyHandler, boolean allowsRedirect )
-    {
         var request = HttpRequest.newBuilder( uri )
                 .header( ACCEPT, APPLICATION_JSON )
                 .GET()
                 .build();
 
-        var client = allowsRedirect ? REDIRECT_HTTP_CLIENT : HTTP_CLIENT;
         try
         {
-            return client.send( request, bodyHandler );
+            return HTTP_CLIENT.send( request, bodyHandler );
         }
         catch ( IOException e )
         {

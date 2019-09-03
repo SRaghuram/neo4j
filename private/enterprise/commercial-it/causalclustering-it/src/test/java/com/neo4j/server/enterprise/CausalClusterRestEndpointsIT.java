@@ -137,7 +137,7 @@ class CausalClusterRestEndpointsIT
             var response = queryLegacyClusterEndpoint( neo4j );
             assertEquals( OK.getStatusCode(), response.statusCode() );
 
-            var baseUri = neo4j.httpURI().resolve( "/db/" + KNOWN_DB + "/cluster/" );
+            var baseUri = neo4j.httpURI().resolve( "/db/manage/server/causalclustering/" );
 
             var expectedBody = Map.of(
                     "available", baseUri.resolve( "available" ).toString(),

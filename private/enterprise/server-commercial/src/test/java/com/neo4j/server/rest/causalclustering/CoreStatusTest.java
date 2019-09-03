@@ -103,7 +103,7 @@ class CoreStatusTest
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
-        status = CausalClusteringStatusFactory.build( output, dbService, databaseName );
+        status = CausalClusteringStatusFactory.build( output, dbService, databaseName, mock( ClusterService.class ) );
     }
 
     @Test

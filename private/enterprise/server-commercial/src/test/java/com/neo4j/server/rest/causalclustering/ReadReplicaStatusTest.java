@@ -94,7 +94,7 @@ class ReadReplicaStatusTest
         when( internalDatabase.getDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
         dependencyResolver.satisfyDependency( internalDatabase );
 
-        status = CausalClusteringStatusFactory.build( output, dbService, DEFAULT_DATABASE_NAME );
+        status = CausalClusteringStatusFactory.build( output, dbService, DEFAULT_DATABASE_NAME, mock( ClusterService.class ) );
     }
 
     @AfterEach

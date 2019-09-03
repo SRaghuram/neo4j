@@ -97,7 +97,7 @@ class CausalClusteringStatusFactoryTest
 
     private static CausalClusteringStatus buildStatus( DatabaseService dbService, String databaseName )
     {
-        return CausalClusteringStatusFactory.build( mock( OutputFormat.class ), dbService, databaseName );
+        return CausalClusteringStatusFactory.build( mock( OutputFormat.class ), dbService, databaseName, mock( ClusterService.class ) );
     }
 
     private static DatabaseService databaseServiceMock( DatabaseInfo knownDbInfo )

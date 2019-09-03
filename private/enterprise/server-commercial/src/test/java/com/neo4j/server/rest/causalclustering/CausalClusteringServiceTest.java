@@ -13,7 +13,6 @@ import org.neo4j.configuration.Config;
 
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.absoluteDatabaseClusterPath;
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.databaseClusterUriPattern;
-import static com.neo4j.server.rest.causalclustering.CausalClusteringService.relativeDatabaseClusterPath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,13 +45,5 @@ class CausalClusteringServiceTest
         var path = absoluteDatabaseClusterPath( config );
 
         assertEquals( "/foo/bar/db/{databaseName}/cluster", path );
-    }
-
-    @Test
-    void shouldReturnRelativeDatabaseManagePath()
-    {
-        var path = relativeDatabaseClusterPath( "hello" );
-
-        assertEquals( "hello/cluster", path );
     }
 }

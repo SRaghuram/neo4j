@@ -40,9 +40,9 @@ class CoreStatus extends ClusterMemberStatus
     private final ThroughputMonitor throughputMonitor;
     private final RoleProvider roleProvider;
 
-    CoreStatus( OutputFormat output, GraphDatabaseAPI databaseAPI )
+    CoreStatus( OutputFormat output, GraphDatabaseAPI databaseAPI, ClusterService clusterService )
     {
-        super( output, databaseAPI );
+        super( output, databaseAPI, clusterService );
 
         DependencyResolver dependencyResolver = databaseAPI.getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );

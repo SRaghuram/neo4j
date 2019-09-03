@@ -16,7 +16,7 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 
 public class CausalClusteringStatusFactory
 {
-    public static CausalClusteringStatus build( OutputFormat output, DatabaseService dbService, String databaseName )
+    public static CausalClusteringStatus build( OutputFormat output, DatabaseService dbService, String databaseName, ClusterService clusterService )
     {
         var db = findDb( dbService, databaseName );
         if ( db == null )
@@ -28,9 +28,9 @@ public class CausalClusteringStatusFactory
         switch ( databaseInfo )
         {
         case CORE:
-            return new CoreStatus( output, db );
+            return new CoreStatus( output, db, clusterService );
         case READ_REPLICA:
-            return new ReadReplicaStatus( output, db );
+            return new ReadReplicaStatus( output, db, clusterService );
         default:
             return new FixedStatus( FORBIDDEN );
         }

@@ -30,9 +30,9 @@ class ReadReplicaStatus extends ClusterMemberStatus
     private final Health dbHealth;
     private final CommandIndexTracker commandIndexTracker;
 
-    ReadReplicaStatus( OutputFormat output, GraphDatabaseAPI databaseAPI )
+    ReadReplicaStatus( OutputFormat output, GraphDatabaseAPI databaseAPI, ClusterService clusterService )
     {
-        super( output, databaseAPI );
+        super( output, databaseAPI, clusterService );
 
         DependencyResolver dependencyResolver = databaseAPI.getDependencyResolver();
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
