@@ -14,11 +14,24 @@ Available Commands
 Running Locally
 --------------
 
-From IntelliJ, you can add a main method to any class you want to run locally:
+From IntelliJ, you can add a main method to any class you want to run locally.
+
+In a scala class named `SuperBenchmark` add:
 
 ```
-def main(args: Array[String]): Unit = {
-    Main.run(classOf[YourClass])
+object SuperBenchmark {
+    def main(args: Array[String]): Unit = {
+        Main.run(classOf[SuperBenchmark], args)
+    }    
+}
+```
+
+In a Java class named `SuperBenchmark` add:
+
+```
+public static void main( String... args )
+{
+    Main.run( SuperBenchmark.class, args );
 }
 ```
 
