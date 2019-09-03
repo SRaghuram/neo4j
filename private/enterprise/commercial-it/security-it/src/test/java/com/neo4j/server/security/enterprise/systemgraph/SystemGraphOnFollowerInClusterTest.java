@@ -24,6 +24,7 @@ import java.util.function.BiConsumer;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.DatabaseStatus;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
@@ -84,6 +85,15 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // Also works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( "neo4j", result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     @Test
@@ -106,6 +116,17 @@ class SystemGraphOnFollowerInClusterTest
         {
             var result = sys.execute( "SHOW USERS" ).columnAs( "user" );
             assertEquals( "neo4j", result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "CREATE USER foo SET PASSWORD 'f00'" );
+
+            var result = sys.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j", "foo" ), Set.of( result.next().toString(), result.next().toString() ) );
             assertFalse( result.hasNext() );
             tx.commit();
         } );
@@ -140,6 +161,17 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "DROP USER foo" );
+
+            var result = sys.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j" ), Set.of( result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     @Test
@@ -149,13 +181,32 @@ class SystemGraphOnFollowerInClusterTest
         {
             try
             {
-                sys.execute( "ALTER USER foo SET PASSWORD 'f00'" );
+                sys.execute( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
             catch ( IllegalStateException e )
             {
-                assertEquals( "Failed to alter the specified user 'foo': " + followerError, e.getMessage() );
+                assertEquals( "Failed to alter the specified user 'neo4j': " + followerError, e.getMessage() );
             }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( true, result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
+
+            var result = sys.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( false, result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
         } );
     }
 
@@ -174,6 +225,10 @@ class SystemGraphOnFollowerInClusterTest
                 assertEquals( "User '' failed to alter their own password: " + followerError, e.getMessage() );
             }
         } );
+
+        // But it works on leader
+        // Current user is '' so nothing will happen but we don't throw any exceptions
+        leaderTx( ( sys, tx ) -> sys.execute( "ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'" ) );
     }
 
     // Role commands tests
@@ -182,6 +237,15 @@ class SystemGraphOnFollowerInClusterTest
     void showRoles() throws Exception
     {
         followerTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
+            assertEquals( PredefinedRoles.ADMIN, result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // Also works on leader
+        leaderTx( ( sys, tx ) ->
         {
             var result = sys.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
             assertEquals( PredefinedRoles.ADMIN, result.next() );
@@ -215,6 +279,21 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "CREATE ROLE foo" );
+
+            var result = sys.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, "foo" ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     @Test
@@ -230,6 +309,20 @@ class SystemGraphOnFollowerInClusterTest
             catch ( IllegalStateException e )
             {
                 assertEquals( "Failed to delete the specified role 'foo': " + followerError, e.getMessage() );
+            }
+        } );
+
+        // But it works on leader (gives correct error for the command and setup)
+        leaderTx( ( sys, tx ) ->
+        {
+            try
+            {
+                sys.execute( "DROP ROLE foo" );
+                fail( "Should have failed to drop non-existing role, but succeeded." );
+            }
+            catch ( QueryExecutionException e )
+            {
+                assertEquals( "Failed to delete the specified role 'foo': Role does not exist.", e.getMessage() );
             }
         } );
     }
@@ -261,6 +354,17 @@ class SystemGraphOnFollowerInClusterTest
         {
             var result = sys.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
             assertEquals( PredefinedRoles.ADMIN, result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "GRANT ROLE bar TO foo" );
+
+            var result = sys.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
+            assertEquals( Set.of( PredefinedRoles.ADMIN, "bar" ), Set.of( result.next().toString(), result.next().toString() ) );
             assertFalse( result.hasNext() );
             tx.commit();
         } );
@@ -297,6 +401,17 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "REVOKE ROLE bar FROM foo" );
+
+            var result = sys.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
+            assertEquals( PredefinedRoles.ADMIN, result.next().toString() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     // Privilege commands tests
@@ -305,6 +420,15 @@ class SystemGraphOnFollowerInClusterTest
     void showPrivileges() throws Exception
     {
         followerTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW ROLE " + PredefinedRoles.READER + " PRIVILEGES" ).columnAs( "role" );
+            assertEquals( PredefinedRoles.READER, result.next() );
+            result.close();
+            tx.commit();
+        } );
+
+        // Also works on leader
+        leaderTx( ( sys, tx ) ->
         {
             var result = sys.execute( "SHOW ROLE " + PredefinedRoles.READER + " PRIVILEGES" ).columnAs( "role" );
             assertEquals( PredefinedRoles.READER, result.next() );
@@ -326,6 +450,20 @@ class SystemGraphOnFollowerInClusterTest
             catch ( IllegalStateException e )
             {
                 assertEquals( "Failed to grant traversal privilege to role 'foo': " + followerError, e.getMessage() );
+            }
+        } );
+
+        // But it works on leader (gives correct error for the command and setup)
+        leaderTx( ( sys, tx ) ->
+        {
+            try
+            {
+                sys.execute( "GRANT TRAVERSE ON GRAPH * TO foo" );
+                fail( "Should have failed to grant traverse to non-existing role, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to grant traversal privilege to role 'foo': Role does not exist.", e.getMessage() );
             }
         } );
     }
@@ -355,6 +493,17 @@ class SystemGraphOnFollowerInClusterTest
         leaderTx( ( sys, tx ) ->
         {
             var result = sys.execute( "SHOW ROLE foo PRIVILEGES" ).columnAs( "role" );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "DENY READ {prop} ON GRAPH * NODES * TO foo" );
+
+            var result = sys.execute( "SHOW ROLE foo PRIVILEGES" ).columnAs( "role" );
+            assertEquals( "foo", result.next() );
             assertFalse( result.hasNext() );
             tx.commit();
         } );
@@ -390,6 +539,16 @@ class SystemGraphOnFollowerInClusterTest
             result.close();
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "REVOKE WRITE {*} ON GRAPH * FROM foo" );
+
+            var result = sys.execute( "SHOW ROLE foo PRIVILEGES" ).columnAs( "grant" );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     // Database commands tests
@@ -398,6 +557,15 @@ class SystemGraphOnFollowerInClusterTest
     void showDatabases() throws Exception
     {
         followerTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW DATABASES" ).columnAs( "name" );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), Set.of( result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // Also works on leader
+        leaderTx( ( sys, tx ) ->
         {
             var result = sys.execute( "SHOW DATABASES" ).columnAs( "name" );
             assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), Set.of( result.next().toString(), result.next().toString() ) );
@@ -416,12 +584,30 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // Also works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW DEFAULT DATABASE" ).columnAs( "name" );
+            assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
     }
 
     @Test
     void showDatabase() throws Exception
     {
         followerTx( ( sys, tx ) ->
+        {
+            var result = sys.execute( "SHOW DATABASE " + DEFAULT_DATABASE_NAME ).columnAs( "name" );
+            assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // Also works on leader
+        leaderTx( ( sys, tx ) ->
         {
             var result = sys.execute( "SHOW DATABASE " + DEFAULT_DATABASE_NAME ).columnAs( "name" );
             assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
@@ -452,6 +638,18 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "CREATE DATABASE foo" );
+
+            var result = sys.execute( "SHOW DATABASE foo" ).columnAs( "name" );
+            assertTrue( result.hasNext() );
+            result.close();
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( "foo", cluster );
     }
 
     @Test
@@ -484,6 +682,17 @@ class SystemGraphOnFollowerInClusterTest
             result.close();
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "DROP DATABASE foo" );
+
+            var result = sys.execute( "SHOW DATABASE foo" ).columnAs( "name" );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseDoesNotExist( "foo", cluster );
     }
 
     @Test
@@ -499,6 +708,20 @@ class SystemGraphOnFollowerInClusterTest
             catch ( IllegalStateException e )
             {
                 assertEquals( "Failed to start the specified database 'foo': " + followerError, e.getMessage() );
+            }
+        } );
+
+        // But it works on leader (gives correct error for the command and setup)
+        leaderTx( ( sys, tx ) ->
+        {
+            try
+            {
+                sys.execute( "START DATABASE foo" );
+                fail( "Should have failed to start non-existing database, but succeeded." );
+            }
+            catch ( QueryExecutionException e )
+            {
+                assertEquals( "Failed to start the specified database 'foo': Database does not exist.", e.getMessage() );
             }
         } );
     }
@@ -533,7 +756,21 @@ class SystemGraphOnFollowerInClusterTest
             assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            sys.execute( "STOP DATABASE foo" );
+
+            var result = sys.execute( "SHOW DATABASE foo" ).columnAs( "status" );
+            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( "foo", cluster );
     }
+
+    // Help methods
 
     /**
      * Perform a transaction on system database against the leader of the core cluster, retrying as necessary.
