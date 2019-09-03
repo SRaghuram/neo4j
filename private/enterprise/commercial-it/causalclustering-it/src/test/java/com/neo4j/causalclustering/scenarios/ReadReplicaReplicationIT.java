@@ -176,10 +176,10 @@ class ReadReplicaReplicationIT
             var readReplicaDb = server.defaultDatabase();
             try ( var tx = readReplicaDb.beginTx() )
             {
-                ThrowingSupplier<Long,Exception> nodeCount = () -> count( readReplicaDb.getAllNodes() );
+                ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
                 assertEventually( "node to appear on read replica", nodeCount, is( 400L ), 1, MINUTES );
 
-                for ( var node : readReplicaDb.getAllNodes() )
+                for ( var node : tx.getAllNodes() )
                 {
                     assertThat( node.getProperty( NODE_PROPERTY_1 ).toString(), startsWith( NODE_PROPERTY_1_PREFIX ) );
                 }

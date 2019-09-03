@@ -86,14 +86,14 @@ class ConvertNonCausalClusteringStoreIT
 
             try ( Transaction tx = db.beginTx() )
             {
-                ThrowingSupplier<Long,Exception> nodeCount = () -> count( db.getAllNodes() );
+                ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
 
                 Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
                 assertEventually( "node to appear on core server " + config.get( raft_advertised_address ), nodeCount,
                         greaterThan( (long) classicNodeCount ), 15, SECONDS );
 
-                assertEquals( classicNodeCount + 1, count( db.getAllNodes() ) );
+                assertEquals( classicNodeCount + 1, count( tx.getAllNodes() ) );
 
                 tx.commit();
             }

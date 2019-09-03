@@ -175,13 +175,13 @@ class CausalClusterMetricIT
     {
         try ( var tx = db.beginTx() )
         {
-            ThrowingSupplier<Long,Exception> nodeCount = () -> count( db.getAllNodes() );
+            ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
 
             var config = db.getDependencyResolver().resolveDependency( Config.class );
 
             assertEventually( "node to appear on core server " + config.get( raft_advertised_address ), nodeCount, greaterThan( 0L ), TIMEOUT, SECONDS );
 
-            for ( var node : db.getAllNodes() )
+            for ( var node : tx.getAllNodes() )
             {
                 assertEquals( "baz_bat", node.getProperty( "foobar" ) );
             }

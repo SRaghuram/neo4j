@@ -154,7 +154,7 @@ public class BatchInsertEnterpriseIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            assertEquals( expectedNodeCount, Iterables.count( db.getAllNodes() ) );
+            assertEquals( expectedNodeCount, Iterables.count( tx.getAllNodes() ) );
             tx.commit();
         }
     }

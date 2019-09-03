@@ -689,7 +689,7 @@ public class ProcedureIT
 //        // Then
 //        try ( Transaction tx = db.beginTx() )
 //        {
-//            assertEquals( 1, db.getAllNodes().stream().count() );
+//            assertEquals( 1, tx.getAllNodes().stream().count() );
 //            tx.commit();
 //        }
 //    }
@@ -780,7 +780,7 @@ public class ProcedureIT
 //        // Then
 //        try ( Transaction tx = db.beginTx() )
 //        {
-//            assertEquals( 1, db.getAllNodes().stream().count() );
+//            assertEquals( 1, tx.getAllNodes().stream().count() );
 //            tx.commit();
 //        }
 //    }

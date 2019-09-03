@@ -183,7 +183,7 @@ class CoreReplicationIT
 
         // when
         try ( Transaction tx = follower.beginTx();
-              ResourceIterator<Node> allNodes = follower.getAllNodes().iterator()
+              ResourceIterator<Node> allNodes = tx.getAllNodes().iterator()
         )
         {
             WriteOperationsNotAllowedException ex =

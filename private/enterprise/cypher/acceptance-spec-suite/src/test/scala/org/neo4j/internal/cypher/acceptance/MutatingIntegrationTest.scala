@@ -18,25 +18,25 @@ import scala.collection.JavaConverters._
 class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   test("create a single node") {
-    val before = graph.inTx(graph.getAllNodes.asScala.size)
+    val before = graph.withTx( tx => tx.getAllNodes.asScala.size)
 
     val result = executeWith(Configs.InterpretedAndSlotted, "create (a)")
 
     assertStats(result, nodesCreated = 1)
-    graph.inTx {
-      graph.getAllNodes.asScala should have size before + 1
-    }
+    graph.withTx( tx =>  {
+      tx.getAllNodes.asScala should have size before + 1
+    } )
   }
 
   test("create a single node with props and return it") {
-    val before = graph.inTx(graph.getAllNodes.asScala.size)
+    val before = graph.withTx( tx => tx.getAllNodes.asScala.size)
 
     val result = executeWith(Configs.InterpretedAndSlotted, "create (a {name : 'Andres'}) return a.name")
 
     assertStats(result, nodesCreated = 1, propertiesWritten = 1)
-    graph.inTx {
-      graph.getAllNodes.asScala should have size before + 1
-    }
+    graph.withTx( tx => {
+      tx.getAllNodes.asScala should have size before + 1
+    } )
 
     result.toList should equal(List(Map("a.name" -> "Andres")))
   }
@@ -250,9 +250,9 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
     executeWith(Configs.InterpretedAndSlotted, """match (n) optional match (n)-[r]-() delete n,r""")
 
-    graph.inTx {
-      graph.getAllNodes().asScala shouldBe empty
-    }
+    graph.withTx( tx => {
+      tx.getAllNodes.asScala shouldBe empty
+    } )
   }
 
   test("delete path") {
@@ -262,9 +262,9 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
     executeWith(Configs.InterpretedAndSlotted, """match (n) where id(n) = 0 match p=(n)-->() delete p""")
 
-    graph.inTx {
-      graph.getAllNodes().asScala shouldBe empty
-    }
+    graph.withTx( tx => {
+      tx.getAllNodes.asScala shouldBe empty
+    } )
   }
 
   test("string literals should not be mistaken for variables") {

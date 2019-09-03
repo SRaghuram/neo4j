@@ -83,14 +83,14 @@ class ClusterFactoryIT
         {
             cluster.awaitLeader();
             cluster.coreTx( ( coreGraphDatabase, transaction ) -> assertEquals( 0,
-                    coreGraphDatabase.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
+                    transaction.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
         }
 
         private void isRunningAndContainData( Cluster cluster ) throws Exception
         {
             cluster.awaitLeader();
             cluster.coreTx( ( coreGraphDatabase, transaction ) -> assertEquals( 1,
-                    coreGraphDatabase.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
+                    transaction.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
         }
 
         Cluster createAndStartCluster() throws Exception

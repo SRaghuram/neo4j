@@ -131,9 +131,9 @@ class ExistingDatabaseCreationIT
 
     private void verifyExpectedNodeCounts( GraphDatabaseService cloneDatabaseService )
     {
-        try ( Transaction ignore = cloneDatabaseService.beginTx() )
+        try ( Transaction transaction = cloneDatabaseService.beginTx() )
         {
-            assertEquals( NUMBER_OF_CREATED_NODES, count( cloneDatabaseService.getAllNodes() ) );
+            assertEquals( NUMBER_OF_CREATED_NODES, count( transaction.getAllNodes() ) );
         }
     }
 

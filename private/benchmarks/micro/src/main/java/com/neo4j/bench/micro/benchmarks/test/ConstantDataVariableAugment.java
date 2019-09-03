@@ -113,21 +113,21 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
     @BenchmarkMode( {Mode.Throughput} )
     public long method1( TxState txState )
     {
-        return countThings();
+        return countThings( txState.tx );
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.Throughput} )
     public long method2( TxState txState )
     {
-        return countThings();
+        return countThings( txState.tx );
     }
 
-    private long countThings()
+    private long countThings( Transaction transaction )
     {
         long nodeCount = 0;
         long relationshipCount = 0;
-        for ( Node n : db().getAllNodes() )
+        for ( Node n : transaction.getAllNodes() )
         {
             nodeCount++;
             for ( Relationship r : n.getRelationships( OUTGOING ) )

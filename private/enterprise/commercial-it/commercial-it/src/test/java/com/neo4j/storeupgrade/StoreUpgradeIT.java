@@ -43,7 +43,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
-import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -512,10 +511,10 @@ public class StoreUpgradeIT
 
     private static void checkLabelCounts( GraphDatabaseAPI db )
     {
-        try ( Transaction ignored = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
             HashMap<Label,Long> counts = new HashMap<>();
-            for ( Node node : db.getAllNodes() )
+            for ( Node node : transaction.getAllNodes() )
             {
                 for ( Label label : node.getLabels() )
                 {
@@ -560,10 +559,10 @@ public class StoreUpgradeIT
 
     private static void checkProvidedParameters( Store store, GraphDatabaseAPI db )
     {
-        try ( Transaction ignored = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // count nodes
-            long nodeCount = count( db.getAllNodes() );
+            long nodeCount = count( tx.getAllNodes() );
             assertThat( nodeCount, is( store.expectedNodeCount ) );
 
             // count indexes

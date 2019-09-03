@@ -170,9 +170,9 @@ public class DataGeneratorTestUtil
 
     private static int nodeCount( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return Iterables.count( db.getAllNodes() );
+            return Iterables.count( transaction.getAllNodes() );
         }
     }
 
@@ -200,7 +200,7 @@ public class DataGeneratorTestUtil
             Histogram outDegreeHistogram = new Histogram( new UniformReservoir() );
             Histogram degreeHistogram = new Histogram( new UniformReservoir() );
 
-            for ( Node node : db.getAllNodes() )
+            for ( Node node : transaction.getAllNodes() )
             {
                 inDegreeHistogram.update( node.getDegree( Direction.INCOMING ) );
                 outDegreeHistogram.update( node.getDegree( Direction.OUTGOING ) );
@@ -242,9 +242,9 @@ public class DataGeneratorTestUtil
 
     private static int nodePropertyCount( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return propertyCount( db.getAllNodes() );
+            return propertyCount( transaction.getAllNodes() );
         }
     }
 
@@ -295,9 +295,9 @@ public class DataGeneratorTestUtil
 
     private static List<ChainPosition> computeNodePropertyChainsStats( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            return computeChainsStats( db.getAllNodes(), PropertyContainer::getPropertyKeys );
+            return computeChainsStats( transaction.getAllNodes(), PropertyContainer::getPropertyKeys );
         }
     }
 
@@ -311,10 +311,10 @@ public class DataGeneratorTestUtil
 
     private static List<ChainPosition> computeRelationshipTypeChainsStats( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             return computeChainsStats(
-                    db.getAllNodes(),
+                    tx.getAllNodes(),
                     n -> StreamSupport
                             .stream( n.getRelationships( Direction.OUTGOING ).spliterator(), false )
                             .map( Relationship::getType )
@@ -325,10 +325,10 @@ public class DataGeneratorTestUtil
 
     public static List<ChainPosition> computeNodeLabelChainsStats( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             return computeChainsStats(
-                    db.getAllNodes(),
+                    tx.getAllNodes(),
                     // return list of label names
                     n -> StreamSupport
                             .stream( n.getLabels().spliterator(), false )
@@ -377,7 +377,7 @@ public class DataGeneratorTestUtil
             int total = 0;
             for ( String key : keys )
             {
-                int value = (keyCountMap.containsKey( key )) ? keyCountMap.get( key ) : 0;
+                int value = keyCountMap.getOrDefault( key, 0 );
                 min = Math.min( min, value );
                 max = Math.max( max, value );
                 total += value;

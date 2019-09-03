@@ -46,6 +46,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -719,7 +720,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.numNodes" )
         public Stream<CountResult> numNodes()
         {
-            Long nNodes = db.getAllNodes().stream().count();
+            Long nNodes = ((GraphDatabaseFacade) db).TEMP_TOP_LEVEL_TRANSACTION.get().getAllNodes().stream().count();
             return Stream.of( new CountResult( nNodes ) );
         }
 

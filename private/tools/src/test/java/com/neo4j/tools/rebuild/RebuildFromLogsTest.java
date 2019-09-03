@@ -184,7 +184,7 @@ class RebuildFromLogsTest
                     @Override
                     void applyTx( GraphDatabaseService graphDb, Transaction tx )
                     {
-                        firstNode( graphDb ).setProperty( name(), "value" );
+                        firstNode( tx ).setProperty( name(), "value" );
                     }
                 },
         CHANGE_PROPERTY( CREATE_NODE_WITH_PROPERTY )
@@ -192,7 +192,7 @@ class RebuildFromLogsTest
                     @Override
                     void applyTx( GraphDatabaseService graphDb, Transaction tx )
                     {
-                        ResourceIterable<Node> nodes = graphDb.getAllNodes();
+                        ResourceIterable<Node> nodes = tx.getAllNodes();
                         try ( ResourceIterator<Node> iterator = nodes.iterator() )
                         {
                             while ( iterator.hasNext() )
@@ -208,9 +208,9 @@ class RebuildFromLogsTest
                     }
                 };
 
-        private static Node firstNode( GraphDatabaseService graphDb )
+        private static Node firstNode( Transaction transaction )
         {
-            return Iterables.firstOrNull( graphDb.getAllNodes() );
+            return Iterables.firstOrNull( transaction.getAllNodes() );
         }
 
         private final Operation[] dependencies;

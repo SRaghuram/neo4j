@@ -163,9 +163,9 @@ class RestoreDatabaseCommandIT
                         .build();
         GraphDatabaseService copiedDb = managementService.database( DEFAULT_DATABASE_NAME );
 
-        try ( Transaction ignored = copiedDb.beginTx() )
+        try ( Transaction transaction = copiedDb.beginTx() )
         {
-            assertEquals( fromNodeCount, Iterables.count( copiedDb.getAllNodes() ) );
+            assertEquals( fromNodeCount, Iterables.count( transaction.getAllNodes() ) );
         }
 
         managementService.shutdown();

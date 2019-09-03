@@ -953,7 +953,7 @@ class BackupIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            for ( Node node : db.getAllNodes() )
+            for ( Node node : tx.getAllNodes() )
             {
                 long id = node.getId();
 

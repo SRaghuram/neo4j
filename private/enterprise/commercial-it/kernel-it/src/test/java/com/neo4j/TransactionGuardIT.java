@@ -373,16 +373,16 @@ class TransactionGuardIT
         }
 
         // Assert node successfully created
-        try ( Transaction ignored = database.beginTx() )
+        try ( Transaction tx = database.beginTx() )
         {
-            assertEquals( 1, database.getAllNodes().stream().count() );
+            assertEquals( 1, tx.getAllNodes().stream().count() );
         }
 
         // Reset timeout and cleanup
         try ( Transaction transaction = database.beginTx() )
         {
             database.execute( "CALL dbms.setConfigValue('" + transaction_timeout.name() + "', '" + DEFAULT_TIMEOUT + "')" );
-            try ( Stream<Node> stream = database.getAllNodes().stream() )
+            try ( Stream<Node> stream = transaction.getAllNodes().stream() )
             {
                 stream.findFirst().map( node ->
                 {
@@ -480,9 +480,9 @@ class TransactionGuardIT
 
     private static void assertDatabaseDoesNotHaveNodes( GraphDatabaseAPI database )
     {
-        try ( Transaction ignored = database.beginTx() )
+        try ( Transaction transaction = database.beginTx() )
         {
-            assertEquals( 0, database.getAllNodes().stream().count() );
+            assertEquals( 0, transaction.getAllNodes().stream().count() );
         }
     }
 

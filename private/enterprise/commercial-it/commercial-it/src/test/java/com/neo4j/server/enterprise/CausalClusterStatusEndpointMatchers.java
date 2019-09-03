@@ -181,12 +181,10 @@ class CausalClusterStatusEndpointMatchers
     static Long getNodeCount( Neo4j serverControls )
     {
         GraphDatabaseService db = serverControls.defaultDatabaseService();
-        long count;
-        try ( Transaction ignored = db.beginTx() )
+        try ( Transaction transaction = db.beginTx() )
         {
-            count = db.getAllNodes().stream().count();
+            return transaction.getAllNodes().stream().count();
         }
-        return count;
     }
 
     static <T> ThrowingSupplier<Collection<T>,RuntimeException> asCollection( ThrowingSupplier<T,RuntimeException> supplier )

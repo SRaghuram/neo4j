@@ -97,7 +97,7 @@ public class DataCreator
         long count;
         try ( Transaction tx = db.beginTx() )
         {
-            count = count( db.getAllNodes() );
+            count = count( tx.getAllNodes() );
             tx.commit();
         }
         return count;
