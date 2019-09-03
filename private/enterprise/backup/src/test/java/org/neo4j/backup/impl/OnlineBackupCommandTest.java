@@ -194,7 +194,7 @@ public class OnlineBackupCommandTest
                 "  --cc-indexes=<true|false>                Perform consistency checks on%n" +
                 "                                           indexes. [default:true]%n" +
                 "  --cc-index-structure=<true|false>        Perform structure checks on indexes.%n" +
-                "                                           [default:true]%n" +
+                "                                           [default:false]%n" +
                 "  --cc-label-scan-store=<true|false>       Perform consistency checks on the%n" +
                 "                                           label scan store. [default:true]%n" +
                 "  --cc-property-owners=<true|false>        Perform additional consistency checks%n" +

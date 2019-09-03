@@ -138,7 +138,7 @@ class OnlineBackupContextFactory
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_CHECK_INDEXES, true, ARG_DESC_CHECK_INDEXES ) )
                 .withArgument( new OptionalBooleanArg(
-                        ARG_NAME_CHECK_INDEX_STRUCTURE, true, ARG_DESC_CHECK_INDEX_STRUCTURE ) )
+                        ARG_NAME_CHECK_INDEX_STRUCTURE, false, ARG_DESC_CHECK_INDEX_STRUCTURE ) )
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_CHECK_LABELS, true, ARG_DESC_CHECK_LABELS ) )
                 .withArgument( new OptionalBooleanArg(
