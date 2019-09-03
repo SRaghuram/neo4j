@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileUtils;
 
 /**
  * This represents the base directory for cluster state and contains
@@ -125,10 +126,28 @@ public class ClusterStateDirectory
 
     public File get()
     {
+        assertInitialized();
+        return stateDir;
+    }
+
+    public boolean isEmpty() throws IOException
+    {
+        assertInitialized();
+        return FileUtils.isEmptyDirectory( stateDir );
+    }
+
+    public void clear( FileSystemAbstraction fs ) throws IOException, ClusterStateException
+    {
+        assertInitialized();
+        fs.deleteRecursively( stateDir );
+        ensureDirectoryExists( fs );
+    }
+
+    private void assertInitialized()
+    {
         if ( !initialized )
         {
             throw new IllegalStateException( "Cluster state has not been initialized" );
         }
-        return stateDir;
     }
 }
