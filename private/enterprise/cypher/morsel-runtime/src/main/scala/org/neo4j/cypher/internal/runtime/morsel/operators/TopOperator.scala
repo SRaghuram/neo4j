@@ -193,13 +193,14 @@ object TopOperator {
 
   case class ZeroTable(override val argumentRowId: Long,
                        override val argumentRowIdsForReducers: Array[Long]) extends TopTable {
+    // expected to be called by reduce task
     override protected def getTopRows: util.Iterator[MorselExecutionContext] = util.Collections.emptyIterator()
 
     override def update(data: MorselExecutionContext): Unit =
       error()
 
-    override def deallocateMemory(): Unit =
-      error()
+    // expected to be called by reduce task
+    override def deallocateMemory(): Unit = {}
 
     private def error() =
       throw new IllegalStateException("Top table method should never be called with LIMIT 0")
