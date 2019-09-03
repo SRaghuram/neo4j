@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration, Vari
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe.projectBackwards
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedPipeMapper}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, RelationshipContainer, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -128,13 +128,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
         if (entityIsNull(fromNode)) {
-          val resultRow = SlottedExecutionContext(slots)
-          resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
-          resultRow.setRefAt(relOffset, Values.NO_VALUE)
-          if (shouldExpandAll) {
-            resultRow.setLongAt(toOffset, -1L)
-          }
-          Iterator(resultRow)
+         Iterator.empty
         }
         else {
           // Ensure that the start-node also adheres to the node predicate
