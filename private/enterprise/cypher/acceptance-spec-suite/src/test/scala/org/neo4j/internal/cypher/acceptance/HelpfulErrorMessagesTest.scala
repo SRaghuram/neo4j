@@ -92,6 +92,11 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     failWithError(Configs.All, query, Seq("Extract is no longer supported. Please use list comprehension instead"))
   }
 
+  test("should provide sensible error message for old parameter syntax") {
+    val query = "RETURN {param} as parameter"
+    failWithError(Configs.All, query, Seq("The old parameter syntax `{param}` is no longer supported. Please use `$param` instead"))
+  }
+
   test("should give correct error message with invalid number literal in a subtract") {
     a[SyntaxException] shouldBe thrownBy {
       executeSingle("with [1a-1] as list return list", Map())
