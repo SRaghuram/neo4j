@@ -103,6 +103,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
         case CompiledByteCode => CypherRuntimeOption.compiled
         case CompiledSourceCode => CypherRuntimeOption.compiled
         case Morsel => CypherRuntimeOption.morsel
+        case Parallel => CypherRuntimeOption.parallel
         case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntime")
       }
 
