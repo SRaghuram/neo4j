@@ -6,28 +6,36 @@
 package org.neo4j.causalclustering.core.state;
 
 import java.io.IOException;
-import java.util.Collection;
 
-import org.neo4j.causalclustering.common.DatabaseService;
-import org.neo4j.causalclustering.common.LocalDatabase;
+import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.StoreLayout;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 public class ClusterStateCleaner extends LifecycleAdapter
 {
+    private final StoreFiles storeFiles;
+    private final StoreLayout storeLayout;
     private final ClusterStateDirectory clusterStateDirectory;
-    private final Collection<? extends LocalDatabase> dbs;
     private final FileSystemAbstraction fs;
     private final Log log;
+    private final Config config;
 
-    ClusterStateCleaner( DatabaseService databaseService, CoreStateStorageService coreStateStorageService, FileSystemAbstraction fs, LogProvider logProvider )
+    ClusterStateCleaner( StoreFiles storeFiles, StoreLayout storeLayout, CoreStateStorageService coreStateStorageService, FileSystemAbstraction fs,
+            LogProvider logProvider, Config config )
     {
-        this.dbs = databaseService.registeredDatabases().values();
+        this.storeFiles = storeFiles;
+        this.storeLayout = storeLayout;
         this.clusterStateDirectory = coreStateStorageService.clusterStateDirectory();
         this.fs = fs;
         this.log = logProvider.getLog( getClass() );
+        this.config = config;
     }
 
     @Override
@@ -44,11 +52,18 @@ public class ClusterStateCleaner extends LifecycleAdapter
 
     public boolean stateUnclean() throws IOException
     {
-        boolean anyEmpty = dbs.isEmpty();
-        for ( LocalDatabase db : dbs )
+        boolean anyEmpty = false;
+        if ( SecuritySettings.isSystemDatabaseEnabled( config ) )
         {
-            anyEmpty = anyEmpty || db.isEmpty();
+            anyEmpty = dbIsEmpty( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         }
+        anyEmpty = anyEmpty || dbIsEmpty( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         return anyEmpty && !clusterStateDirectory.isEmpty();
+    }
+
+    private boolean dbIsEmpty( String databaseName ) throws IOException
+    {
+        DatabaseLayout dbLayout = storeLayout.databaseLayout( databaseName );
+        return storeFiles.isEmpty( dbLayout.databaseDirectory(), dbLayout.storeFiles() );
     }
 }

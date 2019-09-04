@@ -108,6 +108,7 @@ public abstract class BaseClusterOverviewIT
         // when
         Cluster<?> cluster = clusterRule.startCluster();
         cluster.shutdownCoreMembers();
+        cluster.coreMembers().forEach( m -> System.out.println( String.format( "Core Member: %s", m.databaseDirectory() ) ) );
         cluster.startCoreMembers();
 
         Matcher<List<MemberInfo>> expected = allOf(

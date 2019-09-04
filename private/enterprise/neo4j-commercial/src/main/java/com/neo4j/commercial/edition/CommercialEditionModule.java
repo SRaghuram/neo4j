@@ -34,9 +34,8 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.isSystemDatabaseEnabled;
 import static java.lang.String.format;
 
 public class CommercialEditionModule extends EnterpriseEditionModule

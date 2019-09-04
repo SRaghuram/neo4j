@@ -5,16 +5,23 @@
  */
 package org.neo4j.causalclustering.core.state;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.io.File;
 
-import org.neo4j.causalclustering.common.StubLocalDatabase;
-import org.neo4j.causalclustering.common.StubLocalDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.StoreLayout;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.rule.fs.FileSystemRule;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,38 +29,37 @@ import static org.mockito.Mockito.when;
 
 public class ClusterStateCleanerTest
 {
+    private static final FileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    private static final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemRule );
+
+    @Rule
+    public final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( testDirectory );
 
     @Test
     public void shouldDeleteClusterStateInTheEventOfAnyEmptyDatabase() throws Throwable
     {
         // given
-        StubLocalDatabaseService dbService = new StubLocalDatabaseService();
 
-        dbService.givenDatabaseWithConfig()
-                .withDatabaseName( GraphDatabaseSettings.SYSTEM_DATABASE_NAME )
-                .withEmptyStore( false )
-                .register();
-
-        dbService.givenDatabaseWithConfig()
-                .withDatabaseName( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
-                .withEmptyStore( true )
-                .register();
-
+        // a mock core state storage service which returns a non-empty cluster state directory
         CoreStateStorageService storageService = mock( CoreStateStorageService.class );
         ClusterStateDirectory clusterStateDirectory = mock( ClusterStateDirectory.class );
         when( storageService.clusterStateDirectory() ).thenReturn( clusterStateDirectory );
         when( clusterStateDirectory.isEmpty() ).thenReturn( false );
         File stateDir = mock( File.class );
         when( clusterStateDirectory.get() ).thenReturn( stateDir );
-        FileSystemAbstraction fs = mock( FileSystemAbstraction.class );
 
-        ClusterStateCleaner clusterStateCleaner = new ClusterStateCleaner( dbService, storageService, fs, NullLogProvider.getInstance() );
+        // and a store layout / store files which report empty databases
+        StoreLayout storeLayout = testDirectory.storeLayout();
+        FileSystemAbstraction fs = fileSystemRule.get();
+        StoreFiles storeFiles = mock( StoreFiles.class );
+        when( storeFiles.isEmpty( any( File.class ), anyCollection() ) ).thenReturn( true ).thenReturn( false );
+
+        ClusterStateCleaner clusterStateCleaner = new ClusterStateCleaner( storeFiles, storeLayout, storageService, fs,
+                NullLogProvider.getInstance(), Config.defaults() );
 
         // when
         clusterStateCleaner.init();
         // Init again and make sure that when a database is *not* empty that the cluster state does *not* get cleared.
-        StubLocalDatabase db = (StubLocalDatabase) dbService.get( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).orElseThrow( IllegalStateException::new );
-        db.setEmpty( false );
         clusterStateCleaner.init();
 
         // then

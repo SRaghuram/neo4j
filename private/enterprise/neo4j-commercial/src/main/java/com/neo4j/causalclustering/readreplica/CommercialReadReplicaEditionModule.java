@@ -42,7 +42,7 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.isSystemDatabaseEnabled;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services

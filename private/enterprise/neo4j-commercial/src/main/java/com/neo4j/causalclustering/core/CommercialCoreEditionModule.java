@@ -18,7 +18,6 @@ import java.time.Clock;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
-import org.neo4j.causalclustering.core.MemberIdRepository;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.CoreStateStorageService;
@@ -44,7 +43,7 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
+import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.isSystemDatabaseEnabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
 

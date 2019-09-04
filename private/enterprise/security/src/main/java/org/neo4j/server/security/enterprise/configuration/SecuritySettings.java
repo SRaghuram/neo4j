@@ -9,6 +9,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
@@ -16,6 +17,7 @@ import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.configuration.Secret;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Level;
 
 import static org.neo4j.kernel.configuration.Settings.BOOLEAN;
@@ -367,4 +369,15 @@ public class SecuritySettings implements LoadableConfig
     @Deprecated
     public static final Setting<String> property_level_authorization_permissions =
             setting( "dbms.security.property_level.blacklist", STRING, NO_DEFAULT );
+
+    // Helpers
+    public static boolean isSystemDatabaseEnabled( Config config )
+    {
+        return containsSystemGraphRealm().apply( config.get( auth_providers ) );
+    }
+
+    private static Function<List<String>,Boolean> containsSystemGraphRealm()
+    {
+        return providers -> providers.contains( SYSTEM_GRAPH_REALM_NAME );
+    }
 }

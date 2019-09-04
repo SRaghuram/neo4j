@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -58,7 +59,9 @@ public class ClusteringModule
         FileSystemAbstraction fileSystem = platformModule.fileSystem;
         RemoteMembersResolver remoteMembersResolver = chooseResolver( config, platformModule.logging );
 
-        ClusterStateCleaner clusterStateCleaner = new ClusterStateCleaner( databaseService, coreStateStorage, fileSystem, logProvider );
+        StoreFiles storeFiles = new StoreFiles( fileSystem, platformModule.pageCache );
+        ClusterStateCleaner clusterStateCleaner = new ClusterStateCleaner( storeFiles, platformModule.storeLayout,
+                coreStateStorage, fileSystem, logProvider, config );
         memberIdRepository = new MemberIdRepository( platformModule, coreStateStorage, clusterStateCleaner );
         topologyService = discoveryServiceFactory.coreTopologyService( config, memberIdRepository.myself(), platformModule.jobScheduler,
                 logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( config ), monitors, platformModule.clock );
