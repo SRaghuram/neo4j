@@ -219,9 +219,9 @@ class OnlineBackupIT
 
     private void writeRandomData()
     {
-        Label label = label( random.nextAsciiString() );
-        String property = random.nextAsciiString();
-        RelationshipType relType = RelationshipType.withName( random.nextAsciiString() );
+        Label label = label( random.nextAlphaNumericString() );
+        String property = random.nextAlphaNumericString();
+        RelationshipType relType = RelationshipType.withName( random.nextAlphaNumericString() );
 
         try ( Transaction tx = db.beginTx() )
         {
