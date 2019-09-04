@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.infra.aws;
 
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -14,6 +15,10 @@ import com.amazonaws.services.batch.model.DescribeJobsRequest;
 import com.amazonaws.services.batch.model.JobDetail;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
+import com.amazonaws.services.cloudformation.model.Output;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
@@ -40,12 +45,13 @@ public class AWSBatchJobScheduler implements JobScheduler
     {
         Objects.requireNonNull( awsKey );
         Objects.requireNonNull( awsSecret );
-        AWSCredentialsProvider credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) );
+        BasicAWSCredentials credentials = new BasicAWSCredentials( awsKey, awsSecret );
+        AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider( credentials );
         return new AWSBatchJobScheduler( AWSBatchClientBuilder.standard()
-                                                              .withCredentials( credentials )
+                                                              .withCredentials( credentialsProvider )
                                                               .withRegion( region )
                                                               .build(),
-                                         jobQueue,
+                                         getJobQueueCustomName( jobQueue, credentials, region ),
                                          jobDefinition );
     }
 
@@ -58,6 +64,18 @@ public class AWSBatchJobScheduler implements JobScheduler
         this.awsBatch = awsBatch;
         this.jobQueue = jobQueue;
         this.jobDefinition = jobDefinition;
+    }
+
+    private static String getJobQueueCustomName( String jobQueue, AWSCredentials credentialsProvider, String region )
+    {
+        AmazonCloudFormationClientBuilder amazonCloudFormationClientBuilder = AmazonCloudFormationClientBuilder.standard();
+        AmazonCloudFormation amazonCloudFormation = amazonCloudFormationClientBuilder
+                .withCredentials( new AWSStaticCredentialsProvider( credentialsProvider ) )
+                .withRegion( region )
+                .build();
+        return amazonCloudFormation.describeStacks( new DescribeStacksRequest().withStackName( "benchmarking" ) ).getStacks().stream().flatMap(
+                stack -> stack.getOutputs().stream() ).filter( output -> output.getOutputKey().equals( jobQueue ) ).map(
+                Output::getOutputValue ).findFirst().get();
     }
 
     @Override
