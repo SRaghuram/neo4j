@@ -15,15 +15,13 @@ import java.nio.file.Path;
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
+import org.neo4j.commandline.Util;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.consistency.ConsistencyCheckOptions;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
-import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.logging.Level;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_HOST;
@@ -106,8 +104,8 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
                 .build();
 
-        final var userLogProvider = FormattedLogProvider.toOutputStream( ctx.out() );
-        final var internalLogProvider = buildInternalLogProvider();
+        final var userLogProvider = Util.logProviderRespectingConfig( config, ctx.out() );
+        final var internalLogProvider = verbose ? Util.logProviderRespectingConfig( config, ctx.out() ) : NullLogProvider.getInstance();
         final var backupExecutor = OnlineBackupExecutor.builder()
                 .withFileSystem( ctx.fs() )
                 .withInternalLogProvider( internalLogProvider )
@@ -159,12 +157,4 @@ public class OnlineBackupCommand extends AbstractCommand
         return cfg;
     }
 
-    private LogProvider buildInternalLogProvider()
-    {
-        if ( verbose )
-        {
-            return FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( ctx.out() );
-        }
-        return NullLogProvider.getInstance();
-    }
 }
