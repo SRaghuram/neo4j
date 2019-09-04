@@ -109,7 +109,7 @@
                                         <transformer
                                                 implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                             <resource>
-                                                META-INF/services/org.neo4j.commandline.admin.AdminCommand$Provider
+                                                META-INF/services/org.neo4j.cli.CommandProvider
                                             </resource>
                                         </transformer>
                                         <transformer
