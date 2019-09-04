@@ -23,8 +23,8 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpression
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.security.SecurityContext
+import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
@@ -83,6 +83,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     val morselSize = selectMorselSize(query, context)
 
+    val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
     MorselExecutionPlan(executablePipelines,
                         executionGraphDefinition,
                         queryIndexRegistrator.result(),
@@ -93,7 +94,8 @@ class MorselRuntime(parallelExecution: Boolean,
                         executor,
                         context.runtimeEnvironment.tracer,
                         morselSize,
-                        context.config.memoryTrackingController)
+                        context.config.memoryTrackingController,
+                        maybeThreadSafeCursors)
   }
 
   private def selectMorselSize(query: LogicalQuery,
@@ -113,7 +115,8 @@ class MorselRuntime(parallelExecution: Boolean,
                                  queryExecutor: QueryExecutor,
                                  schedulerTracer: SchedulerTracer,
                                  morselSize: Int,
-                                 memoryTrackingController: MemoryTrackingController) extends ExecutionPlan {
+                                 memoryTrackingController: MemoryTrackingController,
+                                 maybeThreadSafeCursors: Option[CursorFactory]) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -149,6 +152,9 @@ class MorselRuntime(parallelExecution: Boolean,
         Set(ExperimentalFeatureNotification(
           "The parallel runtime is experimental and might suffer from instability and potentially correctness issues."))
       else Set.empty
+
+    override def threadSafeCursorFactory(debugOptions: Set[String]): Option[CursorFactory] =
+      if (MorselOptions.singleThreaded(debugOptions)) None else maybeThreadSafeCursors
   }
 
   class MorselRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
