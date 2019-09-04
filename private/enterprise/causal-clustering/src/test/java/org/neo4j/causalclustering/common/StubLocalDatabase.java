@@ -31,17 +31,18 @@ public class StubLocalDatabase extends AbstractLocalDatabase
     StubLocalDatabase( String databaseName, DataSourceManager dataSourceManager, DatabaseLayout databaseLayout, LogFiles ignoredTxLogs,
             StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable, JobScheduler jobScheduler )
     {
-        this( databaseName, dataSourceManager, databaseLayout, logProvider, isAvailable, null, jobScheduler );
+        this( databaseName, dataSourceManager, databaseLayout, logProvider, isAvailable, null, jobScheduler, false );
     }
 
     StubLocalDatabase( String databaseName, DataSourceManager dataSourceManager, DatabaseLayout databaseLayout, LogProvider logProvider,
-            BooleanSupplier isAvailable, Monitors monitors, JobScheduler jobScheduler )
+            BooleanSupplier isAvailable, Monitors monitors, JobScheduler jobScheduler, boolean isEmpty )
     {
         super( databaseName, dataSourceManager, databaseLayout, null, null, logProvider, isAvailable, jobScheduler );
 
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextInt(), rng.nextInt(), rng.nextInt(), rng.nextInt() );
         this.monitors = monitors;
+        this.isEmpty = isEmpty;
     }
 
     @Override

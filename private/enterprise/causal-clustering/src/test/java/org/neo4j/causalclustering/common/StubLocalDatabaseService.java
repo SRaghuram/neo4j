@@ -123,7 +123,7 @@ public class StubLocalDatabaseService implements DatabaseService
     private LocalDatabase stubDatabaseFromConfig( LocalDatabaseConfig config )
     {
         return new StubLocalDatabase( config.databaseName, config.dataSourceManager, config.databaseLayout,
-                config.logProvider, config.isAvailable, config.monitors, config.jobScheduler );
+                config.logProvider, config.isAvailable, config.monitors, config.jobScheduler, config.isEmpty );
     }
 
     public class LocalDatabaseConfig
@@ -136,6 +136,7 @@ public class StubLocalDatabaseService implements DatabaseService
         private Monitors monitors;
         private Dependencies dependencies;
         private JobScheduler jobScheduler = new FakeJobScheduler();
+        private boolean isEmpty;
 
         private LocalDatabaseConfig()
         {
@@ -186,6 +187,12 @@ public class StubLocalDatabaseService implements DatabaseService
         public LocalDatabaseConfig withDependencies( Dependencies dependencies )
         {
             this.dependencies = dependencies;
+            return this;
+        }
+
+        public LocalDatabaseConfig withEmptyStore( boolean isEmpty )
+        {
+            this.isEmpty = isEmpty;
             return this;
         }
 

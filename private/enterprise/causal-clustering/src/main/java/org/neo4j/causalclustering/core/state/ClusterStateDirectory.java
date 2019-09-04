@@ -7,8 +7,11 @@ package org.neo4j.causalclustering.core.state;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.stream.Stream;
 
+import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileUtils;
 
 import static java.lang.String.format;
 
@@ -141,11 +144,31 @@ public class ClusterStateDirectory
     }
 
     public File get()
+    {   assertInitialized();
+        return rootStateDir;
+    }
+
+    public boolean isEmpty() throws IOException
+    {
+        assertInitialized();
+        try ( Stream<FileHandle> files = fileSystem.streamFilesRecursive( rootStateDir ) )
+        {
+            return !files.findFirst().isPresent();
+        }
+    }
+
+    public void clear( FileSystemAbstraction fs ) throws IOException, ClusterStateException
+    {
+        assertInitialized();
+        fs.deleteRecursively( rootStateDir );
+        ensureDirectoryExists( rootStateDir );
+    }
+
+    private void assertInitialized()
     {
         if ( !initialized )
         {
             throw new IllegalStateException( "Cluster state has not been initialized" );
         }
-        return rootStateDir;
     }
 }

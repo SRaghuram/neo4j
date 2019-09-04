@@ -5,15 +5,15 @@
  */
 package org.neo4j.causalclustering.core.state;
 
-import java.io.File;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.causalclustering.core.MemberIdRepository;
 import org.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -23,12 +23,9 @@ import org.neo4j.causalclustering.helper.TemporaryDatabase;
 import org.neo4j.causalclustering.identity.ClusterBinder;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.DatabaseName;
-import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -46,8 +43,9 @@ public class ClusteringModule
 {
     private final CoreTopologyService topologyService;
     private final ClusterBinder clusterBinder;
+    private final MemberIdRepository memberIdRepository;
 
-    public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, PlatformModule platformModule,
+    public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, PlatformModule platformModule,
             CoreStateStorageService coreStateStorage, DatabaseService databaseService, Function<String,DatabaseInitializer> databaseInitializers,
             AvailabilityGuard availabilityGuard )
     {
@@ -60,9 +58,14 @@ public class ClusteringModule
         FileSystemAbstraction fileSystem = platformModule.fileSystem;
         RemoteMembersResolver remoteMembersResolver = chooseResolver( config, platformModule.logging );
 
-        topologyService = discoveryServiceFactory.coreTopologyService( config, myself, platformModule.jobScheduler,
+        ClusterStateCleaner clusterStateCleaner = new ClusterStateCleaner( databaseService, coreStateStorage, fileSystem, logProvider );
+        memberIdRepository = new MemberIdRepository( platformModule, coreStateStorage, clusterStateCleaner );
+        topologyService = discoveryServiceFactory.coreTopologyService( config, memberIdRepository.myself(), platformModule.jobScheduler,
                 logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( config ), monitors, platformModule.clock );
 
+        //Order matters!
+        life.add( clusterStateCleaner );
+        life.add( memberIdRepository );
         life.add( topologyService );
 
         dependencies.satisfyDependency( topologyService ); // for tests
@@ -109,5 +112,10 @@ public class ClusteringModule
     public ClusterBinder clusterBinder()
     {
         return clusterBinder;
+    }
+
+    public MemberIdRepository memberIdRepository()
+    {
+        return memberIdRepository;
     }
 }

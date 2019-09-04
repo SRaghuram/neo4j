@@ -14,7 +14,7 @@ import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.catchup.CatchupServersModule;
 import org.neo4j.causalclustering.common.PipelineBuilders;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.IdentityModule;
+import org.neo4j.causalclustering.core.MemberIdRepository;
 import org.neo4j.causalclustering.core.consensus.ConsensusModule;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
@@ -47,7 +47,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class CoreServerModule extends CatchupServersModule
 {
     public final MembershipWaiterLifecycle membershipWaiterLifecycle;
-    private final IdentityModule identityModule;
+    private final MemberIdRepository memberIdRepository;
     private final ConsensusModule consensusModule;
     private final ClusteringModule clusteringModule;
     private final Supplier<DatabaseHealth> dbHealthSupplier;
@@ -57,13 +57,13 @@ public class CoreServerModule extends CatchupServersModule
     private final JobScheduler jobScheduler;
     private final PlatformModule platformModule;
 
-    public CoreServerModule( IdentityModule identityModule, final PlatformModule platformModule, ConsensusModule consensusModule,
+    public CoreServerModule( MemberIdRepository memberIdRepository, final PlatformModule platformModule, ConsensusModule consensusModule,
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule, DatabaseService databaseService,
             Supplier<DatabaseHealth> dbHealthSupplier, PipelineBuilders pipelineBuilders, InstalledProtocolHandler installedProtocolsHandler,
             CatchupHandlerFactory handlerFactory, String activeDatabaseName )
     {
         super( databaseService, pipelineBuilders, platformModule );
-        this.identityModule = identityModule;
+        this.memberIdRepository = memberIdRepository;
         this.consensusModule = consensusModule;
         this.clusteringModule = clusteringModule;
         this.dbHealthSupplier = dbHealthSupplier;
@@ -117,7 +117,7 @@ public class CoreServerModule extends CatchupServersModule
     private MembershipWaiterLifecycle createMembershipWaiterLifecycle()
     {
         long electionTimeout = config.get( CausalClusteringSettings.leader_election_timeout ).toMillis();
-        MembershipWaiter membershipWaiter = new MembershipWaiter( identityModule.myself(), jobScheduler,
+        MembershipWaiter membershipWaiter = new MembershipWaiter( memberIdRepository.myself(), jobScheduler,
                 dbHealthSupplier, electionTimeout * 4, logProvider, platformModule.monitors );
         long joinCatchupTimeout = config.get( CausalClusteringSettings.join_catch_up_timeout ).toMillis();
         return new MembershipWaiterLifecycle( membershipWaiter, joinCatchupTimeout, consensusModule.raftMachine(), logProvider );

@@ -228,15 +228,15 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
                 createFileSystemWatcherService( fileSystem, directory, logging, platformModule.jobScheduler, config, fileWatcherFileNameFilter() );
         dependencies.satisfyDependencies( watcherServiceFactory );
 
-        IdentityModule identityModule = new IdentityModule( platformModule, storage );
-
         //Build local databases object
         final Supplier<DatabaseHealth> databaseHealthSupplier =
                 () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class, ONLY );
 
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule, logProvider, config );
 
-        ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory, storage, identityModule, dependencies );
+        ClusteringModule clusteringModule = getClusteringModule( platformModule, discoveryServiceFactory, storage, dependencies );
+
+        MemberIdRepository memberIdRepository =  clusteringModule.memberIdRepository();
 
         // We need to satisfy the dependency here to keep users of it, such as BoltKernelExtension, happy.
         dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
@@ -268,23 +268,23 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         life.add( raftSender );
         this.clientInstalledProtocols = raftSender::installedProtocols;
 
-        final MessageLogger<MemberId> messageLogger = createMessageLogger( config, life, identityModule.myself() );
+        final MessageLogger<MemberId> messageLogger = createMessageLogger( config, life, memberIdRepository.myself() );
 
         RaftOutbound raftOutbound = new RaftOutbound( topologyService, raftSender, clusteringModule.clusterIdentity(), logProvider, logThresholdMillis );
-        Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
+        Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, memberIdRepository.myself(), messageLogger );
 
-        consensusModule = new ConsensusModule( identityModule.myself(), platformModule,
+        consensusModule = new ConsensusModule( memberIdRepository.myself(), platformModule,
                 loggingOutbound, clusterStateDirectory.get(), topologyService, storage, activeDatabaseName );
 
         dependencies.satisfyDependency( consensusModule.raftMachine() );
-        replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), platformModule, config,
+        replicationModule = new ReplicationModule( consensusModule.raftMachine(), memberIdRepository.myself(), platformModule, config,
                 loggingOutbound, storage, logProvider, globalGuard, databaseService );
 
         StateStorage<Long> lastFlushedStorage = storage.stateStorage( LAST_FLUSHED );
 
         consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStorage::getInitialState );
 
-        coreStateService = new CoreStateService( identityModule.myself(), platformModule, storage, config,
+        coreStateService = new CoreStateService( memberIdRepository.myself(), platformModule, storage, config,
                 consensusModule.raftMachine(), databaseService, replicationModule, lastFlushedStorage );
 
         this.accessCapability = new LeaderCanWrite( consensusModule.raftMachine() );
@@ -293,19 +293,19 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
 
         CatchupHandlerFactory handlerFactory = snapshotService -> getHandlerFactory( platformModule, fileSystem, snapshotService );
 
-        this.coreServerModule = new CoreServerModule( identityModule, platformModule, consensusModule, coreStateService, clusteringModule,
+        this.coreServerModule = new CoreServerModule( memberIdRepository, platformModule, consensusModule, coreStateService, clusteringModule,
                 replicationModule, databaseService, databaseHealthSupplier, pipelineBuilders, serverInstalledProtocolHandler,
                 handlerFactory, activeDatabaseName );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
-        defaultStrategy.inject( topologyService, config, logProvider, identityModule.myself() );
+        defaultStrategy.inject( topologyService, config, logProvider, memberIdRepository.myself() );
         UpstreamDatabaseStrategySelector catchupStrategySelector =
-                createUpstreamDatabaseStrategySelector( identityModule.myself(), config, logProvider, topologyService, defaultStrategy );
+                createUpstreamDatabaseStrategySelector( memberIdRepository.myself(), config, logProvider, topologyService, defaultStrategy );
 
         CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider =
                 new CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
                         catchupStrategySelector );
-        RaftServerModule.createAndStart( platformModule, consensusModule, identityModule, coreServerModule, databaseService, pipelineBuilders.server(),
+        RaftServerModule.createAndStart( platformModule, consensusModule, memberIdRepository, coreServerModule, databaseService, pipelineBuilders.server(),
                 messageLogger, catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, activeDatabaseName );
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
@@ -364,9 +364,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     }
 
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
+            CoreStateStorageService storage, Dependencies dependencies )
     {
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService,
+        return new ClusteringModule( discoveryServiceFactory, platformModule, storage, databaseService,
                 databaseInitializerMap::get, globalAvailabilityGuard );
     }
 

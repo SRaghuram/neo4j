@@ -58,7 +58,7 @@ public class RaftServerModule
 
     private final PlatformModule platformModule;
     private final ConsensusModule consensusModule;
-    private final IdentityModule identityModule;
+    private final MemberIdRepository memberIdRepository;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
     private final DatabaseService databaseService;
     private final MessageLogger<MemberId> messageLogger;
@@ -67,15 +67,15 @@ public class RaftServerModule
     private CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
-    private RaftServerModule( PlatformModule platformModule, ConsensusModule consensusModule, IdentityModule identityModule, CoreServerModule coreServerModule,
-            DatabaseService databaseService, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
-            CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider,
+    private RaftServerModule( PlatformModule platformModule, ConsensusModule consensusModule, MemberIdRepository memberIdRepository,
+            CoreServerModule coreServerModule, DatabaseService databaseService, NettyPipelineBuilderFactory pipelineBuilderFactory,
+            MessageLogger<MemberId> messageLogger, CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider,
             ApplicationSupportedProtocols supportedApplicationProtocol, Collection<ModifierSupportedProtocols> supportedModifierProtocols,
             ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName )
     {
         this.platformModule = platformModule;
         this.consensusModule = consensusModule;
-        this.identityModule = identityModule;
+        this.memberIdRepository = memberIdRepository;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.databaseService = databaseService;
         this.messageLogger = messageLogger;
@@ -89,14 +89,14 @@ public class RaftServerModule
         createRaftServer( coreServerModule, messageHandlerChain, installedProtocolsHandler, activeDatabaseName );
     }
 
-    static void createAndStart( PlatformModule platformModule, ConsensusModule consensusModule, IdentityModule identityModule,
+    static void createAndStart( PlatformModule platformModule, ConsensusModule consensusModule, MemberIdRepository memberIdRepository,
             CoreServerModule coreServerModule, DatabaseService databaseService, NettyPipelineBuilderFactory pipelineBuilderFactory,
             MessageLogger<MemberId> messageLogger, CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider addressProvider,
             ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, ChannelInboundHandler installedProtocolsHandler,
             String activeDatabaseName )
     {
-        new RaftServerModule( platformModule, consensusModule, identityModule, coreServerModule, databaseService, pipelineBuilderFactory, messageLogger,
+        new RaftServerModule( platformModule, consensusModule, memberIdRepository, coreServerModule, databaseService, pipelineBuilderFactory, messageLogger,
                         addressProvider, supportedApplicationProtocol, supportedModifierProtocols, installedProtocolsHandler, activeDatabaseName );
     }
 
@@ -127,7 +127,7 @@ public class RaftServerModule
         platformModule.dependencies.satisfyDependency( raftServer ); // resolved in tests
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
-                new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );
+                new LoggingInbound<>( nettyHandler, messageLogger, memberIdRepository.myself() );
         loggingRaftInbound.registerHandler( messageHandlerChain );
 
         RecoveryRequiredChecker recoveryChecker = new RecoveryRequiredChecker( platformModule.fileSystem, platformModule.pageCache,

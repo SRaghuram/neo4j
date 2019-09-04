@@ -18,7 +18,7 @@ import java.time.Clock;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.EnterpriseCoreEditionModule;
-import org.neo4j.causalclustering.core.IdentityModule;
+import org.neo4j.causalclustering.core.MemberIdRepository;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.CoreStateStorageService;
@@ -72,7 +72,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 
     @Override
     protected ClusteringModule getClusteringModule( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
+            CoreStateStorageService storage, Dependencies dependencies )
     {
         SslPolicyLoader sslPolicyFactory = dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
         SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
@@ -82,7 +82,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService,
+        return new ClusteringModule( discoveryServiceFactory, platformModule, storage, databaseService,
                 dbName -> databaseInitializerMap.getOrDefault( dbName, NO_INITIALIZATION ), globalAvailabilityGuard );
     }
 

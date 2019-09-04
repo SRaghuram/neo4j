@@ -147,4 +147,9 @@ public class CoreStateStorageService
             }
         }
     }
+
+    ClusterStateDirectory clusterStateDirectory()
+    {
+        return clusterStateDirectory;
+    }
 }
