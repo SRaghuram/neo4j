@@ -119,9 +119,11 @@ object StaticEvaluation {
 
     override def getOrCreatePropertyKeyIds(propertyKeys: Array[String]): Array[Int] = notAvailable()
 
-    override def addIndexRule(labelId: Int, propertyKeyIds: Seq[Int]): IdempotentResult[IndexDescriptor] = notAvailable()
+    override def addIndexRule(labelId: Int, propertyKeyIds: Seq[Int], name: Option[String]): IdempotentResult[IndexDescriptor] = notAvailable()
 
     override def dropIndexRule(labelId: Int, propertyKeyIds: Seq[Int]): Unit = notAvailable()
+
+    override def dropIndexRule(name: String): Unit = notAvailable()
 
     override def indexReference(label: Int, properties: Int*): IndexDescriptor = notAvailable()
 

@@ -370,6 +370,25 @@ class ExecutionResultTest
             assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
             assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
             assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "IndexName" ), equalTo( null ) );
+            transaction.commit();
+        }
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = transaction.execute( "EXPLAIN CREATE INDEX my_index ON :L(prop)" );
+
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "IndexName" ), equalTo( "my_index" ) );
             transaction.commit();
         }
     }
