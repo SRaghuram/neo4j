@@ -72,7 +72,7 @@ class CommercialGlobalTransactionStatsIT
             startSeparateTransaction.await();
             assertEquals( 1, globalTransactionStats.getNumberOfActiveTransactions() );
 
-            try ( Transaction ignored = database.beginTx() )
+            try ( Transaction tx = database.beginTx() )
             {
                 TransactionCounters databaseStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( TransactionCounters.class );
                 assertEquals( 2, globalTransactionStats.getNumberOfActiveTransactions() );

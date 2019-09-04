@@ -100,7 +100,7 @@ public class ReadById extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public Node randomNodeById( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) );
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) );
     }
 
     @Benchmark

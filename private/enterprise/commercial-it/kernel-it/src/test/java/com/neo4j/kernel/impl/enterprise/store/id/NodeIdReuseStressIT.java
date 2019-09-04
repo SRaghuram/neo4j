@@ -169,7 +169,7 @@ class NodeIdReuseStressIT
 
                     try ( Transaction tx = db.beginTx() )
                     {
-                        db.getNodeById( id ).delete();
+                        tx.getNodeById( id ).delete();
                         tx.commit();
                     }
                     catch ( NotFoundException ignore )

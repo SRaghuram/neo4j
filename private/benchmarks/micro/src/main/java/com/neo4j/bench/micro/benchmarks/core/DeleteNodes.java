@@ -123,6 +123,6 @@ public class DeleteNodes extends AbstractCoreBenchmark
     public void deleteNode( TxState txState, RNGState rngState )
     {
         txState.advance( rngState.rng );
-        db().getNodeById( txState.nodeId() ).delete();
+        txState.txBatch.transaction().getNodeById( txState.nodeId() ).delete();
     }
 }

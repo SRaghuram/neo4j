@@ -174,7 +174,7 @@ public class ConcurrentReadWriteLabelsV2 extends AbstractCoreBenchmark
             do
             {
                 txBatch.advance();
-                Node node = db.getNodeById( nodeId( rng ) );
+                Node node = txBatch.transaction().getNodeById( nodeId( rng ) );
                 node.addLabel( createLabel() );
                 node.removeLabel( deleteLabel() );
                 updateLabels();
@@ -281,7 +281,7 @@ public class ConcurrentReadWriteLabelsV2 extends AbstractCoreBenchmark
     {
         writeTxState.throttler.waitForNext();
         writeTxState.advance();
-        Node node = db().getNodeById( writeTxState.nodeId( rngState.rng ) );
+        Node node = writeTxState.txBatch.transaction().getNodeById( writeTxState.nodeId( rngState.rng ) );
         node.addLabel( writeTxState.createLabel() );
         node.removeLabel( writeTxState.deleteLabel() );
     }

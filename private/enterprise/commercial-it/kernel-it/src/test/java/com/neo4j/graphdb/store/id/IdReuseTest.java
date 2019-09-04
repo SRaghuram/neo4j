@@ -103,8 +103,8 @@ class IdReuseTest
         long reusedRelationshipId;
         try ( Transaction tx = db.beginTx() )
         {
-            node1 = db.getNodeById( node1.getId() );
-            node2 = db.getNodeById( node2.getId() );
+            node1 = tx.getNodeById( node1.getId() );
+            node2 = tx.getNodeById( node2.getId() );
             reusedRelationshipId = node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) ).getId();
 
             tx.commit();

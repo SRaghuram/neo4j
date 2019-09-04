@@ -93,7 +93,7 @@ public class TestProcedure
     @Description( "org.neo4j.findNodesWithLabel" )
     public Stream<NodeResult> findNodesWithLabel( @Name( "label" ) String label )
     {
-        ResourceIterator<Node> nodes = ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( label ) );
+        ResourceIterator<Node> nodes = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( label ) );
         return nodes.stream().map( NodeResult::new );
     }
 
@@ -101,7 +101,7 @@ public class TestProcedure
     @Description( "org.neo4j.expandNode" )
     public Stream<NodeResult> expandNode( @Name( "nodeId" ) Long nodeId )
     {
-        Node node = db.getNodeById( nodeId );
+        Node node = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().getNodeById( nodeId );
         List<Node> result = new ArrayList<>();
         for ( Relationship r : node.getRelationships() )
         {

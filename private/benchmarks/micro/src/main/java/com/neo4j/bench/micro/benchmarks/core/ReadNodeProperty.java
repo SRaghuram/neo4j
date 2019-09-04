@@ -130,14 +130,14 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public Object sameNodeGetProperty( TxState txState )
     {
-        return db().getNodeById( 1 ).getProperty( txState.propertyKey );
+        return txState.tx.getNodeById( 1 ).getProperty( txState.propertyKey );
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public boolean sameNodeHasProperty( TxState txState )
     {
-        return db().getNodeById( 1 ).hasProperty( txState.propertyKey );
+        return txState.tx.getNodeById( 1 ).hasProperty( txState.propertyKey );
     }
 
     // --------------- RANDOM NODE ---------------
@@ -146,14 +146,14 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public Object randomNodeGetProperty( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperty( txState.propertyKey );
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperty( txState.propertyKey );
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public boolean randomNodeHasProperty( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).hasProperty( txState.propertyKey );
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).hasProperty( txState.propertyKey );
     }
 
     public static void main( String... methods ) throws Exception

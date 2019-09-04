@@ -229,6 +229,6 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     public void setProperty( TxState txState, RNGState rngState )
     {
         txState.advance( rngState.rng );
-        db().getNodeById( txState.nodeId() ).setProperty( txState.key(), txState.value( rngState.rng ) );
+        txState.txBatch.transaction().getNodeById( txState.nodeId() ).setProperty( txState.key(), txState.value( rngState.rng ) );
     }
 }

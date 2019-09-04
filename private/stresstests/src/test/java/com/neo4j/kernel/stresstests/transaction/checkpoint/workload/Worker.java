@@ -42,7 +42,7 @@ class Worker implements Runnable
             {
                 for ( int i = 0; i < numOpsPerTx; i++ )
                 {
-                    randomMutation.perform();
+                    randomMutation.perform( tx );
                 }
                 tx.commit();
             }

@@ -200,10 +200,10 @@ class RaftIdReuseIT
     {
         return cluster.coreTx( ( db, tx ) ->
         {
-            Node node1 = db.getNodeById( first.longValue() );
+            Node node1 = tx.getNodeById( first.longValue() );
             node1.delete();
 
-            db.getNodeById( second.longValue() ).delete();
+            tx.getNodeById( second.longValue() ).delete();
 
             tx.commit();
         } );

@@ -308,7 +308,7 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
     {
         writeTxState.throttler.waitForNext();
         writeTxState.advance();
-        Node node = db().getNodeById( writeTxState.nodeId( rngState.rng ) );
+        Node node = writeTxState.txBatch.transaction().getNodeById( writeTxState.nodeId( rngState.rng ) );
         node.setProperty( writeTxState.key(), writeTxState.value( rngState.rng ) );
     }
 

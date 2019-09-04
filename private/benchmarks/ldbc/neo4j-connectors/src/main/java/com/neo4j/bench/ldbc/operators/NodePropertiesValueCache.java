@@ -10,8 +10,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 
 public interface NodePropertiesValueCache
 {
@@ -31,7 +31,7 @@ public interface NodePropertiesValueCache
 
     Map<String,Object> values( Node node );
 
-    Map<String,Object> values( long nodeId, GraphDatabaseService db );
+    Map<String,Object> values( long nodeId, Transaction transaction );
 
     class NodePropertiesValueCacheImpl implements NodePropertiesValueCache
     {
@@ -60,7 +60,7 @@ public interface NodePropertiesValueCache
         }
 
         @Override
-        public Map<String,Object> values( long nodeId, GraphDatabaseService db )
+        public Map<String,Object> values( long nodeId, Transaction transaction )
         {
             if ( values.containsKey( nodeId ) )
             {
@@ -68,7 +68,7 @@ public interface NodePropertiesValueCache
             }
             else
             {
-                Node node = db.getNodeById( nodeId );
+                Node node = transaction.getNodeById( nodeId );
                 Map<String,Object> value = node.getProperties( keys );
                 values.put( node.getId(), value );
                 return value;

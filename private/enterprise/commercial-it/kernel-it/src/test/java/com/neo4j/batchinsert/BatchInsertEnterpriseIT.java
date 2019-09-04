@@ -97,8 +97,8 @@ public class BatchInsertEnterpriseIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            Node node1 = db.getNodeById( node1Id );
-            Node node2 = db.getNodeById( node2Id );
+            Node node1 = tx.getNodeById( node1Id );
+            Node node2 = tx.getNodeById( node2Id );
             assertEquals( someProperties( 1 ), node1.getAllProperties() );
             assertEquals( someProperties( 2 ), node2.getAllProperties() );
             assertEquals( relationshipId, single( node1.getRelationships() ).getId() );

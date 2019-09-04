@@ -73,7 +73,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     assertStats(result, nodesDeleted = 1)
 
     result.toList shouldBe empty
-    intercept[NotFoundException](graph.inTx(graphOps.getNodeById(a)))
+    intercept[NotFoundException](graph.withTx( tx => { tx.getNodeById(a) }))
   }
 
   test("multiple deletes should not break anything") {

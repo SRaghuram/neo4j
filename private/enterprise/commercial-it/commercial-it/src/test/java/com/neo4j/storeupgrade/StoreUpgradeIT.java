@@ -545,7 +545,7 @@ public class StoreUpgradeIT
 
     private static void checkGlobalNodeCount( Store store, GraphDatabaseAPI db )
     {
-        try ( Transaction ignored = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             ThreadToStatementContextBridge bridge = db.getDependencyResolver()
                     .resolveDependency( ThreadToStatementContextBridge.class );

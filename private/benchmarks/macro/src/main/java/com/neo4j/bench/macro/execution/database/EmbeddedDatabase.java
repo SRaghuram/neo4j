@@ -275,7 +275,7 @@ public class EmbeddedDatabase implements Database
 
     private void waitForSchema()
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             for ( IndexDefinition index : db.schema().getIndexes() )
             {

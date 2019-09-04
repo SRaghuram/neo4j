@@ -304,7 +304,7 @@ class TokenReplicationStressIT
     private static <T> List<T> allTokens( CoreClusterMember member, TokenAccess<T> tokenAccess )
     {
         GraphDatabaseFacade db = member.defaultDatabase();
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             KernelTransaction kernelTx = currentKernelTx( member );
             return Iterators.asList( tokenAccess.all( kernelTx ) );

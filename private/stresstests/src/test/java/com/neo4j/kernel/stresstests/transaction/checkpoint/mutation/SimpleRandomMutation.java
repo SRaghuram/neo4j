@@ -8,6 +8,7 @@ package com.neo4j.kernel.stresstests.transaction.checkpoint.mutation;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 
 class SimpleRandomMutation implements RandomMutation
 {
@@ -28,7 +29,7 @@ class SimpleRandomMutation implements RandomMutation
             {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s"};
 
     @Override
-    public void perform()
+    public void perform( Transaction tx )
     {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         long nodeId = rng.nextLong( nodeCount );
@@ -36,11 +37,11 @@ class SimpleRandomMutation implements RandomMutation
 
         if ( rng.nextDouble() < 0.01 )
         {
-            rareMutation.perform( nodeId, value );
+            rareMutation.perform( tx, nodeId, value );
         }
         else
         {
-            commonMutation.perform( nodeId, value );
+            commonMutation.perform( tx, nodeId, value );
         }
     }
 }

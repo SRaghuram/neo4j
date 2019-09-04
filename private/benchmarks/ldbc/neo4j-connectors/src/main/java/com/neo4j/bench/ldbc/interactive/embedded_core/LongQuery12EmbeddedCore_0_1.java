@@ -31,9 +31,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Transaction;
 
 public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionState>
 {
@@ -124,7 +124,7 @@ public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionSta
                             (long) friendProperties.get( Person.ID ),
                             (String) friendProperties.get( Person.FIRST_NAME ),
                             (String) friendProperties.get( Person.LAST_NAME ),
-                            preResult.tags( tagNameCache, connection.db() ),
+                            preResult.tags( tagNameCache, connection.getTransaction().get() ),
                             preResult.commentCount()
                     )
             );
@@ -237,12 +237,12 @@ public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionSta
             this.commentCount = newCommentCount;
         }
 
-        private List<String> tags( NodePropertyValueCache<String> tagNameCache, GraphDatabaseService db )
+        private List<String> tags( NodePropertyValueCache<String> tagNameCache, Transaction tx )
         {
             List<String> tags = new ArrayList<>( tagIds.size() );
             for ( Long tagId : tagIds )
             {
-                tags.add( tagNameCache.value( tagId, db ) );
+                tags.add( tagNameCache.value( tagId, tx ) );
             }
             return tags;
         }

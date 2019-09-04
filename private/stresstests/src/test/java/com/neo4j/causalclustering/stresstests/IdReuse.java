@@ -204,7 +204,7 @@ class IdReuse
             try
             {
                 cluster.coreTx( ( db, tx ) -> {
-                    Node node = db.getNodeById( rnd.nextInt( idHighRange ) );
+                    Node node = tx.getNodeById( rnd.nextInt( idHighRange ) );
                     Iterables.stream( node.getRelationships() ).forEach( Relationship::delete );
                     node.delete();
 

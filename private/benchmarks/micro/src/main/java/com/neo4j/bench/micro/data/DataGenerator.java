@@ -583,8 +583,8 @@ public class DataGenerator
                     long endNodeId = nodeIds[(n + position + 1) % nodes];
                     IntFileReader.assertAdvance( relationshipTypeIndexReader );
                     RelationshipType relationshipType = outRelationshipTypes[relationshipTypeIndexReader.getInt()];
-                    Node startNode = db.getNodeById( startNodeId );
-                    Node endNode = db.getNodeById( endNodeId );
+                    Node startNode = tx.getNodeById( startNodeId );
+                    Node endNode = tx.getNodeById( endNodeId );
                     Relationship relationship = startNode.createRelationshipTo( endNode, relationshipType );
                     relationshipIdsWriter.write( (int) relationship.getId() );
                     if ( ++txStateCounter % TX_SIZE == 0 )
@@ -656,8 +656,8 @@ public class DataGenerator
                     long endNodeId = nodeIds[(n + position + 1) % nodes];
                     IntFileReader.assertAdvance( relationshipTypeIndexReader );
                     RelationshipType relationshipType = outRelationshipTypes[relationshipTypeIndexReader.getInt()];
-                    Node startNode = db.getNodeById( startNodeId );
-                    Node endNode = db.getNodeById( endNodeId );
+                    Node startNode = tx.getNodeById( startNodeId );
+                    Node endNode = tx.getNodeById( endNodeId );
                     Relationship relationship = startNode.createRelationshipTo( endNode, relationshipType );
                     relationshipIdsWriter.write( (int) relationship.getId() );
                     if ( ++txStateCounter % TX_SIZE == 0 )
@@ -851,7 +851,7 @@ public class DataGenerator
                     IntFileReader.assertAdvance( propertyIndexReader );
                     String key = nodePropertyKeys[propertyIndexReader.getInt()];
                     ValueGeneratorFun<?> value = nodePropertyValues[propertyIndexReader.getInt()];
-                    Node node = db.getNodeById( nodeId );
+                    Node node = tx.getNodeById( nodeId );
                     node.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
@@ -908,7 +908,7 @@ public class DataGenerator
                     IntFileReader.assertAdvance( propertyIndexReader );
                     String key = nodePropertyKeys[propertyIndexReader.getInt()];
                     ValueGeneratorFun<?> value = nodePropertyValues[propertyIndexReader.getInt()];
-                    Node node = db.getNodeById( nodeId );
+                    Node node = tx.getNodeById( nodeId );
                     node.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
@@ -1136,7 +1136,7 @@ public class DataGenerator
                 IntFileReader labelIndexReader = labelIndexReaders[position];
                 for ( int n = 0; n < nodes; n++ )
                 {
-                    Node node = db.getNodeById( nodeIds[n] );
+                    Node node = tx.getNodeById( nodeIds[n] );
                     IntFileReader.assertAdvance( labelIndexReader );
                     node.addLabel( labels[labelIndexReader.getInt()] );
                     if ( ++txStateCounter % TX_SIZE == 0 )
@@ -1168,7 +1168,7 @@ public class DataGenerator
         {
             for ( int n = 0; n < nodes; n++ )
             {
-                Node node = db.getNodeById( nodeIds[n] );
+                Node node = tx.getNodeById( nodeIds[n] );
                 for ( int position = 0; position < labels.length; position++ )
                 {
                     IntFileReader labelIndexReader = labelIndexReaders[position];
@@ -1384,7 +1384,7 @@ public class DataGenerator
 
     public static void waitForSchemaIndexes( GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             db.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
         }
@@ -1414,7 +1414,7 @@ public class DataGenerator
 
     public static void waitForSchemaIndexes( GraphDatabaseService db, Label label )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             for ( IndexDefinition index : db.schema().getIndexes( label ) )
             {

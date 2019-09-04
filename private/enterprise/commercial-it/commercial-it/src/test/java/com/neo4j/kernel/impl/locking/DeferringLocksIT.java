@@ -157,7 +157,7 @@ public class DeferringLocksIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                db.getNodeById( nodeId ).delete();
+                tx.getNodeById( nodeId ).delete();
                 tx.commit();
                 barrier.reached();
             }
@@ -168,7 +168,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 barrier.await();
-                db.getNodeById( nodeId ).setProperty( PROPERTY_KEY, VALUE_2 );
+                tx.getNodeById( nodeId ).setProperty( PROPERTY_KEY, VALUE_2 );
                 tx.commit();
                 barrier.release();
             }
@@ -184,8 +184,8 @@ public class DeferringLocksIT
         {
             try
             {
-                db.getNodeById( nodeId );
-                assertEquals( VALUE_2, db.getNodeById( nodeId ).getProperty( PROPERTY_KEY, VALUE_2 ) );
+                tx.getNodeById( nodeId );
+                assertEquals( VALUE_2, tx.getNodeById( nodeId ).getProperty( PROPERTY_KEY, VALUE_2 ) );
             }
             catch ( NotFoundException e )
             {
@@ -279,7 +279,7 @@ public class DeferringLocksIT
                 db.schema().indexFor( label ).on( key ).create();
                 tx.commit();
             }
-            try ( Transaction ignore = db.beginTx() )
+            try ( Transaction tx = db.beginTx() )
             {
                 db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
             }

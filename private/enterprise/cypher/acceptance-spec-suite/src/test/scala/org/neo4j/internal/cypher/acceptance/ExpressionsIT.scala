@@ -9,6 +9,7 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.ast._
@@ -31,7 +32,6 @@ import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
-import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.exceptions
 import org.neo4j.exceptions.{CypherTypeException, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.graphdb.{Entity, Relationship}
@@ -3615,13 +3615,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def relationshipValue(from: NodeValue, to: NodeValue, properties: MapValue): RelationshipValue = {
-    graph.inTx {
-      val r: Relationship = relate(graphOps.getNodeById(from.id()), graphOps.getNodeById(to.id()))
+    graph.withTx( tx => {
+      val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
       properties.foreach((t: String, u: AnyValue) => {
         r.setProperty(t, u.asInstanceOf[Value].asObject())
       })
       ValueUtils.fromRelationshipProxy(r)
-    }
+    } )
   }
 
   def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression

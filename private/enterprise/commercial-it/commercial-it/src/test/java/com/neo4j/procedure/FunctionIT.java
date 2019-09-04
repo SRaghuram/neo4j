@@ -104,7 +104,7 @@ class FunctionIT
         QueryExecutionException exception =
                 assertThrows( QueryExecutionException.class, () ->
                 {
-                    try ( Transaction ignore = db.beginTx() )
+                    try ( Transaction tx = db.beginTx() )
                     {
                         //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
                         db.execute( "RETURN com.neo4j.procedure.simpleArgument('42')" );
@@ -119,7 +119,7 @@ class FunctionIT
         QueryExecutionException exception =
                 assertThrows( QueryExecutionException.class, () ->
                 {
-                    try ( Transaction ignore = db.beginTx() )
+                    try ( Transaction tx = db.beginTx() )
                     {
                         db.execute( "RETURN com.neo4j.procedure.simpleArgument()" );
                     }
@@ -138,7 +138,7 @@ class FunctionIT
         QueryExecutionException exception =
                 assertThrows( QueryExecutionException.class, () ->
                 {
-                    try ( Transaction ignore = db.beginTx() )
+                    try ( Transaction tx = db.beginTx() )
                     {
                         db.execute( "RETURN com.neo4j.procedure.nodeWithDescription()" );
                     }
@@ -155,7 +155,7 @@ class FunctionIT
     void shouldCallDelegatingFunction()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.delegatingFunction($name) AS someVal",
@@ -171,7 +171,7 @@ class FunctionIT
     void shouldCallRecursiveFunction()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal", map( "order", 10L ) );
@@ -186,7 +186,7 @@ class FunctionIT
     void shouldCallFunctionWithGenericArgument()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute(
@@ -203,7 +203,7 @@ class FunctionIT
     void shouldCallFunctionWithMapArgument()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal" );
@@ -218,7 +218,7 @@ class FunctionIT
     void shouldCallFunctionWithMapArgumentContainingNullFromParameter()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.mapArgument({foo: $p}) AS someVal", map("p", null) );
@@ -233,7 +233,7 @@ class FunctionIT
     void shouldCallFunctionWithNull()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.mapArgument(null) AS someVal" );
@@ -248,7 +248,7 @@ class FunctionIT
     void shouldCallFunctionWithNullFromParameter()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute(
@@ -295,7 +295,7 @@ class FunctionIT
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Result result = db.execute( "RETURN com.neo4j.procedure.throwsExceptionInStream()" );
 
@@ -312,7 +312,7 @@ class FunctionIT
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             QueryExecutionException exception =
@@ -334,7 +334,7 @@ class FunctionIT
         }
 
         // Then
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Result res = db.execute(
                     "RETURN com.neo4j.procedure.listCoolPeopleInDatabase() AS cool" );
@@ -356,7 +356,7 @@ class FunctionIT
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Result res = db.execute( "RETURN com.neo4j.procedure.logAround()" );
             while ( res.hasNext() )
@@ -379,7 +379,7 @@ class FunctionIT
 //        QueryExecutionException exception =
 //                assertThrows( QueryExecutionException.class, () ->
 //                {
-//                    try ( Transaction ignore = db.beginTx() )
+//                    try ( Transaction tx = db.beginTx() )
 //                    {
 //                        db.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
 //                    }
@@ -393,7 +393,7 @@ class FunctionIT
 //        QueryExecutionException exception =
 //                assertThrows( QueryExecutionException.class, () ->
 //                {
-//                    try ( Transaction ignore = db.beginTx() )
+//                    try ( Transaction tx = db.beginTx() )
 //                    {
 //                        db.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
 //                    }
@@ -407,7 +407,7 @@ class FunctionIT
         QueryExecutionException exception =
                 assertThrows( QueryExecutionException.class, () ->
                 {
-                    try ( Transaction ignore = db.beginTx() )
+                    try ( Transaction tx = db.beginTx() )
                     {
                         // When
                         db.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWriteSchema()" ).next();
@@ -420,7 +420,7 @@ class FunctionIT
     void shouldCoerceLongToDoubleAtRuntimeWhenCallingFunction()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.squareDouble($value) AS result", map( "value", 4L ) );
@@ -435,7 +435,7 @@ class FunctionIT
     void shouldCoerceListOfNumbersToDoublesAtRuntimeWhenCallingFunction()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.avgNumberList($param) AS result",
@@ -451,7 +451,7 @@ class FunctionIT
     void shouldCoerceListOfMixedNumbers()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.avgDoubleList([$long, $double]) AS result",
@@ -467,7 +467,7 @@ class FunctionIT
     void shouldCoerceDoubleToLongAtRuntimeWhenCallingFunction()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.squareLong($value) as someVal", map( "value", 4L ) );
@@ -638,7 +638,7 @@ class FunctionIT
     void shouldBeAbleToUseUDFForLimit()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "UNWIND range(0, 100) AS r RETURN r LIMIT com.neo4j.procedure.squareLong(2)");
@@ -880,7 +880,7 @@ class FunctionIT
     void shouldNotSupportMorselRuntime()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CYPHER runtime=MORSEL RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
@@ -1006,7 +1006,7 @@ class FunctionIT
             {
                 return null;
             }
-            return db.getNodeById( id );
+            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().getNodeById( id );
         }
 
         @UserFunction

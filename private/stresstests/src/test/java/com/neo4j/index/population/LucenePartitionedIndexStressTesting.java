@@ -227,7 +227,7 @@ public class LucenePartitionedIndexStressTesting
 
     private void awaitIndexesOnline( GraphDatabaseService db )
     {
-        try ( Transaction ignored = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Schema schema = db.schema();
             schema.awaitIndexesOnline( WAIT_DURATION_MINUTES, TimeUnit.MINUTES );

@@ -79,7 +79,7 @@ class HalfCreatedConstraintIT
     {
         IllegalStateException exception = assertThrows( IllegalStateException.class, () ->
         {
-            try ( Transaction ignored = database.beginTx() )
+            try ( Transaction tx = database.beginTx() )
             {
                 database.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
             }

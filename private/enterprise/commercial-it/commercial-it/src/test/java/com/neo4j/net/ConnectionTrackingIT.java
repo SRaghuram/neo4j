@@ -457,7 +457,7 @@ class ConnectionTrackingIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = db.getNodeById( id );
+            Node node = tx.getNodeById( id );
             Lock lock = tx.acquireWriteLock( node );
             try
             {

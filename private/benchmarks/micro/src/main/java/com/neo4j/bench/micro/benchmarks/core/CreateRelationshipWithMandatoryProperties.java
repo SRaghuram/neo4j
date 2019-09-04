@@ -153,9 +153,9 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
                 nodeIds.add( nodeId );
                 nodeId = idFun.next( rngState.rng );
             }
-            try ( Transaction ignore = benchmarkState.db().beginTx() )
+            try ( Transaction tx = benchmarkState.db().beginTx() )
             {
-                nodes = nodeIds.stream().map( id -> benchmarkState.db().getNodeById( id ) ).toArray( Node[]::new );
+                nodes = nodeIds.stream().map( tx::getNodeById ).toArray( Node[]::new );
             }
             // In threaded/concurrent scenario, each thread should access different parts of graph
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom

@@ -220,7 +220,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
             do
             {
                 txBatch.advance();
-                Node node = db.getNodeById( nodeId() );
+                Node node = txBatch.transaction().getNodeById( nodeId() );
                 node.setProperty( createProperty(), value( rng ) );
                 node.removeProperty( deleteProperty() );
                 updateProperties();
@@ -289,7 +289,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
     public void createDeleteProperty( WriteTxState writeTxState, RNGState rngState )
     {
         writeTxState.advance();
-        Node node = db().getNodeById( writeTxState.nodeId() );
+        Node node = writeTxState.txBatch.transaction().getNodeById( writeTxState.nodeId() );
         node.setProperty( writeTxState.createProperty(), writeTxState.value( rngState.rng ) );
         node.removeProperty( writeTxState.deleteProperty() );
     }

@@ -5,8 +5,9 @@
  */
 package com.neo4j.kernel.stresstests.transaction.checkpoint.mutation;
 
+import org.neo4j.graphdb.Transaction;
 
 interface Mutation
 {
-    void perform( long nodeId, String value );
+    void perform( Transaction tx, long nodeId, String value );
 }

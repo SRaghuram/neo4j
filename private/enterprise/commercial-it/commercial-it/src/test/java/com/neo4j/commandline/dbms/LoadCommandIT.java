@@ -81,9 +81,9 @@ class LoadCommandIT extends AbstractCommandIT
         managementService.createDatabase( newDatabase );
         GraphDatabaseService database = managementService.database( newDatabase );
 
-        try ( Transaction transaction = database.beginTx() )
+        try ( Transaction tx = database.beginTx() )
         {
-            assertTrue( transaction.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
+            assertTrue( tx.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
         }
     }
 

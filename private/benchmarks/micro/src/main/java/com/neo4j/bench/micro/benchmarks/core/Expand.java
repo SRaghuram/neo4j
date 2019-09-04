@@ -141,7 +141,7 @@ public class Expand extends AbstractCoreBenchmark
     public void expandAll( TxState txState, RNGState rngState, Blackhole bh )
     {
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        Node node = db().getNodeById( nodeId );
+        Node node = txState.tx.getNodeById( nodeId );
         Iterable<Relationship> relationships = node.getRelationships( Direction.OUTGOING );
         for ( Relationship rel : relationships )
         {
@@ -154,7 +154,7 @@ public class Expand extends AbstractCoreBenchmark
     public void expandType( TxState txState, RNGState rngState, Blackhole bh )
     {
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        Node node = db().getNodeById( nodeId );
+        Node node = txState.tx.getNodeById( nodeId );
         RelationshipType type = txState.randomRelationshipType( rngState.rng );
         Iterable<Relationship> relationships = node.getRelationships( type, Direction.OUTGOING );
         for ( Relationship rel : relationships )

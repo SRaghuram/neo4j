@@ -160,35 +160,35 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public int sameNodeCountPropertyKeys( TxState txState )
     {
-        return size( db().getNodeById( 1 ).getPropertyKeys() );
+        return size( txState.tx.getNodeById( 1 ).getPropertyKeys() );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameNodeGetAllProperties( TxState txState )
     {
-        return db().getNodeById( 1 ).getAllProperties();
+        return txState.tx.getNodeById( 1 ).getAllProperties();
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameNodeGetPropertiesFirst( TxState txState )
     {
-        return db().getNodeById( 1 ).getProperties( txState.keysFirst );
+        return txState.tx.getNodeById( 1 ).getProperties( txState.keysFirst );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameNodeGetPropertiesHalf( TxState txState )
     {
-        return db().getNodeById( 1 ).getProperties( txState.keysHalf );
+        return txState.tx.getNodeById( 1 ).getProperties( txState.keysHalf );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameNodeGetPropertiesAll( TxState txState )
     {
-        return db().getNodeById( 1 ).getProperties( txState.keysAll );
+        return txState.tx.getNodeById( 1 ).getProperties( txState.keysAll );
     }
 
     // --------------- RANDOM NODE ---------------
@@ -197,34 +197,34 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public int randomNodeCountPropertyKeys( TxState txState, RNGState rngState )
     {
-        return size( db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getPropertyKeys() );
+        return size( txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getPropertyKeys() );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomNodeGetAllProperties( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getAllProperties();
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getAllProperties();
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomNodeGetPropertiesFirst( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperties( txState.keysFirst );
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperties( txState.keysFirst );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomNodeGetPropertiesHalf( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperties( txState.keysHalf );
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperties( txState.keysHalf );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomNodeGetPropertiesAll( TxState txState, RNGState rngState )
     {
-        return db().getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperties( txState.keysAll );
+        return txState.tx.getNodeById( rngState.rng.nextInt( NODE_COUNT ) ).getProperties( txState.keysAll );
     }
 }

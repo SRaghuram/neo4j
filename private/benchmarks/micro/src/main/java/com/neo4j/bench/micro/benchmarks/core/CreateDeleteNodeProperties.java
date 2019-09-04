@@ -193,7 +193,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                     do
                     {
                         txBatch.advance();
-                        Node node = db.getNodeById( nodeIds.next( rng ) );
+                        Node node = txBatch.transaction().getNodeById( nodeIds.next( rng ) );
                         node.setProperty( keys.get( createPropertyId ), values.next( rng ) );
                         node.removeProperty( keys.get( deletePropertyId ) );
                         createPropertyId = incrementPropertyId( createPropertyId, keys.size() );
@@ -315,7 +315,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
         private void advanceStoreToStableState( GraphDatabaseService db )
         {
             txBatch.advance();
-            Node node = db.getNodeById( nodeId() );
+            Node node = txBatch.transaction().getNodeById( nodeId() );
             while ( node.hasProperty( deleteProperty() ) )
             {
                 updateProperties();
@@ -381,7 +381,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
     public void createDeleteProperty( WriteTxState writeTxState, RNGState rngState )
     {
         writeTxState.advance();
-        Node node = db().getNodeById( writeTxState.nodeId() );
+        Node node = writeTxState.txBatch.transaction().getNodeById( writeTxState.nodeId() );
         node.setProperty( writeTxState.createProperty(), writeTxState.value( rngState.rng ) );
         node.removeProperty( writeTxState.deleteProperty() );
     }

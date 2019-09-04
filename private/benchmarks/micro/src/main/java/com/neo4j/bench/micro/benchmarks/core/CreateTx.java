@@ -67,9 +67,9 @@ public class CreateTx extends AbstractCoreBenchmark
         @Setup
         public void setUp( CreateTx benchmarkState ) throws InterruptedException
         {
-            try ( Transaction ignore = benchmarkState.db().beginTx() )
+            try ( Transaction tx = benchmarkState.db().beginTx() )
             {
-                node = benchmarkState.db().getNodeById( benchmarkState.nodeId.getAndIncrement() );
+                node = tx.getNodeById( benchmarkState.nodeId.getAndIncrement() );
             }
         }
     }

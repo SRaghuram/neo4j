@@ -5,7 +5,9 @@
  */
 package com.neo4j.kernel.stresstests.transaction.checkpoint.mutation;
 
+import org.neo4j.graphdb.Transaction;
+
 public interface RandomMutation
 {
-    void perform();
+    void perform( Transaction tx );
 }

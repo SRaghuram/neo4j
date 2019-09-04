@@ -136,7 +136,7 @@ public class CreateRelationships extends AbstractKernelBenchmark
                     threadParams.getThreadIndex(),
                     sliding ).create();
             MutableLongList nodes = LongLists.mutable.empty();
-            try ( Transaction ignore = benchmarkState.db().beginTx() )
+            try ( Transaction tx = benchmarkState.db().beginTx() )
             {
                 while ( !ids.wrapped() )
                 {

@@ -130,7 +130,7 @@ public class ProcedureIT
     void shouldCallProcedureWithParameterMap()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", 42L ) );
@@ -250,7 +250,7 @@ public class ProcedureIT
     void shouldGiveNiceErrorMessageOnWrongStaticType()
     {
         // When
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
             QueryExecutionException exception =
@@ -264,7 +264,7 @@ public class ProcedureIT
     {
         //Expect
         // When
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.simpleArgument()" ) );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
@@ -280,7 +280,7 @@ public class ProcedureIT
     {
         //Expect
         // When
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "CALL db.awaitIndex()" ) );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
@@ -294,7 +294,7 @@ public class ProcedureIT
 //    @Test
 //    void shouldGiveNiceErrorWhenMissingArgumentsToVoidFunction()
 //    {
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            QueryExecutionException exception =
 //                    assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.sideEffectWithDefault()" ) );
@@ -309,7 +309,7 @@ public class ProcedureIT
     @Test
     void shouldShowDescriptionWhenMissingArguments()
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.nodeWithDescription()" ) );
@@ -325,7 +325,7 @@ public class ProcedureIT
     void shouldCallDelegatingProcedure()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.delegatingProcedure", map( "name", 43L ) );
@@ -340,7 +340,7 @@ public class ProcedureIT
     void shouldCallRecursiveProcedure()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", 10L ) );
@@ -355,7 +355,7 @@ public class ProcedureIT
     void shouldCallProcedureWithGenericArgument()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.genericArguments([ ['graphs'], ['are'], ['everywhere']], " + "[ [[1, 2, 3]], [[4, 5]]] )" );
@@ -370,7 +370,7 @@ public class ProcedureIT
     void shouldCallProcedureWithMapArgument()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'})" );
@@ -385,7 +385,7 @@ public class ProcedureIT
     void shouldCallProcedureWithMapArgumentDefaultingToNull()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.mapWithNullDefault()" );
@@ -400,7 +400,7 @@ public class ProcedureIT
     void shouldCallProcedureWithMapArgumentDefaultingToMap()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.mapWithOtherDefault" );
@@ -415,7 +415,7 @@ public class ProcedureIT
     void shouldCallProcedureWithListWithDefault()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.listWithDefault" );
@@ -430,7 +430,7 @@ public class ProcedureIT
     void shouldCallProcedureWithGenericListWithDefault()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.genericListWithDefault" );
@@ -445,7 +445,7 @@ public class ProcedureIT
     void shouldCallProcedureWithByteArrayWithParameter() throws Throwable
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.incrBytes($param)", map( "param", new byte[]{4, 5, 6} ) );
@@ -460,7 +460,7 @@ public class ProcedureIT
     void shouldCallProcedureWithByteArrayWithParameterAndYield() throws Throwable
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "WITH $param AS b CALL com.neo4j.procedure.incrBytes(b) YIELD bytes RETURN bytes", map( "param", new byte[]{7, 8, 9} ) );
@@ -475,7 +475,7 @@ public class ProcedureIT
     void shouldCallProcedureWithByteArrayWithParameterAndYieldAndParameterReuse() throws Throwable
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "WITH $param AS param CALL com.neo4j.procedure.incrBytes(param) YIELD bytes RETURN bytes, param",
@@ -495,7 +495,7 @@ public class ProcedureIT
     {
         QueryExecutionException exception = assertThrows( QueryExecutionException.class, () ->
         {
-            try ( Transaction ignore = db.beginTx() )
+            try ( Transaction tx = db.beginTx() )
             {
                 Result result = db.execute( "CALL com.neo4j.procedure.incrBytes([1,2,3])" );
                 result.next();
@@ -508,7 +508,7 @@ public class ProcedureIT
     void shouldCallProcedureListWithNull() throws Throwable
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.genericListWithDefault(null)" );
@@ -523,7 +523,7 @@ public class ProcedureIT
     void shouldCallProcedureListWithNullInList()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.genericListWithDefault([[42, null, 57]])" );
@@ -595,7 +595,7 @@ public class ProcedureIT
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Result result = db.execute( "CALL com.neo4j.procedure.throwsExceptionInStream" );
 
@@ -610,7 +610,7 @@ public class ProcedureIT
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class,
                     () -> db.execute( "CALL com.neo4j.procedure.indexOutOfBounds" ).next() );
@@ -630,7 +630,7 @@ public class ProcedureIT
         }
 
         // Then
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Result res = db.execute( "CALL com.neo4j.procedure.listCoolPeopleInDatabase" );
 
@@ -652,7 +652,7 @@ public class ProcedureIT
         db = managementService.database( DEFAULT_DATABASE_NAME );
 
         // When
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             Result res = db.execute( "CALL com.neo4j.procedure.logAround()" );
             while ( res.hasNext() )
@@ -669,7 +669,7 @@ public class ProcedureIT
 //    @Test
 //    void shouldDenyReadOnlyProcedureToPerformWrites()
 //    {
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            QueryExecutionException exception =
 //                    assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.readOnlyTryingToWrite()" ).next() );
@@ -746,7 +746,7 @@ public class ProcedureIT
 //    @Test
 //    void shouldNotBeAbleToCallWriteProcedureThroughReadProcedure()
 //    {
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            QueryExecutionException exception =
 //                    assertThrows( QueryExecutionException.class, () -> db.execute( "CALL com.neo4j.procedure.readOnlyCallingWriteProcedure" ).next() );
@@ -804,7 +804,7 @@ public class ProcedureIT
     void shouldDenyReadOnlyProcedureToPerformSchema()
     {
         // Give
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             QueryExecutionException exception =
@@ -817,7 +817,7 @@ public class ProcedureIT
     void shouldDenyReadWriteProcedureToPerformSchema()
     {
         // Give
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             QueryExecutionException exception =
@@ -856,7 +856,7 @@ public class ProcedureIT
             tx.commit();
         }
 
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.schemaCallReadProcedure($id)", map( "id", nodeId ) );
@@ -872,7 +872,7 @@ public class ProcedureIT
 //    void shouldDenySchemaProcedureToPerformWrite()
 //    {
 //        // Give
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            // When
 //            QueryExecutionException exception =
@@ -885,7 +885,7 @@ public class ProcedureIT
     void shouldCoerceLongToDoubleAtRuntimeWhenCallingProcedure()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.squareDouble", map( "value", 4L ) );
@@ -900,7 +900,7 @@ public class ProcedureIT
     void shouldCoerceListOfNumbersToDoublesAtRuntimeWhenCallingProcedure()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.avgNumberList($param)", map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
@@ -915,7 +915,7 @@ public class ProcedureIT
     void shouldCoerceListOfMixedNumbers()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.avgDoubleList([$long, $double])", map( "long", 1L, "double", 2.0d ) );
@@ -930,7 +930,7 @@ public class ProcedureIT
     void shouldCoerceDoubleToLongAtRuntimeWhenCallingProcedure()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.squareLong", map( "value", 4L ) );
@@ -944,7 +944,7 @@ public class ProcedureIT
 //    @Test
 //    void shouldBeAbleToCallVoidProcedure()
 //    {
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            db.execute( "CALL com.neo4j.procedure.sideEffect('PONTUS')" );
 //
@@ -955,7 +955,7 @@ public class ProcedureIT
 //    @Test
 //    void shouldBeAbleToCallVoidProcedureWithDefaultValue()
 //    {
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            db.execute( "CALL com.neo4j.procedure.sideEffectWithDefault('Person','name')" );
 //            Result result = db.execute( "MATCH (n:Person) RETURN n.name AS name" );
@@ -967,7 +967,7 @@ public class ProcedureIT
 //    @Test
 //    void shouldBeAbleToCallDelegatingVoidProcedure()
 //    {
-//        try ( Transaction ignore = db.beginTx() )
+//        try ( Transaction tx = db.beginTx() )
 //        {
 //            db.execute( "CALL com.neo4j.procedure.delegatingSideEffect('SUTNOP')" );
 //
@@ -1387,7 +1387,7 @@ public class ProcedureIT
     void shouldCallFunctionWithByteArrayWithParameter()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "RETURN com.neo4j.procedure.decrBytes($param) AS bytes", map( "param", new byte[]{4, 5, 6} ) );
@@ -1402,7 +1402,7 @@ public class ProcedureIT
     void shouldCallFunctionWithByteArrayWithBoundLiteral()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res =
@@ -1423,7 +1423,7 @@ public class ProcedureIT
         QueryExecutionException exception =
                 assertThrows( QueryExecutionException.class, () ->
                 {
-                    try ( Transaction ignore = db.beginTx() )
+                    try ( Transaction tx = db.beginTx() )
                     {
                         //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
                         Result result = db.execute( "RETURN com.neo4j.procedure.decrBytes([1,2,5]) AS bytes" );
@@ -1437,7 +1437,7 @@ public class ProcedureIT
     void shouldCallAggregationFunctionWithByteArrays()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             byte[][] data = new byte[3][];
@@ -1482,7 +1482,7 @@ public class ProcedureIT
     void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContext()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
             Result res = db.execute( "CALL com.neo4j.procedure.outputDependsOnYield()" );
@@ -1821,7 +1821,7 @@ public class ProcedureIT
             }
             else
             {
-                nodeOutput.setNode( db.getNodeById( id ) );
+                nodeOutput.setNode( GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().getNodeById( id ) );
             }
             return Stream.of( nodeOutput );
         }

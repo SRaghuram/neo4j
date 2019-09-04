@@ -7,6 +7,7 @@ package com.neo4j.kernel.stresstests.transaction.checkpoint.mutation;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 
 /**
  * Created by davide on 22/06/15.
@@ -21,9 +22,9 @@ class PropertyMutation implements Mutation
     }
 
     @Override
-    public void perform( long nodeId, String value )
+    public void perform( Transaction tx, long nodeId, String value )
     {
-        Node node = db.getNodeById( nodeId );
+        Node node = tx.getNodeById( nodeId );
         if ( node.hasProperty( value ) )
         {
             node.removeProperty( value );

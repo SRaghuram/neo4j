@@ -13,10 +13,10 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 
 public interface ManyToOneExpandCache
 {
@@ -68,7 +68,7 @@ public interface ManyToOneExpandCache
 
     long expandParent( Node thing ) throws DbException;
 
-    long expandParentId( long thingId, GraphDatabaseService db ) throws DbException;
+    long expandParentId( long thingId, Transaction transaction ) throws DbException;
 
     class LazyPullManyToOneExpandCache implements ManyToOneExpandCache
     {
@@ -89,7 +89,7 @@ public interface ManyToOneExpandCache
         }
 
         @Override
-        public long expandParentId( long thingId, GraphDatabaseService db ) throws DbException
+        public long expandParentId( long thingId, Transaction transaction ) throws DbException
         {
             if ( expandCacheMap.containsKey( thingId ) )
             {
@@ -98,7 +98,7 @@ public interface ManyToOneExpandCache
             else
             {
                 // in the case that this line is called expandId is more expensive than expand
-                Node thing = db.getNodeById( thingId );
+                Node thing = transaction.getNodeById( thingId );
                 Node neitherThing = neighborFun.apply(
                         thing.getSingleRelationship( relationshipType, direction ),
                         thing
@@ -149,7 +149,7 @@ public interface ManyToOneExpandCache
         }
 
         @Override
-        public long expandParentId( long thingId, GraphDatabaseService db ) throws DbException
+        public long expandParentId( long thingId, Transaction transaction ) throws DbException
         {
             if ( expandCacheMap.containsKey( thingId ) )
             {
@@ -158,7 +158,7 @@ public interface ManyToOneExpandCache
             else
             {
                 // in the case that this line is called expandId is more expensive than expand
-                Node thing = db.getNodeById( thingId );
+                Node thing = transaction.getNodeById( thingId );
                 Relationship relationship = thing.getSingleRelationship( relationshipType, direction );
                 long neighborThingId = (null == relationship)
                                        ? defaultValue
@@ -213,7 +213,7 @@ public interface ManyToOneExpandCache
         }
 
         @Override
-        public long expandParentId( long nodeId, GraphDatabaseService db ) throws DbException
+        public long expandParentId( long nodeId, Transaction transaction ) throws DbException
         {
             if ( parentNodeMap.containsKey( nodeId ) )
             {
@@ -221,7 +221,7 @@ public interface ManyToOneExpandCache
             }
             else
             {
-                Node node = db.getNodeById( nodeId );
+                Node node = transaction.getNodeById( nodeId );
                 Node parent = parentOrNull( node );
                 if ( null == parent )
                 {

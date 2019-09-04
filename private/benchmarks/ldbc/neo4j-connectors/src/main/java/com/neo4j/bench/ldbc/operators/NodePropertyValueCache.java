@@ -8,8 +8,8 @@ package com.neo4j.bench.ldbc.operators;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 
 public interface NodePropertyValueCache<T>
 {
@@ -29,7 +29,7 @@ public interface NodePropertyValueCache<T>
 
     T value( Node node );
 
-    T value( long nodeId, GraphDatabaseService db );
+    T value( long nodeId, Transaction transaction );
 
     class NodePropertyValueCacheImpl<T> implements NodePropertyValueCache<T>
     {
@@ -58,7 +58,7 @@ public interface NodePropertyValueCache<T>
         }
 
         @Override
-        public T value( long nodeId, GraphDatabaseService db )
+        public T value( long nodeId, Transaction transaction )
         {
             if ( values.containsKey( nodeId ) )
             {
@@ -66,7 +66,7 @@ public interface NodePropertyValueCache<T>
             }
             else
             {
-                Node node = db.getNodeById( nodeId );
+                Node node = transaction.getNodeById( nodeId );
                 T value = (T) node.getProperty( key );
                 values.put( node.getId(), value );
                 return value;

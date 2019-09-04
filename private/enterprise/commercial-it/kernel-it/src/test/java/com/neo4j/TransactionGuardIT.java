@@ -192,7 +192,7 @@ class TransactionGuardIT
 
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            try ( Transaction ignored = database.beginTx() )
+            try ( Transaction tx = database.beginTx() )
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
@@ -220,7 +220,7 @@ class TransactionGuardIT
 
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            try ( Transaction ignored = database.beginTx( 6, TimeUnit.SECONDS ) )
+            try ( Transaction tx = database.beginTx( 6, TimeUnit.SECONDS ) )
             {
                 fakeClock.forward( 7, TimeUnit.SECONDS );
                 timeoutMonitor.run();
@@ -346,7 +346,7 @@ class TransactionGuardIT
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            try ( Transaction ignored = database.beginTx() )
+            try ( Transaction tx = database.beginTx() )
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();

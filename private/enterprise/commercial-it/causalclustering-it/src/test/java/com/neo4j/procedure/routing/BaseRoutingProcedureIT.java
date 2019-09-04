@@ -149,7 +149,7 @@ abstract class BaseRoutingProcedureIT
 
     private static void assertRoutingProcedureFailsForUnknownDatabase( String query, Map<String,Object> params, GraphDatabaseService db )
     {
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( query, params ) );
             assertEquals( DatabaseNotFound.code().serialize(), error.getStatusCode() );

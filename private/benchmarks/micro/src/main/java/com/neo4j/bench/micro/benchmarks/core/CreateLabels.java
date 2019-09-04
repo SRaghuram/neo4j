@@ -147,6 +147,6 @@ public class CreateLabels extends AbstractCoreBenchmark
     public void addLabel( TxState txState, RNGState rngState )
     {
         txState.advance( rngState.rng );
-        db().getNodeById( txState.nodeId() ).addLabel( txState.label() );
+        txState.txBatch.transaction().getNodeById( txState.nodeId() ).addLabel( txState.label() );
     }
 }

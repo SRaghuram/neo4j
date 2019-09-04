@@ -246,7 +246,7 @@ class FulltextIndexCausalClusterIT
         Consumer<ClusterMember> awaitPopulationAndCollectionAppliedTransactionId = member ->
         {
             GraphDatabaseAPI db = member.defaultDatabase();
-            try ( Transaction ignore = db.beginTx() )
+            try ( Transaction tx = db.beginTx() )
             {
                 db.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
                 db.execute( AWAIT_REFRESH ).close();

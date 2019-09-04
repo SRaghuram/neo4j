@@ -123,7 +123,7 @@ public class ReadLabel extends AbstractCoreBenchmark
     public long countLabels( TxState txState, RNGState rngState )
     {
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        return Iterables.count( db().getNodeById( nodeId ).getLabels() );
+        return Iterables.count( txState.tx.getNodeById( nodeId ).getLabels() );
     }
 
     @Benchmark
@@ -133,7 +133,7 @@ public class ReadLabel extends AbstractCoreBenchmark
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
         int randomLabelIndex = rngState.rng.nextInt( txState.labels.length );
         Label label = txState.labels[randomLabelIndex];
-        return db().getNodeById( nodeId ).hasLabel( label );
+        return txState.tx.getNodeById( nodeId ).hasLabel( label );
     }
 
     @Benchmark
@@ -141,7 +141,7 @@ public class ReadLabel extends AbstractCoreBenchmark
     public boolean hasFirstLabel( TxState txState, RNGState rngState )
     {
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        return db().getNodeById( nodeId ).hasLabel( txState.firstLabel );
+        return txState.tx.getNodeById( nodeId ).hasLabel( txState.firstLabel );
     }
 
     @Benchmark
@@ -149,7 +149,7 @@ public class ReadLabel extends AbstractCoreBenchmark
     public boolean hasLastLabel( TxState txState, RNGState rngState )
     {
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        return db().getNodeById( nodeId ).hasLabel( txState.lastLabel );
+        return txState.tx.getNodeById( nodeId ).hasLabel( txState.lastLabel );
     }
 
     public static void main( String... methods ) throws Exception

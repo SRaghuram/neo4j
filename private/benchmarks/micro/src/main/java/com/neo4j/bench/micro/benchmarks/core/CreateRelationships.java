@@ -126,11 +126,11 @@ public class CreateRelationships extends AbstractCoreBenchmark
                     threadParams.getThreadIndex(),
                     sliding ).create();
             List<Node> nodesList = new ArrayList<>();
-            try ( Transaction ignore = benchmarkState.db().beginTx() )
+            try ( Transaction tx = benchmarkState.db().beginTx() )
             {
                 while ( !ids.wrapped() )
                 {
-                    nodesList.add( benchmarkState.db().getNodeById( ids.next( rngState.rng ) ) );
+                    nodesList.add( tx.getNodeById( ids.next( rngState.rng ) ) );
                 }
             }
             nodes = nodesList.toArray( new Node[0] );
