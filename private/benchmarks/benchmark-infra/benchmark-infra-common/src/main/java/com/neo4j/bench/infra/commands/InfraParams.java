@@ -43,7 +43,6 @@ public class InfraParams
     private final String resultsStorePassword;
 
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
-
     private final URI resultsStoreUri;
 
     public InfraParams( Path workspaceDir,
