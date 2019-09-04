@@ -301,7 +301,16 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slots.map(onVariable) ++ cachedProperties.map(onCachedProperty)
   }
 
-  def partitionSlots(p: (String, Slot) => Boolean): (Seq[(String, Slot)], Seq[(String, Slot)]) = {
+  def filterSlots[U](onVariable: ((String,Slot)) => Boolean,
+                 onCachedProperty: ((ASTCachedProperty, RefSlot)) => Boolean
+                ): Iterable[Slot] = {
+    (slots.filter(onVariable) ++ cachedProperties.filter(onCachedProperty)).values
+  }
+
+  /**
+    * Partition slots only, not cached properties
+    */
+  def partitionSlotsOnly(p: (String, Slot) => Boolean): (Seq[(String, Slot)], Seq[(String, Slot)]) = {
     slots.toSeq.partition {
       case (k, slot) =>
         p(k, slot)

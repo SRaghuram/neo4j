@@ -578,14 +578,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val rhsPlan = plan.rhs.get
     val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
     val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
-    val (sharedSlots, rhsUniqueSlots) = rhsSlots.partitionSlots {
-      case (k, slot) =>
-        lhsSlots.get(k).isDefined
-    }
-    val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_._2.isLongSlot)
+    val sharedSlots = rhsSlots.filterSlots(
+      onVariable = {
+        case (k, _) =>  lhsSlots.get(k).isDefined
+      }, onCachedProperty = {
+        case (k, _) => lhsSlots.hasCachedPropertySlot(k)
+      })
 
-    def checkSharedSlots(slots: Seq[(String, Slot)], expectedSlots: Int): Boolean = {
-      val sorted = slots.map(_._2).sortBy(_.offset)
+    val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_.isLongSlot)
+
+    def checkSharedSlots(slots: Seq[Slot], expectedSlots: Int): Boolean = {
+      val sorted = slots.sortBy(_.offset)
       var prevOffset = -1
       for (slot <- sorted) {
         if (slot.offset == prevOffset ||      // if we have aliases for the same slot, we will get it again
@@ -598,8 +601,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
       prevOffset + 1 == expectedSlots
     }
 
-    val longSlotsOk = checkSharedSlots(sharedLongSlots, argumentSize.nLongs)
-    val refSlotsOk = checkSharedSlots(sharedRefSlots, argumentSize.nReferences)
+    val longSlotsOk = checkSharedSlots(sharedLongSlots.toSeq, argumentSize.nLongs)
+    val refSlotsOk = checkSharedSlots(sharedRefSlots.toSeq, argumentSize.nReferences)
 
     if (!longSlotsOk || !refSlotsOk) {
       val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} shared long slots: $sharedLongSlots "
@@ -614,8 +617,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val rhsPlan = plan.rhs.get
     val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
     val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
-    val (lhsLongSlots, lhsRefSlots) = lhsSlots.partitionSlots((_, slot) => slot.isLongSlot)
-    val (rhsLongSlots, rhsRefSlots) = rhsSlots.partitionSlots((_, slot) => slot.isLongSlot)
+    val (lhsLongSlots, lhsRefSlots) = lhsSlots.partitionSlotsOnly((_, slot) => slot.isLongSlot)
+    val (rhsLongSlots, rhsRefSlots) = rhsSlots.partitionSlotsOnly((_, slot) => slot.isLongSlot)
 
     val lhsArgLongSlots = lhsLongSlots.filter { case (_, slot) => slot.offset < argumentSize.nLongs } sortBy(_._1)
     val lhsArgRefSlots = lhsRefSlots.filter { case (_, slot) => slot.offset < argumentSize.nReferences } sortBy(_._1)
