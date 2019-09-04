@@ -129,14 +129,14 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public Object sameRelationshipGetProperty( TxState txState )
     {
-        return db().getRelationshipById( 1 ).getProperty( txState.propertyKey );
+        return txState.tx.getRelationshipById( 1 ).getProperty( txState.propertyKey );
     }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public boolean sameRelationshipHasProperty( TxState txState )
     {
-        return db().getRelationshipById( 1 ).hasProperty( txState.propertyKey );
+        return txState.tx.getRelationshipById( 1 ).hasProperty( txState.propertyKey );
     }
 
     // --------------- RANDOM RELATIONSHIP ---------------
@@ -145,7 +145,7 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public Object randomRelationshipGetProperty( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
                    .getProperty( txState.propertyKey );
     }
 
@@ -153,7 +153,7 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public boolean randomRelationshipHasProperty( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
                    .hasProperty( txState.propertyKey );
     }
 }

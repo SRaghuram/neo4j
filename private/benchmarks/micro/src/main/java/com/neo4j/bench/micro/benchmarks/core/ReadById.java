@@ -107,6 +107,6 @@ public class ReadById extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public Relationship randomRelationshipById( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) );
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) );
     }
 }

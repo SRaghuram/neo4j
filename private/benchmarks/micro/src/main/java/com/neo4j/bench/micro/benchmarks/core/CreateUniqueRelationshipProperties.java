@@ -194,7 +194,7 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
     public void setProperty( TxState txState, RNGState rngState )
     {
         txState.advance( rngState.rng );
-        db().getRelationshipById( txState.relationshipId() )
+        txState.txBatch.transaction().getRelationshipById( txState.relationshipId() )
             .setProperty( txState.key(), txState.value( rngState.rng ) );
     }
 }

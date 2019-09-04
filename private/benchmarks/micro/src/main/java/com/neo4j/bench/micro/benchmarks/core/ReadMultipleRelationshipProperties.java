@@ -158,35 +158,35 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public int sameRelationshipCountPropertyKeys( TxState txState )
     {
-        return size( db().getRelationshipById( 1 ).getPropertyKeys() );
+        return size( txState.tx.getRelationshipById( 1 ).getPropertyKeys() );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameRelationshipGetAllProperties( TxState txState )
     {
-        return db().getRelationshipById( 1 ).getAllProperties();
+        return txState.tx.getRelationshipById( 1 ).getAllProperties();
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameRelationshipGetPropertiesFirst( TxState txState )
     {
-        return db().getRelationshipById( 1 ).getProperties( txState.keysFirst );
+        return txState.tx.getRelationshipById( 1 ).getProperties( txState.keysFirst );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameRelationshipGetPropertiesHalf( TxState txState )
     {
-        return db().getRelationshipById( 1 ).getProperties( txState.keysHalf );
+        return txState.tx.getRelationshipById( 1 ).getProperties( txState.keysHalf );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> sameRelationshipGetPropertiesAll( TxState txState )
     {
-        return db().getRelationshipById( 1 ).getProperties( txState.keysAll );
+        return txState.tx.getRelationshipById( 1 ).getProperties( txState.keysAll );
     }
 
     // --------------- RANDOM RELATIONSHIP ---------------
@@ -195,21 +195,21 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public int randomRelationshipCountPropertyKeys( TxState txState, RNGState rngState )
     {
-        return size( db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getPropertyKeys() );
+        return size( txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getPropertyKeys() );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomRelationshipGetAllProperties( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getAllProperties();
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getAllProperties();
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomRelationshipGetPropertiesFirst( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) )
                    .getProperties( txState.keysFirst );
     }
 
@@ -217,13 +217,13 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomRelationshipGetPropertiesHalf( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getProperties( txState.keysHalf );
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getProperties( txState.keysHalf );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
     public Map<String,Object> randomRelationshipGetPropertiesAll( TxState txState, RNGState rngState )
     {
-        return db().getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getProperties( txState.keysAll );
+        return txState.tx.getRelationshipById( rngState.rng.nextInt( RELATIONSHIP_COUNT ) ).getProperties( txState.keysAll );
     }
 }

@@ -1005,7 +1005,7 @@ public class DataGenerator
                     IntFileReader.assertAdvance( propertyIndexReader );
                     String key = relationshipPropertyKeys[propertyIndexReader.getInt()];
                     ValueGeneratorFun<?> value = relationshipPropertyValues[propertyIndexReader.getInt()];
-                    Relationship relationship = db.getRelationshipById( relationshipId );
+                    Relationship relationship = tx.getRelationshipById( relationshipId );
                     relationship.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
@@ -1062,7 +1062,7 @@ public class DataGenerator
                     IntFileReader.assertAdvance( propertyIndexReader );
                     String key = relationshipPropertyKeys[propertyIndexReader.getInt()];
                     ValueGeneratorFun<?> value = relationshipPropertyValues[propertyIndexReader.getInt()];
-                    Relationship relationship = db.getRelationshipById( relationshipId );
+                    Relationship relationship = tx.getRelationshipById( relationshipId );
                     relationship.setProperty( key, value.next( rng ) );
                     if ( ++txStateCounter % TX_SIZE == 0 )
                     {
