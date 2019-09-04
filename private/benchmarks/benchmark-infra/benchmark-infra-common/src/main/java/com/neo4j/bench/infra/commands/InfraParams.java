@@ -42,6 +42,9 @@ public class InfraParams
     private final String resultsStorePassword;
 
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
+
+    public static final String CMD_BATCH_STACK = "--batch-stack";
+
     private final URI resultsStoreUri;
 
     public InfraParams( Path workspaceDir,

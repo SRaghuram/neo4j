@@ -41,7 +41,13 @@ public class AWSBatchJobScheduler implements JobScheduler
 {
     private static final Logger LOG = LoggerFactory.getLogger( AWSBatchJobScheduler.class );
 
-    public static JobScheduler create( String region, String awsKey, String awsSecret, String jobQueue, String jobDefinition )
+    public static JobScheduler create(
+            String region,
+            String awsKey,
+            String awsSecret,
+            String jobQueue,
+            String jobDefinition,
+            String stack )
     {
         Objects.requireNonNull( awsKey );
         Objects.requireNonNull( awsSecret );
@@ -51,8 +57,25 @@ public class AWSBatchJobScheduler implements JobScheduler
                                                               .withCredentials( credentialsProvider )
                                                               .withRegion( region )
                                                               .build(),
-                                         getJobQueueCustomName( jobQueue, credentials, region ),
+                                         getJobQueueCustomName( jobQueue, credentials, region, stack ),
                                          jobDefinition );
+    }
+
+    private static String getJobQueueCustomName( String jobQueue, AWSCredentials credentialsProvider, String region, String stack )
+    {
+        AmazonCloudFormation amazonCloudFormation = AmazonCloudFormationClientBuilder.standard()
+                .withCredentials( new AWSStaticCredentialsProvider( credentialsProvider ) )
+                .withRegion( region )
+                .build();
+
+        return amazonCloudFormation.describeStacks( new DescribeStacksRequest().withStackName( stack ) )
+                .getStacks()
+                .stream()
+                .flatMap( stacks -> stacks.getOutputs().stream() )
+                .filter( output -> output.getOutputKey().equals( jobQueue ) )
+                .map( Output::getOutputValue )
+                .findFirst()
+                .get();
     }
 
     private final AWSBatch awsBatch;
@@ -64,18 +87,6 @@ public class AWSBatchJobScheduler implements JobScheduler
         this.awsBatch = awsBatch;
         this.jobQueue = jobQueue;
         this.jobDefinition = jobDefinition;
-    }
-
-    private static String getJobQueueCustomName( String jobQueue, AWSCredentials credentialsProvider, String region )
-    {
-        AmazonCloudFormationClientBuilder amazonCloudFormationClientBuilder = AmazonCloudFormationClientBuilder.standard();
-        AmazonCloudFormation amazonCloudFormation = amazonCloudFormationClientBuilder
-                .withCredentials( new AWSStaticCredentialsProvider( credentialsProvider ) )
-                .withRegion( region )
-                .build();
-        return amazonCloudFormation.describeStacks( new DescribeStacksRequest().withStackName( "benchmarking" ) ).getStacks().stream().flatMap(
-                stack -> stack.getOutputs().stream() ).filter( output -> output.getOutputKey().equals( jobQueue ) ).map(
-                Output::getOutputValue ).findFirst().get();
     }
 
     @Override
