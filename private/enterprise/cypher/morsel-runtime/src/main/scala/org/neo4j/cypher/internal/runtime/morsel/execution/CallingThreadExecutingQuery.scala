@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, Worker, WorkerResourceProvider}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
@@ -27,6 +28,9 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
     super.request(numberOfRecords)
     while (!executionState.hasEnded && flowControl.hasDemand) {
       worker.workOnQuery(this, workerResources)
+      if (DebugSupport.FAIL_HARD && !executionState.hasEnded && flowControl.hasDemand) {
+        executionState.failHardIfError()
+      }
     }
   }
 

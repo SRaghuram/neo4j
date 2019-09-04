@@ -55,6 +55,8 @@ trait QueryCompletionTracker extends FlowControl {
     */
   def hasEnded: Boolean
 
+  def peekError: Throwable
+
   /**
     * Add an assertion to be run when the query is completed.
     */
@@ -161,6 +163,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   override def hasEnded: Boolean = count == 0
+
+  override def peekError: Throwable = throwable
 
   // -------- Subscription Methods --------
 
@@ -288,6 +292,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     errors.add(throwable) // add error first to avoid seeing this as a cancellation in postDecrement()
     _cancelledOrFailed = true
   }
+
+  override def peekError: Throwable = errors.peek
 
   override def hasEnded: Boolean = _hasEnded
 

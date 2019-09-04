@@ -242,4 +242,10 @@ trait ExecutionState extends ArgumentStateMapCreator {
    * Get a map used to lookup an ArgumentStateMap by id
    */
   def argumentStateMaps: ArgumentStateMaps
+
+  /**
+   * Force a hard failure if an error was reported
+   */
+  def failHardIfError(): Unit
+
 }
