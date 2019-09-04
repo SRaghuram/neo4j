@@ -41,4 +41,50 @@ class IdAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupp
     executeWith(Configs.InterpretedAndSlotted, "RETURN lower('ABC') AS a").columnAs[String]("a").next should equal("abc")
     executeWith(Configs.InterpretedAndSlotted, "MATCH p = ()-->() RETURN rels(p) AS r").columnAs[List[Relationship]]("r").next should equal(List(r))
   }
+
+  test("node id seek should work with floats") {
+    // given
+    val idResult = executeSingle("CREATE (n) RETURN id(n) AS id, n").toList.head
+    val id = idResult("id")
+    val n = idResult("n")
+
+    // when
+    val result = executeWith(Configs.InterpretedAndSlotted, s"MATCH (n) WHERE id(n)=${id}.0 RETURN n",
+      expectedDifferentResults = Configs.RulePlanner)
+
+    // then
+    result.toList should equal(
+      List(Map("n" -> n))
+    )
+  }
+
+  test("directed rel id seek should work with floats") {
+    // given
+    val idResult = executeSingle("CREATE ()-[r:R]->() RETURN id(r) AS id, r").toList.head
+    val id = idResult("id")
+    val r = idResult("r")
+
+    // when
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_1 - Configs.Cost2_3, s"MATCH ()-[r:R]->() WHERE id(r)=${id}.0 RETURN r")
+
+    // then
+    result.toList should equal(
+      List(Map("r" -> r))
+    )
+  }
+  test("undirected rel id seek should work with floats") {
+    // given
+    val idResult = executeSingle("CREATE ()-[r:R]->() RETURN id(r) AS id, r").toList.head
+    val id = idResult("id")
+    val r = idResult("r")
+
+    // when
+    val result = executeWith(Configs.InterpretedAndSlotted - Configs.Cost3_1 - Configs.Cost2_3, s"MATCH ()-[r:R]-() WHERE id(r)=${id}.0 RETURN r")
+
+    // then
+    result.toList should equal(
+      List(Map("r" -> r),
+        Map("r" -> r))
+    )
+  }
 }
