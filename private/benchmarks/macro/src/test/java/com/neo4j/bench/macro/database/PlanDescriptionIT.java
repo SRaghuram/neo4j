@@ -71,7 +71,7 @@ public class PlanDescriptionIT
                         try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
                         {
                             Result result = database.inner().execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
-                            result.accept( ( row ) -> true );
+                            result.accept( row -> true );
                             ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
                             PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
                             String errorMessage = format( "Plans were not equal!\n" +
