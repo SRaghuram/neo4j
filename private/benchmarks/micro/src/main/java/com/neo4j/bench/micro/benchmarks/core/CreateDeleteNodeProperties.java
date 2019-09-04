@@ -242,7 +242,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
         {
             List<String> keysToIndexList = copy( allKeys );
             keysToIndexList.remove( keyToNotIncludeInIndex );
-            String[] keysToIndex = keysToIndexList.toArray( new String[keysToIndexList.size()] );
+            String[] keysToIndex = keysToIndexList.toArray( new String[0] );
             labelKeyDefinitionsToIndex[index++] = new LabelKeyDefinition( LABEL, keysToIndex );
         }
         return labelKeyDefinitionsToIndex;

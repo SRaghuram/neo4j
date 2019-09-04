@@ -6,11 +6,7 @@
 package com.neo4j.bench.ldbc.connection;
 
 import java.text.DecimalFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
 
 import static java.lang.String.format;
 

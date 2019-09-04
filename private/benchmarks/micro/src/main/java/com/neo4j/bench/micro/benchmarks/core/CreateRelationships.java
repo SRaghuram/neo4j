@@ -133,7 +133,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
                     nodesList.add( benchmarkState.db().getNodeById( ids.next( rngState.rng ) ) );
                 }
             }
-            nodes = nodesList.toArray( new Node[nodesList.size()] );
+            nodes = nodesList.toArray( new Node[0] );
             // access store in random/scattered pattern
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom
             Collections.shuffle( Arrays.asList( nodes ), ThreadLocalRandom.current() );

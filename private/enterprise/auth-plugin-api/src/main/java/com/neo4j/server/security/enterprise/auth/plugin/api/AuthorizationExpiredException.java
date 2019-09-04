@@ -25,9 +25,4 @@ public class AuthorizationExpiredException extends RuntimeException
     {
         super( message );
     }
-
-    public AuthorizationExpiredException( String message, Throwable cause )
-    {
-        super( message, cause );
-    }
 }

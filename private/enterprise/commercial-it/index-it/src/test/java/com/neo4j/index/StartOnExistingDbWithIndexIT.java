@@ -36,15 +36,15 @@ class StartOnExistingDbWithIndexIT
         Label label = Label.label( "string" );
         String property = "property";
         AssertableLogProvider logProvider = new AssertableLogProvider( true );
-        GraphDatabaseService db = prepareDb( label, property, logProvider );
+        prepareDb( label, property, logProvider );
         managementService.shutdown();
-        db = getDatabase( logProvider );
+        getDatabase( logProvider );
         managementService.shutdown();
 
         logProvider.rawMessageMatcher().assertNotContains( "Failed to open index" );
     }
 
-    private GraphDatabaseService prepareDb( Label label, String propertyName, LogProvider logProvider )
+    private void prepareDb( Label label, String propertyName, LogProvider logProvider )
     {
         GraphDatabaseService db = getDatabase( logProvider );
         try ( Transaction transaction = db.beginTx() )
@@ -53,7 +53,6 @@ class StartOnExistingDbWithIndexIT
             transaction.commit();
         }
         waitIndexes( db );
-        return db;
     }
 
     private GraphDatabaseService getDatabase( LogProvider logProvider )

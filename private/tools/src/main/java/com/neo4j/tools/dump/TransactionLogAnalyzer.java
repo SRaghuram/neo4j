@@ -21,7 +21,6 @@ import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
-import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
@@ -92,15 +91,12 @@ public class TransactionLogAnalyzer
      * @param fileSystem {@link FileSystemAbstraction} to find the files on.
      * @param storeDirOrLogFile {@link File} pointing either to a directory containing transaction log files, or directly
      * pointing to a single transaction log file to analyze.
-     * @param invalidLogEntryHandler {@link InvalidLogEntryHandler} to pass in to the internal {@link LogEntryReader}.
      * @param monitor {@link Monitor} receiving call-backs for all {@link Monitor#transaction(LogEntry[]) transactions},
      * {@link Monitor#checkpoint(CheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(File, long) log file transitions}
      * encountered during the analysis.
      * @throws IOException on I/O error.
      */
-    public static void analyze( FileSystemAbstraction fileSystem, File storeDirOrLogFile,
-            InvalidLogEntryHandler invalidLogEntryHandler, Monitor monitor )
-            throws IOException
+    public static void analyze( FileSystemAbstraction fileSystem, File storeDirOrLogFile, Monitor monitor ) throws IOException
     {
         File firstFile;
         LogVersionBridge bridge;

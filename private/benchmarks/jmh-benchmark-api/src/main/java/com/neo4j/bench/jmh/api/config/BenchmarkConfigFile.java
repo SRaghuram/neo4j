@@ -66,7 +66,7 @@ public class BenchmarkConfigFile
         Map<String,BenchmarkConfigFileEntry> benchmarkConfigFileEntries = benchmarks( confMap, benchmarksFinder );
         for ( String key : confMap.keySet() )
         {
-            int separator = key.lastIndexOf( "." );
+            int separator = key.lastIndexOf( '.' );
             if ( separator == -1 )
             {
                 validation.unrecognizedConfigFileEntry( key );
@@ -114,7 +114,7 @@ public class BenchmarkConfigFile
                       .filter( benchmarksFinder::hasBenchmark )
                       .collect( toMap(
                               identity(),
-                              name -> new BenchmarkConfigFileEntry( name, Boolean.valueOf( confMap.get( name ) ) ) ) );
+                              name -> new BenchmarkConfigFileEntry( name, Boolean.parseBoolean( confMap.get( name ) ) ) ) );
     }
 
     public static void write(

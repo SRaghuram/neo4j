@@ -68,7 +68,7 @@ public class QueryRetrier
 
     private <RESULT, QUERY extends Query<RESULT>> Supplier<RESULT> querySupplier( StoreClient client, QUERY query )
     {
-        return new Supplier<RESULT>()
+        return new Supplier<>()
         {
             @Override
             public RESULT get()

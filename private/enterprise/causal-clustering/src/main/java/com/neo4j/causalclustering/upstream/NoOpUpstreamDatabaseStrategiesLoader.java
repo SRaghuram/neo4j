@@ -20,7 +20,7 @@ public class NoOpUpstreamDatabaseStrategiesLoader extends UpstreamDatabaseStrate
     @Override
     public Iterator<UpstreamDatabaseSelectionStrategy> iterator()
     {
-        return new Iterator<UpstreamDatabaseSelectionStrategy>()
+        return new Iterator<>()
         {
             @Override
             public boolean hasNext()

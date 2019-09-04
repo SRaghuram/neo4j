@@ -975,14 +975,11 @@ class FunctionIT
             {
                 return 0L;
             }
-            else
-            {
-                Long prev =
-                        (Long) db.execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal",
-                                map( "order", order - 1 ) )
-                                .next().get( "someVal" );
-                return order + prev;
-            }
+            Long prev =
+                    (Long) db.execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal",
+                            map( "order", order - 1 ) )
+                            .next().get( "someVal" );
+            return order + prev;
         }
 
         @UserFunction

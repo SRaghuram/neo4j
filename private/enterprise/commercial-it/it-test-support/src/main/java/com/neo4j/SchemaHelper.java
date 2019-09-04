@@ -112,11 +112,6 @@ public enum SchemaHelper
                 }
             };
 
-    public void createIndex( GraphDatabaseService db, Label label, String property )
-    {
-        createIndex( db, label.name(), property );
-    }
-
     public abstract void createIndex( GraphDatabaseService db, String label, String property );
 
     public void createUniquenessConstraint( GraphDatabaseService db, Label label, String property )

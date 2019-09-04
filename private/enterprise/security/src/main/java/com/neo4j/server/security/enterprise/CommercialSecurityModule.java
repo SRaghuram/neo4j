@@ -64,7 +64,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -101,10 +100,10 @@ import static org.neo4j.kernel.impl.util.ValueUtils.asParameterMapValue;
 @ServiceProvider
 public class CommercialSecurityModule extends SecurityModule
 {
-    public static final String ROLE_STORE_FILENAME = "roles";
+    private static final String ROLE_STORE_FILENAME = "roles";
     public static final String IMPORT_AUTH_COMMAND_NAME = "import-auth";
-    public static final String USER_IMPORT_FILENAME = ".users.import";
-    public static final String ROLE_IMPORT_FILENAME = ".roles.import";
+    private static final String USER_IMPORT_FILENAME = ".users.import";
+    private static final String ROLE_IMPORT_FILENAME = ".roles.import";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
     private DatabaseManager<?> databaseManager;
@@ -144,7 +143,7 @@ public class CommercialSecurityModule extends SecurityModule
         SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, databaseManager.databaseIdRepository() );
+        authManager = newAuthManager( config, logProvider, securityLog, fileSystem );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
@@ -238,15 +237,14 @@ public class CommercialSecurityModule extends SecurityModule
         throw new RuntimeException( "Expected " + CommercialSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
-    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
-            DatabaseIdRepository databaseIdRepository )
+    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, databaseIdRepository );
+        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog );
         realms.add( (Realm) internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -296,8 +294,7 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog,
-            DatabaseIdRepository databaseIdRepository )
+    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor =
                 new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
@@ -349,30 +346,6 @@ public class CommercialSecurityModule extends SecurityModule
                 migrationRoleRepositorySupplier,
                 initialUserRepositorySupplier,
                 defaultAdminRepositorySupplier
-        );
-    }
-
-    private static SystemGraphImportOptions configureImportOptionsForOfflineImport( UserRepository importUserRepository, RoleRepository importRoleRepository,
-            boolean shouldResetSystemGraphAuthBeforeImport )
-    {
-        boolean shouldPerformImport = true;
-        boolean mayPerformMigration = false;
-        boolean shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
-
-        Supplier<UserRepository> importUserRepositorySupplier = () -> importUserRepository;
-        Supplier<RoleRepository> importRoleRepositorySupplier = () -> importRoleRepository;
-
-        return new SystemGraphImportOptions(
-                shouldPerformImport,
-                mayPerformMigration,
-                shouldPurgeImportRepositoriesAfterSuccesfulImport,
-                shouldResetSystemGraphAuthBeforeImport,
-                importUserRepositorySupplier,
-                importRoleRepositorySupplier,
-                /* migrationUserRepositorySupplier = */ null,
-                /* migrationRoleRepositorySupplier = */ null,
-                /* initialUserRepositorySupplier = */ null,
-                /* defaultAdminRepositorySupplier = */ null
         );
     }
 
@@ -469,7 +442,7 @@ public class CommercialSecurityModule extends SecurityModule
         return realms;
     }
 
-    public static RoleRepository getRoleRepository( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
+    private static RoleRepository getRoleRepository( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
         return new FileRoleRepository( fileSystem, getRoleRepositoryFile( config ), logProvider );
     }
@@ -480,7 +453,7 @@ public class CommercialSecurityModule extends SecurityModule
         return new FileUserRepository( fileSystem, getDefaultAdminRepositoryFile( config ), logProvider );
     }
 
-    public static File getRoleRepositoryFile( Config config )
+    private static File getRoleRepositoryFile( Config config )
     {
         return new File( config.get( DatabaseManagementSystemSettings.auth_store_directory ).toFile(), ROLE_STORE_FILENAME );
     }
@@ -651,34 +624,6 @@ public class CommercialSecurityModule extends SecurityModule
         authProviders.addAll( authorizationDeque );
 
         return authProviders;
-    }
-
-    // This is used by ImportAuthCommand for offline import of auth information
-    public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config, SecurityLog securityLog, DatabaseManager<?> databaseManager,
-            SystemGraphInitializer systemGraphInitializer, UserRepository importUserRepository, RoleRepository importRoleRepository,
-            boolean shouldResetSystemGraphAuthBeforeImport, ThreadToStatementContextBridge threadToStatementContextBridge,
-            DatabaseIdRepository databaseIdRepository )
-    {
-        ContextSwitchingSystemGraphQueryExecutor queryExecutor =
-                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
-        SecureHasher secureHasher = new SecureHasher();
-        SystemGraphImportOptions importOptions =
-                configureImportOptionsForOfflineImport( importUserRepository, importRoleRepository, shouldResetSystemGraphAuthBeforeImport );
-
-        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
-        EnterpriseSecurityGraphInitializer securityGraphInitializer =
-                new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, securityLog, systemGraphOperations, importOptions,
-                        secureHasher );
-
-        return new SystemGraphRealm(
-                systemGraphOperations,
-                securityGraphInitializer,
-                new SecureHasher(),
-                new BasicPasswordPolicy(),
-                CommunitySecurityModule.createAuthenticationStrategy( config ),
-                false,
-                true // At least one of these needs to be true for the realm to consider imports
-        );
     }
 
     private static class SecurityQueryExecutor implements QueryExecutor

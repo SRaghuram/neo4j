@@ -8,12 +8,10 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
-import com.neo4j.metrics.output.EventReporter;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.scheduler.JobScheduler;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -39,8 +37,7 @@ public class TransactionLogsMetrics extends LifecycleAdapter
     private final MetricRegistry registry;
     private final TransactionLogCounters logCounters;
 
-    public TransactionLogsMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
-            TransactionLogCounters logCounters, JobScheduler jobScheduler )
+    public TransactionLogsMetrics( String metricsPrefix, MetricRegistry registry, TransactionLogCounters logCounters )
     {
         this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_EVENTS_TEMPLATE );
         this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_TOTAL_TIME_TEMPLATE );

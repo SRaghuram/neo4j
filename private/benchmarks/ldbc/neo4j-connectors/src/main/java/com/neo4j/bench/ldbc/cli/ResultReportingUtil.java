@@ -93,7 +93,7 @@ class ResultReportingUtil
         // E.g., sf001_p006_regular_utc
         String withoutLdbcPrefix = datasetName.substring( datasetName.indexOf( "_sf" ) + 1 );
         // E.g., 001
-        String scaleFactor = withoutLdbcPrefix.substring( 2, withoutLdbcPrefix.indexOf( "_" ) );
+        String scaleFactor = withoutLdbcPrefix.substring( 2, withoutLdbcPrefix.indexOf( '_' ) );
         // E.g., 1
         return Integer.parseInt( scaleFactor );
     }

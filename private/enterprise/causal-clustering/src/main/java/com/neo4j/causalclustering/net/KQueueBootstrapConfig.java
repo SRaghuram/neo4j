@@ -17,7 +17,7 @@ public abstract class KQueueBootstrapConfig<CHANNEL extends Channel> implements 
 {
     public static KQueueBootstrapConfig<KQueueServerSocketChannel> kQueueServerConfig()
     {
-        return new KQueueBootstrapConfig<KQueueServerSocketChannel>()
+        return new KQueueBootstrapConfig<>()
         {
             @Override
             public Class<KQueueServerSocketChannel> channelClass()
@@ -29,7 +29,7 @@ public abstract class KQueueBootstrapConfig<CHANNEL extends Channel> implements 
 
     public static KQueueBootstrapConfig<KQueueSocketChannel> kQueueClientConfig()
     {
-        return new KQueueBootstrapConfig<KQueueSocketChannel>()
+        return new KQueueBootstrapConfig<>()
         {
             @Override
             public Class<KQueueSocketChannel> channelClass()

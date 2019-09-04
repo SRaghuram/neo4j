@@ -23,8 +23,7 @@ public class VerboseTracerFactory extends DefaultTracerFactory
     }
 
     @Override
-    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock,
-            Log msgLog )
+    public PageCacheTracer createPageCacheTracer( Monitors monitors, JobScheduler jobScheduler, SystemNanoClock clock, Log msgLog )
     {
         return new VerbosePageCacheTracer( msgLog, clock );
     }

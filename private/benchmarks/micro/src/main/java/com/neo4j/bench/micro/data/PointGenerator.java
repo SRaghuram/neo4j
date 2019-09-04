@@ -335,7 +335,7 @@ public abstract class PointGenerator
 
         public ValueGeneratorFun<Point> clusterCenters()
         {
-            return new ValueGeneratorFun<Point>()
+            return new ValueGeneratorFun<>()
             {
                 private final double clusterDiameterX = clusterSizeX / 2;
                 private final double clusterDiameterY = clusterSizeY / 2;
@@ -466,7 +466,7 @@ public abstract class PointGenerator
         @Override
         public ValueGeneratorFun<Point> create()
         {
-            return new ValueGeneratorFun<Point>()
+            return new ValueGeneratorFun<>()
             {
                 private final CoordinateReferenceSystem crs = CRS.from( crsString ).crs();
                 private double x = minX;
@@ -580,7 +580,7 @@ public abstract class PointGenerator
         @Override
         public ValueGeneratorFun<Point> create()
         {
-            return new ValueGeneratorFun<Point>()
+            return new ValueGeneratorFun<>()
             {
                 private final CoordinateReferenceSystem crs = CRS.from( crsString ).crs();
                 private final ValueGeneratorFun<Double> xs = randDouble( minX, maxX ).create();
@@ -653,7 +653,7 @@ public abstract class PointGenerator
         {
             final double clusterDiameterX = definition.clusterSizeX / 2;
             final double clusterDiameterY = definition.clusterSizeY / 2;
-            return new ValueGeneratorFun<Point>()
+            return new ValueGeneratorFun<>()
             {
                 private final GaussianState gaussianState = new GaussianState();
                 private final CoordinateReferenceSystem crs = definition.crs().crs();
@@ -784,7 +784,7 @@ public abstract class PointGenerator
                         "X & Y cluster dimensions must be equal when generating circles\n" +
                                 definition );
             }
-            return new ValueGeneratorFun<Point>()
+            return new ValueGeneratorFun<>()
             {
                 private final CoordinateReferenceSystem crs = definition.crs().crs();
                 private final ValueGeneratorFun<Point> clusterCenters = definition.clusterCenters();
@@ -894,7 +894,7 @@ public abstract class PointGenerator
         {
             ValueGeneratorFun<Double> inner = valueGeneratorFactory.create();
             CoordinateReferenceSystem crs = CRS.from( crsString ).crs();
-            return new ValueGeneratorFun<Point>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()

@@ -191,7 +191,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         satisfyCommercialOnlyDependencies( this.globalModule );
 
-        editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
+        editionInvariants( globalModule, globalDependencies );
     }
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )

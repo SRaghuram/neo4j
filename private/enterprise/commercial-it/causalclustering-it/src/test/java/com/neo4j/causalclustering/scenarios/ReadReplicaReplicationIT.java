@@ -428,10 +428,7 @@ class ReadReplicaReplicationIT
                 // the db is down we'll try again...
                 return -1;
             }
-            else
-            {
-                throw ex;
-            }
+            throw ex;
         }
     }
 

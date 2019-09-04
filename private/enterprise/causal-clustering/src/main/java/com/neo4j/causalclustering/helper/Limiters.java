@@ -55,7 +55,7 @@ public class Limiters
      */
     public static Consumer<Runnable> rateLimiter( Duration minInterval, Clock clock )
     {
-        return new Consumer<Runnable>()
+        return new Consumer<>()
         {
             AtomicReference<Instant> lastRunRef = new AtomicReference<>();
 

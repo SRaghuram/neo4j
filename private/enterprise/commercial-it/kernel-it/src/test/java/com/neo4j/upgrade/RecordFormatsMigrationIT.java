@@ -30,7 +30,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -107,7 +106,6 @@ class RecordFormatsMigrationIT
         try
         {
             DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
-            DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
             DatabaseContext databaseContext = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
             assertTrue( databaseContext.isFailed() );
             assertThat( getRootCause( databaseContext.failureCause() ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );

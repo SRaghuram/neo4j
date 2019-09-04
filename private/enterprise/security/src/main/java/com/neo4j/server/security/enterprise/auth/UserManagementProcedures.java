@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 

@@ -1761,11 +1761,8 @@ public class ProcedureIT
             {
                 return Stream.of( new Output( 0L ) );
             }
-            else
-            {
-                Long prev = (Long) db.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", order - 1 ) ).next().get( "someVal" );
-                return Stream.of( new Output( order + prev ) );
-            }
+            Long prev = (Long) db.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", order - 1 ) ).next().get( "someVal" );
+            return Stream.of( new Output( order + prev ) );
         }
 
         @Procedure

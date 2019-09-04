@@ -124,7 +124,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         satisfyCommercialOnlyDependencies( this.globalModule );
 
-        editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
+        editionInvariants( globalModule, globalDependencies );
     }
 
     @Override

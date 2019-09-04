@@ -73,7 +73,7 @@ public class Neo4jArchive
     {
         return neo4jConfigLines.stream()
                 .filter( line -> line.startsWith( JVM_ARG_KEY ) )
-                .map( line -> line.substring( line.indexOf( "=" ) + 1, line.length() ) )
+                .map( line -> line.substring( line.indexOf( '=' ) + 1, line.length() ) )
                 .collect( toList() );
     }
 

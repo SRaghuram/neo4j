@@ -126,7 +126,7 @@ public abstract class NumberGenerator
         public ValueGeneratorFun<Double> create()
         {
             ValueGeneratorFun<NUMBER> valueGeneratorFun = valueGeneratorFactory.create();
-            return new ValueGeneratorFun<Double>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -187,7 +187,7 @@ public abstract class NumberGenerator
         public ValueGeneratorFun<Float> create()
         {
             ValueGeneratorFun<NUMBER> valueGeneratorFun = valueGeneratorFactory.create();
-            return new ValueGeneratorFun<Float>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -249,7 +249,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Byte> create()
         {
-            return new ValueGeneratorFun<Byte>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -312,7 +312,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Short> create()
         {
-            return new ValueGeneratorFun<Short>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -375,7 +375,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Integer> create()
         {
-            return new ValueGeneratorFun<Integer>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -438,7 +438,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Long> create()
         {
-            return new ValueGeneratorFun<Long>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -501,7 +501,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Float> create()
         {
-            return new ValueGeneratorFun<Float>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -564,7 +564,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Double> create()
         {
-            return new ValueGeneratorFun<Double>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -625,7 +625,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Byte> create()
         {
-            return new ValueGeneratorFun<Byte>()
+            return new ValueGeneratorFun<>()
             {
                 private byte state = initialState;
 
@@ -687,7 +687,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Short> create()
         {
-            return new ValueGeneratorFun<Short>()
+            return new ValueGeneratorFun<>()
             {
                 private short state = initialState;
 
@@ -749,7 +749,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Integer> create()
         {
-            return new ValueGeneratorFun<Integer>()
+            return new ValueGeneratorFun<>()
             {
                 private int state = initialState;
 
@@ -811,7 +811,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Long> create()
         {
-            return new ValueGeneratorFun<Long>()
+            return new ValueGeneratorFun<>()
             {
                 private long state = initialState;
 
@@ -873,7 +873,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Float> create()
         {
-            return new ValueGeneratorFun<Float>()
+            return new ValueGeneratorFun<>()
             {
                 private float state = initialState;
 
@@ -935,7 +935,7 @@ public abstract class NumberGenerator
         @Override
         public ValueGeneratorFun<Double> create()
         {
-            return new ValueGeneratorFun<Double>()
+            return new ValueGeneratorFun<>()
             {
                 private double state = initialState;
 
@@ -1080,7 +1080,7 @@ public abstract class NumberGenerator
         public ValueGeneratorFun<NUMBER> create()
         {
             final IntFunction<NUMBER> toNumFun = typeMappingFunFor( clazz );
-            return new ValueGeneratorFun<NUMBER>()
+            return new ValueGeneratorFun<>()
             {
                 private int offset = baseOffset % stride;
                 private int state = initial - stride;

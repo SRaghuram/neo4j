@@ -58,7 +58,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         // Then
-        testFailRead( subject, 3 );
+        testFailRead( subject );
 
         // When
         GraphDatabaseFacade systemGraph = neo.getSystemGraph();
@@ -85,7 +85,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         CommercialLoginContext subject = neo.login( "Alice", PASSWORD );
 
         // Then
-        testFailRead( subject, 3 );
+        testFailRead( subject );
         testFailWrite( subject );
 
         // When

@@ -14,7 +14,6 @@ import java.util.UUID;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.util.VisibleForTesting;
 
 public final class RaftId
 {

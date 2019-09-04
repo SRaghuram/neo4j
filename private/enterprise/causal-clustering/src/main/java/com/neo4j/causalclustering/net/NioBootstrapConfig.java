@@ -17,7 +17,7 @@ public abstract class NioBootstrapConfig<CHANNEL extends AbstractNioChannel> imp
 {
     public static NioBootstrapConfig<NioServerSocketChannel> nioServerConfig()
     {
-        return new NioBootstrapConfig<NioServerSocketChannel>()
+        return new NioBootstrapConfig<>()
         {
             @Override
             public Class<NioServerSocketChannel> channelClass()
@@ -29,7 +29,7 @@ public abstract class NioBootstrapConfig<CHANNEL extends AbstractNioChannel> imp
 
     public static NioBootstrapConfig<NioSocketChannel> nioClientConfig()
     {
-        return new NioBootstrapConfig<NioSocketChannel>()
+        return new NioBootstrapConfig<>()
         {
             @Override
             public Class<NioSocketChannel> channelClass()

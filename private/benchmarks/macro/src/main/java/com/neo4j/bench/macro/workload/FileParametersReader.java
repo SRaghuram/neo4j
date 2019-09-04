@@ -116,7 +116,7 @@ public class FileParametersReader implements ParametersReader
     {
         return Arrays.stream( headers )
                      .map( column -> column.contains( ":" )
-                                     ? column.substring( 0, column.indexOf( ":" ) )
+                                     ? column.substring( 0, column.indexOf( ':' ) )
                                      : column )
                      .toArray( String[]::new );
     }
@@ -125,7 +125,7 @@ public class FileParametersReader implements ParametersReader
     {
         return Arrays.stream( headers )
                      .map( column -> column.contains( ":" )
-                                     ? column.substring( column.indexOf( ":" ) + 1 )
+                                     ? column.substring( column.indexOf( ':' ) + 1 )
                                      : "String" )
                      .map( FileParametersReader::columnTypesForId )
                      .toArray( ColumnType[]::new );

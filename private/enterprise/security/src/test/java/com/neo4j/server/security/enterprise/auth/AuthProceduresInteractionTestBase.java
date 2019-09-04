@@ -746,10 +746,10 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowNonAdminListUsers()
     {
-        testFailListUsers( pwdSubject, 5, CHANGE_PWD_ERR_MSG );
-        testFailListUsers( readSubject, 5, PERMISSION_DENIED );
-        testFailListUsers( writeSubject, 5, PERMISSION_DENIED );
-        testFailListUsers( schemaSubject, 5, PERMISSION_DENIED );
+        testFailListUsers( pwdSubject, CHANGE_PWD_ERR_MSG );
+        testFailListUsers( readSubject, PERMISSION_DENIED );
+        testFailListUsers( writeSubject, PERMISSION_DENIED );
+        testFailListUsers( schemaSubject, PERMISSION_DENIED );
     }
 
     //---------- list roles -----------
@@ -957,7 +957,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldSetCorrectPasswordChangeRequiredPermissions() throws Throwable
     {
-        testFailRead( pwdSubject, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailRead( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailWrite( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailSchema( pwdSubject, pwdReqErrMsg( PERMISSION_DENIED ) );
         assertPasswordChangeWhenPasswordChangeRequired( pwdSubject, "321" );
@@ -966,7 +966,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ARCHITECT + "', 'Henrik')" );
         S henrik = neo.login( "Henrik", "bar" );
         neo.assertPasswordChangeRequired( henrik );
-        testFailRead( henrik, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailRead( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailWrite( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailSchema( henrik, pwdReqErrMsg( PERMISSION_DENIED ) );
         assertPasswordChangeWhenPasswordChangeRequired( henrik, "321" );
@@ -975,7 +975,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ADMIN + "', 'Olivia')" );
         S olivia = neo.login( "Olivia", "bar" );
         neo.assertPasswordChangeRequired( olivia );
-        testFailRead( olivia, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailRead( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailWrite( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
         testFailSchema( olivia, pwdReqErrMsg( PERMISSION_DENIED ) );
         assertFail( olivia, "CALL dbms.security.createUser('OliviasFriend', 'bar', false)", CHANGE_PWD_ERR_MSG );
@@ -985,7 +985,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldSetCorrectNoRolePermissions()
     {
-        testFailRead( noneSubject, 3 );
+        testFailRead( noneSubject );
         testFailWrite( noneSubject );
         testFailSchema( noneSubject );
         testFailCreateUser( noneSubject, PERMISSION_DENIED );

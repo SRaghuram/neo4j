@@ -56,16 +56,16 @@ class ClusteringLocalDbmsOperatorIT
     {
         String dbName = "my.db";
 
-        cluster.allMembers().forEach( member -> assertFalse( databaseContext( member, dbName ).isPresent() ) );
+        cluster.allMembers().forEach( member -> assertFalse( databaseContext( member ).isPresent() ) );
 
         cluster.allMembers().forEach( member -> localOperator( member ).startDatabase( dbName ) );
-        cluster.allMembers().forEach( member -> assertTrue( availabilityGuard( member, dbName ).isAvailable() ) );
+        cluster.allMembers().forEach( member -> assertTrue( availabilityGuard( member ).isAvailable() ) );
 
         cluster.allMembers().forEach( member -> localOperator( member ).stopDatabase( dbName ) );
-        cluster.allMembers().forEach( member -> assertFalse( availabilityGuard( member, dbName ).isAvailable() ) );
+        cluster.allMembers().forEach( member -> assertFalse( availabilityGuard( member ).isAvailable() ) );
 
         cluster.allMembers().forEach( member -> localOperator( member ).dropDatabase( dbName ) );
-        cluster.allMembers().forEach( member -> assertFalse( databaseContext( member, dbName ).isPresent() ) );
+        cluster.allMembers().forEach( member -> assertFalse( databaseContext( member ).isPresent() ) );
     }
 
     private LocalDbmsOperator localOperator( ClusterMember member )
@@ -81,14 +81,14 @@ class ClusteringLocalDbmsOperatorIT
                 .resolveDependency( DatabaseManager.class );
     }
 
-    private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember member, String databaseName )
+    private Optional<ClusteredDatabaseContext> databaseContext( ClusterMember member )
     {
         return databaseManager( member ).getDatabaseContext( TestDatabaseIdRepository.randomDatabaseId() );
     }
 
-    private DatabaseAvailabilityGuard availabilityGuard( ClusterMember member, String databaseName )
+    private DatabaseAvailabilityGuard availabilityGuard( ClusterMember member )
     {
-        Optional<ClusteredDatabaseContext> optContext = databaseContext( member, databaseName );
+        Optional<ClusteredDatabaseContext> optContext = databaseContext( member );
         assertTrue( optContext.isPresent() );
 
         ClusteredDatabaseContext context = optContext.get();

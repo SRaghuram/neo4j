@@ -53,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler.STRICT;
 import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
@@ -117,7 +116,7 @@ class TransactionLogAnalyzerTest
     void throwExceptionWithErrorMessageIfLogFilesNotFound() throws Exception
     {
         File emptyDirectory = directory.directory( "empty" );
-        assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, STRICT, monitor ) );
+        assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, monitor ) );
     }
 
     @Test
@@ -211,7 +210,7 @@ class TransactionLogAnalyzerTest
         // when
         monitor.nextExpectedTxId = 4;
         monitor.nextExpectedLogVersion = version;
-        TransactionLogAnalyzer.analyze( fs, logFiles.getLogFileForVersion( version ), STRICT, monitor );
+        TransactionLogAnalyzer.analyze( fs, logFiles.getLogFileForVersion( version ), monitor );
 
         // then
         assertEquals( 1, monitor.logFiles );
@@ -221,7 +220,7 @@ class TransactionLogAnalyzerTest
 
     private void analyzeAllTransactionLogs() throws IOException
     {
-        TransactionLogAnalyzer.analyze( fs, directory.databaseLayout().getTransactionLogsDirectory(), STRICT, monitor );
+        TransactionLogAnalyzer.analyze( fs, directory.databaseLayout().getTransactionLogsDirectory(), monitor );
     }
 
     private long rotate() throws IOException

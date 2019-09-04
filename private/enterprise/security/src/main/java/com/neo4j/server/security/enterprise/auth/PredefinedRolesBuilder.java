@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import org.apache.shiro.authz.SimpleRole;
-import org.apache.shiro.authz.permission.RolePermissionResolver;
 import org.apache.shiro.authz.permission.WildcardPermission;
 
 import java.util.Collections;
@@ -67,23 +66,6 @@ public class PredefinedRolesBuilder implements RolesBuilder
 
         return roles;
     }
-
-    public static final RolePermissionResolver rolePermissionResolver = roleString ->
-    {
-        if ( roleString == null )
-        {
-            return Collections.emptyList();
-        }
-        SimpleRole role = roles.get( roleString );
-        if ( role != null )
-        {
-            return role.getPermissions();
-        }
-        else
-        {
-            return Collections.emptyList();
-        }
-    };
 
     @Override
     public Map<String,SimpleRole> buildRoles()

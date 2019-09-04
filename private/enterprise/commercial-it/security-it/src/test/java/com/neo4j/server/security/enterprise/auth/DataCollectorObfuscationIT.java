@@ -80,7 +80,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Com
         assertNoDBMSQueries( "CALL db.stats.retrieveAllAnonymized('graphToken')" );
     }
 
-    private void assertNoDBMSQueries( String query, String... secrets )
+    private void assertNoDBMSQueries( String query )
     {
         assertSuccess( adminSubject, query,
                        itr -> {

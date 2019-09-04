@@ -146,7 +146,7 @@ class TransactionGuardIT
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         monitorSupplier.setTransactionMonitor( timeoutMonitor );
-        TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
+        assertThrows( TransactionTerminatedException.class, () ->
         {
             URL url = prepareTestImportFile( 8 );
             database.executeTransactionally( "USING PERIODIC COMMIT 5 LOAD CSV FROM '" + url + "' AS line CREATE ();" );
@@ -192,7 +192,7 @@ class TransactionGuardIT
 
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            try ( Transaction transaction = database.beginTx() )
+            try ( Transaction ignored = database.beginTx() )
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
@@ -220,7 +220,7 @@ class TransactionGuardIT
 
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            try ( Transaction transaction = database.beginTx( 6, TimeUnit.SECONDS ) )
+            try ( Transaction ignored = database.beginTx( 6, TimeUnit.SECONDS ) )
             {
                 fakeClock.forward( 7, TimeUnit.SECONDS );
                 timeoutMonitor.run();
@@ -298,7 +298,7 @@ class TransactionGuardIT
         GraphDatabaseAPI database = startDatabaseWithTimeout();
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
-        CommercialNeoServer neoServer = startNeoServer( customManagementService );
+        startNeoServer( customManagementService );
 
         org.neo4j.driver.Config driverConfig = getDriverConfig();
 
@@ -322,7 +322,7 @@ class TransactionGuardIT
         KernelTransactionMonitor timeoutMonitor =
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         monitorSupplier.setTransactionMonitor( timeoutMonitor );
-        CommercialNeoServer neoServer = startNeoServer( customManagementService );
+        startNeoServer( customManagementService );
 
         org.neo4j.driver.Config driverConfig = getDriverConfig();
 
@@ -346,7 +346,7 @@ class TransactionGuardIT
                 database.getDependencyResolver().resolveDependency( KernelTransactionMonitor.class );
         TransactionTerminatedException exception = assertThrows( TransactionTerminatedException.class, () ->
         {
-            try ( Transaction transaction = database.beginTx() )
+            try ( Transaction ignored = database.beginTx() )
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
@@ -490,7 +490,7 @@ class TransactionGuardIT
     {
         // Inject IdContextFactory
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( createIdContextFactory( configMap, fileSystem, pageCache ) );
+        dependencies.satisfyDependencies( createIdContextFactory( fileSystem ) );
 
         DatabaseManagementServiceBuilder databaseBuilder =
                 new TestCommercialDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
@@ -501,10 +501,8 @@ class TransactionGuardIT
         return (GraphDatabaseAPI) customManagementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    private IdContextFactory createIdContextFactory( Map<Setting<?>,Object> configMap, FileSystemAbstraction fileSystem, PageCache pageCache )
+    private IdContextFactory createIdContextFactory( FileSystemAbstraction fileSystem )
     {
-        Config config = Config.defaults( configMap );
-
         return IdContextFactoryBuilder.of( JobSchedulerFactory.createScheduler() )
                 .withIdGenerationFactoryProvider(
                         any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate() ) ) )
@@ -577,7 +575,7 @@ class TransactionGuardIT
         }
     }
 
-    private class TerminationIdGeneratorFactory implements IdGeneratorFactory
+    private static class TerminationIdGeneratorFactory implements IdGeneratorFactory
     {
         private final IdGeneratorFactory delegate;
 
@@ -618,7 +616,7 @@ class TransactionGuardIT
         }
     }
 
-    private final class TerminationIdGenerator extends IdGenerator.Delegate
+    private static final class TerminationIdGenerator extends IdGenerator.Delegate
     {
         TerminationIdGenerator( IdGenerator delegate )
         {

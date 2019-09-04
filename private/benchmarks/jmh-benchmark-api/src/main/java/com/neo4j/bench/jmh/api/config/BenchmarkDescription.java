@@ -408,7 +408,7 @@ public class BenchmarkDescription
         {
             throw new RuntimeException( "Invalid JMH @param name, does not contain '_' character :" + jmhParamName );
         }
-        return jmhParamName.substring( jmhParamName.indexOf( "_" ) + 1 );
+        return jmhParamName.substring( jmhParamName.indexOf( '_' ) + 1 );
     }
 
     @Override

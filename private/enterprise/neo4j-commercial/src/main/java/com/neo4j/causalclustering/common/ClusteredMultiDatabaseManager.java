@@ -9,11 +9,8 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.dbms.database.MultiDatabaseManager;
-import org.apache.commons.lang3.SystemUtils;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -31,8 +28,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.util.Collections.singleton;
 
 public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext>
 {

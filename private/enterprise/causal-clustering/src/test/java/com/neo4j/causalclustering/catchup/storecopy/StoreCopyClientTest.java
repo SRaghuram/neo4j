@@ -127,7 +127,7 @@ class StoreCopyClientTest
         mockClient( protocol );
         // setup fake catchup client responses. Lots of files, and any request for a store or index file will succeed
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
-        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
                 .withStoreFilesResponse( success );
@@ -182,7 +182,7 @@ class StoreCopyClientTest
                 backoffStrategy );
 
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
-        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
                 .withStoreFilesResponse( success );
@@ -201,7 +201,7 @@ class StoreCopyClientTest
         mockClient( protocol );
         // given a file will fail an expected number of times
         // and requesting the individual file will fail
-        StoreCopyFinishedResponse failed = expectedStoreCopyFinishedResponse( E_TOO_FAR_BEHIND, protocol );
+        StoreCopyFinishedResponse failed = expectedStoreCopyFinishedResponse( E_TOO_FAR_BEHIND );
         // and the initial list+count store files request is successful
         PrepareStoreCopyResponse initialListingOfFilesResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
 
@@ -282,7 +282,7 @@ class StoreCopyClientTest
         mockClient( protocol );
         // given
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, LAST_CHECKPOINTED_TX );
-        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );
 
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
@@ -322,7 +322,7 @@ class StoreCopyClientTest
                 .collect( Collectors.toList() );
     }
 
-    private static StoreCopyFinishedResponse expectedStoreCopyFinishedResponse( StoreCopyFinishedResponse.Status status, ApplicationProtocol protocol )
+    private static StoreCopyFinishedResponse expectedStoreCopyFinishedResponse( StoreCopyFinishedResponse.Status status )
     {
         return new StoreCopyFinishedResponse( status, LAST_CHECKPOINTED_TX );
     }

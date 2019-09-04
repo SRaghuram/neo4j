@@ -54,7 +54,7 @@ public class SrvRecordResolverImpl extends SrvRecordResolver
 
     private static <T> Stream<T> enumerationAsStream( Enumeration<T> e )
     {
-        return StreamSupport.stream( Spliterators.spliteratorUnknownSize( new Iterator<T>()
+        return StreamSupport.stream( Spliterators.spliteratorUnknownSize( new Iterator<>()
         {
             @Override
             public T next()

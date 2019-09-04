@@ -23,9 +23,6 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
@@ -37,7 +34,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
-    private static final DatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
     private final DatabaseManagementService dbms;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;

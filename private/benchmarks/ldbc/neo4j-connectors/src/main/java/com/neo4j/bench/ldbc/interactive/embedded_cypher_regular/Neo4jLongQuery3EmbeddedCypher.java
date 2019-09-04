@@ -71,7 +71,7 @@ public class Neo4jLongQuery3EmbeddedCypher extends Neo4jQuery3<Neo4jConnectionSt
     }
 
     private static final Function<Map<String,Object>,LdbcQuery3Result> TRANSFORM_FUN =
-            new Function<Map<String,Object>,LdbcQuery3Result>()
+            new Function<>()
             {
                 @Override
                 public LdbcQuery3Result apply( Map<String,Object> cypherResult )

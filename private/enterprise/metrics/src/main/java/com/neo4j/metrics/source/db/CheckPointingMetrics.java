@@ -8,7 +8,6 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.metric.MetricsCounter;
-import com.neo4j.metrics.output.EventReporter;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
@@ -35,8 +34,7 @@ public class CheckPointingMetrics extends LifecycleAdapter
     private final MetricRegistry registry;
     private final CheckpointCounters checkpointCounters;
 
-    public CheckPointingMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
-            CheckpointCounters checkpointCounters )
+    public CheckPointingMetrics( String metricsPrefix, MetricRegistry registry, CheckpointCounters checkpointCounters )
     {
         this.checkPointEvents = name( metricsPrefix, CHECK_POINT_EVENTS_TEMPLATE );
         this.checkPointTotalTime = name( metricsPrefix, CHECK_POINT_TOTAL_TIME_TEMPLATE );

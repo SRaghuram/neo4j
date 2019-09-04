@@ -19,8 +19,6 @@ import static java.lang.String.format;
  * so for that the bytes that make up a value is written (and of course read) in big-endian order.
  *
  * Negative values are also supported, in order to handle relative references.
- *
- * @author Mattias Persson
  */
 public enum Reference
 {

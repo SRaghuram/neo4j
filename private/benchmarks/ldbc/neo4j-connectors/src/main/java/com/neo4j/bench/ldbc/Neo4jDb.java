@@ -463,7 +463,7 @@ public class Neo4jDb extends Db
     public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
     {
         String withoutProtocol = uri.toString().substring( uri.toString().indexOf( "://" ) + 3 );
-        int portIndex = withoutProtocol.lastIndexOf( ":" );
+        int portIndex = withoutProtocol.lastIndexOf( ':' );
         int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1 ) );
         return newDbBuilderForBolt(
                 dbDir,

@@ -211,7 +211,7 @@ public class AkkaCoreTopologyDowningIT
 
     private TopologyServiceComponents createAndStartDynamicResolver( int myPort, int... otherPorts ) throws Throwable
     {
-        return createAndStart( config -> new DynamicResolver( dynamicPorts, config ), myPort, otherPorts );
+        return createAndStart( config -> new DynamicResolver( dynamicPorts ), myPort, otherPorts );
     }
 
     private TopologyServiceComponents createAndStart( Function<Config,RemoteMembersResolver> resolverFactory, int myPort, int... otherPorts ) throws Throwable
@@ -290,7 +290,7 @@ public class AkkaCoreTopologyDowningIT
     {
         private final Set<Integer> dynamicPorts;
 
-        DynamicResolver( Set<Integer> dynamicPorts, Config config )
+        DynamicResolver( Set<Integer> dynamicPorts )
         {
             this.dynamicPorts = dynamicPorts;
         }

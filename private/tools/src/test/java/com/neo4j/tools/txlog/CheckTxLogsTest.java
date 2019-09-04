@@ -26,7 +26,6 @@ import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
-import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
@@ -839,13 +838,6 @@ class CheckTxLogsTest
             record.addPropertyBlock( block );
         }
         return record;
-    }
-
-    private NeoStoreRecord createNeoStoreRecord( int nextProp )
-    {
-        NeoStoreRecord neoStoreRecord = new NeoStoreRecord();
-        neoStoreRecord.setNextProp( nextProp );
-        return neoStoreRecord;
     }
 
     private void writeTxContent( File log, long txId, Command... commands ) throws IOException

@@ -10,7 +10,6 @@ import akka.cluster.UniqueAddress;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
-import scala.Int;
 
 import java.io.IOException;
 

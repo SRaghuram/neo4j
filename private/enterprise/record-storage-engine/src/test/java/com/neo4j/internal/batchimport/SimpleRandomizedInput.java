@@ -39,12 +39,11 @@ import static org.junit.Assert.fail;
 
 public class SimpleRandomizedInput implements Input
 {
-    static final String ID_KEY = "id";
+    private static final String ID_KEY = "id";
 
     private final IdType idType = IdType.INTEGER;
     private final Extractors extractors = new Extractors( Configuration.COMMAS.arrayDelimiter() );
     private final Input actual;
-    private final Collector badCollector;
     private final long nodeCount;
     private final long relationshipCount;
 
@@ -53,7 +52,6 @@ public class SimpleRandomizedInput implements Input
     {
         this.nodeCount = nodeCount;
         this.relationshipCount = relationshipCount;
-        badCollector = new GatheringBadCollector();
         actual = new DataGeneratorInput( nodeCount, relationshipCount, idType, seed, 0,
                 DataGeneratorInput.bareboneNodeHeader( ID_KEY, idType, extractors ),
                 DataGeneratorInput.bareboneRelationshipHeader( idType, extractors,
@@ -250,48 +248,6 @@ public class SimpleRandomizedInput implements Input
             {
                 return type.equals( other.type );
             }
-        }
-    }
-
-    private static class GatheringBadCollector implements Collector
-    {
-        private final Set<RelationshipKey> badRelationships = new HashSet<>();
-        private final Set<Object> badNodes = new HashSet<>();
-
-        @Override
-        public synchronized void collectBadRelationship(
-                Object startId, String startIdGroup, String type,
-                Object endId, String endIdGroup, Object specificValue )
-        {
-            badRelationships.add( new RelationshipKey( startId, type, endId ) );
-        }
-
-        @Override
-        public synchronized void collectDuplicateNode( Object id, long actualId, String group )
-        {
-            badNodes.add( id );
-        }
-
-        @Override
-        public void collectExtraColumns( String source, long row, String value )
-        {
-        }
-
-        @Override
-        public long badEntries()
-        {
-            return badRelationships.size() + badNodes.size();
-        }
-
-        @Override
-        public void close()
-        {
-        }
-
-        @Override
-        public boolean isCollectingBadRelationships()
-        {
-            return true;
         }
     }
 

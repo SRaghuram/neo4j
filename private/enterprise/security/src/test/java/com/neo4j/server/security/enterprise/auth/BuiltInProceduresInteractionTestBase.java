@@ -74,7 +74,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
@@ -204,7 +203,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         String listTransactionsQuery = "CALL dbms.listTransactions()";
 
         DoubleLatch latch = new DoubleLatch( 2 );
-        OffsetDateTime startTime = getStartTime();
 
         ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
         tx.execute( threading, writeSubject, matchQuery );
@@ -262,7 +260,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         try
         {
             ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
-            String q1 = read1.execute( threading, neo.login( "user1", "" ), "UNWIND [1,2,3] AS x RETURN x" );
+            read1.execute( threading, neo.login( "user1", "" ), "UNWIND [1,2,3] AS x RETURN x" );
             latch.startAndWaitForAllToStart();
 
             String query = "CALL dbms.listTransactions()";
@@ -290,7 +288,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
 
         String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
-        String ignored = read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
         latch.startAndWaitForAllToStart();
 
         String query = "CALL dbms.listTransactions()";
@@ -587,7 +585,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
 
         String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
-        String ignored = read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
         latch.startAndWaitForAllToStart();
 
         String query = "CALL dbms.listQueries()";

@@ -47,10 +47,7 @@ class WillNotBecomeLeaderIT
             {
                 return "false";
             }
-            else
-            {
-                return "true";
-            }
+            return "true";
         } );
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );

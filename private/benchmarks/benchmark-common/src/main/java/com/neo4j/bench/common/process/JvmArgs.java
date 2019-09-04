@@ -121,7 +121,7 @@ public class JvmArgs
      */
     public JvmArgs()
     {
-        this( new ArrayList<String>() );
+        this( new ArrayList<>() );
     }
 
     private JvmArgs( List<String> jvmArgs )
@@ -149,7 +149,7 @@ public class JvmArgs
 
     public List<String> toArgs()
     {
-        return new ArrayList<String>( jvmArgs );
+        return new ArrayList<>( jvmArgs );
     }
 
     public String[] asArray()

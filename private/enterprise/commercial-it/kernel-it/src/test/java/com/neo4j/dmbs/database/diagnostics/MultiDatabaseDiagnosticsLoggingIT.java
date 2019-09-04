@@ -10,11 +10,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -61,7 +59,6 @@ class MultiDatabaseDiagnosticsLoggingIT
     @Test
     void dumpDbInformationOnCreation() throws DatabaseExistsException
     {
-        DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
         provider.clear();
         provider.assertNoLoggingOccurred();
 

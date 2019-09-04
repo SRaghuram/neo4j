@@ -22,7 +22,6 @@ import com.neo4j.bench.ldbc.interactive.Neo4jUpdate7;
 import com.neo4j.bench.ldbc.operators.Operators;
 
 import java.util.HashMap;
-import java.util.Set;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
@@ -84,8 +83,8 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
                     double existingWeight = Neo4jQuery14.conversationWeightBetweenPersons(
                             person,
                             replyToCommentCreatorPerson,
-                            new HashMap<Node,Set<Node>>(),
-                            new HashMap<Node,Set<Node>>(),
+                            new HashMap<>(),
+                            new HashMap<>(),
                             POST_HAS_CREATOR_RELATIONSHIP_TYPES,
                             COMMENT_HAS_CREATOR_RELATIONSHIP_TYPES );
                     knows.setProperty( Knows.WEIGHT, existingWeight );
@@ -115,8 +114,8 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
                     double existingWeight = Neo4jQuery14.conversationWeightBetweenPersons(
                             person,
                             replyToPostCreatorPerson,
-                            new HashMap<Node,Set<Node>>(),
-                            new HashMap<Node,Set<Node>>(),
+                            new HashMap<>(),
+                            new HashMap<>(),
                             POST_HAS_CREATOR_RELATIONSHIP_TYPES,
                             COMMENT_HAS_CREATOR_RELATIONSHIP_TYPES );
                     knows.setProperty( Knows.WEIGHT, existingWeight );

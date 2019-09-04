@@ -65,7 +65,7 @@ public abstract class ConcurrentStressIT<T extends RaftLog & Lifecycle>
 
                 for ( Future<Long> f : futures )
                 {
-                    long iterations = f.get();
+                    f.get();
                 }
 
                 es.shutdown();
@@ -77,7 +77,7 @@ public abstract class ConcurrentStressIT<T extends RaftLog & Lifecycle>
         }
     }
 
-    private class TimedTask implements Callable<Long>
+    private static class TimedTask implements Callable<Long>
     {
         private Runnable task;
         private final long runTimeMillis;

@@ -38,7 +38,7 @@ public class BenchmarkDiscoveryUtils
     public static BenchmarkGroup toBenchmarkGroup( BenchmarkParams benchmarkParams )
     {
         String benchmarkMethodName = benchmarkParams.getBenchmark();
-        String benchmarkClassName = benchmarkMethodName.substring( 0, benchmarkMethodName.lastIndexOf( "." ) );
+        String benchmarkClassName = benchmarkMethodName.substring( 0, benchmarkMethodName.lastIndexOf( '.' ) );
         String benchmarkGroup = benchmarkGroupFor( benchmarkClassName );
         return new BenchmarkGroup( benchmarkGroup );
     }
@@ -105,14 +105,14 @@ public class BenchmarkDiscoveryUtils
 
     private static String withoutPackageName( String benchmarkName )
     {
-        int classNameMethodNameSeparatorIndex = benchmarkName.lastIndexOf( "." );
-        int packageClassSeparatorIndex = benchmarkName.lastIndexOf( ".", classNameMethodNameSeparatorIndex - 1 );
+        int classNameMethodNameSeparatorIndex = benchmarkName.lastIndexOf( '.' );
+        int packageClassSeparatorIndex = benchmarkName.lastIndexOf( '.', classNameMethodNameSeparatorIndex - 1 );
         return benchmarkName.substring( packageClassSeparatorIndex + 1 );
     }
 
     private static String withoutMethodName( String benchmarkName )
     {
-        int classNameMethodNameSeparatorIndex = benchmarkName.lastIndexOf( "." );
+        int classNameMethodNameSeparatorIndex = benchmarkName.lastIndexOf( '.' );
         return benchmarkName.substring( 0, classNameMethodNameSeparatorIndex );
     }
 

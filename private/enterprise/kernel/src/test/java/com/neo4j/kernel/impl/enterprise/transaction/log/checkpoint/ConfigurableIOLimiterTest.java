@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.is;
 
 class ConfigurableIOLimiterTest
 {
-    private static final String ORIGIN = "test";
     private ConfigurableIOLimiter limiter;
     private Config config;
     private AtomicLong pauseNanosCounter;

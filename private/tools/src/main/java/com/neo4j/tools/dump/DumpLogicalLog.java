@@ -59,7 +59,7 @@ public class DumpLogicalLog
             Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer,
             InvalidLogEntryHandler invalidLogEntryHandler ) throws IOException
     {
-        TransactionLogAnalyzer.analyze( fileSystem, new File( filenameOrDirectory ), invalidLogEntryHandler, new Monitor()
+        TransactionLogAnalyzer.analyze( fileSystem, new File( filenameOrDirectory ), new Monitor()
         {
             private File file;
             private LogEntryCommit firstTx;

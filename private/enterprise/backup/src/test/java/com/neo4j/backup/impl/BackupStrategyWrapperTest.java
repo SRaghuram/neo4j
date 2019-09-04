@@ -415,20 +415,6 @@ class BackupStrategyWrapperTest
         verify( log ).info( "Previous backup not found, a new full backup will be performed." );
     }
 
-    private void incrementalBackupIsSuccessful( boolean isSuccessful ) throws Exception
-    {
-        if ( isSuccessful )
-        {
-            doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
-        }
-        else
-        {
-            doThrow( BackupExecutionException.class )
-                    .when( backupStrategyImplementation )
-                    .performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );
-        }
-    }
-
     private void bothBackupsFail() throws Exception
     {
         doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any(), eq( DEFAULT_DATABASE_NAME ) );

@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
-import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
@@ -26,8 +25,6 @@ import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
-
-import static java.lang.String.format;
 
 /**
  * Shiro realm using a Neo4j graph to store users and roles

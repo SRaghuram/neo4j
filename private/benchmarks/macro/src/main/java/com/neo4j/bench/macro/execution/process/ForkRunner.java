@@ -191,7 +191,7 @@ public class ForkRunner
         }
         else
         {
-            Main.main( commandArgs.toArray( new String[commandArgs.size()] ) );
+            Main.main( commandArgs.toArray( new String[0] ) );
         }
     }
 }

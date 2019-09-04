@@ -59,7 +59,7 @@ public class ConsoleUtil
             }
             inside = !inside;
         }
-        return result.toArray( new String[result.size()] );
+        return result.toArray( new String[0] );
     }
 
     private static void splitAndKeepEscapedSpaces( String string, boolean preserveEscapes, Collection<String> into )

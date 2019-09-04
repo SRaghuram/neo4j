@@ -38,7 +38,7 @@ class BaseHighLimitRecordFormatTest
         MyRecordFormat format = new MyRecordFormat();
         StubPageCursor cursor = new StubPageCursor( 0, 4 );
         cursor.putByte( 0, (byte) (HEADER_BIT_RECORD_UNIT + HEADER_BIT_FIRST_RECORD_UNIT) );
-        StubPagedFile pagedFile = new StubPagedFile( 3 )
+        new StubPagedFile( 3 )
         {
             @Override
             protected void prepareCursor( StubPageCursor cursor )

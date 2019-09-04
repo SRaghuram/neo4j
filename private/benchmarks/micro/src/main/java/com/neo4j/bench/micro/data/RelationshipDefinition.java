@@ -67,8 +67,8 @@ public class RelationshipDefinition
 
     private static RelationshipDefinition definitionFrom( String s )
     {
-        RelationshipType type = RelationshipType.withName( s.substring( 1, s.indexOf( ":" ) ) );
-        int count = Integer.parseInt( s.substring( s.indexOf( ":" ) + 1, s.length() - 1 ) );
+        RelationshipType type = RelationshipType.withName( s.substring( 1, s.indexOf( ':' ) ) );
+        int count = Integer.parseInt( s.substring( s.indexOf( ':' ) + 1, s.length() - 1 ) );
         return new RelationshipDefinition( type, count );
     }
 }

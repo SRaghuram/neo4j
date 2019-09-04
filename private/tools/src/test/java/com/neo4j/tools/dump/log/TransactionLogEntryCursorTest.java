@@ -105,7 +105,7 @@ class TransactionLogEntryCursorTest
 
     private void assertTx( List<LogEntry> expected, LogEntry[] actual )
     {
-        assertArrayEquals( expected.toArray( new LogEntry[expected.size()] ), actual );
+        assertArrayEquals( expected.toArray( new LogEntry[0] ), actual );
     }
 
     private List<LogEntry> makeTransaction( byte... types )

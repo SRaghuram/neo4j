@@ -62,8 +62,6 @@ import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 abstract class AbstractRESTInteraction extends CommunityServerTestBase implements NeoInteractionLevel<RESTSubject>
 {
-
-    static final String POST = "POST";
     private final ConnectorPortRegister connectorPortRegister;
     private final CommercialAuthManager authManager;
 
@@ -81,7 +79,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         config.forEach( ( setting, s ) -> stringMap.put( setting.name(), s ) );
 
         CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts();
-        PemSslPolicyConfig policy = PemSslPolicyConfig.forScope( BOLT );
+        PemSslPolicyConfig.forScope( BOLT );
         builder = builder
                 .persistent()
                 .usingDataDir( dataDir.getAbsolutePath() )

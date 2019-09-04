@@ -63,7 +63,7 @@ public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionSta
         final OneToManyIsConnectedCache validTagsCache = Operators
                 .oneToManyIsConnected()
                 .lazyPull( validTagClasses, Direction.OUTGOING, Rels.HAS_TYPE );
-        Predicate<Node> validTagPredicate = new Predicate<Node>()
+        Predicate<Node> validTagPredicate = new Predicate<>()
         {
             @Override
             public boolean apply( Node tag )

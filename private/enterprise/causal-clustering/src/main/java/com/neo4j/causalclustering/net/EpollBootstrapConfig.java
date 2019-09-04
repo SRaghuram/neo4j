@@ -17,7 +17,7 @@ public abstract class EpollBootstrapConfig<CHANNEL extends Channel> implements B
 {
     public static EpollBootstrapConfig<EpollServerSocketChannel> epollServerConfig()
     {
-        return new EpollBootstrapConfig<EpollServerSocketChannel>()
+        return new EpollBootstrapConfig<>()
         {
             @Override
             public Class<EpollServerSocketChannel> channelClass()
@@ -29,7 +29,7 @@ public abstract class EpollBootstrapConfig<CHANNEL extends Channel> implements B
 
     public static EpollBootstrapConfig<EpollSocketChannel> epollClientConfig()
     {
-        return new EpollBootstrapConfig<EpollSocketChannel>()
+        return new EpollBootstrapConfig<>()
         {
             @Override
             public Class<EpollSocketChannel> channelClass()

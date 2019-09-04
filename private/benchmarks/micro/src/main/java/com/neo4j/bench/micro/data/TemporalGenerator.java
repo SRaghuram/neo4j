@@ -74,7 +74,7 @@ public class TemporalGenerator
         public ValueGeneratorFun<ZonedDateTime> create()
         {
             ValueGeneratorFun<Long> innerSecondFun = seconds.create();
-            return new ValueGeneratorFun<ZonedDateTime>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -135,7 +135,7 @@ public class TemporalGenerator
         public ValueGeneratorFun<LocalDateTime> create()
         {
             ValueGeneratorFun<Long> innerSecondsFun = seconds.create();
-            return new ValueGeneratorFun<LocalDateTime>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -196,7 +196,7 @@ public class TemporalGenerator
         public ValueGeneratorFun<OffsetTime> create()
         {
             ValueGeneratorFun<Long> innerNanosOfDayFun = nanos.create();
-            return new ValueGeneratorFun<OffsetTime>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -257,7 +257,7 @@ public class TemporalGenerator
         public ValueGeneratorFun<LocalTime> create()
         {
             ValueGeneratorFun<Long> innerNanosOfDayFun = nanos.create();
-            return new ValueGeneratorFun<LocalTime>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -318,7 +318,7 @@ public class TemporalGenerator
         public ValueGeneratorFun<LocalDate> create()
         {
             ValueGeneratorFun<Long> innerEpochDaysFun = epochDays.create();
-            return new ValueGeneratorFun<LocalDate>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()
@@ -379,7 +379,7 @@ public class TemporalGenerator
         public ValueGeneratorFun<DurationValue> create()
         {
             ValueGeneratorFun<Long> innerNanosFun = nanos.create();
-            return new ValueGeneratorFun<DurationValue>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()

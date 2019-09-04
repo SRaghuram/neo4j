@@ -169,7 +169,7 @@ class Neo4jServerWrapper
     void stop() throws TimeoutException
     {
         ProcessWrapper.start( neo4jCommand( INHERIT, INHERIT, "stop" ) ).waitFor();
-        EventualValue<String> eventualValue = new EventualValue<String>()
+        EventualValue<String> eventualValue = new EventualValue<>()
         {
             @Override
             public String getValueOrNull()
@@ -237,7 +237,7 @@ class Neo4jServerWrapper
      */
     private List<String> waitForServerAndGetOutput( Redirect output ) throws TimeoutException
     {
-        EventualValue<List<String>> eventualValue = new EventualValue<List<String>>()
+        EventualValue<List<String>> eventualValue = new EventualValue<>()
         {
             @Override
             public List<String> getValueOrNull()

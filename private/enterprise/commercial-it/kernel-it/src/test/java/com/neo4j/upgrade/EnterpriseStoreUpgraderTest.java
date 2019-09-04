@@ -22,9 +22,10 @@ import org.neo4j.test.Unzip;
 
 public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
 {
+    @SuppressWarnings( "unused" )
     private static Collection<RecordFormats> versions()
     {
-        return Arrays.asList( HighLimitV3_0_0.RECORD_FORMATS,  HighLimitV3_4_0.RECORD_FORMATS );
+        return Arrays.asList( HighLimitV3_0_0.RECORD_FORMATS, HighLimitV3_4_0.RECORD_FORMATS );
     }
 
     @Override

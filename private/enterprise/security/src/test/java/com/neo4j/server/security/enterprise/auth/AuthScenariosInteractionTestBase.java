@@ -38,7 +38,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
         S subject = neo.login( "Henrik", "bar" );
         neo.assertPasswordChangeRequired( subject );
-        testFailRead( subject, 3, pwdReqErrMsg( PERMISSION_DENIED ) );
+        testFailRead( subject, pwdReqErrMsg( PERMISSION_DENIED ) );
     }
 
     @Test
@@ -123,7 +123,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertPasswordChangeWhenPasswordChangeRequired( subject, "foo" );
         subject = neo.login( "Henrik", "foo" );
         neo.assertAuthenticated( subject );
-        testFailRead( subject, 3 );
+        testFailRead( subject );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
         testFailWrite( subject );
         testSuccessfulRead( subject, 3 );
@@ -145,7 +145,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', false)" );
         S subject = neo.login( "Henrik", "bar" );
         neo.assertAuthenticated( subject );
-        testFailRead( subject, 3 );
+        testFailRead( subject );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + PUBLISHER + "', 'Henrik')" );
         testSuccessfulWrite( subject );
         testSuccessfulRead( subject, 4 );
@@ -172,7 +172,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertEmpty( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', false)" );
         S subject = neo.login( "Henrik", "bar" );
         neo.assertAuthenticated( subject );
-        testFailRead( subject, 3 );
+        testFailRead( subject );
         testFailWrite( subject );
         testFailSchema( subject );
         testFailCreateUser( subject, PERMISSION_DENIED );
@@ -288,7 +288,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         neo.assertAuthenticated( subject );
         testSuccessfulWrite( subject );
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'Henrik')" );
-        testFailRead( subject, 4 );
+        testFailRead( subject );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
         testFailWrite( subject );
         testSuccessfulRead( subject, 4 );
@@ -364,7 +364,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + READER + "', 'Henrik')" );
         assertEmpty( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'Henrik')" );
         testFailWrite( subject );
-        testFailRead( subject, 4 );
+        testFailRead( subject );
     }
 
     /*
@@ -523,7 +523,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         testSuccessfulListUsers( adminSubject, with( initialUsers, "Henrik" ) );
         S subject = neo.login( "Henrik", "bar" );
         neo.assertAuthenticated( subject );
-        testFailListUsers( subject, 6, PERMISSION_DENIED );
+        testFailListUsers( subject, PERMISSION_DENIED );
         assertEmpty( adminSubject, "CALL dbms.security.addRoleToUser('" + ADMIN + "', 'Henrik')" );
         testSuccessfulListUsers( subject, with( initialUsers, "Henrik" ) );
     }

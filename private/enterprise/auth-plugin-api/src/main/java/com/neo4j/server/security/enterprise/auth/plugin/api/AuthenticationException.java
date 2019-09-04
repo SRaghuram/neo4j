@@ -15,9 +15,4 @@ public class AuthenticationException extends Exception
     {
         super( message );
     }
-
-    public AuthenticationException( String message, Throwable cause )
-    {
-        super( message, cause );
-    }
 }

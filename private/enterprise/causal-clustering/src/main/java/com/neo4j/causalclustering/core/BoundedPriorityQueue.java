@@ -54,7 +54,7 @@ public class BoundedPriorityQueue<E>
 
         default <T> Removable<T> map( Function<E,T> fn )
         {
-            return new Removable<T>()
+            return new Removable<>()
             {
                 @Override
                 public T get()

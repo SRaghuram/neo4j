@@ -60,7 +60,7 @@ public class Neo4jShortQuery6EmbeddedCypher extends Neo4jShortQuery6<Neo4jConnec
     }
 
     private static final Function<Map<String,Object>,LdbcShortQuery6MessageForumResult> TRANSFORM_FUN =
-            new Function<Map<String,Object>,LdbcShortQuery6MessageForumResult>()
+            new Function<>()
             {
                 @Override
                 public LdbcShortQuery6MessageForumResult apply( Map<String,Object> row )

@@ -14,8 +14,6 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

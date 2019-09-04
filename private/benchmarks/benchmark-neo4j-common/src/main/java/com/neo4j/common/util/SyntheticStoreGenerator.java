@@ -117,7 +117,7 @@ public class SyntheticStoreGenerator
     private static final Supplier<Integer> DURATION_MS = () -> RNG.nextInt( 1000, 4999 );
     private static final Supplier<Repository> TOOL = () -> TOOLS[RNG.nextInt( 0, TOOLS.length - 1 )];
     private static final Supplier<Repository> PROJECT = () -> PROJECTS[RNG.nextInt( 0, PROJECTS.length - 1 )];
-    private static final Supplier<Integer> BUILD = new Supplier<Integer>()
+    private static final Supplier<Integer> BUILD = new Supplier<>()
     {
         private int build;
 

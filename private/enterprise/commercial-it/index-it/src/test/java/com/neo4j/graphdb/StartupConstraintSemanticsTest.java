@@ -14,7 +14,6 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.Exceptions;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -117,7 +116,6 @@ class StartupConstraintSemanticsTest
         {
             graphDb = getCommunityDatabase();
             DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency( DatabaseManager.class );
-            DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
             DatabaseContext databaseContext = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
             assertTrue( databaseContext.isFailed() );
             Throwable error = Exceptions.rootCause( databaseContext.failureCause() );

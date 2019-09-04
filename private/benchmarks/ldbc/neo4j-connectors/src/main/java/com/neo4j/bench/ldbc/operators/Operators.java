@@ -22,33 +22,9 @@ import static java.lang.String.format;
 
 public class Operators
 {
-    private static final Function2<Relationship,Node,Node,DbException> OUTGOING_NEIGHBOR_FUN =
-            new Function2<Relationship,Node,Node,DbException>()
-            {
-                @Override
-                public Node apply( Relationship relationship, Node node )
-                {
-                    return relationship.getEndNode();
-                }
-            };
-    private static final Function2<Relationship,Node,Node,DbException> INCOMING_NEIGHBOR_FUN =
-            new Function2<Relationship,Node,Node,DbException>()
-            {
-                @Override
-                public Node apply( Relationship relationship, Node node )
-                {
-                    return relationship.getStartNode();
-                }
-            };
-    private static final Function2<Relationship,Node,Node,DbException> BOTH_NEIGHBOR_FUN =
-            new Function2<Relationship,Node,Node,DbException>()
-            {
-                @Override
-                public Node apply( Relationship relationship, Node node )
-                {
-                    return relationship.getOtherNode( node );
-                }
-            };
+    private static final Function2<Relationship,Node,Node,DbException> OUTGOING_NEIGHBOR_FUN = ( relationship, node ) -> relationship.getEndNode();
+    private static final Function2<Relationship,Node,Node,DbException> INCOMING_NEIGHBOR_FUN = ( relationship, node ) -> relationship.getStartNode();
+    private static final Function2<Relationship,Node,Node,DbException> BOTH_NEIGHBOR_FUN = Relationship::getOtherNode;
 
     public static Node findNode( Transaction tx, Label label, String key, Object value ) throws DbException
     {

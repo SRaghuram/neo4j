@@ -9,7 +9,6 @@ import com.neo4j.bench.micro.benchmarks.cluster.EditionModuleBackedAbstractBench
 import com.neo4j.bench.micro.benchmarks.cluster.LocalNetworkPlatform;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import io.netty.channel.Channel;

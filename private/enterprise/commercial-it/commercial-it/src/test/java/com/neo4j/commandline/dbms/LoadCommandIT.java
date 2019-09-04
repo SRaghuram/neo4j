@@ -65,7 +65,6 @@ class LoadCommandIT extends AbstractCommandIT
         var newDatabase = "mydatabase";
         var databaseName = databaseAPI.databaseName();
         DatabaseLayout databaseLayout = databaseAPI.databaseLayout();
-        var destinationPath = databaseLayout.getStoreLayout().storeDirectory().toPath();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             transaction.createNode( marker );
@@ -82,7 +81,7 @@ class LoadCommandIT extends AbstractCommandIT
         managementService.createDatabase( newDatabase );
         GraphDatabaseService database = managementService.database( newDatabase );
 
-        try ( Transaction transaction = database.beginTx() )
+        try ( Transaction ignored = database.beginTx() )
         {
             assertTrue( transaction.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
         }
@@ -94,7 +93,6 @@ class LoadCommandIT extends AbstractCommandIT
         Label marker = Label.label( "marker" );
         var databaseName = databaseAPI.databaseName();
         DatabaseLayout databaseLayout = databaseAPI.databaseLayout();
-        var destinationPath = databaseLayout.getStoreLayout().storeDirectory().toPath();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             transaction.createNode( marker );
@@ -118,7 +116,6 @@ class LoadCommandIT extends AbstractCommandIT
         Label marker = Label.label( "marker" );
         var databaseName = databaseAPI.databaseName();
         DatabaseLayout databaseLayout = databaseAPI.databaseLayout();
-        var destinationPath = databaseLayout.getStoreLayout().storeDirectory().toPath();
         try ( Transaction transaction = databaseAPI.beginTx() )
         {
             transaction.createNode( marker );

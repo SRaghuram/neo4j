@@ -122,7 +122,7 @@ public class ConstantGenerator
             Object value = getValue( type, constant );
             Value constantValue = Values.of( value );
 
-            return new ValueGeneratorFun<Object>()
+            return new ValueGeneratorFun<>()
             {
                 @Override
                 public boolean wrapped()

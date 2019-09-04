@@ -258,7 +258,7 @@ public class ResultsCurator
         {
             operationTypes.add( latenciesAtCoresAtSockets.name );
         }
-        String[] operationTypesArray = operationTypes.toArray( new String[operationTypes.size()] );
+        String[] operationTypesArray = operationTypes.toArray( new String[0] );
         Arrays.sort( operationTypesArray );
         int rowLength = 2 + operationTypesArray.length;
         String[] row = new String[rowLength];
@@ -963,7 +963,7 @@ public class ResultsCurator
     {
         return (!file.getName().contains( "." ))
                ? file.getName()
-               : file.getName().substring( 0, file.getName().lastIndexOf( "." ) );
+               : file.getName().substring( 0, file.getName().lastIndexOf( '.' ) );
     }
 
     private static class ResultCodeSummary

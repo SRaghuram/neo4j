@@ -64,15 +64,15 @@ public class Neo4jLongQuery13EmbeddedCypher extends Neo4jQuery13<Neo4jConnection
     }
 
 private static final Function<Map<String,Object>,LdbcQuery13Result> TRANSFORM_FUN =
-            new Function<Map<String,Object>,LdbcQuery13Result>()
+        new Function<>()
+        {
+            @Override
+            public LdbcQuery13Result apply( Map<String,Object> row )
             {
-                @Override
-                public LdbcQuery13Result apply( Map<String,Object> row )
-                {
-                    return new LdbcQuery13Result(
-                            ((Number) row.get( "pathLength" )).intValue() );
-                }
-            };
+                return new LdbcQuery13Result(
+                        ((Number) row.get( "pathLength" )).intValue() );
+            }
+        };
 
     private Map<String,Object> buildParams( LdbcQuery13 operation )
     {

@@ -7,12 +7,10 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +19,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.extension.Inject;
@@ -35,17 +30,14 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
-import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 @SkipThreadLeakageGuard
 @ClusterExtension
@@ -120,20 +112,6 @@ class ClusterStateMigrationIT
         // follower should not be able to start
         var error = assertThrows( Exception.class, follower::start );
         assertThat( getRootCause( error ).getMessage(), containsString( "Illegal cluster state version" ) );
-    }
-
-    private static RaftId readRaftId( CoreClusterMember member )
-    {
-        var storageFactory = storageFactory( member );
-        var raftIdStorage = storageFactory.createRaftIdStorage( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, nullDatabaseLogProvider() );
-        try
-        {
-            return raftIdStorage.readState();
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
     }
 
     private static SimpleStorage<ClusterStateVersion> clusterStateVersionStorage( ClusterMember member )

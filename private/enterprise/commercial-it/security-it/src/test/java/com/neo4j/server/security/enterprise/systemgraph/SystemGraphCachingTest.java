@@ -22,8 +22,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -62,7 +60,7 @@ class SystemGraphCachingTest
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
         DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
         ThreadToStatementContextBridge bridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
-        systemGraphExecutor = new TestQueryExecutor( databaseManager, bridge, new TestDatabaseIdRepository() );
+        systemGraphExecutor = new TestQueryExecutor( databaseManager, bridge );
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
         realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(),
@@ -120,12 +118,11 @@ class SystemGraphCachingTest
         assertFalse( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
     }
 
-    private class TestQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
+    private static class TestQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
     {
         private boolean systemAccess;
 
-        TestQueryExecutor( DatabaseManager<?> databaseManager, ThreadToStatementContextBridge threadToStatementContextBridge,
-                DatabaseIdRepository databaseIdRepository )
+        TestQueryExecutor( DatabaseManager<?> databaseManager, ThreadToStatementContextBridge threadToStatementContextBridge )
         {
             super( databaseManager, threadToStatementContextBridge );
         }

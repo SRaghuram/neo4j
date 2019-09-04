@@ -69,7 +69,7 @@ class ClusterOverviewProcedureIT
         var membersById = cluster.allMembers().stream().collect( toMap( ClusterMember::id, identity() ) );
         assertEquals( CORES + REPLICAS, membersById.size() );
 
-        var clusterOverviewMatcher = buildClusterOverviewMatcher( leader, membersById );
+        var clusterOverviewMatcher = buildClusterOverviewMatcher( membersById );
 
         for ( var member : membersById.values() )
         {
@@ -89,7 +89,7 @@ class ClusterOverviewProcedureIT
         }
     }
 
-    private static ClusterOverviewMatcher buildClusterOverviewMatcher( CoreClusterMember leader, Map<MemberId,ClusterMember> membersById )
+    private static ClusterOverviewMatcher buildClusterOverviewMatcher( Map<MemberId,ClusterMember> membersById )
     {
         var sortedMemberIds = membersById.keySet()
                 .stream()

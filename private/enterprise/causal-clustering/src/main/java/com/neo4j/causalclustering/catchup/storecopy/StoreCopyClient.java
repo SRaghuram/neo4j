@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
-import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import java.io.File;
 import java.net.ConnectException;
@@ -21,6 +20,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -181,7 +181,7 @@ public class StoreCopyClient
     {
         try
         {
-            CatchupResponseAdaptor<StoreId> responseHandler = new CatchupResponseAdaptor<StoreId>()
+            CatchupResponseAdaptor<StoreId> responseHandler = new CatchupResponseAdaptor<>()
             {
                 @Override
                 public void onGetStoreIdResponse( CompletableFuture<StoreId> signal, GetStoreIdResponse response )

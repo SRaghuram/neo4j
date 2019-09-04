@@ -239,16 +239,6 @@ public class Cluster
         shutdownMembers( coreMembers() );
     }
 
-    public void shutdownReadReplicas()
-    {
-        shutdownMembers( readReplicas() );
-    }
-
-    public static void shutdownMembers( ClusterMember... clusterMembers )
-    {
-        shutdownMembers( Arrays.asList( clusterMembers ) );
-    }
-
     public static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers )
     {
         try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown members" ) )

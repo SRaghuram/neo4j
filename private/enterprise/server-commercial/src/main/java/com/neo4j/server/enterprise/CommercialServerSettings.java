@@ -5,14 +5,10 @@
  */
 package com.neo4j.server.enterprise;
 
-import java.net.URI;
 import java.time.Duration;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
-import org.neo4j.configuration.DocumentedDefaultValue;
-import org.neo4j.configuration.Internal;
-import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.graphdb.config.Setting;
 

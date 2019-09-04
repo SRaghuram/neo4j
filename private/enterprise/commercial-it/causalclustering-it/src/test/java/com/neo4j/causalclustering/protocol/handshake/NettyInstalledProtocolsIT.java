@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -317,10 +316,7 @@ class NettyInstalledProtocolsIT
                 RaftMessages.RaftIdAwareMessage<?> message = (RaftMessages.RaftIdAwareMessage<?>) item;
                 return message.raftId().equals( expected.raftId() ) && message.message().equals( expected.message() );
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
 
         @Override

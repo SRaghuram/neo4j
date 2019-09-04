@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
-import org.neo4j.graphdb.Result;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;

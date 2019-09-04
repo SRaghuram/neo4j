@@ -25,7 +25,7 @@ public class LoggingInbound<M extends RaftMessages.RaftMessage> implements Inbou
     @Override
     public void registerHandler( final MessageHandler<M> handler )
     {
-        inbound.registerHandler( new MessageHandler<M>()
+        inbound.registerHandler( new MessageHandler<>()
         {
             @Override
             public synchronized void handle( M message )

@@ -56,12 +56,12 @@ public class DatabaseMetricsExporter
 
         if ( config.get( MetricsSettings.neoCheckPointingEnabled ) )
         {
-            life.add( new CheckPointingMetrics( metricsPrefix, reporter, registry, dependencies.checkpointCounters() ) );
+            life.add( new CheckPointingMetrics( metricsPrefix, registry, dependencies.checkpointCounters() ) );
         }
 
         if ( config.get( MetricsSettings.neoTransactionLogsEnabled ) )
         {
-            life.add( new TransactionLogsMetrics( metricsPrefix, reporter, registry, dependencies.transactionLogCounters(), dependencies.scheduler() ) );
+            life.add( new TransactionLogsMetrics( metricsPrefix, registry, dependencies.transactionLogCounters() ) );
         }
 
         if ( config.get( MetricsSettings.neoCountsEnabled ) )

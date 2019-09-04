@@ -42,9 +42,9 @@ public class Update1EmbeddedCore_1 extends Neo4jUpdate1<Neo4jConnectionState>
         person.setProperty( Person.LOCATION_IP, operation.locationIp() );
         person.setProperty( Person.BROWSER_USED, operation.browserUsed() );
         person.setProperty( Person.LANGUAGES,
-                operation.languages().toArray( new String[operation.languages().size()] ) );
+                operation.languages().toArray( new String[0] ) );
         person.setProperty( Person.EMAIL_ADDRESSES,
-                operation.emails().toArray( new String[operation.emails().size()] ) );
+                operation.emails().toArray( new String[0] ) );
 
         Node city = Operators.findNode( connection.getTransaction().get(), Place.Type.City, Place.ID, operation.cityId() );
         person.createRelationshipTo( city, Rels.PERSON_IS_LOCATED_IN );

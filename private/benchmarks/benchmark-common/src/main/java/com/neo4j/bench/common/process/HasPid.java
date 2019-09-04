@@ -31,7 +31,7 @@ public interface HasPid
                 String str = name.substring( 0, name.indexOf( DELIM ) );
                 try
                 {
-                    return new Pid( Long.valueOf( str ) );
+                    return new Pid( Long.parseLong( str ) );
                 }
                 catch ( NumberFormatException nfe )
                 {

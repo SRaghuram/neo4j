@@ -31,7 +31,7 @@ public class TransactionLogEntryCursor implements IOCursor<LogEntry[]>
     @Override
     public LogEntry[] get()
     {
-        return transaction.toArray( new LogEntry[transaction.size()] );
+        return transaction.toArray( new LogEntry[0] );
     }
 
     @Override

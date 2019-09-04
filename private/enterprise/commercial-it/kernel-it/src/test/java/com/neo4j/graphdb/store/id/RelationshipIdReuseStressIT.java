@@ -302,11 +302,6 @@ class RelationshipIdReuseStressIT
                 LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( millisToWait ) );
             }
         }
-
-        public int getRelationshipSize()
-        {
-            return relationshipSize;
-        }
     }
 
     private class RelationshipTypeCalculator implements Runnable

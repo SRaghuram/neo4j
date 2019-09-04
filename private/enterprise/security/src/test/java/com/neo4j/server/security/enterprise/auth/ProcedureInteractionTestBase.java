@@ -236,12 +236,12 @@ public abstract class ProcedureInteractionTestBase<S>
         } );
     }
 
-    void testFailRead( S subject, int count )
+    void testFailRead( S subject )
     {
-        testFailRead( subject, count, READ_OPS_NOT_ALLOWED );
+        testFailRead( subject, READ_OPS_NOT_ALLOWED );
     }
 
-    void testFailRead( S subject, int count, String errMsg )
+    void testFailRead( S subject, String errMsg )
     {
         assertFail( subject, "MATCH (n) RETURN count(n)", errMsg );
     }
@@ -331,7 +331,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 r -> assertKeyIsArray( r, "username", users ) );
     }
 
-    void testFailListUsers( S subject, int count, String errMsg )
+    void testFailListUsers( S subject, String errMsg )
     {
         assertFail( subject, "CALL dbms.security.listUsers() YIELD username", errMsg );
     }
@@ -454,13 +454,6 @@ public abstract class ProcedureInteractionTestBase<S>
                     List<Map<String,Object>> collect = result.stream().collect( toList() );
                     assertTrue( "Expected no results but got: " + collect, collect.isEmpty() );
                 } );
-    }
-
-    private void executeQuery( S subject, String call )
-    {
-        neo.executeQuery( subject, call, null, r ->
-        {
-        } );
     }
 
     boolean userHasRole( String user, String role ) throws InvalidArgumentsException

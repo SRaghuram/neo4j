@@ -104,7 +104,7 @@ public class CreateNodeKey extends AbstractCoreBenchmark
         ValueGeneratorFactory valueGeneratorFactory = discretePropertyValueGenerator();
         propertyDefinitions.add( new PropertyDefinition( CreateNodeKey_type + "_" + (CreateNodeKey_keys - 1),
                                                          valueGeneratorFactory ) );
-        return propertyDefinitions.toArray( new PropertyDefinition[propertyDefinitions.size()] );
+        return propertyDefinitions.toArray( new PropertyDefinition[0] );
     }
 
     private ValueGeneratorFactory discretePropertyValueGenerator()
