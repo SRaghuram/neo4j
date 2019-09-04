@@ -83,7 +83,7 @@ class LoadCommandIT extends AbstractCommandIT
 
         try ( Transaction ignored = database.beginTx() )
         {
-            assertTrue( transaction.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
+            assertTrue( ignored.findNodes( marker ).stream().anyMatch( alwaysTrue() ) );
         }
     }
 
