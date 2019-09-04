@@ -22,17 +22,13 @@ import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
-import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import com.neo4j.common.util.TestSupport;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -218,7 +214,9 @@ public class RunWorkloadCommandIT
         {
             Path outputDir = temporaryFolder.newFolder().toPath();
             Workload workload = Workload.fromName( workloadName, resources, deployment );
-            Store store = createEmptyStoreFor( workload );
+            Store store = StoreTestUtil.createEmptyStoreFor( workload,
+                                                             temporaryFolder.newFolder().toPath(), // store
+                                                             temporaryFolder.newFile().toPath() ); // neo4j config
 
             Path neo4jConfigFile = temporaryFolder.newFile().toPath();
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
@@ -313,16 +311,6 @@ public class RunWorkloadCommandIT
                 assertThat( attachedProfilerRecordingsCount, greaterThanOrEqualTo( minimumExpectedProfilerRecordingCount ) );
             }
         }
-    }
-
-    // Create empty store with valid schema, as expected by workload
-    private Store createEmptyStoreFor( Workload workload ) throws IOException
-    {
-        Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
-        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
-        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
-        return store;
     }
 
     private Path getNeo4jDir()
