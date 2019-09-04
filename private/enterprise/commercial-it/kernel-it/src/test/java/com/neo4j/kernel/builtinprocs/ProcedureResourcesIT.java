@@ -50,7 +50,7 @@ class ProcedureResourcesIT
     private final String ftsNodesIndex = "'ftsNodes'";
     private final String ftsRelsIndex = "'ftsRels'";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private long indexId;
+    private String indexName;
 
     @ExtensionCallback
     static void enableBolt( TestDatabaseManagementServiceBuilder builder )
@@ -157,7 +157,7 @@ class ProcedureResourcesIT
             final int labelId = ktx.tokenRead().nodeLabel( "Label" );
             final int propId = ktx.tokenRead().propertyKey( "prop" );
             final IndexDescriptor index = ktx.schemaRead().index( labelId, propId );
-            indexId = index.getId();
+            indexName = index.getName();
             tx.commit();
         }
     }
@@ -334,7 +334,7 @@ class ProcedureResourcesIT
             proc.withParam( "'0s'" );
             break;
         case "db.indexDetails":
-            proc.withParam( indexId );
+            proc.withParam( "\"" + indexName + "\"" );
         default:
         }
         return proc;
