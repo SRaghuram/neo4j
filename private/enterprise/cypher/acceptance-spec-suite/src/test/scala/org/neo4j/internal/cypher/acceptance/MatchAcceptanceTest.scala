@@ -16,7 +16,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  test("Optional Match over or-union query should retain incoming arguments") {
+  test("Optional Match over or-union-index query should retain incoming arguments") {
     graph.createIndex("Person", "name")
     graph.createIndex("Person", "number")
     createLabeledNode(Map("name" -> "x", "number" -> 0), "Person")
