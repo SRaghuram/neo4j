@@ -5,12 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
-import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 // TODO extend as soon as we re-support cartesian product
-abstract class CartesianProductStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends ParallelStressSuite(runtime) {
+abstract class CartesianProductStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(edition, runtime) {
 
   ignore("should support nested Cartesian Product") {
     // given

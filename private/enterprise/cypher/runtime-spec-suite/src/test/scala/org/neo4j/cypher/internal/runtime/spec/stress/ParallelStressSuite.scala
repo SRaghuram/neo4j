@@ -22,16 +22,16 @@ object ParallelStressSuite {
   *
   * To use this, implement a StressTest that extends this class and mixes in all the traits that makes sense, while overriding the required methods.
   */
-abstract class ParallelStressSuite(runtime: CypherRuntime[EnterpriseRuntimeContext])
+abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
-    ENTERPRISE.PARALLEL.copyWith(
+    edition.copyWith(
       GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
       GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
       GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)),
     runtime) {
 
   private val morselsPerGraph = 10
-  private val graphSize = morselsPerGraph * MORSEL_SIZE
+  protected val graphSize: Int = morselsPerGraph * MORSEL_SIZE
 
   /**
     * All nodes in the test definition

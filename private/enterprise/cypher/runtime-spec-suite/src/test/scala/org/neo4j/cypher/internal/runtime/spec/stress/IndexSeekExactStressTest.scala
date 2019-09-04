@@ -5,10 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
+import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class IndexSeekExactStressTest(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends ParallelStressSuite(runtime)
+abstract class IndexSeekExactStressTest(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(edition, runtime)
     with RHSOfApplyLeafStressSuite {
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =

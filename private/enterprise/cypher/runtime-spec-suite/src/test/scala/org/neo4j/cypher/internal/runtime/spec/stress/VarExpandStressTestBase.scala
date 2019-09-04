@@ -5,10 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
+import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class VarExpandStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends ParallelStressSuite(runtime)
+abstract class VarExpandStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(edition, runtime)
     with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =

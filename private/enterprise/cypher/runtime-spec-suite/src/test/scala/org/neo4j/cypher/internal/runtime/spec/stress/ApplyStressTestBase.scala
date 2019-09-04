@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
-import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class ApplyStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends ParallelStressSuite(runtime) {
+abstract class ApplyStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(edition, runtime) {
 
   test("should support nested Apply") {
     // given

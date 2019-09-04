@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
-import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class AggregationStressTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends ParallelStressSuite(runtime) with RHSOfApplyOneChildStressSuite with OnTopOfParallelInputStressTest {
+abstract class AggregationStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends ParallelStressSuite(edition, runtime) with RHSOfApplyOneChildStressSuite with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(

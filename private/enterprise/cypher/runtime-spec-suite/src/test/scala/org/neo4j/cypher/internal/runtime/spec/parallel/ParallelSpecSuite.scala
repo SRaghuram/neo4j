@@ -24,12 +24,14 @@ class ParallelRuntimeInputTestNoFusing extends ParallelInputTestBase(ENTERPRISE.
 // ALL NODE SCAN
 class ParallelRuntimeAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeAllNodeScanNoFusingTest extends AllNodeScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeAllNodeScanStressTest extends AllNodeScanStressTestBase(PARALLEL)
+class ParallelRuntimeAllNodeScanStressTest extends AllNodeScanStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeAllNodeScanNoFusingStressTest extends AllNodeScanStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // NODE BY ID SEEK
 class ParallelRuntimeNodeByIdSeekTest extends NodeByIdSeekTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeNodeByIdSeekStressTest extends NodeByIdSeekStressTestBase(PARALLEL)
+class ParallelRuntimeNodeByIdSeekStressTest extends NodeByIdSeekStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeNodeByIdSeekNoFusingStressTest extends NodeByIdSeekStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // RELATIONSHIP BY ID SEEK
 class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.PARALLEL, MORSEL, SIZE_HINT)
@@ -50,7 +52,8 @@ class ParallelRelationshipCountFromCountStoreNoFusingTest extends RelationshipCo
 // LABEL SCAN
 class ParallelRuntimeLabelScanTest extends LabelScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeLabelScanNoFusingTest extends LabelScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeLabelScanStressTest extends LabelScanStressTestBase(PARALLEL)
+class ParallelRuntimeLabelScanStressTest extends LabelScanStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeLabelScanNoFusingStressTest extends LabelScanStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // INDEX SEEK
 class ParallelRuntimeNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
@@ -60,53 +63,68 @@ class ParallelRuntimeNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(ENT
   with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
   with ArrayIndexSupport[EnterpriseRuntimeContext]
 
-class ParallelRuntimeIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(PARALLEL)
-class ParallelRuntimeIndexSeekExactStressTest extends IndexSeekExactStressTest(PARALLEL)
+class ParallelRuntimeIndexSeekRangeStressTest extends IndexSeekRangeStressTestBase(ENTERPRISE.PARALLEL,PARALLEL)
+class ParallelRuntimeIndexSeekRangeNoFusingStressTest extends IndexSeekRangeStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
+class ParallelRuntimeIndexSeekExactStressTest extends IndexSeekExactStressTest(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeIndexSeekExactNoFusingStressTest extends IndexSeekExactStressTest(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // INDEX SCAN
 class ParallelRuntimeNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeIndexScanStressTest extends IndexScanStressTestBase(PARALLEL)
+class ParallelRuntimeIndexScanNoFusingStressTest extends IndexScanStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeIndexScanStressTest extends IndexScanStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // INDEX CONTAINS SCAN
 class ParallelRuntimeNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeIndexContainsScanStressTest extends IndexContainsScanStressTestBase(PARALLEL)
+class ParallelRuntimeIndexContainsScanStressTest extends IndexContainsScanStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeIndexContainsScanNoFusingStressTest extends IndexContainsScanStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // INDEX ENDS WITH SCAN
 class ParallelRuntimeNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeIndexEndsWithScanStressTest extends IndexEndsWithScanStressTestBase(PARALLEL)
+class ParallelRuntimeIndexEndsWithScanStressTest extends IndexEndsWithScanStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeIndexEndsWithScanNoFusingStressTest extends IndexEndsWithScanStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // ARGUMENT
 class ParallelRuntimeArgumentTest extends ArgumentTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeArgumentNoFusingTest extends ArgumentTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeArgumentStressTest extends ArgumentStressTestBase(PARALLEL)
+class ParallelRuntimeArgumentStressTest extends ArgumentStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeArgumentNoFusingStressTest extends ArgumentStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // APPLY
-class ParallelRuntimeApplyStressTest extends ApplyStressTestBase(PARALLEL)
+class ParallelRuntimeApplyStressTest extends ApplyStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeApplyNoFusingStressTest extends ApplyStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // EXPAND
 class ParallelRuntimeExpandAllTest extends ExpandAllTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
                                    with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeExpandAllTestNoFusing extends ExpandAllTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
                                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-class ParallelRuntimeExpandStressTest extends ExpandStressTestBase(PARALLEL)
+class ParallelRuntimeExpandStressTest extends ExpandStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeExpandNoFusingStressTest extends ExpandStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // VAR EXPAND
 class ParallelRuntimeVarLengthExpandTest extends VarLengthExpandTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeVarExpandStressTest extends VarExpandStressTestBase(PARALLEL)
+class ParallelRuntimeVarExpandStressTest extends VarExpandStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeVarExpandNoFusingStressTest extends VarExpandStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // PROJECTION
 class ParallelRuntimeProjectionTest extends ProjectionTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeProjectionNoFusingTest extends ProjectionTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeProjectionStressTest extends ProjectionStressTestBase(PARALLEL)
+class ParallelRuntimeProjectionStressTest extends ProjectionStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeProjectionNoFusingStressTest extends ProjectionStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // FILTER
 class ParallelRuntimeFilterTest extends FilterTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeFilterNoFusingTest extends FilterTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeFilterStressTest extends FilterStressTestBase(PARALLEL)
+class ParallelRuntimeFilterStressTest extends FilterStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeFilterNoFusingStressTest extends FilterStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
+
+//Misc Expressions
+class ParallelRuntimeExpressionStressTest extends ExpressionStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeExpressionNoFusingStressTest extends ExpressionStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // LIMIT
 class ParallelRuntimeLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
@@ -114,19 +132,21 @@ class ParallelRuntimeLimitNoFusingTest extends LimitTestBase(ENTERPRISE.PARALLEL
 
 // DISTINCT
 class ParallelRuntimeDistinctTest extends DistinctTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
-class ParallelRuntimeDistinctStressTest extends DistinctStressTestBase(PARALLEL)
+class ParallelRuntimeDistinctStressTest extends DistinctStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeDistinctNoFusingStressTest extends DistinctStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // UNWIND
 class ParallelRuntimeUnwindTest extends UnwindTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 class ParallelRuntimeUnwindNoFusingTest extends UnwindTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeUnwindStressTest extends UnwindStressTestBase(PARALLEL)
+class ParallelRuntimeUnwindStressTest extends UnwindStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeUnwindNoFusingStressTest extends UnwindStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // SORT
 class ParallelRuntimeSortTest extends SortTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
 
 // AGGREGATION
 class ParallelRuntimeParallelAggregationTest extends AggregationTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
-class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(PARALLEL)
+class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(ENTERPRISE.PARALLEL, PARALLEL)
 
 // NODE HASH JOIN
 //class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)

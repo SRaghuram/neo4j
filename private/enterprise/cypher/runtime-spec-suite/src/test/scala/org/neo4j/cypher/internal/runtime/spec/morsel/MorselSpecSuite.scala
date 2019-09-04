@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.MORSEL
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{SINGLE_THREADED, SINGLE_THREADED_NO_FUSING}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
@@ -74,7 +75,8 @@ class MorselArgumentTest extends ArgumentTestBase(SINGLE_THREADED, MORSEL, SIZE_
 class MorselArgumentNoFusingTest extends ArgumentTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
 
 // APPLY
-class MorselApplyStressTest extends ApplyStressTestBase(MORSEL)
+class MorselApplyStressTest extends ApplyStressTestBase(ENTERPRISE.PARALLEL, MORSEL)
+class MorselApplyNoFusingStressTest extends ApplyStressTestBase(ENTERPRISE.PARALLEL_NO_FUSING, MORSEL)
 
 // EXPAND
 class MorselExpandAllTest extends ExpandAllTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)
