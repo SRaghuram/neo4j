@@ -27,7 +27,11 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
+import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
@@ -46,6 +50,7 @@ class ProcedureResourcesIT
     private final String ftsNodesIndex = "'ftsNodes'";
     private final String ftsRelsIndex = "'ftsRels'";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private long indexId;
 
     @ExtensionCallback
     static void enableBolt( TestDatabaseManagementServiceBuilder builder )
@@ -146,6 +151,21 @@ class ProcedureResourcesIT
             db.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
             tx.commit();
         }
+        try ( Transaction tx = db.beginTx() )
+        {
+            final KernelTransaction ktx = getKernelTransaction( db.databaseId() );
+            final int labelId = ktx.tokenRead().nodeLabel( "Label" );
+            final int propId = ktx.tokenRead().propertyKey( "prop" );
+            final IndexDescriptor index = ktx.schemaRead().index( labelId, propId );
+            indexId = index.getId();
+            tx.commit();
+        }
+    }
+
+    private KernelTransaction getKernelTransaction( DatabaseId databaseId )
+    {
+        return db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
+                        .getKernelTransactionBoundToThisThread( false, databaseId );
     }
 
     private void createFulltextIndexes()
@@ -171,8 +191,6 @@ class ProcedureResourcesIT
     {
         private final String name;
         private final List<Object> params = new ArrayList<>();
-        private String setupQuery;
-        private String postQuery;
         private boolean skip;
 
         private ProcedureData( ProcedureSignature procedure )
@@ -185,12 +203,6 @@ class ProcedureResourcesIT
             this.params.add( param );
         }
 
-        private void withSetup( String setupQuery, String postQuery )
-        {
-            this.setupQuery = setupQuery;
-            this.postQuery = postQuery;
-        }
-
         private String buildProcedureQuery()
         {
             StringJoiner stringJoiner = new StringJoiner( ",", "CALL " + name + "(", ")" );
@@ -198,14 +210,7 @@ class ProcedureResourcesIT
             {
                 stringJoiner.add( parameter.toString() );
             }
-            if ( setupQuery != null && postQuery != null )
-            {
-                return setupQuery + " " + stringJoiner.toString() + " " + postQuery;
-            }
-            else
-            {
-                return stringJoiner.toString();
-            }
+            return stringJoiner.toString();
         }
 
         @Override
@@ -328,6 +333,8 @@ class ProcedureResourcesIT
             proc.withParam( "'CheckPoint'" );
             proc.withParam( "'0s'" );
             break;
+        case "db.indexDetails":
+            proc.withParam( indexId );
         default:
         }
         return proc;
