@@ -13,10 +13,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.NodeByIdSeekOperator.{asId, asIdMethod, isValidNode}
+import org.neo4j.cypher.internal.runtime.morsel.operators.NodeByIdSeekOperator.{asIdMethod, isValidNode}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
@@ -28,7 +29,6 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, Read}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.IntegralValue
 import org.neo4j.values.virtual.ListValue
 
 
@@ -82,7 +82,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
 
       while (outputRow.isValidRow && ids.hasNext) {
-        val nextId = asId(ids.next())
+        val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
         tracer.onNode(nextId)
         if (nextId >= 0L && context.transactionalContext.dataRead.nodeExists(nextId)) {
           outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
@@ -102,13 +102,9 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
   }
 }
 
-object NodeByIdSeekOperator {
-  def asId(value: AnyValue): Long = value match {
-    case d:IntegralValue => d.longValue()
-    case _ => -1L
-  }
+object NodeByIdSeekOperator  {
 
-  val asIdMethod: Method = method[NodeByIdSeekOperator, Long, AnyValue]("asId")
+  val asIdMethod: Method = method[NumericHelper, Long, AnyValue]("asLongEntityIdPrimitive")
 
   def isValidNode(idVariable: String): IntermediateRepresentation =
     and(greaterThanOrEqual(load(idVariable), constant(0L)),

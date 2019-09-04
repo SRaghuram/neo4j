@@ -29,9 +29,9 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
-object LimitOperator extends NumericHelper {
+object LimitOperator {
   def evaluateCountValue(countValue: AnyValue): Long = {
-    val limitNumber = asNumber(countValue)
+    val limitNumber = NumericHelper.asNumber(countValue)
     if (limitNumber.isInstanceOf[FloatingPointValue]) {
       val limit = limitNumber.doubleValue()
       throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
@@ -154,7 +154,7 @@ object LimitOperator extends NumericHelper {
   */
 class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
-                    countExpression: Expression) extends MiddleOperator with NumericHelper {
+                    countExpression: Expression) extends MiddleOperator {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = {
 

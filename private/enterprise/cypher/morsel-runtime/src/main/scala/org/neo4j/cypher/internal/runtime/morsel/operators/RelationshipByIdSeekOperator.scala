@@ -14,10 +14,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.RelationshipByIdSeekOperator.{asId, asIdMethod}
+import org.neo4j.cypher.internal.runtime.morsel.operators.RelationshipByIdSeekOperator.asIdMethod
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -29,7 +30,6 @@ import org.neo4j.cypher.internal.v4_0.util.{Many, One, Zero, ZeroOneOrMany}
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.IntegralValue
 import org.neo4j.values.virtual.ListValue
 
 abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
@@ -82,12 +82,7 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
 
 object RelationshipByIdSeekOperator {
 
-  def asId(value: AnyValue): Long = value match {
-    case d: IntegralValue => d.longValue()
-    case _ => -1L
-  }
-
-  val asIdMethod: Method = method[RelationshipByIdSeekOperator, Long, AnyValue]("asId")
+  val asIdMethod: Method = method[NumericHelper, Long, AnyValue]("asLongEntityIdPrimitive")
 
 
   def taskTemplate(isDirected: Boolean,
@@ -174,7 +169,7 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
       override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
         while (outputRow.isValidRow && ids.hasNext) {
-          val nextId = asId(ids.next())
+          val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
           val read = context.transactionalContext.dataRead
           if (nextId >= 0L) {
             read.singleRelationship(nextId, cursor)
@@ -220,7 +215,7 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
       override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
         while (outputRow.isValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
-            val nextId = asId(ids.next())
+            val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
             if (nextId >= 0L) {
               context.transactionalContext.dataRead.singleRelationship(nextId, cursor)
               if (cursor.next()) {
