@@ -15,6 +15,7 @@ public class InfraParams
     public static final String CMD_WORKER_ARTIFACT_URI = "--worker-artifact-uri";
     public static final String CMD_JOB_QUEUE = "--job-queue";
     public static final String CMD_JOB_DEFINITION = "--job-definition";
+    public static final String CMD_BATCH_STACK = "--batch-stack";
 
     public static final String CMD_WORKSPACE_DIR = "--workspace-dir";
     private final Path workspaceDir;
@@ -42,8 +43,6 @@ public class InfraParams
     private final String resultsStorePassword;
 
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
-
-    public static final String CMD_BATCH_STACK = "--batch-stack";
 
     private final URI resultsStoreUri;
 
