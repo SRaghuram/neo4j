@@ -118,6 +118,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
   def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {
       // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
+      //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
       if (pipeline.needsMorsel) {
         val slots = pipeline.slots
         val morsel = Morsel.create(slots, state.morselSize)

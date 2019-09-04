@@ -220,7 +220,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                       pipelineBuilder.pipeline.outputDefinition,
                                       pipelineBuilder.pipeline.middlePlans,
                                       serial = false)
-    fuser.compilePipeline(pipeline)
+    fuser.compilePipeline(pipeline, false)._1
   }
 
   case class dummy(source: LogicalPlan) extends LogicalPlan(idGen) {
