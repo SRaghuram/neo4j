@@ -32,6 +32,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.StorageCommand;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -122,7 +123,8 @@ class CoreReplicatedContentMarshalV2Test
             extraHeader = tx.additionalHeader();
         }
         TransactionRepresentation representation =
-                ReplicatedTransactionFactory.extractTransactionRepresentation( (ReplicatedTransaction) unmarshal, extraHeader );
+                ReplicatedTransactionFactory.extractTransactionRepresentation( (ReplicatedTransaction) unmarshal, extraHeader,
+                        new VersionAwareLogEntryReader<>() );
         assertThat( representation, equalTo( tx ) );
     }
 }

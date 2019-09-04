@@ -22,7 +22,6 @@ import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChanne
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.StorageCommandSerializer;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.StorageCommand;
 
 public class ReplicatedTransactionFactory
@@ -32,9 +31,10 @@ public class ReplicatedTransactionFactory
         throw new AssertionError( "Should not be instantiated" );
     }
 
-    public static TransactionRepresentation extractTransactionRepresentation( ReplicatedTransaction transactionCommand, byte[] extraHeader )
+    public static TransactionRepresentation extractTransactionRepresentation( ReplicatedTransaction transactionCommand, byte[] extraHeader,
+            LogEntryReader<ReadableClosablePositionAwareChannel> reader )
     {
-        return transactionCommand.extract( new TransactionRepresentationReader( extraHeader ) );
+        return transactionCommand.extract( new TransactionRepresentationReader( extraHeader, reader ) );
     }
 
     static TransactionRepresentationWriter transactionalRepresentationWriter( TransactionRepresentation transactionCommand )
@@ -45,10 +45,12 @@ public class ReplicatedTransactionFactory
     private static class TransactionRepresentationReader implements TransactionRepresentationExtractor
     {
         private final byte[] extraHeader;
+        private final LogEntryReader<ReadableClosablePositionAwareChannel> reader;
 
-        TransactionRepresentationReader( byte[] extraHeader )
+        TransactionRepresentationReader( byte[] extraHeader, LogEntryReader<ReadableClosablePositionAwareChannel> reader )
         {
             this.extraHeader = extraHeader;
+            this.reader = reader;
         }
 
         @Override
@@ -71,8 +73,6 @@ public class ReplicatedTransactionFactory
         {
             try
             {
-                LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
-
                 int authorId = channel.getInt();
                 int masterId = channel.getInt();
                 long latestCommittedTxWhenStarted = channel.getLong();
