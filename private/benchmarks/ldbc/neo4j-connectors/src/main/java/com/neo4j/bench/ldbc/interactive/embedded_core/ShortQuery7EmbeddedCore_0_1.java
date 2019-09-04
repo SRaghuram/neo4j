@@ -22,7 +22,6 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +51,7 @@ public class ShortQuery7EmbeddedCore_0_1 extends Neo4jShortQuery7<Neo4jConnectio
             LdbcShortQuery7MessageReplies operation ) throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node message = Operators.findNode( connection.db(), Nodes.Message, Message.ID, operation.messageId() );
+        Node message = Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.messageId() );
         Node messageAuthor;
         if ( message.hasLabel( Nodes.Comment ) )
         {

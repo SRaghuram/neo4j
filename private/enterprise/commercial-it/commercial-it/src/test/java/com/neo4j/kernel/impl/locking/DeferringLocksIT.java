@@ -203,7 +203,7 @@ public class DeferringLocksIT
             try ( Transaction tx = db.beginTx() )
             {
                 createNodeWithProperty( tx, LABEL, PROPERTY_KEY, VALUE_1 );
-                assertNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
+                assertNodeWith( tx, LABEL, PROPERTY_KEY, VALUE_1 );
 
                 tx.commit();
             }
@@ -235,7 +235,7 @@ public class DeferringLocksIT
             Node node = tx.createNode( LABEL );
             node.setProperty( PROPERTY_KEY, VALUE_1 );
 
-            assertNodeWith( LABEL, PROPERTY_KEY, VALUE_1 );
+            assertNodeWith( tx, LABEL, PROPERTY_KEY, VALUE_1 );
 
             tx.commit();
         }
@@ -247,14 +247,14 @@ public class DeferringLocksIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            assertNodeWith( label, key, value );
+            assertNodeWith( tx, label, key, value );
             tx.commit();
         }
     }
 
-    private void assertNodeWith( Label label, String key, Object value )
+    private void assertNodeWith( Transaction transaction, Label label, String key, Object value )
     {
-        try ( ResourceIterator<Node> nodes = db.findNodes( label, key, value ) )
+        try ( ResourceIterator<Node> nodes = transaction.findNodes( label, key, value ) )
         {
             assertTrue( nodes.hasNext() );
             Node foundNode = nodes.next();

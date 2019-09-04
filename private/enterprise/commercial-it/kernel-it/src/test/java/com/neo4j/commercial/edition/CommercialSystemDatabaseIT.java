@@ -96,12 +96,12 @@ class CommercialSystemDatabaseIT
         }
         try ( Transaction transaction = defaultDb.beginTx() )
         {
-            assertEquals( 0, count( defaultDb.findNodes( systemLabel ) ) );
+            assertEquals( 0, count( transaction.findNodes( systemLabel ) ) );
             assertEquals( 0, count( transaction.getAllLabels() ) );
         }
         try ( Transaction transaction = systemDb.beginTx() )
         {
-            assertEquals( 1, count( systemDb.findNodes( systemLabel ) ) );
+            assertEquals( 1, count( transaction.findNodes( systemLabel ) ) );
             assertEquals( 2, count( transaction.getAllLabels() ) );
         }
     }

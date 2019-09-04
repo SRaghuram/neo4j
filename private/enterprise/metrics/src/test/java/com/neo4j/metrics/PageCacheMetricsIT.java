@@ -69,9 +69,9 @@ class PageCacheMetricsIT
             transaction.commit();
         }
 
-        try ( Transaction ignored = database.beginTx() )
+        try ( Transaction tx = database.beginTx() )
         {
-            ResourceIterator<Node> nodes = database.findNodes( testLabel );
+            ResourceIterator<Node> nodes = tx.findNodes( testLabel );
             assertEquals( 1, nodes.stream().count() );
         }
 

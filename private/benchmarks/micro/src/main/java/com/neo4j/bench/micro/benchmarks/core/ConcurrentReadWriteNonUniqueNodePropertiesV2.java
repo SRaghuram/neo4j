@@ -324,7 +324,7 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
     public void countNodesWithLabelKeyValueWhenSelectivityHigh( ReadTxState txState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, highSelectivityValue ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, highSelectivityValue ),
                 txState.highSelectivityMin,
                 txState.highSelectivityMax,
                 bh );
@@ -337,7 +337,7 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
     public void countNodesWithLabelKeyValueWhenSelectivityMedium( ReadTxState txState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, mediumSelectivityValue ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, mediumSelectivityValue ),
                 txState.mediumSelectivityMin,
                 txState.mediumSelectivityMax,
                 bh );
@@ -350,7 +350,7 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
     public void countNodesWithLabelKeyValueWhenSelectivityLow( ReadTxState txState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, lowSelectivityValue ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, lowSelectivityValue ),
                 txState.lowSelectivityMin,
                 txState.lowSelectivityMax,
                 bh );

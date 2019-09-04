@@ -28,8 +28,8 @@ public class Update5EmbeddedCore_0 extends Neo4jUpdate5<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node forum = Operators.findNode( connection.db(), Nodes.Forum, Forum.ID, operation.forumId() );
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.personId() );
+        Node forum = Operators.findNode( connection.getTransaction().get(), Nodes.Forum, Forum.ID, operation.forumId() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
         Relationship membership = forum.createRelationshipTo( person, Rels.HAS_MEMBER );
         membership.setProperty( HasMember.JOIN_DATE, dateUtil.utcToFormat( operation.joinDate().getTime() ) );
         return LdbcNoResult.INSTANCE;

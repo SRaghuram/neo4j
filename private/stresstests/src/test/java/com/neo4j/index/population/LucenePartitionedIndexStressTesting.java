@@ -146,19 +146,19 @@ public class LucenePartitionedIndexStressTesting
 
     private void findLastTrackedNodesByLabelAndProperties( GraphDatabaseService db, PopulationResult populationResult )
     {
-        try ( Transaction ignored = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            Node nodeByUniqueStringProperty = db.findNode( Label.label( LABEL ), getUniqueStringProperty(),
+            Node nodeByUniqueStringProperty = tx.findNode( Label.label( LABEL ), getUniqueStringProperty(),
                     populationResult.maxPropertyId + "" );
-            Node nodeByStringProperty = db.findNode( Label.label( LABEL ), getStringProperty(),
+            Node nodeByStringProperty = tx.findNode( Label.label( LABEL ), getStringProperty(),
                     populationResult.maxPropertyId + "" );
             assertNotNull( "Should find last inserted node", nodeByStringProperty );
             assertEquals( "Both nodes should be the same last inserted node", nodeByStringProperty,
                     nodeByUniqueStringProperty );
 
-            Node nodeByUniqueLongProperty = db.findNode( Label.label( LABEL ), getUniqueLongProperty(),
+            Node nodeByUniqueLongProperty = tx.findNode( Label.label( LABEL ), getUniqueLongProperty(),
                     populationResult.maxPropertyId );
-            Node nodeByLongProperty = db.findNode( Label.label( LABEL ), getLongProperty(),
+            Node nodeByLongProperty = tx.findNode( Label.label( LABEL ), getLongProperty(),
                     populationResult.maxPropertyId );
             assertNotNull( "Should find last inserted node", nodeByLongProperty );
             assertEquals( "Both nodes should be the same last inserted node", nodeByLongProperty,

@@ -98,7 +98,7 @@ public class ReadAll extends AbstractCoreBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public void countNodesWithLabel( TxState txState, Blackhole bh )
     {
-        assertCount( db().findNodes( LABEL ), NODE_COUNT, bh );
+        assertCount( txState.tx.findNodes( LABEL ), NODE_COUNT, bh );
     }
 
     @Benchmark

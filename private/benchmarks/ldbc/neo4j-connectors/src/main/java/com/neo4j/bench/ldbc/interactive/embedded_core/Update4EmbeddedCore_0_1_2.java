@@ -31,11 +31,11 @@ public class Update4EmbeddedCore_0_1_2 extends Neo4jUpdate4<Neo4jConnectionState
         forum.setProperty( Forum.ID, operation.forumId() );
         forum.setProperty( Forum.TITLE, operation.forumTitle() );
         forum.setProperty( Forum.CREATION_DATE, dateUtil.utcToFormat( operation.creationDate().getTime() ) );
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.moderatorPersonId() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.moderatorPersonId() );
         forum.createRelationshipTo( person, Rels.HAS_MODERATOR );
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.db(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
             forum.createRelationshipTo( tag, Rels.FORUM_HAS_TAG );
         }
         return LdbcNoResult.INSTANCE;

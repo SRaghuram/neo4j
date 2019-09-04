@@ -48,8 +48,8 @@ public class LongQuery14EmbeddedCore_1 extends Neo4jQuery14<Neo4jConnectionState
     public List<LdbcQuery14Result> execute( Neo4jConnectionState connection, LdbcQuery14 operation )
             throws DbException
     {
-        Node person1 = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.person1Id() );
-        Node person2 = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.person2Id() );
+        Node person1 = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.person1Id() );
+        Node person2 = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.person2Id() );
         var context = new BasicEvaluationContext( connection.getTransaction().get(), connection.db() );
         PathFinder<Path> finder = GraphAlgoFactory.shortestPath( context,
                 PathExpanders.forTypeAndDirection( Rels.KNOWS, Direction.BOTH ),

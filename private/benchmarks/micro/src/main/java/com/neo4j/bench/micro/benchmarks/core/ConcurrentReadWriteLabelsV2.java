@@ -298,6 +298,6 @@ public class ConcurrentReadWriteLabelsV2 extends AbstractCoreBenchmark
     public void readNodesWithLabel( ReadTxState readTxState, RNGState rngState, Blackhole bh )
     {
         Label label = readTxState.label( rngState.rng );
-        assertCount( db().findNodes( label ), readTxState.minCount(), readTxState.maxCount(), bh );
+        assertCount( readTxState.tx.findNodes( label ), readTxState.minCount(), readTxState.maxCount(), bh );
     }
 }

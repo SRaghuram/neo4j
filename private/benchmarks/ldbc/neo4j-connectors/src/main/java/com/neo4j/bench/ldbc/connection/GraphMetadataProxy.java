@@ -24,9 +24,7 @@ public class GraphMetadataProxy
             Node node;
             try
             {
-                node = Operators.findNode(
-                        db,
-                        Nodes.GraphMetaData,
+                node = Operators.findNode( tx, Nodes.GraphMetaData,
                         GraphMetadata.ID,
                         GraphMetadata.ID_VALUE );
             }
@@ -118,9 +116,7 @@ public class GraphMetadataProxy
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = Operators.findNode(
-                    db,
-                    Nodes.GraphMetaData,
+            Node node = Operators.findNode( tx, Nodes.GraphMetaData,
                     GraphMetadata.ID,
                     GraphMetadata.ID_VALUE );
             Long commentHasCreatorMinDate =

@@ -45,20 +45,18 @@ public class Update1EmbeddedCore_0 extends Neo4jUpdate1<Neo4jConnectionState>
         person.setProperty( Person.EMAIL_ADDRESSES,
                 operation.emails().toArray( new String[operation.emails().size()] ) );
 
-        Node city = Operators.findNode( connection.db(), Place.Type.City, Person.ID, operation.cityId() );
+        Node city = Operators.findNode( connection.getTransaction().get(), Place.Type.City, Person.ID, operation.cityId() );
         person.createRelationshipTo( city, Rels.PERSON_IS_LOCATED_IN );
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.db(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
             person.createRelationshipTo( tag, Rels.HAS_INTEREST );
         }
 
         for ( LdbcUpdate1AddPerson.Organization organization : operation.studyAt() )
         {
-            Node university = Operators.findNode(
-                    connection.db(),
-                    Organisation.Type.University,
+            Node university = Operators.findNode( connection.getTransaction().get(), Organisation.Type.University,
                     Organisation.ID,
                     organization.organizationId() );
             Relationship studyAt = person.createRelationshipTo( university, Rels.STUDY_AT );
@@ -67,9 +65,7 @@ public class Update1EmbeddedCore_0 extends Neo4jUpdate1<Neo4jConnectionState>
 
         for ( LdbcUpdate1AddPerson.Organization organization : operation.workAt() )
         {
-            Node company = Operators.findNode(
-                    connection.db(),
-                    Organisation.Type.Company,
+            Node company = Operators.findNode( connection.getTransaction().get(), Organisation.Type.Company,
                     Organisation.ID,
                     organization.organizationId() );
             Relationship workAt = person.createRelationshipTo( company, Rels.WORKS_AT );

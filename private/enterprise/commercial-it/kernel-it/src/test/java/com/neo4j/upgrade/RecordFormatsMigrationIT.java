@@ -133,7 +133,7 @@ class RecordFormatsMigrationIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            assertNotNull( db.findNode( LABEL, PROPERTY, VALUE ) );
+            assertNotNull( tx.findNode( LABEL, PROPERTY, VALUE ) );
             tx.commit();
         }
     }

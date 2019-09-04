@@ -146,7 +146,7 @@ class IdReuseTest
         final IdController idMaintenanceController = getIdMaintenanceController();
 
         try ( Transaction transaction = db.beginTx();
-              ResourceIterator<Node> nodes = db.findNodes( testLabel ) )
+              ResourceIterator<Node> nodes = transaction.findNodes( testLabel ) )
         {
             List<Node> nodeList = Iterators.asList( nodes );
             for ( Node node : nodeList )
@@ -179,7 +179,7 @@ class IdReuseTest
     private void deleteRelationshipByLabelAndRelationshipType( Label marker )
     {
         try ( Transaction transaction = db.beginTx();
-              ResourceIterator<Node> nodes = db.findNodes( marker ) )
+              ResourceIterator<Node> nodes = transaction.findNodes( marker ) )
         {
             List<Node> nodeList = Iterators.asList( nodes );
             for ( Node node : nodeList )

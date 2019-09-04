@@ -212,7 +212,7 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     public void countNodesWithLabelKeyValueWhenSelectivityHigh( TxState txState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, highSelectivityValue ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, highSelectivityValue ),
                 txState.highSelectivityMin,
                 txState.highSelectivityMax,
                 bh );
@@ -223,7 +223,7 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     public void countNodesWithLabelKeyValueWhenSelectivityMedium( TxState txState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, mediumSelectivityValue ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, mediumSelectivityValue ),
                 txState.mediumSelectivityMin,
                 txState.mediumSelectivityMax,
                 bh );
@@ -234,7 +234,7 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     public void countNodesWithLabelKeyValueWhenSelectivityLow( TxState txState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, lowSelectivityValue ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, lowSelectivityValue ),
                 txState.lowSelectivityMin,
                 txState.lowSelectivityMax,
                 bh );

@@ -388,7 +388,7 @@ class BackupSchemaIT
                 assertEquals( 1, countNodeConstraints( db, "Person", UNIQUENESS, "name" ) );
                 for ( int i = 1; i <= 42; i++ )
                 {
-                    assertNotNull( db.findNode( label( "Person" ), "name", String.valueOf( i ) ) );
+                    assertNotNull( tx.findNode( label( "Person" ), "name", String.valueOf( i ) ) );
                 }
             }
             try ( Transaction transaction = db.beginTx() )

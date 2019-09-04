@@ -141,7 +141,7 @@ class CommercialGraphDatabaseBackupIT
     {
         try ( var tx = db.beginTx() )
         {
-            var ids = db.findNodes( label( "Person" ) )
+            var ids = tx.findNodes( label( "Person" ) )
                     .stream()
                     .map( node -> node.getProperty( "id" ) )
                     .map( value -> (int) value )

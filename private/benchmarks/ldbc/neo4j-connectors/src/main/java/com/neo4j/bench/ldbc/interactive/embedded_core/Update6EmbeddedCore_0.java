@@ -45,18 +45,18 @@ public class Update6EmbeddedCore_0 extends Neo4jUpdate6<Neo4jConnectionState>
         }
         post.setProperty( Message.LENGTH, operation.length() );
 
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.authorPersonId() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.authorPersonId() );
         post.createRelationshipTo( person, Rels.POST_HAS_CREATOR );
 
-        Node forum = Operators.findNode( connection.db(), Nodes.Forum, Forum.ID, operation.forumId() );
+        Node forum = Operators.findNode( connection.getTransaction().get(), Nodes.Forum, Forum.ID, operation.forumId() );
         forum.createRelationshipTo( post, Rels.CONTAINER_OF );
 
-        Node country = Operators.findNode( connection.db(), Place.Type.Country, Place.ID, operation.countryId() );
+        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.ID, operation.countryId() );
         post.createRelationshipTo( country, Rels.POST_IS_LOCATED_IN );
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.db(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
             post.createRelationshipTo( tag, Rels.POST_HAS_TAG );
         }
 

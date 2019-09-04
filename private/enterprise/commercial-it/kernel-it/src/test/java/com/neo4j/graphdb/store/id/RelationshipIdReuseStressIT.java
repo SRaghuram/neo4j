@@ -163,15 +163,15 @@ class RelationshipIdReuseStressIT
         return TestRelationshipTypes.values()[ThreadLocalRandom.current().nextInt( TestRelationshipTypes.values().length )];
     }
 
-    private Node getRandomCityNode( GraphDatabaseAPI embeddedDatabase, Label cityLabel )
+    private Node getRandomCityNode( Transaction transaction, Label cityLabel )
     {
-        return embeddedDatabase.
+        return transaction.
                 findNode( cityLabel, NAME_PROPERTY, "city" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_CITIES + 1 )) );
     }
 
-    private Node getRandomBandNode( GraphDatabaseAPI embeddedDatabase, Label bandLabel )
+    private Node getRandomBandNode( Transaction transaction, Label bandLabel )
     {
-        return embeddedDatabase.
+        return transaction.
                 findNode( bandLabel, NAME_PROPERTY, "band" + (ThreadLocalRandom.current().nextInt( 1, NUMBER_OF_BANDS + 1 )) );
     }
 
@@ -211,19 +211,19 @@ class RelationshipIdReuseStressIT
                 int newRelationships = 0;
                 try ( Transaction transaction = embeddedDatabase.beginTx() )
                 {
-                    Node bandNode = getRandomBandNode( embeddedDatabase, bandLabel );
+                    Node bandNode = getRandomBandNode( transaction, bandLabel );
                     int direction = ThreadLocalRandom.current().nextInt( 3 );
                     switch ( direction )
                     {
                     case 0:
-                        newRelationships += connectCitiesToBand( bandNode );
+                        newRelationships += connectCitiesToBand( transaction, bandNode );
                         break;
                     case 1:
-                        newRelationships += connectBandToCities( bandNode );
+                        newRelationships += connectBandToCities( transaction, bandNode );
                         break;
                     case 2:
-                        newRelationships += connectCitiesToBand( bandNode );
-                        newRelationships += connectBandToCities( bandNode );
+                        newRelationships += connectCitiesToBand( transaction, bandNode );
+                        newRelationships += connectBandToCities( transaction, bandNode );
                         break;
                     default:
                         throw new IllegalStateException( "Unsupported direction value:" + direction );
@@ -240,13 +240,13 @@ class RelationshipIdReuseStressIT
             }
         }
 
-        private int connectBandToCities( Node bandNode )
+        private int connectBandToCities( Transaction transaction, Node bandNode )
         {
-            Node city1 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city2 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city3 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city4 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city5 = getRandomCityNode( embeddedDatabase, cityLabel );
+            Node city1 = getRandomCityNode( transaction, cityLabel );
+            Node city2 = getRandomCityNode( transaction, cityLabel );
+            Node city3 = getRandomCityNode( transaction, cityLabel );
+            Node city4 = getRandomCityNode( transaction, cityLabel );
+            Node city5 = getRandomCityNode( transaction, cityLabel );
 
             bandNode.createRelationshipTo( city1, TestRelationshipTypes.LIKE );
             bandNode.createRelationshipTo( city2, TestRelationshipTypes.LIKE );
@@ -256,12 +256,12 @@ class RelationshipIdReuseStressIT
             return 5;
         }
 
-        private int connectCitiesToBand( Node bandNode )
+        private int connectCitiesToBand( Transaction transaction, Node bandNode )
         {
-            Node city1 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city2 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city3 = getRandomCityNode( embeddedDatabase, cityLabel );
-            Node city4 = getRandomCityNode( embeddedDatabase, cityLabel );
+            Node city1 = getRandomCityNode( transaction, cityLabel );
+            Node city2 = getRandomCityNode( transaction, cityLabel );
+            Node city3 = getRandomCityNode( transaction, cityLabel );
+            Node city4 = getRandomCityNode( transaction, cityLabel );
             city1.createRelationshipTo( bandNode, TestRelationshipTypes.LIKE );
             city2.createRelationshipTo( bandNode, TestRelationshipTypes.HATE );
             city3.createRelationshipTo( bandNode, TestRelationshipTypes.LIKE );
@@ -294,7 +294,7 @@ class RelationshipIdReuseStressIT
             {
                 try ( Transaction transaction = embeddedDatabase.beginTx() )
                 {
-                    Node randomBandNode = getRandomBandNode( embeddedDatabase, bandLabel );
+                    Node randomBandNode = getRandomBandNode( transaction, bandLabel );
                     relationshipSize = Iterables.asList( randomBandNode.getRelationships() ).size();
                     transaction.commit();
                 }
@@ -328,7 +328,7 @@ class RelationshipIdReuseStressIT
             {
                 try ( Transaction transaction = embeddedDatabase.beginTx() )
                 {
-                    Node randomBandNode = getRandomBandNode( embeddedDatabase, bandLabel );
+                    Node randomBandNode = getRandomBandNode( transaction, bandLabel );
                     relationshipSize = Iterables.asList( randomBandNode.getRelationshipTypes()).size();
                     transaction.commit();
                 }
@@ -363,11 +363,11 @@ class RelationshipIdReuseStressIT
                     boolean deleteOnBands = ThreadLocalRandom.current().nextBoolean();
                     if ( deleteOnBands )
                     {
-                        deleteRelationshipOfRandomType();
+                        deleteRelationshipOfRandomType( transaction );
                     }
                     else
                     {
-                        deleteRelationshipOnRandomNode();
+                        deleteRelationshipOnRandomNode( transaction );
 
                     }
                     transaction.commit();
@@ -386,9 +386,9 @@ class RelationshipIdReuseStressIT
             return removalCount;
         }
 
-        private void deleteRelationshipOfRandomType()
+        private void deleteRelationshipOfRandomType( Transaction transaction )
         {
-            Node bandNode = getRandomBandNode( embeddedDatabase, bandLabel );
+            Node bandNode = getRandomBandNode( transaction, bandLabel );
             TestRelationshipTypes relationshipType = getRandomRelationshipType();
             Iterable<Relationship> relationships =
                     bandNode.getRelationships( relationshipType, getRandomDirection() );
@@ -398,9 +398,9 @@ class RelationshipIdReuseStressIT
             }
         }
 
-        private void deleteRelationshipOnRandomNode()
+        private void deleteRelationshipOnRandomNode( Transaction transaction )
         {
-            try ( ResourceIterator<Node> nodeResourceIterator = embeddedDatabase.findNodes( cityLabel ) )
+            try ( ResourceIterator<Node> nodeResourceIterator = transaction.findNodes( cityLabel ) )
             {
                 List<Node> nodes = Iterators.asList( nodeResourceIterator );
                 int index = ThreadLocalRandom.current().nextInt( nodes.size() );

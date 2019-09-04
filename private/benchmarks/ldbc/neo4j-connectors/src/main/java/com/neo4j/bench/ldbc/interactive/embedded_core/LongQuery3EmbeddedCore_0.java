@@ -42,9 +42,9 @@ public class LongQuery3EmbeddedCore_0 extends Neo4jQuery3<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.personId() );
-        Node countryX = Operators.findNode( connection.db(), Place.Type.Country, Place.NAME, operation.countryXName() );
-        Node countryY = Operators.findNode( connection.db(), Place.Type.Country, Place.NAME, operation.countryYName() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node countryX = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.NAME, operation.countryXName() );
+        Node countryY = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.NAME, operation.countryYName() );
 
         CityCountryCache cityCountryCache = new CityCountryCache( countryX, countryY );
 

@@ -22,7 +22,6 @@ import com.neo4j.bench.ldbc.operators.Operators;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -45,7 +44,7 @@ public class ShortQuery2EmbeddedCore_0_1 extends Neo4jShortQuery2<Neo4jConnectio
             LdbcShortQuery2PersonPosts operation ) throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.personId() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
 
         MinMaxPriorityQueue<MessageDetails> messages = MinMaxPriorityQueue
                 .orderedBy( DESCENDING_CREATION_DATE_DESCENDING_ID_COMPARATOR )

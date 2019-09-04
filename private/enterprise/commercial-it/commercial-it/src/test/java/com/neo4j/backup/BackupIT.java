@@ -598,7 +598,7 @@ class BackupIT
 
         try ( Transaction transaction = db.beginTx() )
         {
-            Node node = findNodeByLabel( db, markerLabel );
+            Node node = findNodeByLabel( transaction, markerLabel );
             for ( int i = 0; i < 10; i++ )
             {
                 node.setProperty( "property" + i, "testValue" + i );
@@ -611,7 +611,7 @@ class BackupIT
         // removing properties will free couple of ids that will be reused during next properties creation
         try ( Transaction transaction = db.beginTx() )
         {
-            Node node = findNodeByLabel( db, markerLabel );
+            Node node = findNodeByLabel( transaction, markerLabel );
             for ( int i = 0; i < 6; i++ )
             {
                 node.removeProperty( "property" + i );
@@ -625,7 +625,7 @@ class BackupIT
 
         try ( Transaction transaction = db.beginTx() )
         {
-            Node node = findNodeByLabel( db, markerLabel );
+            Node node = findNodeByLabel( transaction, markerLabel );
             for ( int i = 10; i < 16; i++ )
             {
                 node.setProperty( "property" + i, "updatedValue" + i );
@@ -645,7 +645,7 @@ class BackupIT
         {
             try ( Transaction transaction = backupDb.beginTx() )
             {
-                Node node = findNodeByLabel( backupDb, markerLabel );
+                Node node = findNodeByLabel( transaction, markerLabel );
                 Iterable<String> propertyKeys = node.getPropertyKeys();
                 for ( String propertyKey : propertyKeys )
                 {
@@ -655,9 +655,9 @@ class BackupIT
                 transaction.commit();
             }
 
-            try ( Transaction ignored = backupDb.beginTx() )
+            try ( Transaction transaction = backupDb.beginTx() )
             {
-                Node node = findNodeByLabel( backupDb, markerLabel );
+                Node node = findNodeByLabel( transaction, markerLabel );
                 // newProperty + 10 defined properties.
                 assertEquals( 11, Iterables.count( node.getPropertyKeys() ), "We should be able to see all previously defined properties." );
             }
@@ -1223,9 +1223,9 @@ class BackupIT
         }
     }
 
-    private static Node findNodeByLabel( GraphDatabaseService db, Label label )
+    private static Node findNodeByLabel( Transaction transaction, Label label )
     {
-        try ( ResourceIterator<Node> nodes = db.findNodes( label ) )
+        try ( ResourceIterator<Node> nodes = transaction.findNodes( label ) )
         {
             return nodes.next();
         }

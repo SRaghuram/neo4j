@@ -72,13 +72,13 @@ public class SystemGraphDbmsModel
 
         try ( var tx = systemDatabase.beginTx() )
         {
-            var deletedDatabases = systemDatabase.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
+            var deletedDatabases = tx.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
             deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), DROPPED ) ) );
 
             // existing databases supersede dropped databases of the same name, because they represent a later state
             // there can only ever be exactly 0 or 1 existing database for a particular name and
             // database nodes can only ever go from the existing to the dropped state
-            var existingDatabases = systemDatabase.findNodes( DATABASE_LABEL ).stream().collect( Collectors.toList() );
+            var existingDatabases = tx.findNodes( DATABASE_LABEL ).stream().collect( Collectors.toList() );
             existingDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), getOnlineStatus( node ) ) ) );
 
             tx.commit();

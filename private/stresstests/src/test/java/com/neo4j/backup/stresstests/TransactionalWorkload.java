@@ -119,7 +119,7 @@ class TransactionalWorkload extends Workload
             for ( int i = 0; i < 10; i++ )
             {
                 long randomId = ThreadLocalRandom.current().nextLong( 0, nodesCreated );
-                Node node = db.findNode( LABEL, ID_PROPERTY, randomId );
+                Node node = tx.findNode( LABEL, ID_PROPERTY, randomId );
                 assertNotNull( node );
                 for ( String property : PROPERTIES )
                 {

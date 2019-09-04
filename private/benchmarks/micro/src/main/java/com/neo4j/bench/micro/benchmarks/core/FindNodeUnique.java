@@ -166,7 +166,7 @@ public class FindNodeUnique extends AbstractCoreBenchmark
     public void findNodeByLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh )
     {
         assertNotNull(
-                db().findNode( LABEL, txState.propertyKey, txState.nextValue( rngState.rng ) ),
+                txState.tx.findNode( LABEL, txState.propertyKey, txState.nextValue( rngState.rng ) ),
                 bh );
     }
 
@@ -175,7 +175,7 @@ public class FindNodeUnique extends AbstractCoreBenchmark
     public void countNodesWithLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh )
     {
         assertCount(
-                db().findNodes( LABEL, txState.propertyKey, txState.nextValue( rngState.rng ) ),
+                txState.tx.findNodes( LABEL, txState.propertyKey, txState.nextValue( rngState.rng ) ),
                 1,
                 bh );
     }

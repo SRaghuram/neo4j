@@ -31,6 +31,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.Evaluator;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -92,7 +93,7 @@ public class TestProcedure
     @Description( "org.neo4j.findNodesWithLabel" )
     public Stream<NodeResult> findNodesWithLabel( @Name( "label" ) String label )
     {
-        ResourceIterator<Node> nodes = db.findNodes( Label.label( label ) );
+        ResourceIterator<Node> nodes = ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( label ) );
         return nodes.stream().map( NodeResult::new );
     }
 

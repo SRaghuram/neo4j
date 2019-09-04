@@ -51,7 +51,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
         comment.setProperty( Message.CONTENT, operation.content() );
         comment.setProperty( Message.LENGTH, operation.length() );
 
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.authorPersonId() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.authorPersonId() );
 
         comment.createRelationshipTo( person, Rels.COMMENT_HAS_CREATOR );
 
@@ -64,7 +64,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
         if ( -1 == operation.replyToPostId() )
         {
             Node replyToComment =
-                    Operators.findNode( connection.db(), Nodes.Message, Message.ID, operation.replyToCommentId() );
+                    Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.replyToCommentId() );
             comment.createRelationshipTo( replyToComment, Rels.REPLY_OF_COMMENT );
 
             // maintain edge weights between persons - for query 14
@@ -95,7 +95,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
         else
         {
             Node replyToPost =
-                    Operators.findNode( connection.db(), Nodes.Message, Message.ID, operation.replyToPostId() );
+                    Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.replyToPostId() );
             comment.createRelationshipTo( replyToPost, Rels.REPLY_OF_POST );
 
             // maintain edge weights between persons - for query 14
@@ -124,7 +124,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
             }
         }
 
-        Node country = Operators.findNode( connection.db(), Place.Type.Country, Place.ID, operation.countryId() );
+        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.ID, operation.countryId() );
         RelationshipType isLocatedInAtTime =
                 connection.timeStampedRelationshipTypesCache().commentIsLocatedInForDateAtResolution(
                         dateUtil.formatToEncodedDateAtResolution( creationDate ),
@@ -133,7 +133,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.db(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
             comment.createRelationshipTo( tag, Rels.COMMENT_HAS_TAG );
         }
 

@@ -288,7 +288,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     {
         try ( Transaction tx = connection.db().beginTx() )
         {
-            try ( ResourceIterator<Node> persons = connection.db().findNodes( Nodes.Person ) )
+            try ( ResourceIterator<Node> persons = tx.findNodes( Nodes.Person ) )
             {
                 while ( persons.hasNext() )
                 {
@@ -342,7 +342,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         {
             int minYear = Integer.MAX_VALUE;
             int maxYear = Integer.MIN_VALUE;
-            try ( ResourceIterator<Node> persons = connection.db().findNodes( Nodes.Person ) )
+            try ( ResourceIterator<Node> persons = tx.findNodes( Nodes.Person ) )
             {
                 while ( persons.hasNext() )
                 {

@@ -47,6 +47,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
@@ -1052,7 +1053,7 @@ class FunctionIT
         @UserFunction
         public List<String> listCoolPeopleInDatabase()
         {
-            return db.findNodes( label( "Person" ) )
+            return ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( label( "Person" ) )
                     .map( node -> (String) node.getProperty( "name" ) )
                     .stream()
                     .collect( Collectors.toList() );

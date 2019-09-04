@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
@@ -51,17 +50,6 @@ class MultiDatabaseTransactionBridgeIT
         try ( Transaction transaction = db.beginTx() )
         {
             TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> systemDb.getNodeById(1) );
-            assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
-        }
-    }
-
-    @Test
-    void lookupNodesByLabelOnSystemDbInsideOtherDbTransaction()
-    {
-        GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
-        try ( Transaction transaction = db.beginTx() )
-        {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> systemDb.findNodes( Label.label( "any" ) ) );
             assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
         }
     }

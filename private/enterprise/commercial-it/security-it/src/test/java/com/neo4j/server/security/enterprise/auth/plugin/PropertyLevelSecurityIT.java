@@ -625,7 +625,7 @@ class PropertyLevelSecurityIT
         @Procedure( name = "test.getAlias", mode = Mode.READ )
         public Stream<MyOutputRecord> getAlias()
         {
-            ResourceIterator<Node> nodes = db.findNodes( Label.label( "Person" ) );
+            ResourceIterator<Node> nodes = ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( "Person" ) );
             return nodes
                     .stream()
                     .map( n -> new MyOutputRecord( (String) n.getProperty( "name" ),

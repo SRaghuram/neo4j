@@ -12,11 +12,11 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 
 import static java.lang.String.format;
 
@@ -50,9 +50,9 @@ public class Operators
                 }
             };
 
-    public static Node findNode( GraphDatabaseService db, Label label, String key, Object value ) throws DbException
+    public static Node findNode( Transaction tx, Label label, String key, Object value ) throws DbException
     {
-        Node node = db.findNode( label, key, value );
+        Node node = tx.findNode( label, key, value );
         if ( null == node )
         {
             throw new DbException( format( "%s (%s=%s) not found", label.name(), key, value ) );

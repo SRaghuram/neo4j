@@ -36,34 +36,30 @@ public class Update7EmbeddedCore_0 extends Neo4jUpdate7<Neo4jConnectionState>
         comment.setProperty( Message.CONTENT, operation.content() );
         comment.setProperty( Message.LENGTH, operation.length() );
 
-        Node person = Operators.findNode( connection.db(), Nodes.Person, Person.ID, operation.authorPersonId() );
+        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.authorPersonId() );
         comment.createRelationshipTo( person, Rels.COMMENT_HAS_CREATOR );
 
         if ( -1 == operation.replyToPostId() )
         {
-            Node replyToComment = Operators.findNode(
-                    connection.db(),
-                    Nodes.Message,
+            Node replyToComment = Operators.findNode( connection.getTransaction().get(), Nodes.Message,
                     Message.ID,
                     operation.replyToCommentId() );
             comment.createRelationshipTo( replyToComment, Rels.REPLY_OF_COMMENT );
         }
         else
         {
-            Node replyToPost = Operators.findNode(
-                    connection.db(),
-                    Nodes.Message,
+            Node replyToPost = Operators.findNode( connection.getTransaction().get(), Nodes.Message,
                     Message.ID,
                     operation.replyToPostId() );
             comment.createRelationshipTo( replyToPost, Rels.REPLY_OF_POST );
         }
 
-        Node country = Operators.findNode( connection.db(), Place.Type.Country, Place.ID, operation.countryId() );
+        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.ID, operation.countryId() );
         comment.createRelationshipTo( country, Rels.COMMENT_IS_LOCATED_IN );
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.db(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
             comment.createRelationshipTo( tag, Rels.COMMENT_HAS_TAG );
         }
 
