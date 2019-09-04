@@ -170,6 +170,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     var i = 0
     while (i < refs.length) {
       usage += refs(i).estimatedHeapUsage()
+      i += 1
     }
     usage
   }

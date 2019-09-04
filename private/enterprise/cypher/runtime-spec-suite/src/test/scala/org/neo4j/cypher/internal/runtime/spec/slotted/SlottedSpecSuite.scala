@@ -54,7 +54,7 @@ class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.SINGLE_T
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedOptionalTest extends OptionalTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
-//class SlottedMemoryManagementTest extends MemoryManagementTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
-//                                  with FullSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
-//                                  with SlottedMemoryManagementTestBase
-//class SlottedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
+class SlottedMemoryManagementTest extends MemoryManagementTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
+                                  with FullSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
+                                  with SlottedMemoryManagementTestBase
+class SlottedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
