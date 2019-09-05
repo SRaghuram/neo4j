@@ -101,12 +101,15 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                                      override val id: Id,
                                      innermost: DelegateOperatorTaskTemplate,
-                                     codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+                                     codeGen: OperatorExpressionCompiler,
+                                     isHead: Boolean = true) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
 
-  protected val canContinue: InstanceField = field[Boolean](codeGen.namer.nextVariableName())
+  protected val canContinue: InstanceField = field[Boolean](codeGen.namer.nextVariableName() + "canContinue")
 
-  override final def genFields: Seq[Field] = Seq(INNER_LOOP, canContinue) ++ genMoreFields
+  protected val innerLoop: InstanceField = field[Boolean](codeGen.namer.nextVariableName() + "innerLoop")
+
+  override final def genFields: Seq[Field] = Seq(canContinue, innerLoop) ++ genMoreFields
 
   def genMoreFields: Seq[Field]
 
@@ -126,7 +129,10 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     inner.genInit
   }
 
-  override def genOperate: IntermediateRepresentation = {
+  override def genOperate: IntermediateRepresentation =
+    if (isHead) genOperateHead else genOperateMiddle
+
+  private def genOperateHead: IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
     //while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
     //  if (!innerLoop) {
@@ -163,28 +169,73 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputRow.finishedWriting()
     block(
-      labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(INNER_LOOP)), innermost.predicate))(
+      setField(canContinue, INPUT_ROW_IS_VALID),
+      labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
         block(
-          condition(not(loadField(INNER_LOOP)))(setField(INNER_LOOP, genInitializeInnerLoop)),
-          ifElse(loadField(INNER_LOOP))(
+          condition(not(loadField(innerLoop)))(setField(innerLoop, genInitializeInnerLoop)),
+          ifElse(loadField(innerLoop))(
             block(
               genInnerLoop,
               condition(not(loadField(canContinue)))(
                 block(
                   genCloseInnerLoop,
-                  setField(INNER_LOOP, constant(false)),
+                  setField(innerLoop, constant(false)),
                   INPUT_ROW_MOVE_TO_NEXT,
                   setField(canContinue, INPUT_ROW_IS_VALID)
+                  )
                 )
               )
-            )
-          )( //else
-            INPUT_ROW_MOVE_TO_NEXT
-          ),
+            )( //else
+              block(
+                INPUT_ROW_MOVE_TO_NEXT
+               )),
           innermost.resetCachedPropertyVariables
+          )
         )
       )
-    )
+  }
+
+  private def genOperateMiddle: IntermediateRepresentation = {
+    /**
+      * This is called when the loop is used as a middle operator,
+      * Here we should act as an inner loop and not advance the input
+      * morsel
+      * {{{
+      *   this.canContinue = input.isValid
+      *   while ( (this.canContinue || this.innerLoop) && hasDemand) {
+      *     if (!this.innerLoop) {
+      *       this.innerLoop = [genInitializeInnerLoop]
+      *     }
+      *     if (this.innerLoop) {
+      *       [genInnerLoop]
+      *       if (!this.canContinue) {
+      *         [genCloseInnerLoop]
+      *         this.innerLoop = false
+      *       }
+      *     }
+      *   }
+      * }}}
+      */
+    block(
+      setField(canContinue, INPUT_ROW_IS_VALID),
+      loop(and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
+        block(
+          condition(not(loadField(innerLoop)))(setField(innerLoop, genInitializeInnerLoop)),
+          condition(loadField(innerLoop))(
+            block(
+              genInnerLoop,
+              condition(not(loadField(canContinue)))(
+                block(
+                  genCloseInnerLoop,
+                  setField(innerLoop, constant(false)),
+                  )
+                )
+              )
+            ),
+          innermost.resetCachedPropertyVariables
+          )
+        )
+      )
   }
 
   /**
