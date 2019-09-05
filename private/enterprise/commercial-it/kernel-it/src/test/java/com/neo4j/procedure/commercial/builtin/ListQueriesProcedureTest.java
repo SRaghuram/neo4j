@@ -224,7 +224,7 @@ public class ListQueriesProcedureTest
             // when
             try ( Transaction transaction = db.beginTx() )
             {
-                try ( Result rows = db.execute(
+                try ( Result rows = transaction.execute(
                         "CALL dbms.listQueries() " + "YIELD query AS queryText, queryId, activeLockCount " + "WHERE queryText = $queryText " +
                                 "CALL dbms.listActiveLocks(queryId) YIELD mode, resourceType, resourceId " + "RETURN *", singletonMap( "queryText", query ) ); )
                 {
@@ -287,7 +287,7 @@ public class ListQueriesProcedureTest
             // when
             try ( Transaction transaction = db.beginTx() )
             {
-                try ( Result rows = db.execute(
+                try ( Result rows = transaction.execute(
                         "CALL dbms.listQueries() " + "YIELD query AS queryText, queryId, activeLockCount " + "WHERE queryText = $queryText " +
                                 "CALL dbms.listActiveLocks(queryId) YIELD resourceId " +
                                 "WITH queryText, queryId, activeLockCount, count(resourceId) AS allLocks " + "RETURN *",

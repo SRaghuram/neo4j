@@ -166,7 +166,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
     {
         writeTxState.advance();
         Map<String,Object> params = writeTxState.params();
-        writeTxState.db.execute( "MATCH (n) WHERE id(n)=$id SET n += $prop", params );
+        writeTxState.txBatch.transaction().execute( "MATCH (n) WHERE id(n)=$id SET n += $prop", params );
     }
 
     public static void main( String... methods ) throws Exception

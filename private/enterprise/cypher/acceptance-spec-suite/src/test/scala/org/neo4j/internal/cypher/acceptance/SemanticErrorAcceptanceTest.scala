@@ -465,15 +465,16 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   private def executeAndEnsureError(query: String, expected: Seq[String], params: (String,Any)*) {
     import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper._
+
     import scala.collection.JavaConverters._
 
     val expectedErrorString = expected.map(e => s"'$e'").mkString(" or ")
-    graph.inTx(
+    graph.withTx( tx =>
       try {
         val jParams = new util.HashMap[String, Object]()
         params.foreach(kv => jParams.put(kv._1, kv._2.asInstanceOf[AnyRef]))
 
-        graph.execute(query.fixNewLines, jParams).asScala.size
+        tx.execute(query.fixNewLines, jParams).asScala.size
         fail(s"Did not get the expected error, expected: $expectedErrorString")
       } catch {
         case x: QueryExecutionException =>

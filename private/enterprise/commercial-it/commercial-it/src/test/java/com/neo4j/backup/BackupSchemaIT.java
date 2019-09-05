@@ -429,7 +429,7 @@ class BackupSchemaIT
                 assertEquals( 1, countNodeConstraints( db, "Person", NODE_KEY, "name", "age" ) );
                 for ( int i = 1; i <= 42; i++ )
                 {
-                    Result result = db.execute( "MATCH (p:Person {name: $name, age: $age}) RETURN count(p) AS count",
+                    Result result = tx.execute( "MATCH (p:Person {name: $name, age: $age}) RETURN count(p) AS count",
                             map( "name", String.valueOf( i ), "age", i ) );
                     assertEquals( 1L, single( result ).get( "count" ) );
                 }

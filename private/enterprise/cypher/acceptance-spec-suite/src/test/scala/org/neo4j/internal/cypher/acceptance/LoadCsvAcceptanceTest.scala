@@ -568,7 +568,7 @@ class LoadCsvAcceptanceTest
       val transaction = db.beginTx()
       try {
         intercept[QueryExecutionException] {
-          db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line CREATE (a {name:line[0]})", emptyMap())
+          transaction.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line CREATE (a {name:line[0]})", emptyMap())
         }.getMessage should endWith(": configuration property 'dbms.security.allow_csv_import_from_file_urls' is false")
       } finally {
         transaction.close()
@@ -596,7 +596,7 @@ class LoadCsvAcceptanceTest
 
     val tx = db.beginTx
     try {
-      val result = db.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line RETURN line[0] AS field", emptyMap())
+      val result = tx.execute(s"LOAD CSV FROM 'file:///tmp/blah.csv' AS line RETURN line[0] AS field", emptyMap())
       result.asScala.map(_.asScala).toList should equal(List(Map("field" -> "something")))
       result.close()
     } finally {
@@ -619,7 +619,7 @@ class LoadCsvAcceptanceTest
     val transaction = db.beginTx()
     try {
       intercept[QueryExecutionException] {
-        db.execute(s"LOAD CSV FROM 'file:///../foo.csv' AS line RETURN line[0] AS field", emptyMap()).asScala.size
+        transaction.execute(s"LOAD CSV FROM 'file:///../foo.csv' AS line RETURN line[0] AS field", emptyMap()).asScala.size
       }.getMessage should endWith(" file URL points outside configured import directory").or(include("Couldn't load the external resource at"))
     } finally {
       transaction.close()
@@ -654,7 +654,7 @@ class LoadCsvAcceptanceTest
 
     val tx = db.beginTx
     try {
-      val result = db.execute(s"LOAD CSV FROM 'testproto://foo.bar' AS line RETURN line[0] AS field", emptyMap())
+      val result = tx.execute(s"LOAD CSV FROM 'testproto://foo.bar' AS line RETURN line[0] AS field", emptyMap())
       result.asScala.map(_.asScala).toList should equal(List(Map("field" -> "something")))
       resourceMonitor.assertClosedAndClear(1)
     } finally {

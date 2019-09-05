@@ -442,7 +442,7 @@ class SecurityAdministrationCommandLoggingIT
     {
         try ( InternalTransaction transaction = database.beginTransaction( Transaction.Type.explicit, loginContext ) )
         {
-            database.execute( query, params );
+            transaction.execute( query, params );
             transaction.commit();
         }
     }

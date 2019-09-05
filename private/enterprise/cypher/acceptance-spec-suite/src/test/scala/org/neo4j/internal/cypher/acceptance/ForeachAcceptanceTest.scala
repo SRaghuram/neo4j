@@ -23,7 +23,7 @@ class ForeachAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
         |  CREATE (n)-[:SELF]->(b))""".stripMargin
 
     // should work
-    inTx( _ => executeOfficial(query))
+    inTx( tx => executeOfficial(tx, query))
   }
 
   test("nested foreach") {

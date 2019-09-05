@@ -127,12 +127,12 @@ public class Neo4jConnectionState extends DbConnectionState
             Function<Result,T> resultMapper ) throws DbException
     {
 
-        Result defaultResult = db().execute( withExplain( annotatedQuery.defaultQueryString() ), params );
+        Result defaultResult = transaction.execute( withExplain( annotatedQuery.defaultQueryString() ), params );
         // exhaust result
         Lists.newArrayList( defaultResult ).size();
         String defaultPlanner = PlanMeta.extractPlanner( defaultResult.getExecutionPlanDescription() );
 
-        Result result = db().execute( withProfile( annotatedQuery.queryString() ), params );
+        Result result = transaction.execute( withProfile( annotatedQuery.queryString() ), params );
         // exhaust result
         T mappedResults = resultMapper.apply( result );
         ExecutionPlanDescription plan = result.getExecutionPlanDescription();

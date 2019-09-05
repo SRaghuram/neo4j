@@ -168,14 +168,14 @@ public class EmbeddedDatabase implements Database
     {
         return inTx
                ? executeInTx( query, parameters, shouldRollback )
-               : execute( query, parameters );
+               : execute( db, query, parameters );
     }
 
     private int executeInTx( String query, Map<String,Object> parameters, boolean shouldRollback )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            int rowCount = execute( query, parameters );
+            int rowCount = execute( tx, query, parameters );
             if ( shouldRollback )
             {
                 tx.rollback();
@@ -188,13 +188,20 @@ public class EmbeddedDatabase implements Database
         }
     }
 
-    private int execute( String query, Map<String,Object> parameters )
+    private int execute( Transaction transaction, String query, Map<String,Object> parameters )
     {
         resultVisitor.reset();
-        try ( Result result = db.execute( query, parameters ) )
+        try ( Result result = transaction.execute( query, parameters ) )
         {
             result.accept( resultVisitor );
         }
+        return resultVisitor.count();
+    }
+
+    private int execute( GraphDatabaseService db, String query, Map<String,Object> parameters )
+    {
+        resultVisitor.reset();
+        db.executeTransactionally( query, parameters, result -> result.accept( resultVisitor ) );
         return resultVisitor.count();
     }
 

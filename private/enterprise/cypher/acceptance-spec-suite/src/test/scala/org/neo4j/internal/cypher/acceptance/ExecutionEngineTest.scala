@@ -700,9 +700,9 @@ order by a.COL1""".format(a, b))
     //GIVEN
     readOnlyEngine() {
       _ =>
-        graph.withTx(_ =>{
+        graph.withTx( tx =>{
           //WHEN
-          val result = executeOfficial("MATCH (n) WHERE n:NonExistingLabel RETURN n")
+          val result = executeOfficial( tx, "MATCH (n) WHERE n:NonExistingLabel RETURN n")
 
           //THEN
           result.asScala.toList shouldBe empty
@@ -875,8 +875,8 @@ order by a.COL1""".format(a, b))
       writer.println("1,2,3")
       writer.println("4,5,6")
     }
-    graph.inTx({
-      val result = executeOfficial(s"using periodic commit load csv from '$url' as line create (x) return x")
+    graph.withTx( tx => {
+      val result = executeOfficial( tx, s"using periodic commit load csv from '$url' as line create (x) return x")
       result.asScala should have size 2
     })
   }
@@ -904,12 +904,12 @@ order by a.COL1""".format(a, b))
     (0 until 100).foreach { _ => createLabeledNode("Person") }
 
     // WHEN
-    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
+    graph.withTx(tx => executeOfficial( tx, s"match (n:Person) return n").resultAsString())
     planningListener.planRequests should equal(Seq(
       s"match (n:Person) return n"
     ))
     (0 until 301).foreach { _ => createLabeledNode("Person") }
-    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
+    graph.withTx( tx => executeOfficial( tx, s"match (n:Person) return n").resultAsString())
 
     //THEN
     planningListener.planRequests should equal (Seq(
@@ -925,12 +925,12 @@ order by a.COL1""".format(a, b))
 
     (0 until 100).foreach { _ => createLabeledNode("Person") }
     //WHEN
-    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
+    graph.withTx( tx => executeOfficial( tx, s"match (n:Person) return n").resultAsString())
     planningListener.planRequests should equal(Seq(
       s"match (n:Person) return n"
     ))
     (0 until 9).foreach { _ => createLabeledNode("Dog") }
-    graph.inTx(executeOfficial(s"match (n:Person) return n").resultAsString())
+    graph.withTx( tx => executeOfficial( tx, s"match (n:Person) return n").resultAsString())
 
     //THEN
     planningListener.planRequests should equal(Seq(

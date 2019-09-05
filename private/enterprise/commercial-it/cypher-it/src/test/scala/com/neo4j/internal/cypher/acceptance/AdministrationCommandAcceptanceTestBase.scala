@@ -166,7 +166,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     try {
       executeBefore(tx)
       var count = 0
-      val result: Result = new RichGraphDatabaseQueryService(graph).execute(query, params)
+      val result: Result = tx.execute(query, params)
       result.accept(row => {
         resultHandler(row, count)
         count = count + 1

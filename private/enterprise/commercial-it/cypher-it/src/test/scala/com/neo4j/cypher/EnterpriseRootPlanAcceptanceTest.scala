@@ -68,24 +68,24 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Comm
   }
 
   test("should show_java_source") {
-    graph.withTx { _ =>
-      val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
+    graph.withTx { tx =>
+      val res = executeOfficial( tx, "CYPHER runtime=compiled debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
     }
   }
 
   test("should show_bytecode") {
-    graph.withTx { _ =>
-      val res = executeOfficial("CYPHER runtime=compiled debug=show_bytecode MATCH (n) RETURN n")
+    graph.withTx { tx =>
+      val res = executeOfficial( tx, "CYPHER runtime=compiled debug=show_bytecode MATCH (n) RETURN n")
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
     }
   }
 
   test("should show_java_source and show_bytecode") {
-    graph.withTx { _ =>
-      val res = executeOfficial("CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
+    graph.withTx { tx =>
+      val res = executeOfficial( tx, "CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
       shouldContainByteCode(res.getExecutionPlanDescription)
@@ -153,8 +153,8 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Comm
           val runtimeString = runtime.map("runtime=" + _.name).getOrElse("")
           s"CYPHER $version $plannerString $runtimeString"
       }
-      graph.withTx { _ =>
-        val result = executeOfficial(s"$prepend PROFILE $query")
+      graph.withTx { tx =>
+        val result = executeOfficial( tx, s"$prepend PROFILE $query")
         result.resultAsString()
         result.getExecutionPlanDescription
       }

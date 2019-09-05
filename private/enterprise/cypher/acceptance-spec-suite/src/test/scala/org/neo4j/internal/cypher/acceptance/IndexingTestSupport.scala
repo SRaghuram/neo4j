@@ -89,8 +89,8 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
       expected.foreach(p => assert(nodes.contains(p)))
       nodes.size() should be(expected.size)
     } else {
-      graph.inTx({
-        val result = graph.execute("CYPHER runtime=slotted "+query, params)
+      graph.withTx( tx => {
+        val result = tx.execute("CYPHER runtime=slotted "+query, params)
         val nodes = result.columnAs("n").stream().collect(Collectors.toSet)
         expected.foreach(p => assert(nodes.contains(p)))
         nodes.size() should be(expected.size)

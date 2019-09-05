@@ -177,18 +177,18 @@ class QueryLoggerIT
         // Set meta data and execute query in transaction
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, subject ) )
         {
-            db.execute( "CALL dbms.setTXMetaData( { User: 'Johan' } )", emptyMap() );
-            db.execute( "CALL dbms.procedures() YIELD name RETURN name", emptyMap() ).close();
-            db.execute( "MATCH (n) RETURN n", emptyMap() ).close();
-            db.execute( QUERY, emptyMap() );
+            tx.execute( "CALL dbms.setTXMetaData( { User: 'Johan' } )", emptyMap() );
+            tx.execute( "CALL dbms.procedures() YIELD name RETURN name", emptyMap() ).close();
+            tx.execute( "MATCH (n) RETURN n", emptyMap() ).close();
+            tx.execute( QUERY, emptyMap() );
             tx.commit();
         }
 
         // Ensure that old meta data is not retained
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, subject ) )
         {
-            db.execute( "CALL dbms.setTXMetaData( { Location: 'Sweden' } )", emptyMap() );
-            db.execute( "MATCH ()-[r]-() RETURN count(r)", emptyMap() ).close();
+            tx.execute( "CALL dbms.setTXMetaData( { Location: 'Sweden' } )", emptyMap() );
+            tx.execute( "MATCH ()-[r]-() RETURN count(r)", emptyMap() ).close();
             tx.commit();
         }
 
@@ -559,7 +559,7 @@ class QueryLoggerIT
     {
         try ( Transaction transaction = database.beginTx() )
         {
-            Result execute = database.execute( query, params );
+            Result execute = transaction.execute( query, params );
             execute.close();
             transaction.commit();
         }
@@ -638,7 +638,7 @@ class QueryLoggerIT
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? emptyMap() : params;
-            resultConsumer.accept( db.execute( call, p ) );
+            resultConsumer.accept( tx.execute( call, p ) );
             tx.commit();
         }
     }

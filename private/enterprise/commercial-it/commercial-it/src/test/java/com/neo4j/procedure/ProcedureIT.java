@@ -133,7 +133,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", 42L ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", 42L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 42L ) ) );
@@ -328,7 +328,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.delegatingProcedure", map( "name", 43L ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.delegatingProcedure", map( "name", 43L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 43L ) ) );
@@ -343,7 +343,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", 10L ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", 10L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 55L ) ) );
@@ -448,7 +448,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.incrBytes($param)", map( "param", new byte[]{4, 5, 6} ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.incrBytes($param)", map( "param", new byte[]{4, 5, 6} ) );
 
             // Then
             assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{5, 6, 7} ) );
@@ -463,7 +463,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "WITH $param AS b CALL com.neo4j.procedure.incrBytes(b) YIELD bytes RETURN bytes", map( "param", new byte[]{7, 8, 9} ) );
+            Result res = tx.execute( "WITH $param AS b CALL com.neo4j.procedure.incrBytes(b) YIELD bytes RETURN bytes", map( "param", new byte[]{7, 8, 9} ) );
 
             // Then
             assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{8, 9, 10} ) );
@@ -478,7 +478,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "WITH $param AS param CALL com.neo4j.procedure.incrBytes(param) YIELD bytes RETURN bytes, param",
+            Result res = tx.execute( "WITH $param AS param CALL com.neo4j.procedure.incrBytes(param) YIELD bytes RETURN bytes, param",
                     map( "param", new byte[]{10, 11, 12} ) );
 
             // Then
@@ -543,7 +543,7 @@ public class ProcedureIT
             long nodeId = tx.createNode().getId();
 
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.node($id)", map( "id", nodeId ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.node($id)", map( "id", nodeId ) );
 
             // Then
             Node node = (Node) res.next().get( "node" );
@@ -859,7 +859,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.schemaCallReadProcedure($id)", map( "id", nodeId ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.schemaCallReadProcedure($id)", map( "id", nodeId ) );
 
             // Then
             Node node = (Node) res.next().get( "node" );
@@ -888,7 +888,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.squareDouble", map( "value", 4L ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.squareDouble", map( "value", 4L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "result", 16.0d ) ) );
@@ -903,7 +903,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.avgNumberList($param)", map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.avgNumberList($param)", map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "result", 2.0d ) ) );
@@ -918,7 +918,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.avgDoubleList([$long, $double])", map( "long", 1L, "double", 2.0d ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.avgDoubleList([$long, $double])", map( "long", 1L, "double", 2.0d ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "result", 1.5d ) ) );
@@ -933,7 +933,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.squareLong", map( "value", 4L ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.squareLong", map( "value", 4L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 16L ) ) );
@@ -982,7 +982,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             long nodeId = tx.createNode().getId();
-            Node node = Iterators.single( db.execute( "CALL com.neo4j.procedure.node", map( "id", nodeId ) ).columnAs( "node" ) );
+            Node node = Iterators.single( tx.execute( "CALL com.neo4j.procedure.node", map( "id", nodeId ) ).columnAs( "node" ) );
             node.setProperty( "name", "Stefan" );
             tx.commit();
         }
@@ -1124,7 +1124,7 @@ public class ProcedureIT
             Relationship rel = node1.createRelationshipTo( node2, RelationshipType.withName( "KNOWS" ) );
 
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.nodePaths($node) YIELD path RETURN path", map( "node", node1 ) );
+            Result res = tx.execute( "CALL com.neo4j.procedure.nodePaths($node) YIELD path RETURN path", map( "node", node1 ) );
 
             // Then
             assertTrue( res.hasNext() );
@@ -1390,7 +1390,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.decrBytes($param) AS bytes", map( "param", new byte[]{4, 5, 6} ) );
+            Result res = tx.execute( "RETURN com.neo4j.procedure.decrBytes($param) AS bytes", map( "param", new byte[]{4, 5, 6} ) );
 
             // Then
             assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{3, 4, 5} ) );
@@ -1406,7 +1406,7 @@ public class ProcedureIT
         {
             // When
             Result res =
-                    db.execute( "WITH $param AS param RETURN com.neo4j.procedure.decrBytes(param) AS bytes, param", map( "param", new byte[]{10, 11, 12} ) );
+                    tx.execute( "WITH $param AS param RETURN com.neo4j.procedure.decrBytes(param) AS bytes, param", map( "param", new byte[]{10, 11, 12} ) );
 
             // Then
             assertTrue( res.hasNext() );
@@ -1444,7 +1444,7 @@ public class ProcedureIT
             data[0] = new byte[]{1, 2, 3};
             data[1] = new byte[]{3, 2, 1};
             data[2] = new byte[]{1, 2, 1};
-            Result res = db.execute( "UNWIND $data AS bytes RETURN com.neo4j.procedure.aggregateByteArrays(bytes) AS bytes", map( "data", data ) );
+            Result res = tx.execute( "UNWIND $data AS bytes RETURN com.neo4j.procedure.aggregateByteArrays(bytes) AS bytes", map( "data", data ) );
 
             // Then
             assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{5, 6, 5} ) );
@@ -1750,7 +1750,8 @@ public class ProcedureIT
         @Procedure
         public Stream<Output> delegatingProcedure( @Name( "name" ) long someValue )
         {
-            return db.execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", someValue ) ).stream().map(
+            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+                    .execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", someValue ) ).stream().map(
                     row -> new Output( (Long) row.get( "someVal" ) ) );
         }
 
@@ -1761,7 +1762,8 @@ public class ProcedureIT
             {
                 return Stream.of( new Output( 0L ) );
             }
-            Long prev = (Long) db.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", order - 1 ) ).next().get( "someVal" );
+            Long prev = (Long) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+                    .execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", order - 1 ) ).next().get( "someVal" );
             return Stream.of( new Output( order + prev ) );
         }
 
@@ -1957,7 +1959,7 @@ public class ProcedureIT
         @Procedure( mode = WRITE )
         public void delegatingSideEffect( @Name( "value" ) String value )
         {
-            db.execute( "CALL com.neo4j.procedure.sideEffect", map( "value", value ) );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.sideEffect", map( "value", value ) );
         }
 
         @Procedure( mode = WRITE )
@@ -1980,7 +1982,8 @@ public class ProcedureIT
         @Procedure
         public Stream<PathOutputRecord> nodePaths( @Name( "node" ) Node node )
         {
-            return db.execute( "WITH $node AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) ).stream().map(
+            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+                    .execute( "WITH $node AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) ).stream().map(
                     record -> new PathOutputRecord( (Path) record.getOrDefault( "p", null ) ) );
         }
 

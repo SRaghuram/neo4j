@@ -38,9 +38,9 @@ import scala.util.{Failure, Success, Try}
 trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   self: ExecutionEngineFunSuite =>
 
-  override def eengineExecute(query: String,
+  override def eengineExecute(tx: InternalTransaction, query: String,
                               params: Map[String, Any]): Result = {
-    executeOfficial(query, params.toSeq:_*)
+    executeOfficial(tx, query, params.toSeq:_*)
   }
 
   override def eengineExecute(query: String,
@@ -70,7 +70,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with CommercialGraphDatabaseTestSupport {
 
   // abstract, can be defined through CypherComparisonSupport
-  def eengineExecute(query: String, params: Map[String, Any]): Result
+  def eengineExecute(tx: InternalTransaction, query: String, params: Map[String, Any]): Result
 
   def eengineExecute(query: String,
                      params: MapValue,
@@ -167,8 +167,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     */
   protected def dumpToString(query: String,
                              params: Map[String, Any] = Map.empty): String = {
-    inTx({ _ =>
-      val result = Try(eengineExecute(query, params).resultAsString())
+    inTx({ tx =>
+      val result = Try(eengineExecute(tx, query, params).resultAsString())
 
       if (!result.isSuccess) fail(s"Failed to execute ´$query´")
 

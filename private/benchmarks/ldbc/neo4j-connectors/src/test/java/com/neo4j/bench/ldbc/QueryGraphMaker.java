@@ -79,7 +79,7 @@ public abstract class QueryGraphMaker
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( createQuery, queryParams );
+            tx.execute( createQuery, queryParams );
             tx.commit();
         }
         catch ( Exception e )

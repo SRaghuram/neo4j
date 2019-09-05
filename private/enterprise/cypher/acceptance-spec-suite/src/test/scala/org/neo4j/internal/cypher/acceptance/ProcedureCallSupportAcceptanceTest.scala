@@ -132,10 +132,13 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
       val foo = 42
     }
     val value = new Arbitrary
-
-    // When & then
-    executeTransactionally(
-    intercept[QueryExecutionException](graph.execute("CALL my.first.proc($p)", map("p", value)).next()))
+    val transaction = graphOps.beginTx()
+    try {
+      // When & then
+      intercept[QueryExecutionException](transaction.execute("CALL my.first.proc($p)", map("p", value)).next())
+    } finally {
+      transaction.close()
+    }
   }
 
   test("procedure calls and pattern comprehensions with simple query") {

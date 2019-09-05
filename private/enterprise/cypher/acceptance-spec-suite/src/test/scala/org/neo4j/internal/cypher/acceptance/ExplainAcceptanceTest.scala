@@ -28,8 +28,8 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
   }
 
   test("EXPLAIN for Cypher 3.1") {
-    inTx( _ => {
-      val result = executeOfficial("explain match (n) return n")
+    inTx( tx => {
+      val result = executeOfficial(tx, "explain match (n) return n")
       result.resultAsString()
       result.getExecutionPlanDescription.toString should include("Estimated Rows")
     })

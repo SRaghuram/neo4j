@@ -99,7 +99,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     dateMap.put("a", LocalDate.of(2018, 5, 5))
     dateMap.put("b", LocalTime.of(10, 3, 5))
 
-    graph.inTx(graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
+    graph.withTx( tx => tx.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
 
     val query = "MATCH (n) WHERE n.a = $param.a RETURN n.a as a, n.b as b"
     val result = executeWith(Configs.CachedProperty + Configs.Compiled, query, params = Map("param" -> dateMap))
@@ -115,7 +115,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     dateMap.put("a", LocalDate.of(2018, 5, 5))
     dateMap.put("b", LocalTime.of(10, 3, 5))
 
-    graph.inTx(graph.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
+    graph.withTx(tx => tx.execute("CREATE ($param)", Map[String,Object]("param" -> dateMap).asJava))
 
     val query = "MATCH (n) RETURN $param, n.a as a, n.b as b"
     val result = executeWith(Configs.All, query, params = Map("param" -> dateMap))

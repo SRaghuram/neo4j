@@ -17,11 +17,12 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.test.extension.Inject;
 
@@ -63,61 +64,61 @@ class CausalClusteringProceduresIT
     @Test
     void dbmsProceduresShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsProcedures );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsProcedures( db ) );
     }
 
     @Test
     void dbmsListQueriesShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsListQueries );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsListQueries( db ) );
     }
 
     @Test
     void dbmsClusterOverviewShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( db ) );
     }
 
     @Test
     void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( db ) );
     }
 
     @Test
     void routingProcedureShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeRoutingProcedure( tx ) );
     }
 
     @Test
     void routingProcedureShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeRoutingProcedure( tx ) );
     }
 
     @Test
     void legacyRoutingProcedureShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeLegacyRoutingProcedure( tx ) );
     }
 
     @Test
     void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeLegacyRoutingProcedure( tx ) );
     }
 
     @Test
     void installedProtocolsProcedure()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( db ) );
     }
 
     @Test
     void installedProtocolsProcedureOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( db ) );
     }
 
     @Test
@@ -160,14 +161,14 @@ class CausalClusteringProceduresIT
     }
 
     private static void verifyProcedureAvailability( String databaseName, Set<? extends ClusterMember> members,
-            Function<GraphDatabaseService,Result> procedureExecutor )
+            BiFunction<GraphDatabaseService,Transaction,Result> procedureExecutor )
     {
         for ( var member : members )
         {
             var db = member.database( databaseName );
             try ( var transaction = db.beginTx() )
             {
-                try ( var result = procedureExecutor.apply( db ) )
+                try ( var result = procedureExecutor.apply( db, transaction ) )
                 {
                     var records = Iterators.asList( result );
                     assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
@@ -200,7 +201,7 @@ class CausalClusteringProceduresIT
             var db = member.database( databaseName );
             try ( var transaction = db.beginTx() )
             {
-                try ( var result = invokeClusterRoleProcedure( db, databaseName ) )
+                try ( var result = invokeClusterRoleProcedure( transaction, databaseName ) )
                 {
                     return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
                 }
@@ -223,14 +224,14 @@ class CausalClusteringProceduresIT
         return db.execute( "CALL dbms.cluster.overview()" );
     }
 
-    private Result invokeRoutingProcedure( GraphDatabaseService db )
+    private Result invokeRoutingProcedure( Transaction tx )
     {
-        return db.execute( "CALL dbms.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
+        return tx.execute( "CALL dbms.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
     }
 
-    private Result invokeLegacyRoutingProcedure( GraphDatabaseService db )
+    private Result invokeLegacyRoutingProcedure( Transaction tx )
     {
-        return db.execute( "CALL dbms.cluster.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
+        return tx.execute( "CALL dbms.cluster.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
     }
 
     private Result invokeClusterProtocolsProcedure( GraphDatabaseService db )
@@ -238,8 +239,8 @@ class CausalClusteringProceduresIT
         return db.execute( "CALL dbms.cluster.protocols()" );
     }
 
-    private Result invokeClusterRoleProcedure( GraphDatabaseService db, String databaseName )
+    private Result invokeClusterRoleProcedure( Transaction tx, String databaseName )
     {
-        return db.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) );
+        return tx.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) );
     }
 }

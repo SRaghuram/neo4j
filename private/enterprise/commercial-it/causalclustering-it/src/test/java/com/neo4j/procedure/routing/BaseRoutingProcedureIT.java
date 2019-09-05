@@ -151,15 +151,15 @@ abstract class BaseRoutingProcedureIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( query, params ) );
+            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> tx.execute( query, params ) );
             assertEquals( DatabaseNotFound.code().serialize(), error.getStatusCode() );
         }
     }
 
     private static RoutingResult invokeRoutingProcedure( String query, Map<String,Object> params, GraphDatabaseService db )
     {
-        try ( var ignore = db.beginTx();
-              var result = db.execute( query, params ) )
+        try ( var tx = db.beginTx();
+              var result = tx.execute( query, params ) )
         {
             var record = Iterators.single( result );
             return asRoutingResult( record );

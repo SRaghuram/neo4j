@@ -17,6 +17,7 @@ import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.QueryString;
+import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -24,8 +25,6 @@ import java.util.Map;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.PROFILE;
@@ -70,18 +69,7 @@ public class PlanCreator
                                  ParametersReader parameters,
                                  GraphDatabaseService db ) throws Exception
     {
-        if ( query.queryString().isPeriodicCommit() )
-        {
-            return createPlan( query.queryString(), parameters, db );
-        }
-        else
-        {
-            try ( Transaction tx = db.beginTx() )
-            {
-                return createPlan( query.queryString(), parameters, db );
-                // Always roll back, mutating the store prevents later forks from reusing it.
-            }
-        }
+        return createPlan( query.queryString(), parameters, db );
     }
 
     private static Plan createPlan( QueryString queryString,
@@ -115,11 +103,21 @@ public class PlanCreator
                                                                    QueryString queryString,
                                                                    Map<String,Object> queryParameters )
     {
-        try ( Result result = db.execute( queryString.value(), queryParameters ) )
+        MutableObject<ExecutionPlanDescription> plan = new MutableObject<>();
+        try
         {
-            CountingResultVisitor resultVisitor = new CountingResultVisitor();
-            result.accept( resultVisitor );
-            return result.getExecutionPlanDescription();
+            db.executeTransactionally( queryString.value(), queryParameters, result ->
+            {
+                CountingResultVisitor resultVisitor = new CountingResultVisitor();
+                result.accept( resultVisitor );
+                plan.setValue( result.getExecutionPlanDescription() );
+                throw new RuntimeException();
+            } );
         }
+        catch ( Exception e )
+        {
+            //ignore
+        }
+        return plan.getValue();
     }
 }

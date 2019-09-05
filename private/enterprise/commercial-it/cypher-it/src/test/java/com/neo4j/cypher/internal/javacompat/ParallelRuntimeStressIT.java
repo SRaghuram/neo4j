@@ -73,7 +73,7 @@ public class ParallelRuntimeStressIT
             {
                 try
                 {
-                    db.execute( query(), PARAMS ).accept( visitor() );
+                    db.executeTransactionally( query(), PARAMS, r -> r.accept( visitor() ) );
                 }
                 catch ( Throwable t )
                 {

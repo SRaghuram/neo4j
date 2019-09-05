@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
@@ -160,7 +161,7 @@ public class VarianceProcedure
             params.put( "neo4j_series", neo4jSeries );
             params.put( "owner", branchOwner );
 
-            List<Point> points = db.execute( BENCHMARK_POINTS_FOR_SERIES, params ).stream()
+            List<Point> points = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( BENCHMARK_POINTS_FOR_SERIES, params ).stream()
                                    .map( rowMap ->
                                                  new Point(
                                                          ((Number) rowMap.get( "metricsNodeId" )).longValue(),
@@ -190,7 +191,7 @@ public class VarianceProcedure
         params.put( "group", groupName );
         params.put( "neo4j_series", neo4jSeries );
         params.put( "owner", branchOwner );
-        return db.execute( BENCHMARKS_FOR_GROUP, params ).stream()
+        return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( BENCHMARKS_FOR_GROUP, params ).stream()
                  .map( rowMap ->
                                Benchmark.benchmarkFor( (String) ((Node) rowMap.get( "b" )).getProperty( Benchmark.DESCRIPTION ),
                                                        (String) ((Node) rowMap.get( "b" )).getProperty( Benchmark.SIMPLE_NAME ),

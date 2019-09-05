@@ -116,7 +116,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? Collections.emptyMap() : params;
-            resultConsumer.accept( db.execute( call, p ) );
+            resultConsumer.accept( tx.execute( call, p ) );
             tx.commit();
             return "";
         }

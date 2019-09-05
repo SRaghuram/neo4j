@@ -597,7 +597,7 @@ class PropertyLevelSecurityIT
         Result result;
         try ( InternalTransaction tx = db.beginTransaction( explicit, subject ) )
         {
-            result = db.execute( query, params );
+            result = tx.execute( query, params );
             consumer.accept( result );
             tx.commit();
             result.close();
@@ -609,7 +609,7 @@ class PropertyLevelSecurityIT
         Result result;
         try ( InternalTransaction tx = db.beginTransaction( explicit, subject ) )
         {
-            result = db.execute( query, params );
+            result = tx.execute( query, params );
             result.resultAsString();
             tx.commit();
         }
@@ -625,7 +625,7 @@ class PropertyLevelSecurityIT
         @Procedure( name = "test.getAlias", mode = Mode.READ )
         public Stream<MyOutputRecord> getAlias()
         {
-            ResourceIterator<Node> nodes = ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( "Person" ) );
+            ResourceIterator<Node> nodes = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( "Person" ) );
             return nodes
                     .stream()
                     .map( n -> new MyOutputRecord( (String) n.getProperty( "name" ),

@@ -298,7 +298,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = db.execute( "UNWIND $ids AS ids WITH com.neo4j.procedure.collectNode(ids) AS nodes RETURN nodes",
+            Result result = transaction.execute( "UNWIND $ids AS ids WITH com.neo4j.procedure.collectNode(ids) AS nodes RETURN nodes",
                     map( "ids", nodes.stream().map( Node::getId ).collect( Collectors.toList() ) ) );
 
             // Then
