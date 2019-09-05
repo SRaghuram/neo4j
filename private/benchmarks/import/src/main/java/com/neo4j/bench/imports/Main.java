@@ -66,7 +66,13 @@ public class Main
     private static final String NEO4J_COMMUNITY = "Community";
     private static final String ARG_NEO4J_BRANCH = "--neo4j_branch";
     private static final String ARG_BRANCH_OWNER = "--branch_owner";
+    private static final String ARG_REPORT_RESULT = "--report_result";
 
+    @Option( type = OptionType.COMMAND,
+            name = {ARG_REPORT_RESULT},
+            description = "Should benchmark result be reported or not?",
+            title = "Report result" )
+    private String reportResult = "true";
     @Option( type = OptionType.COMMAND,
              name = {"--csv_location"},
              description = "Location for csv files",
@@ -209,7 +215,11 @@ public class Main
                 createIndexes( size, storeDir, databaseName, benchmarkGroupBenchmarkMetrics, indexGroup, neo4jConfig );
                 print( "End index population " + databaseName );
             }
-            report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
+
+            if ( Boolean.parseBoolean( reportResult ) )
+            {
+                report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
+            }
         }
     }
 
