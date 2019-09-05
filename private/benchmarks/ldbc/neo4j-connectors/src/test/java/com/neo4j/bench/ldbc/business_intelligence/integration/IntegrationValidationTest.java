@@ -60,7 +60,6 @@ public class IntegrationValidationTest
                         new File( validationSetDir, "validation_params.csv" ),
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
-                        Scenario.randomNeo4jImporterFor( CsvSchema.CSV_REGULAR, Neo4jSchema.NEO4J_REGULAR ),
                         Neo4jApi.EMBEDDED_CYPHER,
                         PlannerType.DEFAULT,
                         RuntimeType.DEFAULT,
@@ -138,8 +137,7 @@ public class IntegrationValidationTest
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 dbDir,
                 scenario.csvDir(),
@@ -245,8 +243,7 @@ public class IntegrationValidationTest
         File dbDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 dbDir,
                 scenario.csvDir(),

@@ -13,7 +13,6 @@ import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
-import com.neo4j.bench.ldbc.connection.Neo4jImporter;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.utils.Utils;
@@ -28,13 +27,6 @@ import static java.lang.String.format;
         description = "Imports LDBC CSV file into Neo4j" )
 public class ImportCommand implements Runnable
 {
-    public static final String CMD_IMPORTER = "--importer";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_IMPORTER},
-            description = "Neo4j importer to use: BATCH, PARALLEL",
-            title = "Importer" )
-    private String neo4jImporterString = Neo4jImporter.defaultImporter().name();
-
     public static final String CMD_CSV_SCHEMA = "--csv-schema";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CSV_SCHEMA},
@@ -108,15 +100,13 @@ public class ImportCommand implements Runnable
     public static final String CMD_CONFIG = "--config";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CONFIG},
-            description = "Import configuration file (only applicable to Batch Inserter importer variants)",
+            description = "Import configuration file",
             title = "Importer Config" )
     private File importerConfigurationFile;
 
     @Override
     public void run()
     {
-        System.out.println( format( "Importer                       : %s",
-                neo4jImporterString ) );
         System.out.println( format( "Source CSV Schema              : %s",
                 csvSchemaString ) );
         System.out.println( format( "Source CSV Directory           : %s",
@@ -174,18 +164,8 @@ public class ImportCommand implements Runnable
             throw new RuntimeException( format( "Invalid Neo4j Schema: %s\nValid values are: %s",
                     neo4jSchemaString, Arrays.toString( Neo4jSchema.values() ) ) );
         }
-        Neo4jImporter neo4jImporter;
-        try
-        {
-            neo4jImporter = Neo4jImporter.valueOf( neo4jImporterString );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( format( "Invalid Neo4j Importer: %s\nValid values are: %s",
-                    neo4jImporterString, Arrays.toString( Neo4jImporter.values() ) ) );
-        }
 
-        LdbcSnbImporter importer = LdbcSnbImporter.importerFor( csvSchema, neo4jSchema, neo4jImporter );
+        LdbcSnbImporter importer = LdbcSnbImporter.importerFor( csvSchema, neo4jSchema );
 
         try
         {
@@ -207,7 +187,6 @@ public class ImportCommand implements Runnable
     }
 
     public static String[] buildArgs(
-            Neo4jImporter neo4jImporter,
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
             File dbDir,
@@ -221,7 +200,6 @@ public class ImportCommand implements Runnable
     {
         String[] args = new String[]{
                 "import",
-                CMD_IMPORTER, neo4jImporter.name(),
                 CMD_CSV_SCHEMA, csvSchema.name(),
                 CMD_NEO4J_SCHEMA, neo4jSchema.name(),
                 CMD_DB, dbDir.getAbsolutePath(),
