@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
@@ -34,10 +35,12 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
@@ -249,6 +252,18 @@ public final class CausalClusteringTestHelpers
                 () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), is( true ), 1, MINUTES );
     }
 
+    public static void assertUserDoesNotExist( String userName, Cluster cluster ) throws InterruptedException
+    {
+        assertEventually( ignore -> "User is not absent on all members: " + memberUserStates( cluster ),
+                () -> noMembersHaveUser( cluster, userName ), is( true ), 1, MINUTES);
+    }
+
+    public static void assertRoleDoesNotExist( String roleName, Cluster cluster ) throws InterruptedException
+    {
+        assertEventually( ignore -> "Role is not absent on all members: " + memberRoleStates( cluster ),
+                () -> noMembersHaveRole( cluster, roleName ), is( true ), 1, MINUTES);
+    }
+
     private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
     {
         return membersHaveDatabaseState( expected, cluster.allMembers(), databaseName );
@@ -305,6 +320,54 @@ public final class CausalClusteringTestHelpers
         }
 
         return DatabaseAvailability.AVAILABLE;
+    }
+
+    private static Map<ClusterMember,Set<String>> memberUserStates( Cluster cluster )
+    {
+        return cluster.allMembers().stream().collect( toMap( identity(), CausalClusteringTestHelpers::getMemberUsers ) );
+    }
+
+    private static boolean noMembersHaveUser( Cluster cluster, String userName )
+    {
+        Set<String> users = cluster.allMembers().stream().flatMap( m -> getMemberUsers( m ).stream() ).collect( Collectors.toSet() );
+        return !users.contains( userName );
+    }
+
+    private static Set<String> getMemberUsers( ClusterMember member )
+    {
+        GraphDatabaseFacade system = member.systemDatabase();
+        Set<String> users;
+        try ( var tx = system.beginTx() )
+        {
+            Result result = tx.execute( "SHOW USERS" );
+            users = result.columnAs( "user" ).stream().map( Object::toString ).collect( Collectors.toSet() );
+            tx.commit();
+        }
+        return users;
+    }
+
+    private static Map<ClusterMember,Set<String>> memberRoleStates( Cluster cluster )
+    {
+        return cluster.allMembers().stream().collect( toMap( identity(), CausalClusteringTestHelpers::getMemberRoles ) );
+    }
+
+    private static boolean noMembersHaveRole( Cluster cluster, String roleName )
+    {
+        Set<String> roles = cluster.allMembers().stream().flatMap( m -> getMemberRoles( m ).stream() ).collect( Collectors.toSet() );
+        return !roles.contains( roleName );
+    }
+
+    private static Set<String> getMemberRoles( ClusterMember member )
+    {
+        GraphDatabaseFacade system = member.systemDatabase();
+        Set<String> roles;
+        try ( var tx = system.beginTx() )
+        {
+            Result result = tx.execute( "SHOW ROLES" );
+            roles = result.columnAs( "role" ).stream().map( Object::toString ).collect( Collectors.toSet() );
+            tx.commit();
+        }
+        return roles;
     }
 
     public static void stopDiscoveryService( ClusterMember member ) throws Exception

@@ -517,6 +517,10 @@ public class Cluster
 
     /**
      * Perform a transaction against a member with given role of the core cluster, retrying as necessary.
+     *
+     * Transactions may only successfully be committed against the leader of a cluster,
+     * but it is useful to be able to attempt transactions against other members,
+     * for the purposes of testing error handling.
      */
     public CoreClusterMember coreTx( String databaseName, Role role, BiConsumer<GraphDatabaseFacade,Transaction> op, int timeout, TimeUnit timeUnit )
             throws Exception
