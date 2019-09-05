@@ -506,6 +506,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               acc.template,
               plan.id,
               innermostTemplate,
+              plan eq headPlan,
               collection,
               offset)(expressionCompiler)
 

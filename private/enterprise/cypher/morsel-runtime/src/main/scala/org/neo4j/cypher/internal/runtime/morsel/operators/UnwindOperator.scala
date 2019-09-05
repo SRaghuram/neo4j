@@ -90,10 +90,11 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                  id: Id,
                                  innermost: DelegateOperatorTaskTemplate,
+                                 isHead: Boolean,
                                  rawListExpression: expressions.Expression,
                                  offset: Int)
                                 (codeGen: OperatorExpressionCompiler)
-  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+  extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
   import OperatorCodeGenHelperTemplates._
 
