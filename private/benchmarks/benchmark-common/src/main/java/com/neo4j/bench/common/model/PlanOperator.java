@@ -158,7 +158,6 @@ public class PlanOperator
     @Override
     public int hashCode()
     {
-        //return Objects.hash( id, operatorType, estimatedRows, dbHits, rows, arguments, identifiers, children );
         return id;
     }
 
