@@ -7,66 +7,19 @@ package com.neo4j.bench.ldbc.utils;
 
 public class AnnotatedQuery
 {
-    public static String withExplain( String cypher )
-    {
-        return "explain " + cypher;
-    }
-
-    public static String withProfile( String cypher )
-    {
-        return "profile " + cypher;
-    }
-
-    private final int operationType;
-    private final String operationDescription;
-    private final String defaultQueryString;
     private final String queryString;
-    private final PlannerType plannerType;
-    private final RuntimeType runtimeType;
 
     public AnnotatedQuery(
-            int operationType,
-            String operationDescription,
             String queryString,
             PlannerType plannerType,
             RuntimeType runtimeType )
     {
-        this.operationType = operationType;
-        this.operationDescription = operationDescription;
-        this.defaultQueryString = queryString;
         this.queryString = buildQueryString( queryString, plannerType, runtimeType );
-        this.plannerType = plannerType;
-        this.runtimeType = runtimeType;
-    }
-
-    public int operationType()
-    {
-        return operationType;
-    }
-
-    public String operationDescription()
-    {
-        return operationDescription;
-    }
-
-    public String defaultQueryString()
-    {
-        return defaultQueryString;
     }
 
     public String queryString()
     {
         return queryString;
-    }
-
-    public PlannerType plannerType()
-    {
-        return plannerType;
-    }
-
-    public RuntimeType runtimeType()
-    {
-        return runtimeType;
     }
 
     private static String buildQueryString( String queryString, PlannerType plannerType, RuntimeType runtimeType )

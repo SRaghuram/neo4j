@@ -12,15 +12,11 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery13;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery13Result;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.interactive.Neo4jQuery13;
-import com.neo4j.bench.ldbc.utils.PlanMeta;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.graphdb.Result;
-
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
 
 public class Neo4jLongQuery13EmbeddedCypher extends Neo4jQuery13<Neo4jConnectionState>
 {
@@ -30,37 +26,16 @@ public class Neo4jLongQuery13EmbeddedCypher extends Neo4jQuery13<Neo4jConnection
     @Override
     public LdbcQuery13Result execute( Neo4jConnectionState connection, LdbcQuery13 operation ) throws DbException
     {
-        if ( connection.isFirstForType( operation.type() ) )
+        Result result = connection.execute(
+                connection.queries().queryFor( operation ).queryString(),
+                buildParams( operation ) );
+        if ( !result.hasNext() )
         {
-            Result defaultPlannerResult = connection.execute(
-                    withExplain( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            Result executionResult = connection.execute(
-                    withProfile( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            LdbcQuery13Result results = Iterators.transform( executionResult, TRANSFORM_FUN ).next();
-            // force materialize
-            connection.reportPlanStats(
-                    operation,
-                    PlanMeta.extractPlanner( defaultPlannerResult.getExecutionPlanDescription() ),
-                    PlanMeta.extractPlanner( executionResult.getExecutionPlanDescription() ),
-                    executionResult.getExecutionPlanDescription()
-            );
-            return results;
+            throw new RuntimeException( "Expected 1 row got 0" );
         }
-        else
-        {
-            Result result = connection.execute(
-                    connection.queries().queryFor( operation ).queryString(),
-                    buildParams( operation ) );
-            if ( !result.hasNext() )
-            {
-                throw new RuntimeException( "Expected 1 row got 0" );
-            }
-            return Iterators.transform(
-                    result,
-                    TRANSFORM_FUN ).next();
-        }
+        return Iterators.transform(
+                result,
+                TRANSFORM_FUN ).next();
     }
 
 private static final Function<Map<String,Object>,LdbcQuery13Result> TRANSFORM_FUN =

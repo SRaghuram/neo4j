@@ -9,7 +9,6 @@ import com.ldbc.driver.Db;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
-import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
@@ -115,14 +114,9 @@ public class Neo4jDb extends Db
             assertValidDbDir( dbDir );
             assertValidConfigFile( configFile );
             loggingService.info( "Connecting to database: " + dbDir.getAbsolutePath() );
-            String resultDirPath = params.get( ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG );
-            File resultDir = new File( resultDirPath );
-            String benchmarkName = params.get( ConsoleAndFileDriverConfiguration.NAME_ARG );
             commands = new SnbInteractiveEmbeddedCypherRegularCommands(
                     dbDir,
                     configFile,
-                    resultDir,
-                    benchmarkName,
                     loggingService,
                     SnbInteractiveCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
@@ -242,15 +236,9 @@ public class Neo4jDb extends Db
             assertValidDbDir( dbDir );
             assertValidConfigFile( configFile );
             loggingService.info( "Connecting to database: " + dbDir.getAbsolutePath() );
-
-            String resultDirPath = params.get( ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG );
-            File resultDir = new File( resultDirPath );
-            String benchmarkName = params.get( ConsoleAndFileDriverConfiguration.NAME_ARG );
             commands = new SnbBiEmbeddedCypherRegularCommands(
                     dbDir,
                     configFile,
-                    resultDir,
-                    benchmarkName,
                     loggingService,
                     SnbBiCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
@@ -699,7 +687,7 @@ public class Neo4jDb extends Db
         else
         {
             throw new RuntimeException(
-                    format( "Unsupported workload: %s", workloadClass.getClass().getSimpleName() ) );
+                    format( "Unsupported workload: %s", workloadClass.getSimpleName() ) );
         }
     }
 }

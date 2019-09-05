@@ -12,15 +12,9 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery5MessageCrea
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery5MessageCreatorResult;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.interactive.Neo4jShortQuery5;
-import com.neo4j.bench.ldbc.utils.PlanMeta;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import org.neo4j.graphdb.Result;
-
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
 
 public class Neo4jShortQuery5EmbeddedCypher extends Neo4jShortQuery5<Neo4jConnectionState>
 {
@@ -30,33 +24,12 @@ public class Neo4jShortQuery5EmbeddedCypher extends Neo4jShortQuery5<Neo4jConnec
     public LdbcShortQuery5MessageCreatorResult execute( Neo4jConnectionState connection,
             LdbcShortQuery5MessageCreator operation ) throws DbException
     {
-        if ( connection.isFirstForType( operation.type() ) )
-        {
-            Result defaultPlannerResult = connection.execute(
-                    withExplain( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            Result executionResult = connection.execute(
-                    withProfile( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            LdbcShortQuery5MessageCreatorResult results = Iterators.transform( executionResult, TRANSFORM_FUN ).next();
-            // force materialize
-            connection.reportPlanStats(
-                    operation,
-                    PlanMeta.extractPlanner( defaultPlannerResult.getExecutionPlanDescription() ),
-                    PlanMeta.extractPlanner( executionResult.getExecutionPlanDescription() ),
-                    executionResult.getExecutionPlanDescription()
-            );
-            return results;
-        }
-        else
-        {
-            return Iterators.transform(
-                    connection.execute(
-                            connection.queries().queryFor( operation ).queryString(),
-                            buildParams( operation ) ),
-                    TRANSFORM_FUN
-            ).next();
-        }
+        return Iterators.transform(
+                connection.execute(
+                        connection.queries().queryFor( operation ).queryString(),
+                        buildParams( operation ) ),
+                TRANSFORM_FUN
+        ).next();
     }
 
     private static final Function<Map<String,Object>,LdbcShortQuery5MessageCreatorResult> TRANSFORM_FUN =

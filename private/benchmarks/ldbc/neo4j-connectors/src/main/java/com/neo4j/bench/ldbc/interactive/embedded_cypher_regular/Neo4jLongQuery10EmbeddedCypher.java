@@ -6,7 +6,6 @@
 package com.neo4j.bench.ldbc.interactive.embedded_cypher_regular;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.ldbc.driver.DbException;
@@ -14,16 +13,10 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery10;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery10Result;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.interactive.Neo4jQuery10;
-import com.neo4j.bench.ldbc.utils.PlanMeta;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.neo4j.graphdb.Result;
-
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
 
 public class Neo4jLongQuery10EmbeddedCypher extends Neo4jQuery10<Neo4jConnectionState>
 {
@@ -35,37 +28,15 @@ public class Neo4jLongQuery10EmbeddedCypher extends Neo4jQuery10<Neo4jConnection
     public List<LdbcQuery10Result> execute( Neo4jConnectionState connection, LdbcQuery10 operation )
             throws DbException
     {
-        if ( connection.isFirstForType( operation.type() ) )
-        {
-            Result defaultPlannerResult = connection.execute(
-                    withExplain( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            Result executionResult = connection.execute(
-                    withProfile( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            List<LdbcQuery10Result> results =
-                    ImmutableList.copyOf( Iterators.transform( executionResult, TRANSFORM_FUN ) );
-            // force materialize
-            results.size();
-            connection.reportPlanStats(
-                    operation,
-                    PlanMeta.extractPlanner( defaultPlannerResult.getExecutionPlanDescription() ),
-                    PlanMeta.extractPlanner( executionResult.getExecutionPlanDescription() ),
-                    executionResult.getExecutionPlanDescription()
-            );
-            return results;
-        }
-        else
-        {
-            return Lists.newArrayList(
-                    Iterators.transform(
-                            connection.execute(
-                                    connection.queries().queryFor( operation ).queryString(),
-                                    buildParams( operation ) ),
-                            TRANSFORM_FUN
-                    )
-            );
-        }
+
+        return Lists.newArrayList(
+                Iterators.transform(
+                        connection.execute(
+                                connection.queries().queryFor( operation ).queryString(),
+                                buildParams( operation ) ),
+                        TRANSFORM_FUN
+                )
+        );
     }
 
     private static final Function<Map<String,Object>,LdbcQuery10Result> TRANSFORM_FUN =
