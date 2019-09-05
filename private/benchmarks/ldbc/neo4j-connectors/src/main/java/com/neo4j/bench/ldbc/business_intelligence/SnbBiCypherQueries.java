@@ -64,10 +64,7 @@ import com.neo4j.bench.ldbc.utils.RuntimeType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-import java.util.Map;
-
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 
 public class SnbBiCypherQueries implements AnnotatedQueries
 {
@@ -81,151 +78,126 @@ public class SnbBiCypherQueries implements AnnotatedQueries
         return new SnbBiCypherQueries()
                 .withQuery(
                         LdbcSnbBiQuery1PostingSummary.TYPE,
-                        LdbcSnbBiQuery1PostingSummary.class,
                         Neo4jSnbBiQuery1.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery2TopTags.TYPE,
-                        LdbcSnbBiQuery2TopTags.class,
                         Neo4jSnbBiQuery2.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery3TagEvolution.TYPE,
-                        LdbcSnbBiQuery3TagEvolution.class,
                         Neo4jSnbBiQuery3.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery4PopularCountryTopics.TYPE,
-                        LdbcSnbBiQuery4PopularCountryTopics.class,
                         Neo4jSnbBiQuery4.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery5TopCountryPosters.TYPE,
-                        LdbcSnbBiQuery5TopCountryPosters.class,
                         Neo4jSnbBiQuery5.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery6ActivePosters.TYPE,
-                        LdbcSnbBiQuery6ActivePosters.class,
                         Neo4jSnbBiQuery6.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery7AuthoritativeUsers.TYPE,
-                        LdbcSnbBiQuery7AuthoritativeUsers.class,
                         Neo4jSnbBiQuery7.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery8RelatedTopics.TYPE,
-                        LdbcSnbBiQuery8RelatedTopics.class,
                         Neo4jSnbBiQuery8.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery9RelatedForums.TYPE,
-                        LdbcSnbBiQuery9RelatedForums.class,
                         Neo4jSnbBiQuery9.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery10TagPerson.TYPE,
-                        LdbcSnbBiQuery10TagPerson.class,
                         Neo4jSnbBiQuery10.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery11UnrelatedReplies.TYPE,
-                        LdbcSnbBiQuery11UnrelatedReplies.class,
                         Neo4jSnbBiQuery11.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery12TrendingPosts.TYPE,
-                        LdbcSnbBiQuery12TrendingPosts.class,
                         Neo4jSnbBiQuery12.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery13PopularMonthlyTags.TYPE,
-                        LdbcSnbBiQuery13PopularMonthlyTags.class,
                         Neo4jSnbBiQuery13.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery14TopThreadInitiators.TYPE,
-                        LdbcSnbBiQuery14TopThreadInitiators.class,
                         Neo4jSnbBiQuery14.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery15SocialNormals.TYPE,
-                        LdbcSnbBiQuery15SocialNormals.class,
                         Neo4jSnbBiQuery15.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery16ExpertsInSocialCircle.TYPE,
-                        LdbcSnbBiQuery16ExpertsInSocialCircle.class,
                         Neo4jSnbBiQuery16.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery17FriendshipTriangles.TYPE,
-                        LdbcSnbBiQuery17FriendshipTriangles.class,
                         Neo4jSnbBiQuery17.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery18PersonPostCounts.TYPE,
-                        LdbcSnbBiQuery18PersonPostCounts.class,
                         Neo4jSnbBiQuery18.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery19StrangerInteraction.TYPE,
-                        LdbcSnbBiQuery19StrangerInteraction.class,
                         Neo4jSnbBiQuery19.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery20HighLevelTopics.TYPE,
-                        LdbcSnbBiQuery20HighLevelTopics.class,
                         Neo4jSnbBiQuery20.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery21Zombies.TYPE,
-                        LdbcSnbBiQuery21Zombies.class,
                         Neo4jSnbBiQuery21.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery22InternationalDialog.TYPE,
-                        LdbcSnbBiQuery22InternationalDialog.class,
                         Neo4jSnbBiQuery22.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery23HolidayDestinations.TYPE,
-                        LdbcSnbBiQuery23HolidayDestinations.class,
                         Neo4jSnbBiQuery23.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery24MessagesByTopic.TYPE,
-                        LdbcSnbBiQuery24MessagesByTopic.class,
                         Neo4jSnbBiQuery24.QUERY_STRING,
                         runtimeType,
                         plannerType )
                 .withQuery(
                         LdbcSnbBiQuery25WeightedPaths.TYPE,
-                        LdbcSnbBiQuery25WeightedPaths.class,
                         Neo4jSnbBiQuery25.QUERY_STRING,
                         runtimeType,
                         plannerType );
@@ -240,7 +212,6 @@ public class SnbBiCypherQueries implements AnnotatedQueries
 
     private SnbBiCypherQueries withQuery(
             int operationType,
-            Class<? extends Operation> operationClass,
             String queryString,
             RuntimeType runtimeType,
             PlannerType plannerType )
@@ -248,8 +219,6 @@ public class SnbBiCypherQueries implements AnnotatedQueries
         annotatedQueries.put(
                 operationType,
                 new AnnotatedQuery(
-                        operationType,
-                        operationClass.getSimpleName(),
                         queryString,
                         plannerType,
                         runtimeType
@@ -266,11 +235,5 @@ public class SnbBiCypherQueries implements AnnotatedQueries
             throw new DbException( format( "Operation type %s has no associated query", operation.type() ) );
         }
         return annotatedQueries.get( operation.type() );
-    }
-
-    @Override
-    public Iterable<AnnotatedQuery> allQueries() throws DbException
-    {
-        return annotatedQueries.entrySet().stream().map( Map.Entry::getValue ).collect( toList() );
     }
 }
