@@ -776,14 +776,16 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.doubleNestedAllowedProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> doubleNestedAllowedProcedure()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL test.nestedAllowedProcedure('test.allowedReadProcedure') YIELD value" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+                    .execute( "CALL test.nestedAllowedProcedure('test.allowedReadProcedure') YIELD value" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
         @Procedure( name = "test.failingNestedAllowedWriteProcedure", mode = Mode.WRITE )
         public Stream<AuthProceduresBase.StringResult> failingNestedAllowedWriteProcedure()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+                    .execute( "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 

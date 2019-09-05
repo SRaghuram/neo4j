@@ -352,7 +352,8 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                Result result = transaction.execute( "CALL db.index.fulltext.queryRelationships('idx', '42') YIELD relationship RETURN count(relationship) AS count" );
+                Result result = transaction
+                        .execute( "CALL db.index.fulltext.queryRelationships('idx', '42') YIELD relationship RETURN count(relationship) AS count" );
                 assertEquals( 42L, single( result ).get( "count" ) );
             }
         }
@@ -393,7 +394,8 @@ class BackupSchemaIT
             }
             try ( Transaction transaction = db.beginTx() )
             {
-                QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> transaction.execute( "CREATE (:Person {name: '1'})" ).close() );
+                QueryExecutionException error = assertThrows( QueryExecutionException.class,
+                        () -> transaction.execute( "CREATE (:Person {name: '1'})" ).close() );
                 assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
             }
         }

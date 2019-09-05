@@ -43,9 +43,11 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     // Execute your buggy query
     val query = ???
 
-    val r = graph.execute(query)
-    println(r.resultAsString())
-    println(r.getExecutionPlanDescription)
+    graph.withTx(tx => {
+      val r = tx.execute(query)
+      println(r.resultAsString())
+      println(r.getExecutionPlanDescription)
+    })
   }
 
   test("should create graph from data collector graph counts")  {

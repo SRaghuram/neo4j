@@ -583,7 +583,8 @@ public class ProcedureIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute( "CALL someProcedureThatDoesNotExist" ) );
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> transaction.execute( "CALL someProcedureThatDoesNotExist" ) );
             assertThat( exception.getMessage(), equalTo( "There is no procedure with the name `someProcedureThatDoesNotExist` " +
                     "registered for this database instance. Please ensure you've spelled the " +
                     "procedure name correctly and that the procedure is properly deployed." ) );
@@ -795,7 +796,8 @@ public class ProcedureIT
         try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.write() ) )
         {
             QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingSchemaProcedure" ).next() );
+                    assertThrows( QueryExecutionException.class,
+                            () -> tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingSchemaProcedure" ).next() );
             assertThat( exception.getMessage(), startsWith( "Schema operations are not allowed" ) );
         }
     }
@@ -1358,9 +1360,9 @@ public class ProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Given/When
-            List<Map<String,Object>> results =
-                    transaction.execute( "CALL dbms.functions()" ).stream().filter( record -> record.get( "name" ).equals( "com.neo4j.procedure.getNodeName" ) ).collect(
-                            Collectors.toList() );
+            List<Map<String,Object>> results = transaction.execute( "CALL dbms.functions()" ).stream()
+                                .filter( record -> record.get( "name" ).equals( "com.neo4j.procedure.getNodeName" ) )
+                                .collect( Collectors.toList() );
             // Then
             assertFalse( results.isEmpty(), "Expected to find test function" );
             assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.getNodeName(node = null :: NODE?) :: (STRING?)" ) );
@@ -1457,7 +1459,8 @@ public class ProcedureIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute( "CALL com.neo4j.procedure.guardMe" ).next() );
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class,
+                    () -> transaction.execute( "CALL com.neo4j.procedure.guardMe" ).next() );
             assertThat( exception.getMessage(), equalTo( "The transaction has been terminated. Retry your operation in a new " +
                     "transaction, and you should see a successful result. Explicitly terminated by the user. " ) );
         }

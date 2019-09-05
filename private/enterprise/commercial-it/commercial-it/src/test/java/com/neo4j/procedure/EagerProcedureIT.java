@@ -109,9 +109,11 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When explaining a call to an eagerized procedure
-            Result res = transaction.execute( "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
-                    "YIELD value RETURN value" );
-            assertThat( "The plan description should contain the 'Eager' operation", res.getExecutionPlanDescription().toString(), containsString( "+Eager" ) );
+            Result res = transaction.execute(
+                    "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
+                            "YIELD value RETURN value" );
+            assertThat( "The plan description should contain the 'Eager' operation",
+                    res.getExecutionPlanDescription().toString(), containsString( "+Eager" ) );
             transaction.commit();
         }
     }
