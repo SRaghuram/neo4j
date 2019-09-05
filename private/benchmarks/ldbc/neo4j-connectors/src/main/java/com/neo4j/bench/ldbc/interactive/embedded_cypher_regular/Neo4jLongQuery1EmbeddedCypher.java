@@ -15,17 +15,11 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery1Result;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.connection.QueryDateUtil;
 import com.neo4j.bench.ldbc.interactive.Neo4jQuery1;
-import com.neo4j.bench.ldbc.utils.PlanMeta;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.neo4j.graphdb.Result;
-
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
 
 public class Neo4jLongQuery1EmbeddedCypher extends Neo4jQuery1<Neo4jConnectionState>
 {
@@ -37,36 +31,11 @@ public class Neo4jLongQuery1EmbeddedCypher extends Neo4jQuery1<Neo4jConnectionSt
     public List<LdbcQuery1Result> execute( Neo4jConnectionState connection, LdbcQuery1 operation )
             throws DbException
     {
-        if ( connection.isFirstForType( operation.type() ) )
-        {
-            Result defaultPlannerResult = connection.db().execute(
-                    withExplain( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            Result executionResult = connection.db().execute(
-                    withProfile( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            List<LdbcQuery1Result> results =
-                    ImmutableList.copyOf( Iterators.transform(
-                            executionResult,
-                            new TransformFun( connection.dateUtil() ) ) );
-            // force materialize
-            results.size();
-            connection.reportPlanStats(
-                    operation,
-                    PlanMeta.extractPlanner( defaultPlannerResult.getExecutionPlanDescription() ),
-                    PlanMeta.extractPlanner( executionResult.getExecutionPlanDescription() ),
-                    executionResult.getExecutionPlanDescription()
-            );
-            return results;
-        }
-        else
-        {
-            return Lists.newArrayList( Iterators.transform(
-                    connection.db().execute(
-                            connection.queries().queryFor( operation ).queryString(),
-                            buildParams( operation ) ),
-                    new TransformFun( connection.dateUtil() ) ) );
-        }
+        return Lists.newArrayList( Iterators.transform(
+                connection.db().execute(
+                        connection.queries().queryFor( operation ).queryString(),
+                        buildParams( operation ) ),
+                new TransformFun( connection.dateUtil() ) ) );
     }
 
     private static class TransformFun implements Function<Map<String,Object>,LdbcQuery1Result>

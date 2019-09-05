@@ -9,10 +9,10 @@ import com.ldbc.driver.Db;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
-import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiCypherQueries;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiEmbeddedCypherRegularCommands;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
@@ -24,7 +24,6 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularComma
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -108,14 +107,9 @@ public class Neo4jDb extends Db
             assertValidDbDir( dbDir );
             assertValidConfigFile( configFile );
             loggingService.info( "Connecting to database: " + dbDir.getAbsolutePath() );
-            String resultDirPath = params.get( ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG );
-            File resultDir = new File( resultDirPath );
-            String benchmarkName = params.get( ConsoleAndFileDriverConfiguration.NAME_ARG );
             commands = new SnbInteractiveEmbeddedCypherRegularCommands(
                     dbDir,
                     configFile,
-                    resultDir,
-                    benchmarkName,
                     loggingService,
                     SnbInteractiveCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
@@ -235,15 +229,9 @@ public class Neo4jDb extends Db
             assertValidDbDir( dbDir );
             assertValidConfigFile( configFile );
             loggingService.info( "Connecting to database: " + dbDir.getAbsolutePath() );
-
-            String resultDirPath = params.get( ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG );
-            File resultDir = new File( resultDirPath );
-            String benchmarkName = params.get( ConsoleAndFileDriverConfiguration.NAME_ARG );
             commands = new SnbBiEmbeddedCypherRegularCommands(
                     dbDir,
                     configFile,
-                    resultDir,
-                    benchmarkName,
                     loggingService,
                     SnbBiCypherQueries.createWith(
                             getCypherPlannerOrFail( cypherPlannerString ),
@@ -434,10 +422,9 @@ public class Neo4jDb extends Db
     public static GraphDatabaseBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
     {
         String withoutProtocol = uri.toString().substring(
-                uri.toString().indexOf( "://" ) + 3,
-                uri.toString().length() );
+                uri.toString().indexOf( "://" ) + 3 );
         int portIndex = withoutProtocol.lastIndexOf( ":" );
-        int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1, withoutProtocol.length() ) );
+        int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1 ) );
         return newDbBuilderForBolt(
                 dbDir,
                 configFile,
@@ -467,14 +454,7 @@ public class Neo4jDb extends Db
         }
         else
         {
-            try
-            {
-                return FileUtils.readFileToString( configFile );
-            }
-            catch ( IOException e )
-            {
-                throw new DbException( "Error reading Neo4j configuration contents to string", e );
-            }
+            return BenchmarkUtil.fileToString( configFile.toPath() );
         }
     }
 
@@ -564,7 +544,7 @@ public class Neo4jDb extends Db
         else
         {
             throw new RuntimeException(
-                    format( "Unsupported workload: %s", workloadClass.getClass().getSimpleName() ) );
+                    format( "Unsupported workload: %s", workloadClass.getSimpleName() ) );
         }
     }
 
@@ -685,7 +665,7 @@ public class Neo4jDb extends Db
         else
         {
             throw new RuntimeException(
-                    format( "Unsupported workload: %s", workloadClass.getClass().getSimpleName() ) );
+                    format( "Unsupported workload: %s", workloadClass.getSimpleName() ) );
         }
     }
 }
