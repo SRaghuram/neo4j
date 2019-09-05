@@ -33,17 +33,6 @@ class MultiDatabaseTransactionBridgeIT
     private DatabaseManagementService managementService;
 
     @Test
-    void queryOnSystemDbInsideOtherDbTransaction()
-    {
-        GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
-        try ( Transaction transaction = db.beginTx() )
-        {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> transaction.execute( "SHOW DATABASES" ) );
-            assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
-        }
-    }
-
-    @Test
     void beginTransactionOnSystemDbInsideOtherDbTransaction()
     {
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
