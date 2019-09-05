@@ -131,7 +131,7 @@ public class ClusterOverviewHelper
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
+            try ( var result = transaction.execute( "CALL dbms.cluster.overview()" ) )
             {
                 return result.stream()
                         .map( ClusterOverviewHelper::createMemberInfo )

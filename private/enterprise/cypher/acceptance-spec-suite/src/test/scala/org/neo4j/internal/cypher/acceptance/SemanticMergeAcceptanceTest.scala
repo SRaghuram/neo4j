@@ -30,18 +30,18 @@ class SemanticMergeAcceptanceTest
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.inTx(graph.execute(s"MERGE $patternString").close())
+          graph.withTx( tx => tx.execute(s"MERGE $patternString").close())
 
           //find created pattern (cannot return * since everything might be unnamed)
-          graph.inTx({
-            val result1 = graph.execute(s"MATCH $patternString RETURN 42")
+          graph.withTx( tx => {
+            val result1 = tx.execute(s"MATCH $patternString RETURN 42")
             hasSingleRow(result1)
-            val result2 = graph.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
+            val result2 = tx.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
             hasSingleRow(result2)
           })
 
           //clean up
-          graph.inTx(graph.execute(s"MATCH (n) DETACH DELETE n"))
+          graph.withTx( tx => tx.execute(s"MATCH (n) DETACH DELETE n"))
         }
       }
     }
@@ -56,17 +56,17 @@ class SemanticMergeAcceptanceTest
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.inTx(graph.execute(s"CREATE $patternString"))
+          graph.withTx( tx => tx.execute(s"CREATE $patternString"))
 
           //find created pattern (cannot return * since everything might be unnamed)
-          graph.inTx({
-            val result = RewindableExecutionResult(graph.execute(s"MERGE $patternString RETURN 42"))
+          graph.withTx( tx => {
+            val result = RewindableExecutionResult(tx.execute(s"MERGE $patternString RETURN 42"))
             result.toList should have size 1
             assertStats(result, nodesCreated = 0)
           })
 
           //clean up
-          graph.inTx(graph.execute(s"MATCH (n) DETACH DELETE n"))
+          graph.withTx( tx => tx.execute(s"MATCH (n) DETACH DELETE n"))
         }
       }
     }

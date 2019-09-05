@@ -7,7 +7,6 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{Interpreted, Slotted, SlottedWithCompiledExpressions}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -187,8 +186,8 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
         |RETURN count(*) as c
       """.stripMargin
 
-    graph.inTx({
-      val result = graph.execute(query)
+    graph.withTx( tx => {
+      val result = tx.execute(query)
 
       assert(result.hasNext)
       result.next.get("c") shouldEqual 1
@@ -203,7 +202,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should throw on CREATE relationship if start-point is missing") {
-    graph.inTx(graph.execute("CREATE (a), (b)"))
+    graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
     val config = Configs.InterpretedAndSlotted
 
@@ -217,7 +216,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should throw on CREATE relationship if end-point is missing") {
-    graph.inTx(graph.execute("CREATE (a), (b)"))
+    graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
     val config = Configs.InterpretedAndSlotted
 

@@ -58,7 +58,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   }
 
   test("should not explode on complex pattern comprehension projection in write query") {
-    graph.inTx({
+    graph.withTx( tx => {
       val query =
         """UNWIND [{children : [
           |            {_type : "browseNodeId", _text : "20" },
@@ -76,7 +76,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
           |
           |RETURN *""".stripMargin
 
-      val result = graph.execute(query)
+      val result = tx.execute(query)
       result.resultAsString() // should not explode
     })
   }

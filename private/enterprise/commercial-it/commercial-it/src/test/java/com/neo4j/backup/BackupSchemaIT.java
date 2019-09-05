@@ -232,7 +232,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE INDEX ON :Person(name)" ).close();
+                transaction.execute( "CREATE INDEX ON :Person(name)" ).close();
                 transaction.commit();
             }
         }
@@ -242,7 +242,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
+                transaction.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
                 transaction.commit();
             }
         }
@@ -253,7 +253,7 @@ class BackupSchemaIT
             try ( Transaction tx = db.beginTx() )
             {
                 assertEquals( 1, countNodeIndexes( db, "Person", "name" ) );
-                assertEquals( 42L, single( db.execute( "MATCH (n:Person {name: '42'}) RETURN count(n) AS count" ) ).get( "count" ) );
+                assertEquals( 42L, single( tx.execute( "MATCH (n:Person {name: '42'}) RETURN count(n) AS count" ) ).get( "count" ) );
             }
         }
     }
@@ -265,7 +265,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE INDEX ON :Person(name, age)" ).close();
+                transaction.execute( "CREATE INDEX ON :Person(name, age)" ).close();
                 transaction.commit();
             }
         }
@@ -275,7 +275,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42', age: 42})" ).close();
+                transaction.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42', age: 42})" ).close();
                 transaction.commit();
             }
         }
@@ -286,7 +286,7 @@ class BackupSchemaIT
             try ( Transaction tx = db.beginTx() )
             {
                 assertEquals( 1, countNodeIndexes( db, "Person", "name", "age" ) );
-                assertEquals( 42L, single( db.execute( "MATCH (n:Person {name: '42', age: 42}) RETURN count(n) AS count" ) ).get( "count" ) );
+                assertEquals( 42L, single( tx.execute( "MATCH (n:Person {name: '42', age: 42}) RETURN count(n) AS count" ) ).get( "count" ) );
             }
         }
     }
@@ -298,7 +298,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CALL db.index.fulltext.createNodeIndex('idx',['Person'],['name'])" ).close();
+                transaction.execute( "CALL db.index.fulltext.createNodeIndex('idx',['Person'],['name'])" ).close();
                 transaction.commit();
             }
         }
@@ -308,7 +308,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
+                transaction.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: '42'})" ).close();
                 transaction.commit();
             }
         }
@@ -318,7 +318,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                Result result = db.execute( "CALL db.index.fulltext.queryNodes('idx', '42') YIELD node RETURN count(node) AS count" );
+                Result result = transaction.execute( "CALL db.index.fulltext.queryNodes('idx', '42') YIELD node RETURN count(node) AS count" );
                 assertEquals( 42L, single( result ).get( "count" ) );
                 transaction.commit();
             }
@@ -332,7 +332,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CALL db.index.fulltext.createRelationshipIndex('idx',['LIKES'],['name'])" ).close();
+                transaction.execute( "CALL db.index.fulltext.createRelationshipIndex('idx',['LIKES'],['name'])" ).close();
                 transaction.commit();
             }
         }
@@ -342,7 +342,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person)-[:LIKES {name: '42'}]->(:Person)" ).close();
+                transaction.execute( "UNWIND range(1, 42) AS x CREATE (:Person)-[:LIKES {name: '42'}]->(:Person)" ).close();
                 transaction.commit();
             }
         }
@@ -352,7 +352,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                Result result = db.execute( "CALL db.index.fulltext.queryRelationships('idx', '42') YIELD relationship RETURN count(relationship) AS count" );
+                Result result = transaction.execute( "CALL db.index.fulltext.queryRelationships('idx', '42') YIELD relationship RETURN count(relationship) AS count" );
                 assertEquals( 42L, single( result ).get( "count" ) );
             }
         }
@@ -365,7 +365,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name IS UNIQUE" ).close();
+                transaction.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT p.name IS UNIQUE" ).close();
                 transaction.commit();
             }
         }
@@ -375,7 +375,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x)})" ).close();
+                transaction.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x)})" ).close();
                 transaction.commit();
             }
         }
@@ -393,7 +393,7 @@ class BackupSchemaIT
             }
             try ( Transaction transaction = db.beginTx() )
             {
-                QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person {name: '1'})" ).close() );
+                QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> transaction.execute( "CREATE (:Person {name: '1'})" ).close() );
                 assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
             }
         }
@@ -406,7 +406,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT (p.name, p.age) IS NODE KEY" ).close();
+                transaction.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT (p.name, p.age) IS NODE KEY" ).close();
                 transaction.commit();
             }
         }
@@ -416,7 +416,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x), age: x})" ).close();
+                transaction.execute( "UNWIND range(1, 42) AS x CREATE (:Person {name: toString(x), age: x})" ).close();
                 transaction.commit();
             }
         }
@@ -437,7 +437,7 @@ class BackupSchemaIT
             try ( Transaction transaction = db.beginTx() )
             {
                 QueryExecutionException error =
-                        assertThrows( QueryExecutionException.class, () -> db.execute( "CREATE (:Person {name: '1', age: 1})" ).close() );
+                        assertThrows( QueryExecutionException.class, () -> transaction.execute( "CREATE (:Person {name: '1', age: 1})" ).close() );
                 assertThat( findCauseOrSuppressed( error, instanceOf( IndexEntryConflictException.class ) ), not( empty() ) );
             }
         }
@@ -450,7 +450,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT exists(p.name)" ).close();
+                transaction.execute( "CREATE CONSTRAINT ON (p:Person) ASSERT exists(p.name)" ).close();
                 transaction.commit();
             }
         }
@@ -467,7 +467,7 @@ class BackupSchemaIT
             {
                 assertEquals( 1, countNodeConstraints( db, "Person", NODE_PROPERTY_EXISTENCE, "name" ) );
                 ConstraintViolationException error = assertThrows( ConstraintViolationException.class, () -> {
-                    db.execute( "CREATE (:Person)" ).close();
+                    tx.execute( "CREATE (:Person)" ).close();
                     tx.commit();
                 } );
                 assertThat( findCauseOrSuppressed( error, instanceOf( NodePropertyExistenceException.class ) ), not( empty() ) );
@@ -482,7 +482,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE CONSTRAINT ON ()-[like:LIKES]-() ASSERT exists(like.name)" ).close();
+                transaction.execute( "CREATE CONSTRAINT ON ()-[like:LIKES]-() ASSERT exists(like.name)" ).close();
                 transaction.commit();
             }
         }
@@ -499,7 +499,7 @@ class BackupSchemaIT
             {
                 assertEquals( 1, countRelationshipConstraints( db, "LIKES", RELATIONSHIP_PROPERTY_EXISTENCE, "name" ) );
                 ConstraintViolationException error = assertThrows( ConstraintViolationException.class, () -> {
-                    db.execute( "CREATE ()-[:LIKES]->()" ).close();
+                    tx.execute( "CREATE ()-[:LIKES]->()" ).close();
                     tx.commit();
                 } );
                 assertThat( findCauseOrSuppressed( error, instanceOf( ConstraintViolationException.class ) ), not( empty() ) );

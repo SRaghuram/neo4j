@@ -92,7 +92,7 @@ class SystemGraphAuthCacheClearingIT
 
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
-            systemDb.execute( "CREATE USER foo SET PASSWORD 'f00'" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'f00'" );
             tx.commit();
         }
 
@@ -102,7 +102,7 @@ class SystemGraphAuthCacheClearingIT
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
-            systemDb.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
+            tx.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
             tx.commit();
         }
 
@@ -126,9 +126,9 @@ class SystemGraphAuthCacheClearingIT
 
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
-            systemDb.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
-            systemDb.execute( "CREATE ROLE role" );
-            systemDb.execute( "GRANT ROLE role TO foo" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT ROLE role TO foo" );
             tx.commit();
         }
 
@@ -139,7 +139,7 @@ class SystemGraphAuthCacheClearingIT
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
-            systemDb.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
             tx.commit();
         }
 
@@ -149,7 +149,7 @@ class SystemGraphAuthCacheClearingIT
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
-            systemDb.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
+            tx.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
             tx.commit();
         }
 
@@ -171,7 +171,7 @@ class SystemGraphAuthCacheClearingIT
 
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "CREATE USER foo SET PASSWORD 'f00'" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'f00'" );
             tx.commit();
         } );
 
@@ -181,7 +181,7 @@ class SystemGraphAuthCacheClearingIT
         // When changing the system database
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
+            tx.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
             tx.commit();
         } );
 
@@ -204,9 +204,9 @@ class SystemGraphAuthCacheClearingIT
 
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
-            sys.execute( "CREATE ROLE role" );
-            sys.execute( "GRANT ROLE role TO foo" );
+            tx.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+            tx.execute( "CREATE ROLE role" );
+            tx.execute( "GRANT ROLE role TO foo" );
             tx.commit();
         } );
 
@@ -217,7 +217,7 @@ class SystemGraphAuthCacheClearingIT
         // When granting privilege
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
             tx.commit();
         } );
 
@@ -227,7 +227,7 @@ class SystemGraphAuthCacheClearingIT
         // When revoking privilege
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
+            tx.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
             tx.commit();
         } );
 
@@ -274,7 +274,7 @@ class SystemGraphAuthCacheClearingIT
         var context = login( database, authToken );
         try ( var tx = database.beginTransaction( Type.explicit, context ) )
         {
-            Result result = database.execute( query );
+            Result result = tx.execute( query );
             result.accept( row -> true );
             tx.commit();
         }

@@ -249,7 +249,7 @@ class TransactionIdTrackerIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                db.execute( "CREATE ()" ).close();
+                transaction.execute( "CREATE ()" ).close();
                 transaction.commit();
             }
         }

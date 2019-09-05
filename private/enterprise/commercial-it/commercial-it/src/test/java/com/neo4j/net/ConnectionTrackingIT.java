@@ -373,7 +373,7 @@ class ConnectionTrackingIT
         List<Map<String,Object>> matchingRecords = new ArrayList<>();
         try ( Transaction transaction = db.beginTx() )
         {
-            Result result = db.execute( "CALL dbms.listConnections()" );
+            Result result = transaction.execute( "CALL dbms.listConnections()" );
             assertEquals( LIST_CONNECTIONS_PROCEDURE_COLUMNS, result.columns() );
             List<Map<String,Object>> records = result.stream().collect( toList() );
 
@@ -443,7 +443,7 @@ class ConnectionTrackingIT
         try ( Transaction transaction = db.beginTx() )
         {
             long id;
-            try ( Result result = db.execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
+            try ( Result result = transaction.execute( "CREATE (n:Dummy) RETURN id(n) AS i" ) )
             {
                 Map<String,Object> record = single( result );
                 id = (long) record.get( "i" );

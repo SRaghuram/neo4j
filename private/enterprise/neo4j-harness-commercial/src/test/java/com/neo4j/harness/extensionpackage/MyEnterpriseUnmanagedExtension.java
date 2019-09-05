@@ -41,7 +41,7 @@ public class MyEnterpriseUnmanagedExtension
         GraphDatabaseService db = dbms.database( "neo4j" );
         try ( Transaction tx = db.beginTx() )
         {
-            try ( Result result = db.execute( "CREATE CONSTRAINT ON (user:User) ASSERT exists(user.name)" ) )
+            try ( Result result = tx.execute( "CREATE CONSTRAINT ON (user:User) ASSERT exists(user.name)" ) )
             {
                 // nothing to-do
             }

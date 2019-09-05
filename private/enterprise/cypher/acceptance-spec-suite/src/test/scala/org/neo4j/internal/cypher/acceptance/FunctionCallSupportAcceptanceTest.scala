@@ -23,7 +23,7 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.inTx(graph.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
+    graph.withTx( tx => tx.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("my.first.value()", value)
     )))
   }
@@ -32,8 +32,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerFunction(classOf[TestFunction])
 
     // We just want to make sure that running the query does not throw exceptions
-    graph.inTx(
-    graph.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)")
+    graph.withTx( tx =>
+    tx.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)")
       .stream().toArray.length should equal(1))
   }
 
@@ -45,7 +45,7 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.withTx( tx => tx.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
     )))
   }
@@ -59,7 +59,7 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.withTx( tx => tx.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
     )))
   }
@@ -72,8 +72,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.inTx({
-      val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
+    graph.withTx( tx => {
+      val returned = tx.execute("RETURN my.first.value() AS out").next().get("out")
 
       returned shouldBe an [util.ArrayList[_]]
       returned shouldBe value
@@ -89,8 +89,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value))
 
     // Using graph execute to get a Java value
-    graph.inTx({
-      val returned = graph.execute("RETURN my.first.value() AS out").next().get("out")
+    graph.withTx( tx => {
+      val returned = tx.execute("RETURN my.first.value() AS out").next().get("out")
 
       returned shouldBe an [util.ArrayList[_]]
       returned shouldBe value
@@ -105,8 +105,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     registerUserFunction(ValueUtils.of(value), Neo4jTypes.NTList(Neo4jTypes.NTInteger))
 
     // Using graph execute to get a Java value
-    graph.inTx({
-      val returned = graph.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
+    graph.withTx( tx => {
+      val returned = tx.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
         .next().get("out")
 
       returned should equal(4)
@@ -120,8 +120,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     registerUserFunction(ValueUtils.of(value), Neo4jTypes.NTAny)
 
-    graph.inTx({
-      val result = graph.execute("RETURN [x in my.first.value() | x + 1] as y")
+    graph.withTx( tx => {
+      val result = tx.execute("RETURN [x in my.first.value() | x + 1] as y")
 
       result.hasNext shouldBe true
       result.next.get("y").asInstanceOf[util.List[_]].asScala should equal(List(2, 3))
@@ -135,8 +135,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     registerUserFunction(ValueUtils.of(value), Neo4jTypes.NTAny)
 
-    graph.inTx({
-      val result = graph.execute("RETURN ANY(x in my.first.value() WHERE x = 2) as u")
+    graph.withTx( tx => {
+      val result = tx.execute("RETURN ANY(x in my.first.value() WHERE x = 2) as u")
 
       result.hasNext shouldBe true
       result.next.get("u") should equal(true)

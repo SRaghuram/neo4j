@@ -61,7 +61,7 @@ class CompositeConstraintIT
         try ( Transaction transaction = database.beginTx() )
         {
             String query = format( "CREATE CONSTRAINT ON (n:%s) ASSERT (n.%s,n.%s) IS NODE KEY", label.name(), "a", "b" );
-            database.execute( query );
+            transaction.execute( query );
             transaction.commit();
         }
 

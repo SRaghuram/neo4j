@@ -71,7 +71,7 @@ class VersionContextIT
 
         try ( Transaction transaction = futuramaDatabase.beginTx() )
         {
-            futuramaDatabase.execute( "match (n) return n" );
+            transaction.execute( "match (n) return n" );
             assertNotSame( futuramaContextSupplier.getVersionContext().lastClosedTransactionId(),
                     defaultContextSupplier.getVersionContext().lastClosedTransactionId() );
         }

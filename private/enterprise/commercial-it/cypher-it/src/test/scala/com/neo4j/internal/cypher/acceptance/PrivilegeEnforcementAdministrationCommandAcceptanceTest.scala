@@ -23,7 +23,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     setupUserWithCustomRole()
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (n:A {name:'a'})"))
+    graph.withTx( tx => tx.execute("CREATE (n:A {name:'a'})"))
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
@@ -42,7 +42,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (n:A {name:'a'})"))
+    graph.withTx( tx => tx.execute("CREATE (n:A {name:'a'})"))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be(null)
     }) should be(1)
@@ -62,7 +62,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (n:A {name:'a'})"))
+    graph.withTx( tx => tx.execute("CREATE (n:A {name:'a'})"))
 
     // THEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -1381,7 +1381,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})"))
+    graph.withTx( tx => tx.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})"))
 
     val expected = List(
       "a", "b"
@@ -1408,7 +1408,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
+    graph.withTx( tx => tx.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1437,7 +1437,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
+    graph.withTx( tx => tx.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1477,7 +1477,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
+    graph.withTx( tx => tx.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1508,7 +1508,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
+    graph.withTx( tx => tx.execute("CREATE (:A {name:'a'})-[:LOVES]->(:A {name:'b'})-[:HATES]->(:A {name:'c'})"))
 
     val query = "MATCH (n)-->(m) RETURN n.name ORDER BY n.name"
 
@@ -1530,7 +1530,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
@@ -1570,7 +1570,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A {name:'a'}), (a)-[:LOVES]->(:B {name:'b'}), (a)-[:LOVES]->(:A {name:'c'})"))
     executeOnDefault("joe", "soap", "MATCH ()-[r:LOVES]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
@@ -1612,7 +1612,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()"))
+    graph.withTx( tx => tx.execute("CREATE (a:Start), (a)-[:A]->(), (a)-[:B]->()"))
 
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
@@ -1674,7 +1674,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
 
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.inTx(graph.execute("CREATE (a:A), (a)-[:A]->(:A), (a)-[:B]->(:A), (a)-[:B]->(:B)"))
+    graph.withTx( tx => tx.execute("CREATE (a:A), (a)-[:A]->(:A), (a)-[:B]->(:A), (a)-[:B]->(:B)"))
 
     val expectedZero = List(
       ("A", 0),
@@ -2802,7 +2802,7 @@ class PrivilegeEnforcementAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE ROLE custom")
     val tx = graph.beginTransaction(Transaction.Type.explicit, LoginContext.AUTH_DISABLED)
     try {
-      val result: Result = new RichGraphDatabaseQueryService(graph).execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
+      val result: Result = tx.execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
       result.accept(_ => true)
       tx.rollback()
     } finally {

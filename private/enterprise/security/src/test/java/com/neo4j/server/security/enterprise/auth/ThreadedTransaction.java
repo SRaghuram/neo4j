@@ -85,7 +85,7 @@ class ThreadedTransaction<S>
                                     {
                                         result.close();
                                     }
-                                    result = neo.getLocalGraph().execute( query );
+                                    result = tx.execute( query );
                                 }
                                 if ( !startEarly )
                                 {

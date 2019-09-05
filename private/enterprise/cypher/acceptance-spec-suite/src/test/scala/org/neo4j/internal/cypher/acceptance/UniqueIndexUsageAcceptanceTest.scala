@@ -142,7 +142,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   private def given() {
-    graph.inTx(graph.execute(
+    graph.withTx( tx => tx.execute(
       """CREATE (architect:Matrix { name:'The Architect' }),
         |       (smith:Matrix { name:'Agent Smith' }),
         |       (cypher:Matrix:Crew { name:'Cypher' }),

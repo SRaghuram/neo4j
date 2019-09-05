@@ -112,10 +112,10 @@ class ProcedureResourcesIT
         try ( Transaction outer = db.beginTx() )
         {
             String procedureQuery = proc.buildProcedureQuery();
-            exhaust( db.execute( procedureQuery ) ).close();
-            exhaust( db.execute( "MATCH (mo:Label) WHERE mo.prop = 'n/a' RETURN mo" ) ).close();
+            exhaust( outer.execute( procedureQuery ) ).close();
+            exhaust( outer.execute( "MATCH (mo:Label) WHERE mo.prop = 'n/a' RETURN mo" ) ).close();
             executeInOtherThread( "CREATE(mo:Label) SET mo.prop = 'val' RETURN mo" );
-            Result result = db.execute( "MATCH (mo:Label) WHERE mo.prop = 'val' RETURN mo" );
+            Result result = outer.execute( "MATCH (mo:Label) WHERE mo.prop = 'val' RETURN mo" );
             assertTrue( result.hasNext(), failureMessage );
             Map<String,Object> next = result.next();
             assertNotNull( next.get( "mo" ), failureMessage );
@@ -138,7 +138,7 @@ class ProcedureResourcesIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE INDEX ON " + indexDefinition );
+            tx.execute( "CREATE INDEX ON " + indexDefinition );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
@@ -152,8 +152,8 @@ class ProcedureResourcesIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "call db.index.fulltext.createNodeIndex(" + ftsNodesIndex + ", ['Label'], ['prop'])" ).close();
-            db.execute( "call db.index.fulltext.createRelationshipIndex(" + ftsRelsIndex + ", ['Label'], ['prop'])" ).close();
+            tx.execute( "call db.index.fulltext.createNodeIndex(" + ftsNodesIndex + ", ['Label'], ['prop'])" ).close();
+            tx.execute( "call db.index.fulltext.createRelationshipIndex(" + ftsRelsIndex + ", ['Label'], ['prop'])" ).close();
             tx.commit();
         }
     }
@@ -162,7 +162,7 @@ class ProcedureResourcesIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "MATCH (n) DETACH DELETE n" ).close();
+            tx.execute( "MATCH (n) DETACH DELETE n" ).close();
             tx.commit();
         }
     }
@@ -339,7 +339,7 @@ class ProcedureResourcesIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                exhaust( db.execute( query ) );
+                exhaust( tx.execute( query ) );
                 tx.commit();
             }
         } );

@@ -143,12 +143,12 @@ class FulltextIndexBackupIT
 
         try ( Transaction tx = backupDb.beginTx() )
         {
-            try ( Result nodes = backupDb.execute( format( QUERY_NODES, NODE_INDEX, "additional" ) ) )
+            try ( Result nodes = tx.execute( format( QUERY_NODES, NODE_INDEX, "additional" ) ) )
             {
                 List<Long> nodeIds = nodes.stream().map( m -> ((Node) m.get( NODE )).getId() ).collect( Collectors.toList() );
                 assertThat( nodeIds, containsInAnyOrder( nodeId3, nodeId4 ) );
             }
-            try ( Result relationships = backupDb.execute( format( QUERY_RELS, REL_INDEX, "knows" ) ) )
+            try ( Result relationships = tx.execute( format( QUERY_RELS, REL_INDEX, "knows" ) ) )
             {
                 List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
                 assertThat( relIds, containsInAnyOrder( relId2 ) );
@@ -178,8 +178,8 @@ class FulltextIndexBackupIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP ) ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
             tx.commit();
         }
         awaitPopulation( db );
@@ -207,12 +207,12 @@ class FulltextIndexBackupIT
         awaitPopulation( db );
         try ( Transaction tx = db.beginTx() )
         {
-            try ( Result nodes = db.execute( format( QUERY_NODES, NODE_INDEX, "integration" ) ) )
+            try ( Result nodes = tx.execute( format( QUERY_NODES, NODE_INDEX, "integration" ) ) )
             {
                 List<Long> nodeIds = nodes.stream().map( m -> ((Node) m.get( NODE )).getId() ).collect( Collectors.toList() );
                 assertThat( nodeIds, containsInAnyOrder( nodeId1, nodeId2 ) );
             }
-            try ( Result relationships = db.execute( format( QUERY_RELS, REL_INDEX, "relate" ) ) )
+            try ( Result relationships = tx.execute( format( QUERY_RELS, REL_INDEX, "relate" ) ) )
             {
                 List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
                 assertThat( relIds, containsInAnyOrder( relId1 ) );

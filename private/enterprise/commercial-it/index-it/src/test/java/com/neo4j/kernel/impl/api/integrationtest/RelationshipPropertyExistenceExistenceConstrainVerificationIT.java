@@ -20,9 +20,9 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 class RelationshipPropertyExistenceExistenceConstrainVerificationIT extends PropertyExistenceConstraintVerificationIT
 {
     @Override
-    public void createConstraint( SchemaHelper helper, GraphDatabaseService db, String relType, String property )
+    public void createConstraint( SchemaHelper helper, GraphDatabaseService db, Transaction tx, String relType, String property )
     {
-        helper.createRelPropertyExistenceConstraint( db, relType, property );
+        helper.createRelPropertyExistenceConstraint( db, tx, relType, property );
     }
 
     @Override

@@ -31,13 +31,13 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
           //update
           val transaction = graphOps.beginTx()
           try {
-            graph.execute(s"CREATE $patternString").close()
+            transaction.execute(s"CREATE $patternString").close()
             //delete
             val variables = findAllRelationshipNames(pattern) ++ findAllNodeNames(pattern)
-            graph.execute(s"MATCH $patternString DELETE ${variables.mkString(",")} RETURN count(*)").close()
+            transaction.execute(s"MATCH $patternString DELETE ${variables.mkString(",")} RETURN count(*)").close()
 
             //now db should be empty
-            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            RewindableExecutionResult(transaction.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
           } finally {
             transaction.close()
           }
@@ -58,13 +58,13 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
           val transaction = graphOps.beginTx()
           try {
             //update
-            graph.execute(s"CREATE $patternString").close()
+            transaction.execute(s"CREATE $patternString").close()
             //delete
             val variables = findAllNodeNames(pattern)
-            graph.execute(s"MATCH $patternString DETACH DELETE ${variables.mkString(",")} RETURN count(*)").close()
+            transaction.execute(s"MATCH $patternString DETACH DELETE ${variables.mkString(",")} RETURN count(*)").close()
 
             //now db should be empty
-            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            RewindableExecutionResult(transaction.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
           } finally {
             transaction.close()
           }
@@ -85,14 +85,14 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
           val transaction = graphOps.beginTx()
           try {
             //update
-            graph.execute(s"CREATE $patternString").close()
+            transaction.execute(s"CREATE $patternString").close()
             //delete
             val variables = findAllRelationshipNames(pattern) ++ findAllNodeNames(pattern)
             val undirected = makeUndirected(pattern).map(_.string).mkString
-            graph.execute(s"MATCH $undirected DELETE ${variables.mkString(",")}").close()
+            transaction.execute(s"MATCH $undirected DELETE ${variables.mkString(",")}").close()
 
             //now db should be empty
-            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            RewindableExecutionResult(transaction.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
           } finally {
             transaction.close()
           }
@@ -113,14 +113,14 @@ class SemanticDeleteAcceptanceTest extends ExecutionEngineFunSuite with PatternG
           val transaction = graphOps.beginTx()
           try {
             //update
-            graph.execute(s"CREATE $patternString").close()
+            transaction.execute(s"CREATE $patternString").close()
             //delete
             val variables = findAllNodeNames(pattern)
             val undirected = makeUndirected(pattern).map(_.string).mkString
-            graph.execute(s"MATCH $undirected DETACH DELETE ${variables.mkString(",")}").close()
+            transaction.execute(s"MATCH $undirected DETACH DELETE ${variables.mkString(",")}").close()
 
             //now db should be empty
-            RewindableExecutionResult(graph.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
+            RewindableExecutionResult(transaction.execute("MATCH () RETURN count(*) AS c")).toList should equal(List(Map("c" -> 0)))
           } finally {
             transaction.close()
           }

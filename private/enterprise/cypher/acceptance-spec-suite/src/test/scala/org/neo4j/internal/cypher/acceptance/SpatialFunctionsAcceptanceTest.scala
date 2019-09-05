@@ -267,8 +267,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("point should be readable from node property") {
     // Given
     createLabeledNode("Place")
-    graph.inTx(
-      graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point").close()
+    graph.withTx( tx =>
+      tx.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point").close()
     )
 
     // When
@@ -299,8 +299,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("3D point should be readable from node property") {
     // Given
     createLabeledNode("Place")
-    graph.inTx(
-      graph.execute("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point").close()
+    graph.withTx( tx =>
+      tx.execute("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point").close()
     )
 
     // When
@@ -448,8 +448,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("array of cartesian points should be readable from node property") {
     // Given
     createLabeledNode("Place")
-    graph.inTx(
-    graph.execute(
+    graph.withTx( tx =>
+    tx.execute(
       """
         |UNWIND [1,2,3] as num
         |WITH point({x: num, y: num}) as point
@@ -475,8 +475,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("array of 3D cartesian points should be readable from node property") {
     // Given
     createLabeledNode("Place")
-    graph.inTx(
-      graph.execute(
+    graph.withTx( tx =>
+      tx.execute(
         """
           |UNWIND [1,2,3] as num
           |WITH point({x: num, y: num, z: num}) as point
@@ -502,8 +502,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("array of 3D WGS84 points should be readable from node property") {
     // Given
     createLabeledNode("Place")
-    graph.inTx(
-      graph.execute(
+    graph.withTx( tx =>
+      tx.execute(
         """
           |UNWIND [1,2,3] as num
           |WITH point({longitude: num, latitude: num, height: num}) as point
@@ -529,8 +529,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("array of wgs84 points should be readable from node property") {
     // Given
     createLabeledNode("Place")
-    graph.inTx(
-      graph.execute(
+    graph.withTx( tx =>
+      tx.execute(
         """
           |UNWIND [1,2,3] as num
           |WITH point({latitude: num, longitude: num}) as point
@@ -571,7 +571,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("accessors on 2D cartesian points") {
     // given
-    graph.inTx(graph.execute("CREATE (:P {p : point({x: 1, y: 2})})"))
+    graph.withTx( tx => tx.execute("CREATE (:P {p : point({x: 1, y: 2})})"))
 
     // when
     val result = executeWith(Configs.All, "MATCH (n:P) WITH n.p AS p RETURN p.x, p.y, p.crs, p.srid")
@@ -584,7 +584,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("accessors on 3D cartesian points") {
     // given
-    graph.inTx(graph.execute("CREATE (:P {p : point({x: 1, y: 2, z:3})})"))
+    graph.withTx( tx => tx.execute("CREATE (:P {p : point({x: 1, y: 2, z:3})})"))
 
     // when
     val result = executeWith(Configs.All, "MATCH (n:P) WITH n.p AS p RETURN p.x, p.y, p.z, p.crs, p.srid")
@@ -596,7 +596,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("accessors on 2D geographic points") {
     // given
-    graph.inTx(graph.execute("CREATE (:P {p : point({longitude: 1, latitude: 2})})"))
+    graph.withTx( tx => tx.execute("CREATE (:P {p : point({longitude: 1, latitude: 2})})"))
 
     // when
     val result = executeWith(Configs.All,  "MATCH (n:P) WITH n.p AS p RETURN p.longitude, p.latitude, p.crs, p.x, p.y, p.srid")
@@ -609,7 +609,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("accessors on 3D geographic points") {
     // given
-    graph.inTx(graph.execute("CREATE (:P {p : point({longitude: 1, latitude: 2, height:3})})"))
+    graph.withTx( tx => tx.execute("CREATE (:P {p : point({longitude: 1, latitude: 2, height:3})})"))
 
     // when
     val result = executeWith(Configs.All,

@@ -144,7 +144,7 @@ class SchemaWithPECAcceptanceTest
         try ( Transaction transaction = db.beginTx() )
         {
             before = getConstraints( db ).collection();
-            helper.createUniquenessConstraint( db, label, propertyKey );
+            helper.createUniquenessConstraint( db, transaction, label, propertyKey );
             transaction.commit();
         }
         helper.awaitIndexes( db );
@@ -171,7 +171,7 @@ class SchemaWithPECAcceptanceTest
         try ( Transaction transaction = db.beginTx() )
         {
             before = getConstraints( db ).collection();
-            helper.createNodeKeyConstraint( db, label, propertyKey );
+            helper.createNodeKeyConstraint( db, transaction, label, propertyKey );
             transaction.commit();
         }
 
@@ -208,7 +208,7 @@ class SchemaWithPECAcceptanceTest
         try ( Transaction transaction = db.beginTx() )
         {
             Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-            helper.createNodePropertyExistenceConstraint( db, label, propertyKey );
+            helper.createNodePropertyExistenceConstraint( db, transaction, label, propertyKey );
             var constraint = getCreatedConstraint( before );
             transaction.commit();
             return constraint;
@@ -220,7 +220,7 @@ class SchemaWithPECAcceptanceTest
         try ( Transaction transaction = db.beginTx() )
         {
             Collection<ConstraintDefinition> before = getConstraints( db ).collection();
-            helper.createRelPropertyExistenceConstraint( db, type, propertyKey );
+            helper.createRelPropertyExistenceConstraint( db, transaction, type, propertyKey );
             var constraint = getCreatedConstraint( before );
             transaction.commit();
             return constraint;

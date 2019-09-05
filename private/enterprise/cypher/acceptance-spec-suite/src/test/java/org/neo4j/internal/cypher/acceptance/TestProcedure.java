@@ -62,7 +62,7 @@ public class TestProcedure
     @Description( "org.neo4j.aNodeWithLabel" )
     public Stream<NodeResult> aNodeWithLabel( @Name( value = "label", defaultValue = "Dog" ) String label )
     {
-        Result result = db.execute( "MATCH (n:" + label + ") RETURN n LIMIT 1" );
+        Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n:" + label + ") RETURN n LIMIT 1" );
         return result.stream().map( row -> new NodeResult( (Node)row.get( "n" ) ) );
     }
 
@@ -80,11 +80,12 @@ public class TestProcedure
         Result result;
         if ( n == 0 )
         {
-            result = db.execute( "MATCH (n) RETURN n LIMIT 1" );
+            result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n) RETURN n LIMIT 1" );
         }
         else
         {
-            result = db.execute( "UNWIND [1] AS i CALL org.neo4j.recurseN(" + ( n - 1 ) + ") YIELD node RETURN node" );
+            result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute(
+                    "UNWIND [1] AS i CALL org.neo4j.recurseN(" + (n - 1) + ") YIELD node RETURN node" );
         }
         return result.stream().map( row -> new NodeResult( (Node)row.get( "node" ) ) );
     }

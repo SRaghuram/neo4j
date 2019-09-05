@@ -411,7 +411,7 @@ class ClusterDatabaseManagementIT
         try ( var tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
         {
             var field = "count";
-            var results = db.execute( String.format( "MATCH (n:%s) RETURN count(n) AS %s", label, field ) );
+            var results = tx.execute( String.format( "MATCH (n:%s) RETURN count(n) AS %s", label, field ) );
             result = (long) results.next().get( field );
             tx.commit();
         }

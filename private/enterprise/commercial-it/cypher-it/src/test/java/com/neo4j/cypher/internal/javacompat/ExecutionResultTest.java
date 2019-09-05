@@ -46,7 +46,7 @@ class ExecutionResultTest
         {
             // When
             List<Map<String,Object>> listResult;
-            try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            try ( Result result = transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
             {
                 listResult = Iterators.asList( result );
             }
@@ -68,7 +68,7 @@ class ExecutionResultTest
         {
             // When
             Map<String,Object> firstRow = null;
-            try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            try ( Result result = transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
             {
                 if ( result.hasNext() )
                 {
@@ -93,7 +93,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             final List<Result.ResultRow> listResult = new ArrayList<>();
-            try ( Result result = db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            try ( Result result = transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
             {
                 result.accept( row ->
                 {
@@ -121,7 +121,7 @@ class ExecutionResultTest
             try ( Transaction transaction = db.beginTx() )
             {
                 final List<Result.ResultRow> listResult = new ArrayList<>();
-                try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
                 {
                     result.accept( row ->
                     {
@@ -153,7 +153,7 @@ class ExecutionResultTest
                 final List<Result.ResultRow> listResult = new ArrayList<>();
                 //This is really a read query but the planner will think of it as a read-write and force it to be
                 //materialized
-                try ( Result result = db.execute( String.format( "CYPHER runtime=%s MERGE (n) RETURN n", runtime ) ) )
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s MERGE (n) RETURN n", runtime ) ) )
                 {
                     result.accept( row ->
                     {
@@ -183,7 +183,7 @@ class ExecutionResultTest
             try ( Transaction transaction = db.beginTx() )
             {
                 final List<Result.ResultRow> listResult = new ArrayList<>();
-                try ( Result result = db.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
+                try ( Result result = transaction.execute( String.format( "CYPHER runtime=%s MATCH (n) RETURN n", runtime ) ) )
                 {
                     result.accept( row ->
                     {
@@ -210,7 +210,7 @@ class ExecutionResultTest
         {
             // Then
             // just close result without consuming it
-            db.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ).close();
+            transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ).close();
             transaction.commit();
         }
     }
@@ -220,8 +220,8 @@ class ExecutionResultTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
-            Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
+            Result create = transaction.execute( "CREATE CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
+            Result drop = transaction.execute( "DROP CONSTRAINT ON (n:L) ASSERT n.prop IS UNIQUE" );
 
             assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
             assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
@@ -236,8 +236,8 @@ class ExecutionResultTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Result create = db.execute( "CREATE CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
-            Result drop = db.execute( "DROP CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
+            Result create = transaction.execute( "CREATE CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
+            Result drop = transaction.execute( "DROP CONSTRAINT ON (n:L) ASSERT exists(n.prop)" );
 
             assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
             assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
@@ -253,7 +253,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = db.execute( "EXPLAIN MATCH (n) RETURN n.prop" );
+            Result result = transaction.execute( "EXPLAIN MATCH (n) RETURN n.prop" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -274,7 +274,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = db.execute( "EXPLAIN CYPHER runtime=compiled MATCH (n) RETURN n.prop" );
+            Result result = transaction.execute( "EXPLAIN CYPHER runtime=compiled MATCH (n) RETURN n.prop" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -295,7 +295,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = db.execute( "EXPLAIN CYPHER runtime=interpreted MATCH (n) RETURN n.prop" );
+            Result result = transaction.execute( "EXPLAIN CYPHER runtime=interpreted MATCH (n) RETURN n.prop" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -316,7 +316,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = db.execute( "EXPLAIN CALL db.labels()" );
+            Result result = transaction.execute( "EXPLAIN CALL db.labels()" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -337,7 +337,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = db.execute( "PROFILE CALL db.labels()" );
+            Result result = transaction.execute( "PROFILE CALL db.labels()" );
             result.resultAsString();
 
             // When
@@ -359,7 +359,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = db.execute( "EXPLAIN CREATE INDEX ON :L(prop)" );
+            Result result = transaction.execute( "EXPLAIN CREATE INDEX ON :L(prop)" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -379,7 +379,7 @@ class ExecutionResultTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Object s = db.execute( "RETURN split('hello, world', ',') AS s" ).next().get( "s" );
+            Object s = transaction.execute( "RETURN split('hello, world', ',') AS s" ).next().get( "s" );
             assertThat( s, instanceOf( List.class ) );
         }
     }
@@ -390,10 +390,10 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            db.execute( "CREATE (p:Person {names:['adsf', 'adf' ]})" );
+            transaction.execute( "CREATE (p:Person {names:['adsf', 'adf' ]})" );
 
             // When
-            Object result = db.execute( "MATCH (n) RETURN n.names" ).next().get( "n.names" );
+            Object result = transaction.execute( "MATCH (n) RETURN n.names" ).next().get( "n.names" );
 
             // Then
             assertThat( result, CoreMatchers.instanceOf( String[].class ) );
@@ -409,7 +409,7 @@ class ExecutionResultTest
             try ( Transaction transaction = db.beginTx() )
             {
                 // Given
-                Result result = db.execute( String.format( "EXPLAIN CYPHER %s MATCH (n) RETURN n", version ) );
+                Result result = transaction.execute( String.format( "EXPLAIN CYPHER %s MATCH (n) RETURN n", version ) );
 
                 // When
                 ExecutionPlanDescription description = result.getExecutionPlanDescription();
@@ -438,7 +438,7 @@ class ExecutionResultTest
             // When
             try ( Transaction transaction = db.beginTx() )
             {
-                Result result = db.execute( String.format( "PROFILE CYPHER %s MATCH (n) RETURN n", version ) );
+                Result result = transaction.execute( String.format( "PROFILE CYPHER %s MATCH (n) RETURN n", version ) );
                 result.resultAsString();
                 ExecutionPlanDescription.ProfilerStatistics stats = result.getExecutionPlanDescription()//ProduceResult
                         .getChildren().get( 0 ) //AllNodesScan

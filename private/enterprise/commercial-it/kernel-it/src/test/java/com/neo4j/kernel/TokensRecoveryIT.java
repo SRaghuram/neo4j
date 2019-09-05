@@ -45,7 +45,7 @@ class TokensRecoveryIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CALL db.index.fulltext.createNodeIndex('nodes', ['Label'], ['prop'] )" ).close();
+            tx.execute( "CALL db.index.fulltext.createNodeIndex('nodes', ['Label'], ['prop'] )" ).close();
             tx.commit();
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.

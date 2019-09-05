@@ -19,6 +19,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs._
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.{CallableProcedure, Context}
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -36,7 +37,7 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
       // when
       val transaction = db.beginTx()
-      val result = db.execute("CYPHER runtime=compiled MATCH (n) RETURN n")
+      val result = transaction.execute("CYPHER runtime=compiled MATCH (n) RETURN n")
       result.accept(new ResultVisitor[RuntimeException] {
         def visit(row: ResultRow) = true
       })
@@ -53,8 +54,8 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
   }
 
   private implicit class RichDb(db: GraphDatabaseCypherService) {
-    def planDescriptionForQuery(query: String): ExecutionPlanDescription = {
-      val res = db.execute(query)
+    def planDescriptionForQuery(tx:InternalTransaction, query: String): ExecutionPlanDescription = {
+      val res = tx.execute(query)
       res.resultAsString()
       res.getExecutionPlanDescription
     }

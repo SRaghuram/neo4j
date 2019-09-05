@@ -33,19 +33,19 @@ class PropertyExistenceIT
         {
             try ( Transaction transaction = database.beginTx() )
             {
-                database.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT exists(book.isbn)" );
+                transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT exists(book.isbn)" );
                 transaction.commit();
             }
 
             try ( Transaction transaction = database.beginTx() )
             {
-                database.execute( "CREATE (:label1 {name: \"Pelle\"})<-[:T1]-(:label2 {name: \"Elin\"})-[:T2]->(:label3)" );
+                transaction.execute( "CREATE (:label1 {name: \"Pelle\"})<-[:T1]-(:label2 {name: \"Elin\"})-[:T2]->(:label3)" );
                 transaction.commit();
             }
 
             try ( Transaction transaction = database.beginTx() )
             {
-                database.execute( "MATCH (n:label1 {name: \"Pelle\"})<-[r:T1]-(:label2 {name: \"Elin\"})-[:T2]->(:label3) DELETE r,n" );
+                transaction.execute( "MATCH (n:label1 {name: \"Pelle\"})<-[r:T1]-(:label2 {name: \"Elin\"})-[:T2]->(:label3) DELETE r,n" );
                 transaction.commit();
             }
         }

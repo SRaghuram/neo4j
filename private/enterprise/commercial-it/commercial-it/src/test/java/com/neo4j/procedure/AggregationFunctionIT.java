@@ -63,18 +63,18 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE ({ prop:'foo'})" );
-            db.execute( "CREATE ({ prop:'foo'})" );
-            db.execute( "CREATE ({ prop:'bar'})" );
-            db.execute( "CREATE ({prop:'baz'})" );
-            db.execute( "CREATE ()" );
+            tx.execute( "CREATE ({ prop:'foo'})" );
+            tx.execute( "CREATE ({ prop:'foo'})" );
+            tx.execute( "CREATE ({ prop:'bar'})" );
+            tx.execute( "CREATE ({prop:'baz'})" );
+            tx.execute( "CREATE ()" );
             tx.commit();
         }
 
         // When
         try ( Transaction transaction = db.beginTx() )
         {
-            Result result = db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" );
+            Result result = transaction.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" );
 
             // Then
             assertThat( result.next(), equalTo( map( "count", 4L ) ) );
@@ -89,18 +89,18 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE ({prop1:42, prop2:'foo'})" );
-            db.execute( "CREATE ({prop1:42, prop2:'foo'})" );
-            db.execute( "CREATE ({prop1:42, prop2:'bar'})" );
-            db.execute( "CREATE ({prop1:1337, prop2:'baz'})" );
-            db.execute( "CREATE ({prop1:1337})" );
+            tx.execute( "CREATE ({prop1:42, prop2:'foo'})" );
+            tx.execute( "CREATE ({prop1:42, prop2:'foo'})" );
+            tx.execute( "CREATE ({prop1:42, prop2:'bar'})" );
+            tx.execute( "CREATE ({prop1:1337, prop2:'baz'})" );
+            tx.execute( "CREATE ({prop1:1337})" );
             tx.commit();
         }
 
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = db.execute( "MATCH (n) RETURN n.prop1, com.neo4j.procedure.count(n.prop2) AS count" );
+            Result result = transaction.execute( "MATCH (n) RETURN n.prop1, com.neo4j.procedure.count(n.prop2) AS count" );
 
             // Then
             assertThat( result.next(), equalTo( map( "n.prop1", 42L, "count", 3L ) ) );
@@ -116,11 +116,11 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE ({ prop:'foo'})" );
-            db.execute( "CREATE ({ prop:'foo'})" );
-            db.execute( "CREATE ({ prop:'bar'})" );
-            db.execute( "CREATE ({prop:42})" );
-            db.execute( "CREATE ()" );
+            tx.execute( "CREATE ({ prop:'foo'})" );
+            tx.execute( "CREATE ({ prop:'foo'})" );
+            tx.execute( "CREATE ({ prop:'bar'})" );
+            tx.execute( "CREATE ({prop:42})" );
+            tx.execute( "CREATE ()" );
             tx.commit();
         }
 
@@ -128,7 +128,7 @@ class AggregationFunctionIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class,
-                                  () -> db.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ).resultAsString() );
+                                  () -> transaction.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ).resultAsString() );
             assertThat( exception.getMessage(), equalTo( "Can't coerce `Long(42)` to String" ) );
         }
     }
@@ -139,17 +139,17 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE ({ level:42})" );
-            db.execute( "CREATE ({ level:1337})" );
-            db.execute( "CREATE ({ level:0})" );
-            db.execute( "CREATE ()" );
+            tx.execute( "CREATE ({ level:42})" );
+            tx.execute( "CREATE ({ level:1337})" );
+            tx.execute( "CREATE ({ level:0})" );
+            tx.execute( "CREATE ()" );
             tx.commit();
         }
 
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = db.execute( "MATCH (n) WITH com.neo4j.procedure.findBestNode(n) AS best RETURN best.level AS level" );
+            Result result = transaction.execute( "MATCH (n) WITH com.neo4j.procedure.findBestNode(n) AS best RETURN best.level AS level" );
 
             // Then
             assertThat( result.next(), equalTo( map( "level", 1337L ) ) );
@@ -164,17 +164,17 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE ()-[:T {level:42}]->()" );
-            db.execute( "CREATE ()-[:T {level:1337}]->()" );
-            db.execute( "CREATE ()-[:T {level:2}]->()" );
-            db.execute( "CREATE ()-[:T]->()" );
+            tx.execute( "CREATE ()-[:T {level:42}]->()" );
+            tx.execute( "CREATE ()-[:T {level:1337}]->()" );
+            tx.execute( "CREATE ()-[:T {level:2}]->()" );
+            tx.execute( "CREATE ()-[:T]->()" );
             tx.commit();
         }
 
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = db.execute( "MATCH ()-[r]->() WITH com.neo4j.procedure.findBestRel(r) AS best RETURN best.level AS level" );
+            Result result = transaction.execute( "MATCH ()-[r]->() WITH com.neo4j.procedure.findBestRel(r) AS best RETURN best.level AS level" );
 
             // Then
             assertThat( result.next(), equalTo( map( "level", 1337L ) ) );
@@ -189,16 +189,16 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE ()-[:T]->()" );
-            db.execute( "CREATE ()-[:T]->()-[:T]->()" );
-            db.execute( "CREATE ()-[:T]->()-[:T]->()-[:T]->()" );
+            tx.execute( "CREATE ()-[:T]->()" );
+            tx.execute( "CREATE ()-[:T]->()-[:T]->()" );
+            tx.execute( "CREATE ()-[:T]->()-[:T]->()-[:T]->()" );
             tx.commit();
         }
 
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = db.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len" );
+            Result result = transaction.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len" );
 
             // Then
             assertThat( result.next(), equalTo( map( "len", 3L ) ) );
@@ -213,7 +213,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When
-            Result result = db.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN longest" );
+            Result result = transaction.execute( "MATCH p=()-[:T*]->() WITH com.neo4j.procedure.longestPath(p) AS longest RETURN longest" );
 
             // Then
             assertThat( result.next(), equalTo( map( "longest", null ) ) );
@@ -228,7 +228,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Given, When
-            Result result = db.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.near42(num) AS closest" );
+            Result result = transaction.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.near42(num) AS closest" );
 
             // Then
             assertThat( result.next(), equalTo( map( "closest", 41.9 ) ) );
@@ -243,7 +243,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Given, When
-            Result result = db.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.doubleAggregator(num) AS closest" );
+            Result result = transaction.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.doubleAggregator(num) AS closest" );
 
             // Then
             assertThat( result.next(), equalTo( map( "closest", 41.9 ) ) );
@@ -258,7 +258,7 @@ class AggregationFunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Given, When
-            Result result = db.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.longAggregator(num) AS closest" );
+            Result result = transaction.execute( "UNWIND [43, 42.5, 41.9, 1337] AS num RETURN com.neo4j.procedure.longAggregator(num) AS closest" );
 
             // Then
             assertThat( result.next(), equalTo( map( "closest", 42L ) ) );
@@ -272,9 +272,9 @@ class AggregationFunctionIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( db.execute( "UNWIND [1,2] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
+            assertThat( transaction.execute( "UNWIND [1,2] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
                     equalTo( map( "wasCalled", true ) ) );
-            assertThat( db.execute( "UNWIND [] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
+            assertThat( transaction.execute( "UNWIND [] AS num RETURN com.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
                     equalTo( map( "wasCalled", false ) ) );
             transaction.commit();
         }
@@ -315,26 +315,29 @@ class AggregationFunctionIT
         // Given
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE (:User {country: 'Sweden'})" );
-            db.execute( "CREATE (:User {country: 'Sweden'})" );
-            db.execute( "CREATE (:User {country: 'Sweden'})" );
-            db.execute( "CREATE (:User {country: 'Sweden'})" );
-            db.execute( "CREATE (:User {country: 'Germany'})" );
-            db.execute( "CREATE (:User {country: 'Germany'})" );
-            db.execute( "CREATE (:User {country: 'Germany'})" );
-            db.execute( "CREATE (:User {country: 'Mexico'})" );
-            db.execute( "CREATE (:User {country: 'Mexico'})" );
-            db.execute( "CREATE (:User {country: 'South Korea'})" );
+            tx.execute( "CREATE (:User {country: 'Sweden'})" );
+            tx.execute( "CREATE (:User {country: 'Sweden'})" );
+            tx.execute( "CREATE (:User {country: 'Sweden'})" );
+            tx.execute( "CREATE (:User {country: 'Sweden'})" );
+            tx.execute( "CREATE (:User {country: 'Germany'})" );
+            tx.execute( "CREATE (:User {country: 'Germany'})" );
+            tx.execute( "CREATE (:User {country: 'Germany'})" );
+            tx.execute( "CREATE (:User {country: 'Mexico'})" );
+            tx.execute( "CREATE (:User {country: 'Mexico'})" );
+            tx.execute( "CREATE (:User {country: 'South Korea'})" );
             tx.commit();
         }
 
         // When
-        List<Map<String,Object>> result =
-                Iterators.asList( db.execute(
-                        "MATCH (u:User) RETURN u.country,count(*),com.neo4j.procedure.first(u).country AS first" ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            List<Map<String,Object>> result =
+                    Iterators.asList( transaction.execute( "MATCH (u:User) RETURN u.country,count(*),com.neo4j.procedure.first(u).country AS first" ) );
 
-        // Then
-        assertThat( result, hasSize( 4 ) );
+            // Then
+            assertThat( result, hasSize( 4 ) );
+            transaction.commit();
+        }
     }
 
     @BeforeEach

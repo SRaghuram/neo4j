@@ -940,9 +940,9 @@ order by a.COL1""".format(a, b))
 
   test("replanning should happen after data source restart") {
     // given
-    graph.inTx({
-      graph.execute("match (n) return n").hasNext shouldBe false
-    })
+    graph.withTx( tx =>
+      tx.execute("match (n) return n").hasNext shouldBe false
+    )
 
     val database = graph.getDependencyResolver.resolveDependency(classOf[Database])
     database.stop()
@@ -951,9 +951,9 @@ order by a.COL1""".format(a, b))
     // when
     val planningListener = PlanningListener()
     kernelMonitors.addMonitorListener(planningListener)
-    graph.inTx({
-      graph.execute("match (n) return n").hasNext shouldBe false
-    })
+    graph.withTx( tx =>
+      tx.execute("match (n) return n").hasNext shouldBe false
+    )
 
     // then
     planningListener.planRequests should equal(Seq("match (n) return n"))

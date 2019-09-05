@@ -62,7 +62,7 @@ class StartupConstraintSemanticsTest
         {
             try ( Transaction transaction = graphDb.beginTx() )
             {
-                graphDb.execute( constraintCreationQuery );
+                transaction.execute( constraintCreationQuery );
                 transaction.commit();
             }
         }
@@ -101,7 +101,7 @@ class StartupConstraintSemanticsTest
         {
             try ( Transaction transaction = graphDb.beginTx() )
             {
-                graphDb.execute( constraintCreationQuery );
+                transaction.execute( constraintCreationQuery );
                 transaction.commit();
             }
         }

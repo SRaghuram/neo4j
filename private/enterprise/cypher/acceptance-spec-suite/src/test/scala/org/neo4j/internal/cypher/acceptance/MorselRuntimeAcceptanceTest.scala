@@ -38,7 +38,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with 
     //Given
     import scala.collection.JavaConverters._
 
-    val result = graph.inTx(graph.execute("CYPHER runtime=parallel EXPLAIN MATCH (n) RETURN n"))
+    val result = graph.withTx( tx => tx.execute("CYPHER runtime=parallel EXPLAIN MATCH (n) RETURN n"))
 
     // When (exhaust result)
     val notifications = result.getNotifications.asScala.toSet
@@ -66,8 +66,8 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with 
     val switch = new AtomicBoolean(false)
 
     // When executing a query that has multiple ProduceResult tasks
-    graph.inTx({
-      val result = graph.execute("CYPHER runtime=parallel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
+    graph.withTx( tx => {
+      val result = tx.execute("CYPHER runtime=parallel MATCH (n:N)-[:R]->(m:M)-[:P]->(o:O) RETURN o.i, o.j, o.k")
 
       // Then these tasks should be executed non-concurrently
       result.accept(new ResultVisitor[Exception]() {
@@ -87,22 +87,25 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with 
 
   ignore("don't stall for nested plan expressions") {
     // Given
-    graph.execute( """CREATE (a:A)
+    graph.withTx( tx =>
+    tx.execute( """CREATE (a:A)
                      |CREATE (a)-[:T]->(:B),
-                     |       (a)-[:T]->(:C)""".stripMargin)
+                     |       (a)-[:T]->(:C)""".stripMargin))
 
 
     // When
-    val result =
-      graph.execute( """ CYPHER runtime=parallel
-                       | MATCH (n)
-                       | RETURN CASE
-                       |          WHEN id(n) >= 0 THEN (n)-->()
-                       |          ELSE 42
-                       |        END AS p""".stripMargin)
+    graph.withTx( tx => {
+      val result =
+        tx.execute( """ CYPHER runtime=parallel
+                         | MATCH (n)
+                         | RETURN CASE
+                         |          WHEN id(n) >= 0 THEN (n)-->()
+                         |          ELSE 42
+                         |        END AS p""".stripMargin)
 
-    // Then
-    asScalaResult(result).toList should not be empty
+      // Then
+      asScalaResult(result).toList should not be empty
+    })
   }
 }
 

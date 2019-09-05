@@ -85,9 +85,9 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     }
 
     @Override
-    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, org.neo4j.graphdb.Transaction tx, String type, String property )
     {
-        helper.createUniquenessConstraint( db, type, property );
+        helper.createUniquenessConstraint( db, tx, type, property );
     }
 
     @Override

@@ -142,7 +142,7 @@ class ClusterDiscoveryIT
     {
         try ( var transaction = db.beginTx() )
         {
-            try ( var result = db.execute( "CALL dbms.routing.getRoutingTable({})" ) )
+            try ( var result = transaction.execute( "CALL dbms.routing.getRoutingTable({})" ) )
             {
                 var record = Iterators.single( result );
                 return (List<Map<String,Object>>) record.get( "servers" );

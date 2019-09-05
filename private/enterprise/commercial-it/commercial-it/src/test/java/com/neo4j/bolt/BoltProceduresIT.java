@@ -36,6 +36,7 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
@@ -176,7 +177,7 @@ public class BoltProceduresIT
         @Procedure( name = "test.readNodesReturnThemAndTerminateTheTransaction", mode = Mode.READ )
         public Stream<NodeResult> readNodesReturnThemAndTerminateTheTransaction()
         {
-            Result result = db.execute( "MATCH (n) RETURN n" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n) RETURN n" );
 
             NodeResult[] results = result.stream()
                     .map( record -> (Node) record.get( "n" ) )

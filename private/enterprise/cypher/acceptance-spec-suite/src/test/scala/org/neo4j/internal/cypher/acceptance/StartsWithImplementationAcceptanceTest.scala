@@ -52,9 +52,9 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
     createLabeledNode(Map("name" -> "Craig"), "User")
 
     def prepare(tx: InternalTransaction): Unit = {
-      drain(graph.execute("MATCH (u:User {name: 'Craig'}) SET u.name = 'Steven'"))
-      drain(graph.execute("MATCH (u:User {name: 'Stephan'}) DELETE u"))
-      drain(graph.execute("MATCH (u:User {name: 'Stefanie'}) SET u.name = 'steffi'"))
+      drain(tx.execute("MATCH (u:User {name: 'Craig'}) SET u.name = 'Steven'"))
+      drain(tx.execute("MATCH (u:User {name: 'Stephan'}) DELETE u"))
+      drain(tx.execute("MATCH (u:User {name: 'Stefanie'}) SET u.name = 'steffi'"))
     }
 
     executeWith(Configs.CachedProperty, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = prepare,

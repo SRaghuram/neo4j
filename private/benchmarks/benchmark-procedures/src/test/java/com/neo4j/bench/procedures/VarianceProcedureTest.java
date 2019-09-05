@@ -88,7 +88,7 @@ public class VarianceProcedureTest
     public void cleanUpDb( GraphDatabaseService databaseService )
     {
         // this is hacky HACK, needs to be fixed in Neo4jExtension
-        databaseService.execute( "MATCH (n) DETACH DELETE n" ).close();
+        databaseService.executeTransactionally( "MATCH (n) DETACH DELETE n" );
     }
 
     @Disabled

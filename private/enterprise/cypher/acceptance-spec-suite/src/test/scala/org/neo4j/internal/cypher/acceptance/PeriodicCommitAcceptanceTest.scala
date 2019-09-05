@@ -195,7 +195,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     try {
       val caught = intercept[QueryExecutionException] {
         val url = createTempCSVFile(3)
-        graph.getGraphDatabaseService.execute(s"USING PERIODIC COMMIT LOAD CSV FROM '$url' AS line CREATE ()")
+        transaction.execute(s"USING PERIODIC COMMIT LOAD CSV FROM '$url' AS line CREATE ()")
       }
       val rootCause = ExceptionUtils.getRootCause(caught)
       rootCause shouldBe a[PeriodicCommitInOpenTransactionException]

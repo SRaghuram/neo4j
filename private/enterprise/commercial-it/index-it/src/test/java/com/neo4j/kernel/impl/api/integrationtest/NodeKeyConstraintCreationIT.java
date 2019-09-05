@@ -36,9 +36,9 @@ class NodeKeyConstraintCreationIT extends AbstractConstraintCreationIT<Constrain
     }
 
     @Override
-    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, org.neo4j.graphdb.Transaction tx, String type, String property )
     {
-        helper.createNodeKeyConstraint( db, type, property );
+        helper.createNodeKeyConstraint( db, tx, type, property );
     }
 
     @Override

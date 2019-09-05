@@ -385,18 +385,18 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("use getDegree for pattern expression predicate on var-length pattern") {
     // given
     graph.createIndex("MYNODE", "name")
-    graph.inTx({
-      graph.execute("CREATE (:MYNODE {name:'a'})-[:CONNECTED]->(:MYNODE {name:'b'})-[:CONNECTED]->(cut:MYNODE {name:'c'})-[:CONNECTED]->(:MYNODE {name:'d'})-[:CONNECTED]->(:MYNODE {name:'e'})-[:CONNECTED]->(:MYNODE {name:'z0'})").close()
+    graph.withTx( tx => {
+      tx.execute("CREATE (:MYNODE {name:'a'})-[:CONNECTED]->(:MYNODE {name:'b'})-[:CONNECTED]->(cut:MYNODE {name:'c'})-[:CONNECTED]->(:MYNODE {name:'d'})-[:CONNECTED]->(:MYNODE {name:'e'})-[:CONNECTED]->(:MYNODE {name:'z0'})").close()
 
-      graph.execute("MATCH (cut:MYNODE {name:'c'}) CREATE (cut)<-[:HAS_CUT]-(:CUT)").close()
+      tx.execute("MATCH (cut:MYNODE {name:'c'}) CREATE (cut)<-[:HAS_CUT]-(:CUT)").close()
 
-      graph.execute(
+      tx.execute(
         """WITH range (1, 40) AS myrange
           |UNWIND myrange as i
           |WITH "z"+i AS name
           |CREATE (:MYNODE {name:name})""".stripMargin).close()
 
-      graph.execute(
+      tx.execute(
         """WITH range (1, 40) AS myrange
           |UNWIND myrange as i WITH "z"+(i-1) AS name1, "z"+i AS name2
           |MATCH (n1:MYNODE {name:name1})

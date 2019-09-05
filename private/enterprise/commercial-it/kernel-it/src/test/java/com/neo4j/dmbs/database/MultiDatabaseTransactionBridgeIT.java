@@ -38,7 +38,7 @@ class MultiDatabaseTransactionBridgeIT
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = db.beginTx() )
         {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> systemDb.execute( "SHOW DATABASES" ) );
+            TransactionFailureException exception = assertThrows( TransactionFailureException.class, () -> transaction.execute( "SHOW DATABASES" ) );
             assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
         }
     }
@@ -78,7 +78,7 @@ class MultiDatabaseTransactionBridgeIT
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDb.beginTx() )
         {
-            assertThat( count( systemDb.execute( "SHOW DATABASES" ) ), greaterThanOrEqualTo( 2L ) );
+            assertThat( count( transaction.execute( "SHOW DATABASES" ) ), greaterThanOrEqualTo( 2L ) );
         }
     }
 }

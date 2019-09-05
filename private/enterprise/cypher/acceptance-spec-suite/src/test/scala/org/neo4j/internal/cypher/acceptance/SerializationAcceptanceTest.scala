@@ -16,11 +16,11 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH (n) DELETE n RETURN n"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should include("Node[0]{deleted}")
-    }
+    } )
   }
 
   test("non-deleted nodes should be returned as normal") {
@@ -28,11 +28,11 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH (n) RETURN n"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should not include "deleted"
-    }
+    } )
   }
 
   test("non-deleted relationships should be returned as normal") {
@@ -40,11 +40,11 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH ()-[r]->() RETURN r"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should not include "deleted"
-    }
+    })
   }
 
   test("deleted relationships should be returned marked as such") {
@@ -52,11 +52,11 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH ()-[r]->() DELETE r RETURN r"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should include(":T[0]{deleted}")
-    }
+    })
   }
 
   test("returning everything when including deleted entities should work") {
@@ -64,13 +64,13 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH (a)-[r]->(b) DELETE a, r, b RETURN *"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should include(":T[0]{deleted}")
       result should include("Node[0]{deleted}")
       result should include("Node[1]{deleted}")
-    }
+    })
   }
 
   test("returning a deleted path") {
@@ -78,13 +78,13 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH p=(a)-[r]->(b) DELETE p RETURN p"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should include("[0:T,deleted]")
       result should include("(0,deleted)")
       result should include("(1,deleted)")
-    }
+    })
   }
 
   test("returning a deleted path with deleted node") {
@@ -92,13 +92,13 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH p=(a)-[r]->(b) DELETE a, r RETURN p"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should include("[0:T,deleted]")
       result should include("(0,deleted)")
       result should not include "(1,deleted)"
-    }
+    })
   }
 
   test("returning a deleted path with deleted relationship") {
@@ -106,13 +106,13 @@ class SerializationAcceptanceTest extends ExecutionEngineFunSuite {
 
     val query = "MATCH p=(a)-[r]->(b) DELETE r RETURN p"
 
-    graph.inTx {
-      val result = graph.execute(query).resultAsString()
+    graph.withTx( tx => {
+      val result = tx.execute(query).resultAsString()
 
       result should include("[0:T,deleted]")
       result should not include "(0,deleted)"
       result should not include "(1,deleted)"
-    }
+    })
   }
 
 }

@@ -171,28 +171,28 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // null as value
         try ( Transaction tx = graph.beginTx() )
         {
-            graph.execute( "CALL dbms.setTXMetaData( { realUser: null })" );
-            assertNull( getResultRowForMetadataQuery( graph ).get( "realUser" ) );
+            tx.execute( "CALL dbms.setTXMetaData( { realUser: null })" );
+            assertNull( getResultRowForMetadataQuery( tx ).get( "realUser" ) );
         }
         // null as key
         try ( Transaction tx = graph.beginTx() )
         {
-            graph.execute( "CALL dbms.setTXMetaData( { null: 'success' } )" );
-            assertEquals( "success", getResultRowForMetadataQuery( graph ).get( "null" ) );
+            tx.execute( "CALL dbms.setTXMetaData( { null: 'success' } )" );
+            assertEquals( "success", getResultRowForMetadataQuery( tx ).get( "null" ) );
         }
 
         // nesting map with null as value
         try ( Transaction tx = graph.beginTx() )
         {
-            graph.execute( "CALL dbms.setTXMetaData( { nesting: { inner: null } } )" );
-            assertNull( ((Map<String,Object>) getResultRowForMetadataQuery( graph ).get( "nesting" )).get( "inner" ) );
+            tx.execute( "CALL dbms.setTXMetaData( { nesting: { inner: null } } )" );
+            assertNull( ((Map<String,Object>) getResultRowForMetadataQuery( tx ).get( "nesting" )).get( "inner" ) );
         }
 
         // nesting map with null as key
         try ( Transaction tx = graph.beginTx() )
         {
-            graph.execute( "CALL dbms.setTXMetaData( { nesting: { null: 'success' } } )" );
-            assertEquals( "success", ((Map<String,Object>) getResultRowForMetadataQuery( graph ).get( "nesting" )).get( "null" ) );
+            tx.execute( "CALL dbms.setTXMetaData( { nesting: { null: 'success' } } )" );
+            assertEquals( "success", ((Map<String,Object>) getResultRowForMetadataQuery( tx ).get( "nesting" )).get( "null" ) );
         }
     }
 
@@ -1015,9 +1015,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         try ( InternalTransaction transaction = neo
                 .beginLocalTransactionAsUser( writeSubject, KernelTransaction.Type.explicit ) )
         {
-            graph.execute( "CALL dbms.setTXMetaData({" + testKey + ":'" + testValue + "'})" );
+            transaction.execute( "CALL dbms.setTXMetaData({" + testKey + ":'" + testValue + "'})" );
             Map<String,Object> metadata =
-                    (Map<String,Object>) graph.execute( "CALL dbms.getTXMetaData " ).next().get( "metadata" );
+                    (Map<String,Object>) transaction.execute( "CALL dbms.getTXMetaData " ).next().get( "metadata" );
             assertEquals( testValue, metadata.get( testKey ) );
         }
     }
@@ -1489,9 +1489,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     ==================================================================================
      */
 
-    private static Map<String,Object> getResultRowForMetadataQuery( GraphDatabaseFacade graph )
+    private static Map<String,Object> getResultRowForMetadataQuery( Transaction tx )
     {
-        Result result = graph.execute( "call dbms.getTXMetaData() yield metadata return metadata" );
+        Result result = tx.execute( "call dbms.getTXMetaData() yield metadata return metadata" );
         Map<String,Object> row = (Map<String,Object>) result.next().get( "metadata" );
         assertFalse( result.hasNext() );
         return row;

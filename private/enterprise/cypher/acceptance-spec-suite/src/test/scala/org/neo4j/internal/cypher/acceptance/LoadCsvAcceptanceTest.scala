@@ -746,8 +746,8 @@ class LoadCsvAcceptanceTest
       })
       for (url <- urls) {
         //TODO this message should mention `dbms.import.csv.buffer_size` in 3.5
-        val error = db.inTx(
-          intercept[QueryExecutionException](db.execute(
+        val error = db.withTx( tx =>
+          intercept[QueryExecutionException](tx.execute(
             s"""LOAD CSV WITH HEADERS FROM '$url' AS row
                |RETURN row.prop""".stripMargin).next().get("row.prop")))
         error.getMessage should startWith(
@@ -769,8 +769,8 @@ class LoadCsvAcceptanceTest
           writer.println(longName)
       })
       for (url <- urls) {
-        db.withTx( _ => {
-          val result = db.execute(
+        db.withTx( tx => {
+          val result = tx.execute(
             s"""LOAD CSV WITH HEADERS FROM '$url' AS row
                |RETURN row.prop""".stripMargin)
           result.next().get("row.prop") should equal(longName)

@@ -93,7 +93,7 @@ public abstract class QueryGraphMaker
             for ( String createIndexQuery : createIndexQueries( neo4jSchema ) )
             {
                 System.out.println( createIndexQuery );
-                db.execute( createIndexQuery );
+                tx.execute( createIndexQuery );
             }
             tx.commit();
         }

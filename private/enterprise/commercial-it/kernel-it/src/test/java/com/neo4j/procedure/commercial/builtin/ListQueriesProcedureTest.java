@@ -84,7 +84,7 @@ public class ListQueriesProcedureTest
             String query = "CALL dbms.listQueries";
 
             // when
-            Result result = db.execute( query );
+            Result result = transaction.execute( query );
 
             // then
             Map<String,Object> row = result.next();
@@ -100,7 +100,7 @@ public class ListQueriesProcedureTest
         try ( Transaction transaction = db.beginTx() )
         {
             // when
-            Result result = db.execute( "CALL dbms.listQueries" );
+            Result result = transaction.execute( "CALL dbms.listQueries" );
 
             // then
             Map<String,Object> row = result.next();
@@ -577,7 +577,7 @@ public class ListQueriesProcedureTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            try ( Result rows = db.execute( "CALL dbms.listQueries" ) )
+            try ( Result rows = transaction.execute( "CALL dbms.listQueries" ) )
             {
                 while ( rows.hasNext() )
                 {
@@ -649,7 +649,7 @@ public class ListQueriesProcedureTest
             {
                 for ( String query : queries )
                 {
-                    db.execute( query ).close();
+                    tx.execute( query ).close();
                 }
                 tx.commit();
             }

@@ -68,9 +68,9 @@ class ExpressionEngineConfigurationTest
         // When
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( query );
-            db.execute( query );
-            db.execute( query );
+            transaction.execute( query );
+            transaction.execute( query );
+            transaction.execute( query );
         }
 
         // Then
@@ -107,7 +107,7 @@ class ExpressionEngineConfigurationTest
         // When
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( query );
+            transaction.execute( query );
         }
 
         // Then
@@ -131,7 +131,7 @@ class ExpressionEngineConfigurationTest
         logProvider.clear();
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( query ).resultAsString();
+            transaction.execute( query ).resultAsString();
             transaction.commit();
         }
 
@@ -148,7 +148,7 @@ class ExpressionEngineConfigurationTest
         logProvider.clear();
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( query ).resultAsString();
+            transaction.execute( query ).resultAsString();
             transaction.commit();
         }
 

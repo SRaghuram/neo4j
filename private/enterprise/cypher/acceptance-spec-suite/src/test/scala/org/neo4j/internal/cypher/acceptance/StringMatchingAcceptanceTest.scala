@@ -73,9 +73,9 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   }
 
   test("should distinguish between one and multiple spaces in strings") {
-    graph.inTx({
-      graph.execute("CREATE (:Label{prop:'1 2'})")
-      graph.execute("CREATE (:Label{prop:'1  2'})")
+    graph.withTx( tx => {
+      tx.execute("CREATE (:Label{prop:'1 2'})")
+      tx.execute("CREATE (:Label{prop:'1  2'})")
     })
 
     val result = executeSingle("MATCH (n:Label) RETURN size(n.prop) as l", Map.empty)

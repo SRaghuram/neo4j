@@ -71,7 +71,7 @@ public class EnterpriseSanityCheckTest
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
         try ( Transaction transaction = db.beginTx() )
         {
-            Result result = db.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
+            Result result = transaction.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
             result.accept( row -> true );
             String planner = (String) result.getExecutionPlanDescription().getArguments().get( "planner" );
             String runtime = (String) result.getExecutionPlanDescription().getArguments().get( "runtime" );

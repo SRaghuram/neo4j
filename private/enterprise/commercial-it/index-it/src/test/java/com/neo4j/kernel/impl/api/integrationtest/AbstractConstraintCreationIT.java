@@ -72,7 +72,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
     abstract Constraint createConstraint( SchemaWrite writeOps, DESCRIPTOR descriptor ) throws Exception;
 
-    abstract void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property );
+    abstract void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, org.neo4j.graphdb.Transaction tx, String type, String property );
 
     abstract Constraint newConstraintObject( DESCRIPTOR descriptor );
 
@@ -353,7 +353,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         {
             var e = assertThrows( Exception.class, () ->
             {
-                createConstraintInRunningTx( helper, db, KEY, PROP );
+                createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
@@ -386,7 +386,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         {
             var e = assertThrows( Exception.class, () ->
             {
-                createConstraintInRunningTx( helper, db, KEY, PROP );
+                createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             } );
             assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
@@ -414,7 +414,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         {
             try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
             {
-                createConstraintInRunningTx( helper, db, KEY, PROP );
+                createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             }
         };

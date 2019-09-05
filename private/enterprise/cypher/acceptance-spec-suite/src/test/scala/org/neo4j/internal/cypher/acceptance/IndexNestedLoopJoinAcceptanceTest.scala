@@ -186,8 +186,8 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("should be able to plan index use for spatial index queries") {
     // Given
-    graph.inTx(
-      graph.execute(
+    graph.withTx( tx =>
+      tx.execute(
         """CREATE (:Bar {location: point({ x:0, y:100 })})
           |WITH 1 as whyOwhy
           |UNWIND range(1,200) AS y

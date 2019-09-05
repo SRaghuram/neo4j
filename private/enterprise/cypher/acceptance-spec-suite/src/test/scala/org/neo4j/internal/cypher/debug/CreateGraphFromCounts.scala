@@ -24,24 +24,24 @@ trait CreateGraphFromCounts {
   def createGraph(graphCounts: DbStatsRetrieveGraphCountsJSON): Unit = {
     val row = graphCounts.results.head.data.head.row
 
-    graph.inTx {
+    graph.withTx( tx => {
       for (constraint <- row.data.constraints) {
         constraint.`type` match {
           case "Uniqueness constraint" =>
             // Uniqueness constraints can only be on labels, not on relationship types
             val label = constraint.label.getOrElse(throw new IllegalArgumentException(s"Expected a node label in $constraint"))
             val property = getSingleProperty(constraint.properties)
-            graph.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT n.$property IS UNIQUE")
+            tx.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT n.$property IS UNIQUE")
           case "Existence constraint" =>
             (constraint.label, constraint.relationshipType) match {
               case (Some(label), None) =>
                 // Node
                 val property = getSingleProperty(constraint.properties)
-                graph.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT EXISTS (n.$property)")
+                tx.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT EXISTS (n.$property)")
               case (None, Some(relType)) =>
                 // Relationship
                 val property = getSingleProperty(constraint.properties)
-                graph.execute(s"CREATE CONSTRAINT ON ()-[n:$relType]-() ASSERT EXISTS (n.$property)")
+                tx.execute(s"CREATE CONSTRAINT ON ()-[n:$relType]-() ASSERT EXISTS (n.$property)")
               case _ =>
                 throw new IllegalArgumentException(s"Expected either node or relationship existence constraint, but got: $constraint")
             }
@@ -49,7 +49,7 @@ trait CreateGraphFromCounts {
             // Node key constraints can only be on labels, not on relationship types
             val label = constraint.label.getOrElse(throw new IllegalArgumentException(s"Expected a node label in $constraint"))
             val properties = propertiesString(constraint.properties)
-            graph.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT $properties IS NODE KEY")
+            tx.execute(s"CREATE CONSTRAINT ON (n:$label) ASSERT $properties IS NODE KEY")
         }
       }
 
@@ -66,7 +66,7 @@ trait CreateGraphFromCounts {
           case _: ConstraintViolationException =>
         }
       }
-    }
+    })
 
     graph.withTx { tx =>
       val nodeMap = scala.collection.mutable.Map[String, ArrayBuffer[Node]]()

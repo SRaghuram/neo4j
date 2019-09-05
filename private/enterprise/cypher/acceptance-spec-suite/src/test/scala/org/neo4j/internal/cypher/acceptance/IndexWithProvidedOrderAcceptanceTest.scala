@@ -35,7 +35,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   // Invoked once before the Tx and once in the same Tx
   def createSomeNodes(tx: InternalTransaction): Unit = {
-    graph.execute(
+    tx.execute(
       """CREATE (:Awesome {prop1: 40, prop2: 5})-[:R]->(:B)
         |CREATE (:Awesome {prop1: 41, prop2: 2})-[:R]->(:B)
         |CREATE (:Awesome {prop1: 42, prop2: 3})-[:R]->(:B)
@@ -824,9 +824,9 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order for multiple types") {
-      graph.inTx({
-        graph.execute("CREATE (:Awesome {prop1: 'hallo'})")
-        graph.execute("CREATE (:Awesome {prop1: 35.5})")
+      graph.withTx( tx => {
+        tx.execute("CREATE (:Awesome {prop1: 'hallo'})")
+        tx.execute("CREATE (:Awesome {prop1: 35.5})")
       })
 
       val result = executeWith(Configs.Optional,
@@ -965,9 +965,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should use provided index order for nested functions with $functionName as inner") {
-      graph.inTx({
-        graph.execute("CREATE (:Awesome {prop3: 'ha'})")
-      })
+      graph.withTx( tx => tx.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the alphabetically smallest/largest prop3 string
       val result = executeWith(Configs.Optional,
@@ -991,7 +989,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should give correct result for nested functions with $functionName as outer") {
-      graph.inTx(graph.execute("CREATE (:Awesome {prop3: 'ha'})"))
+      graph.withTx( tx => tx.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the shortest/longest prop3 string
       val result = executeWith(Configs.CachedProperty,
@@ -1005,7 +1003,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken-$functionName: should give correct result for nested functions in several depths") {
-      graph.inTx(graph.execute("CREATE (:Awesome {prop3: 'ha'})"))
+      graph.withTx( tx => tx.execute("CREATE (:Awesome {prop3: 'ha'})"))
 
       //should give the length of the shortest/longest prop3 string
       val result = executeWith(Configs.CachedProperty,
@@ -1157,7 +1155,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   // Some nodes which are suitable for CONTAINS and ENDS WITH testing
   private def createStringyNodes(tx: InternalTransaction) =
-    graph.execute(
+    tx.execute(
       """CREATE (:Awesome {prop3: 'scat'})
         |CREATE (:Awesome {prop3: 'bobcat'})
         |CREATE (:Awesome {prop3: 'poodlecatilicious'})
@@ -1171,7 +1169,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   private def createMoreNodes(tx: InternalTransaction) = {
     createSomeNodes(tx)
-    graph.execute(
+    tx.execute(
       """
         |CREATE (:Awesome {prop1: 40, prop2: 3, prop5: 'a'})
         |CREATE (:Awesome {prop1: 40, prop2: 1, prop5: 'b'})
@@ -1185,7 +1183,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
   // Nodes for composite index independent of already existing indexes
   private def createNodesForComposite() =
-    graph.inTx(graph.execute(
+    graph.withTx( tx => tx.execute(
       """
         |CREATE (:Label {prop1: 40, prop2: 5, prop3: 'a', prop4: true, prop5: 3.14})
         |CREATE (:Label {prop1: 40, prop2: 5, prop3: 'c', prop5: 2.72})

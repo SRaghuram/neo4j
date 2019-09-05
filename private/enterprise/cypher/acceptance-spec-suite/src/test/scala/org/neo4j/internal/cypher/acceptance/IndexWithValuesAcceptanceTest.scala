@@ -35,7 +35,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   // Invoked once before the Tx and once in the same Tx
   def createSomeNodes(tx: InternalTransaction): Unit = {
-    graph.execute(
+    tx.execute(
       """
       CREATE (:Awesome {prop1: 40, prop2: 5})-[:R]->()
       CREATE (:Awesome {prop1: 41, prop2: 2})-[:R]->()

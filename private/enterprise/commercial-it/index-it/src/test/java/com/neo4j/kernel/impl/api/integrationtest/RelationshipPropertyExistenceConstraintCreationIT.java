@@ -38,9 +38,9 @@ class RelationshipPropertyExistenceConstraintCreationIT
     }
 
     @Override
-    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String type, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, org.neo4j.graphdb.Transaction tx, String type, String property )
     {
-        helper.createRelPropertyExistenceConstraint( db, type, property );
+        helper.createRelPropertyExistenceConstraint( db, tx, type, property );
     }
 
     @Override

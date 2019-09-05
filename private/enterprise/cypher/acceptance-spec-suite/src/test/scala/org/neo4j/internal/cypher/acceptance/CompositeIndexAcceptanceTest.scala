@@ -519,9 +519,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should be able to update composite index when only one property has changed") {
     graph.createIndex("Person", "name", "surname")
     var n: Node = null
-    graph.inTx({
-      n = graph.execute("CREATE (n:Person {name:'Joe', surname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
-      graph.execute("MATCH (n:Person) SET n.surname = 'Bloggs'")
+    graph.withTx( tx => {
+      n = tx.execute("CREATE (n:Person {name:'Joe', surname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
+      tx.execute("MATCH (n:Person) SET n.surname = 'Bloggs'")
     })
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Person) where n.name = 'Joe' and n.surname = 'Bloggs' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -1119,7 +1119,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     def createMe(tx: InternalTransaction): Unit = {
       createNodesInTxState(tx)
       // Values that should not be valid for the query
-      graph.execute(
+      tx.execute(
         """
           |CREATE (:Awesome {prop2: 42, prop1: 'futhark'})
           |CREATE (:Awesome {prop2: false, prop1: 'futhark'})
@@ -1319,7 +1319,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     graph.createIndex("Awesome", "prop1", "prop2")
 
     def createMe(tx: InternalTransaction): Unit = {
-      graph.execute(
+      tx.execute(
         """
           |CREATE (:Awesome {prop1: 'foo', prop2: 'alligator'})
           |CREATE (:Awesome {prop1: 'futhark', prop2: 'owl'})
@@ -1329,7 +1329,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         """.stripMargin)
 
       // Values that should not be valid for the query
-      graph.execute(
+      tx.execute(
         """
           |CREATE (:Awesome {prop1: 5, prop2: 'seagull'})
           |CREATE (:Awesome {prop1: false, prop2: 'fish'})
@@ -1366,8 +1366,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNodes()
 
     // Add nodes not in index
-    graph.inTx(
-    graph.execute(
+    graph.withTx( tx =>
+    tx.execute(
       """
         |CREATE (:Awesome)
         |CREATE (:Awesome)
@@ -1405,8 +1405,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createNodes()
 
     // Add nodes not in index
-    graph.inTx(
-    graph.execute(
+    graph.withTx( tx =>
+    tx.execute(
       """
         |CREATE (:Awesome)
         |CREATE (:Awesome)
@@ -1596,8 +1596,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   private def createNodes(): Unit =
-    graph.inTx(
-    graph.execute(
+    graph.withTx( tx =>
+    tx.execute(
       """
         |CREATE (:Awesome {prop1: 40, prop2: 5})
         |CREATE (:Awesome {prop1: 41, prop2: 2})
@@ -1612,7 +1612,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     )
 
   private def createNodesInTxState(tx: InternalTransaction): Unit =
-    graph.execute(
+    tx.execute(
       """
         |CREATE (:Awesome {prop1: 40, prop2: 3, prop5: 'a'})
         |CREATE (:Awesome {prop1: 40, prop2: 1, prop5: 'b'})

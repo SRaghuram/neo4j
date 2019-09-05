@@ -1230,7 +1230,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE CONSTRAINT ON (node:" + label + ") ASSERT exists(node.`" + key + "`)" );
+            tx.execute( "CREATE CONSTRAINT ON (node:" + label + ") ASSERT exists(node.`" + key + "`)" );
             tx.commit();
         }
         catch ( Exception e )
@@ -1244,7 +1244,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE CONSTRAINT ON ()-[r:" + type + "]-() ASSERT exists(r.`" + key + "`)" );
+            tx.execute( "CREATE CONSTRAINT ON ()-[r:" + type + "]-() ASSERT exists(r.`" + key + "`)" );
             tx.commit();
         }
         catch ( Exception e )
@@ -1258,7 +1258,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE CONSTRAINT ON (node:" + label + ") ASSERT node.`" + key + "` IS UNIQUE" );
+            tx.execute( "CREATE CONSTRAINT ON (node:" + label + ") ASSERT node.`" + key + "` IS UNIQUE" );
             tx.commit();
         }
         catch ( Exception e )
@@ -1271,7 +1271,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE " + compositeIndexPattern( label, keys ) );
+            tx.execute( "CREATE " + compositeIndexPattern( label, keys ) );
             tx.commit();
         }
         catch ( Exception e )
@@ -1285,7 +1285,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CALL db.index.fulltext.createNodeIndex('ftsNodes', ['" + label.name() + "'], ['" + join( "','", propertyKeys ) + "'] )" ).close();
+            tx.execute( "CALL db.index.fulltext.createNodeIndex('ftsNodes', ['" + label.name() + "'], ['" + join( "','", propertyKeys ) + "'] )" ).close();
             tx.commit();
         }
     }
@@ -1294,7 +1294,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CALL db.index.fulltext.createRelationshipIndex('ftsRels', ['" + type.name() + "'], ['" + propertyKey + "'])" ).close();
+            tx.execute( "CALL db.index.fulltext.createRelationshipIndex('ftsRels', ['" + type.name() + "'], ['" + propertyKey + "'])" ).close();
             tx.commit();
         }
     }
@@ -1303,7 +1303,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "CREATE " + compositeKeyPattern( label, keys ) );
+            tx.execute( "CREATE " + compositeKeyPattern( label, keys ) );
             tx.commit();
         }
         catch ( Exception e )
@@ -1317,7 +1317,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "DROP CONSTRAINT ON (node:" + label + ") ASSERT exists(node.`" + key + "`)" );
+            tx.execute( "DROP CONSTRAINT ON (node:" + label + ") ASSERT exists(node.`" + key + "`)" );
             tx.commit();
         }
         catch ( Exception e )
@@ -1331,7 +1331,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "DROP CONSTRAINT ON ()-[r:" + label + "]-() ASSERT exists(r.`" + key + "`)" );
+            tx.execute( "DROP CONSTRAINT ON ()-[r:" + label + "]-() ASSERT exists(r.`" + key + "`)" );
             tx.commit();
         }
         catch ( Exception e )
@@ -1345,7 +1345,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "DROP CONSTRAINT ON (node:" + label + ") ASSERT node.`" + key + "` IS UNIQUE" );
+            tx.execute( "DROP CONSTRAINT ON (node:" + label + ") ASSERT node.`" + key + "` IS UNIQUE" );
             tx.commit();
         }
         catch ( Exception e )
@@ -1358,7 +1358,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "DROP " + compositeIndexPattern( label, keys ) );
+            tx.execute( "DROP " + compositeIndexPattern( label, keys ) );
             tx.commit();
         }
         catch ( Exception e )
@@ -1372,7 +1372,7 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "DROP " + compositeKeyPattern( label, keys ) );
+            tx.execute( "DROP " + compositeKeyPattern( label, keys ) );
             tx.commit();
         }
         catch ( Exception e )

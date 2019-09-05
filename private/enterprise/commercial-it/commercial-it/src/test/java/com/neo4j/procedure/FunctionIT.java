@@ -107,7 +107,7 @@ class FunctionIT
                     try ( Transaction tx = db.beginTx() )
                     {
                         //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
-                        db.execute( "RETURN com.neo4j.procedure.simpleArgument('42')" );
+                        tx.execute( "RETURN com.neo4j.procedure.simpleArgument('42')" );
                     }
                 } );
         assertThat( exception.getMessage(), startsWith( "Type mismatch: expected Integer but was String (line 1, column 43 (offset: 42))" ) );
@@ -121,7 +121,7 @@ class FunctionIT
                 {
                     try ( Transaction tx = db.beginTx() )
                     {
-                        db.execute( "RETURN com.neo4j.procedure.simpleArgument()" );
+                        tx.execute( "RETURN com.neo4j.procedure.simpleArgument()" );
                     }
                 } );
         assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format( "Function call does not provide the " +
@@ -140,7 +140,7 @@ class FunctionIT
                 {
                     try ( Transaction tx = db.beginTx() )
                     {
-                        db.execute( "RETURN com.neo4j.procedure.nodeWithDescription()" );
+                        tx.execute( "RETURN com.neo4j.procedure.nodeWithDescription()" );
                     }
                 } );
         assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format( "Function call does not provide the " +
@@ -189,7 +189,7 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute(
+            Result res = tx.execute(
                     "RETURN com.neo4j.procedure.genericArguments([ ['graphs'], ['are'], ['everywhere']], " +
                     "[ [[1, 2, 3]], [[4, 5]]] ) AS someVal" );
 
@@ -206,7 +206,7 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal" );
+            Result res = tx.execute( "RETURN com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal" );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 2L ) ) );
@@ -236,7 +236,7 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "RETURN com.neo4j.procedure.mapArgument(null) AS someVal" );
+            Result res = tx.execute( "RETURN com.neo4j.procedure.mapArgument(null) AS someVal" );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 0L ) ) );
@@ -283,7 +283,8 @@ class FunctionIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute( "RETURN org.someFunctionThatDoesNotExist()" ) );
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> transaction.execute( "RETURN org.someFunctionThatDoesNotExist()" ) );
             assertThat( exception.getMessage(), startsWith( String.format(
                     "Unknown function 'org.someFunctionThatDoesNotExist' (line 1, column 8 (offset: 7))" + "%n" +
                             "\"RETURN org.someFunctionThatDoesNotExist()" ) ) );
@@ -297,7 +298,7 @@ class FunctionIT
         // run in tx to avoid having to wait for tx rollback on shutdown
         try ( Transaction tx = db.beginTx() )
         {
-            Result result = db.execute( "RETURN com.neo4j.procedure.throwsExceptionInStream()" );
+            Result result = tx.execute( "RETURN com.neo4j.procedure.throwsExceptionInStream()" );
 
             // When
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, result::next );
@@ -316,7 +317,7 @@ class FunctionIT
         {
             // When
             QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> db.execute( "RETURN com.neo4j.procedure.indexOutOfBounds()" ).next() );
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( "RETURN com.neo4j.procedure.indexOutOfBounds()" ).next() );
             assertThat( exception.getMessage(), startsWith(
                     "Failed to invoke function `com.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang" +
                             ".ArrayIndexOutOfBoundsException" ) );
@@ -336,7 +337,7 @@ class FunctionIT
         // Then
         try ( Transaction tx = db.beginTx() )
         {
-            Result res = db.execute(
+            Result res = tx.execute(
                     "RETURN com.neo4j.procedure.listCoolPeopleInDatabase() AS cool" );
 
             assertEquals( res.next().get( "cool" ), singletonList( "Buddy Holly" ) );
@@ -358,7 +359,7 @@ class FunctionIT
         // When
         try ( Transaction tx = db.beginTx() )
         {
-            Result res = db.execute( "RETURN com.neo4j.procedure.logAround()" );
+            Result res = tx.execute( "RETURN com.neo4j.procedure.logAround()" );
             while ( res.hasNext() )
             { res.next(); }
         }
@@ -381,7 +382,7 @@ class FunctionIT
 //                {
 //                    try ( Transaction tx = db.beginTx() )
 //                    {
-//                        db.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
+//                        tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
 //                    }
 //                } );
 //        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
@@ -395,7 +396,7 @@ class FunctionIT
 //                {
 //                    try ( Transaction tx = db.beginTx() )
 //                    {
-//                        db.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
+//                        tx.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
 //                    }
 //                } ) ;
 //        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
@@ -410,7 +411,7 @@ class FunctionIT
                     try ( Transaction tx = db.beginTx() )
                     {
                         // When
-                        db.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWriteSchema()" ).next();
+                        tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWriteSchema()" ).next();
                     }
                 } );
         assertThat( exception.getMessage(), containsString( "Schema operations are not allowed" ) );
@@ -498,7 +499,7 @@ class FunctionIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "RETURN com.neo4j.procedure.simpleArgument(12)" ).close();
+            tx.execute( "RETURN com.neo4j.procedure.simpleArgument(12)" ).close();
             tx.createNode();
         }
     }
@@ -511,7 +512,7 @@ class FunctionIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                try ( Result result = db.execute( "RETURN com.neo4j.procedure.unsupportedFunction()" ) )
+                try ( Result result = transaction.execute( "RETURN com.neo4j.procedure.unsupportedFunction()" ) )
                 {
                     result.resultAsString();
                 }
@@ -550,7 +551,7 @@ class FunctionIT
 
         try ( Transaction transaction = db.beginTx() )
         {
-            try ( Result result = db.execute( "MATCH () RETURN count(*) as n" ) )
+            try ( Result result = transaction.execute( "MATCH () RETURN count(*) as n" ) )
             {
                 assertThat( result.hasNext(), equalTo( true ) );
                 while ( result.hasNext() )
@@ -589,7 +590,7 @@ class FunctionIT
         {
             //Make sure all the lines has been properly commited to the database.
             String[] dbContents =
-                    db.execute( "MATCH (n) return n.prop" ).stream().map( m -> Long.toString( (long) m.get( "n.prop" ) ) ).toArray( String[]::new );
+                    transaction.execute( "MATCH (n) return n.prop" ).stream().map( m -> Long.toString( (long) m.get( "n.prop" ) ) ).toArray( String[]::new );
             assertThat( dbContents, equalTo( lines ) );
             transaction.commit();
         }
@@ -602,7 +603,7 @@ class FunctionIT
 
         try ( Transaction transaction = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute(
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
                             "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " + "RETURN val" ) );
             assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
@@ -641,7 +642,7 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "UNWIND range(0, 100) AS r RETURN r LIMIT com.neo4j.procedure.squareLong(2)");
+            Result res = tx.execute( "UNWIND range(0, 100) AS r RETURN r LIMIT com.neo4j.procedure.squareLong(2)");
 
             // Then
             List<Object> list =
@@ -673,7 +674,7 @@ class FunctionIT
             tx.createNode( Label.label( "Person" ) );
             tx.createNode( Label.label( "Person" ) );
             assertEquals(
-                    db.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal" )
+                    tx.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal" )
                             .next()
                             .get( "someVal" ),
                     2L );
@@ -687,7 +688,7 @@ class FunctionIT
         {
             tx.createNode( Label.label( "Person" ) );
             assertEquals(
-                    db.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal" )
+                    tx.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal" )
                             .next()
                             .get( "someVal" ),
                     1L );
@@ -703,7 +704,7 @@ class FunctionIT
             tx.createNode( Label.label( "Person" ) );
 
             // When
-            Result res = db.execute(
+            Result res = tx.execute(
                     "MATCH (n:Person) WITH collect(n) as persons RETURN com.neo4j.procedure.nodeListArgument(persons)" +
                     " AS someVal" );
 
@@ -723,7 +724,7 @@ class FunctionIT
                 {
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
                     {
-                        db.execute( "RETURN com.neo4j.procedure.integrationTestMe()" ).next();
+                        tx.execute( "RETURN com.neo4j.procedure.integrationTestMe()" ).next();
                         tx.commit();
                     }
                 } );
@@ -736,7 +737,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues() AS result" );
+            Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues() AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( "a string,42,3.14,true" ) );
@@ -766,7 +767,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string') AS result" );
+            Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string') AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( "another string,42,3.14,true" ) );
@@ -781,7 +782,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337) AS result" );
+            Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337) AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( "another string,1337,3.14,true" ) );
@@ -796,7 +797,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result" );
+            Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,true" ) );
@@ -811,7 +812,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false) AS result" );
+            Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false) AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,false" ) );
@@ -826,7 +827,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN com.neo4j.procedure.node(-1) AS result" );
+            Result res = transaction.execute( "RETURN com.neo4j.procedure.node(-1) AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( null ) );
@@ -845,7 +846,7 @@ class FunctionIT
 //        try ( Transaction transaction = db.beginTx() )
 //        {
 //            //Given/When
-//            Result res = db.execute( "CALL dbms.functions()" );
+//            Result res = tx.execute( "CALL dbms.functions()" );
 //
 //            try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
 //            {
@@ -867,7 +868,7 @@ class FunctionIT
         try ( Transaction transaction = db.beginTx() )
         {
             //Given/When
-            Result res = db.execute( "RETURN this.is.test.only.sum([1337, 2.718281828, 3.1415]) AS result" );
+            Result res = transaction.execute( "RETURN this.is.test.only.sum([1337, 2.718281828, 3.1415]) AS result" );
 
             // Then
             assertThat( res.next().get( "result" ), equalTo( 1337 + 2.718281828 + 3.1415 ) );
@@ -883,7 +884,7 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CYPHER runtime=MORSEL RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
+            Result res = tx.execute( "CYPHER runtime=MORSEL RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 4L ) ) );
@@ -1076,13 +1077,14 @@ class FunctionIT
         @UserFunction
         public Node readOnlyCallingWriteFunction()
         {
-            return (Node) db.execute( "RETURN com.neo4j.procedure.writingFunction() AS node" ).next().get( "node" );
+            return (Node) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "RETURN com.neo4j.procedure.writingFunction() AS node" ).next().get(
+                    "node" );
         }
 
         @UserFunction
         public long readOnlyCallingWriteProcedure()
         {
-            db.execute( "CALL com.neo4j.procedure.writingProcedure()" );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.writingProcedure()" );
             return 1337L;
         }
 
@@ -1136,7 +1138,7 @@ class FunctionIT
         @UserFunction
         public String readOnlyTryingToWriteSchema()
         {
-            db.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
             return "done";
         }
     }

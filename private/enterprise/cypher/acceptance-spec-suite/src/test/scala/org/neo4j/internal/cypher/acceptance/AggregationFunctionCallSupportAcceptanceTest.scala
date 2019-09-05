@@ -19,7 +19,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    graph.inTx(graph.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
+    graph.withTx( tx => tx.execute("RETURN my.first.value()").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("my.first.value()", value)
     )))
   }
@@ -32,7 +32,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.withTx( tx => tx.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
     )))
   }
@@ -46,7 +46,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(stream)
 
     // Using graph execute to get a Java value
-    graph.inTx(graph.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
+    graph.withTx( tx => tx.execute("RETURN my.first.value() AS out").stream().toArray.toList should equal(List(
       java.util.Collections.singletonMap("out", value)
     )))
   }
@@ -59,7 +59,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    val returned = graph.inTx(graph.execute("RETURN my.first.value() AS out").next().get("out"))
+    val returned = graph.withTx( tx => tx.execute("RETURN my.first.value() AS out").next().get("out"))
 
     returned shouldBe an [util.ArrayList[_]]
     returned shouldBe value
@@ -74,7 +74,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value)
 
     // Using graph execute to get a Java value
-    val returned = graph.inTx(graph.execute("RETURN my.first.value() AS out").next().get("out"))
+    val returned = graph.withTx( tx => tx.execute("RETURN my.first.value() AS out").next().get("out"))
 
     returned shouldBe an [util.ArrayList[_]]
     returned shouldBe value
@@ -88,7 +88,7 @@ class AggregationFunctionCallSupportAcceptanceTest extends ProcedureCallAcceptan
     registerUserAggregationFunction(value, Neo4jTypes.NTList(Neo4jTypes.NTInteger))
 
     // Using graph execute to get a Java value
-    val returned = graph.inTx(graph.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
+    val returned = graph.withTx( tx => tx.execute("WITH my.first.value() AS list RETURN list[0] + list[1] AS out")
       .next().get("out"))
 
     returned should equal(4)

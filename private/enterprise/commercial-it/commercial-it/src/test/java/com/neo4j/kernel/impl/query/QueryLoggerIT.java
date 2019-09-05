@@ -371,7 +371,7 @@ class QueryLoggerIT
         {
             try ( Transaction transaction = database.beginTx() )
             {
-                database.execute( QUERY );
+                transaction.execute( QUERY );
                 transaction.commit();
             }
         }
@@ -402,7 +402,7 @@ class QueryLoggerIT
         {
             try ( Transaction transaction = database.beginTx() )
             {
-                database.execute( QUERY );
+                transaction.execute( QUERY );
                 transaction.commit();
             }
         }
@@ -423,11 +423,11 @@ class QueryLoggerIT
         try ( Transaction transaction = database.beginTx() )
         {
             // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
-            database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
-            database.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
+            transaction.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_max_archives.name() + "','1')" );
+            transaction.execute( "CALL dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_rotation_threshold.name() + "','20m')" );
             for ( int i = 0; i < 100; i++ )
             {
-                database.execute( QUERY );
+                transaction.execute( QUERY );
             }
             transaction.commit();
         }
@@ -460,7 +460,7 @@ class QueryLoggerIT
         String query = "CALL dbms.security.changePassword('abc123')";
         try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
         {
-            Result res = facade.execute( query );
+            Result res = tx.execute( query );
             res.close();
             tx.commit();
         }
@@ -489,20 +489,20 @@ class QueryLoggerIT
         {
             try ( Transaction transaction = database.beginTx() )
             {
-                database.execute( QUERY ).close();
+                transaction.execute( QUERY ).close();
 
                 // File will not be created until query logService is enabled.
                 assertFalse( fileSystem.fileExists( logFilename ) );
 
-                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" ).close();
-                database.execute( QUERY ).close();
+                transaction.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'info')" ).close();
+                transaction.execute( QUERY ).close();
 
                 // Both config change and query should exist
                 strings = readAllLines( logFilename );
                 assertEquals( 2, strings.size() );
 
-                database.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" ).close();
-                database.execute( QUERY ).close();
+                transaction.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" ).close();
+                transaction.execute( QUERY ).close();
                 transaction.commit();
             }
         }
@@ -544,7 +544,7 @@ class QueryLoggerIT
         database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {
-            database.execute( QUERY ).close();
+            transaction.execute( QUERY ).close();
             transaction.commit();
         }
         databaseManagementService.shutdown();

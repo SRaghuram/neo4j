@@ -64,25 +64,25 @@ class CausalClusteringProceduresIT
     @Test
     void dbmsProceduresShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsProcedures( db ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsProcedures( tx ) );
     }
 
     @Test
     void dbmsListQueriesShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsListQueries( db ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsListQueries( tx ) );
     }
 
     @Test
     void dbmsClusterOverviewShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( db ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( tx ) );
     }
 
     @Test
     void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( db ) );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( tx ) );
     }
 
     @Test
@@ -112,13 +112,13 @@ class CausalClusteringProceduresIT
     @Test
     void installedProtocolsProcedure()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( db ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( tx ) );
     }
 
     @Test
     void installedProtocolsProcedureOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( db ) );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( tx ) );
     }
 
     @Test
@@ -209,19 +209,19 @@ class CausalClusteringProceduresIT
         };
     }
 
-    private Result invokeDbmsProcedures( GraphDatabaseService db )
+    private Result invokeDbmsProcedures( Transaction tx )
     {
-        return db.execute( "CALL dbms.procedures()" );
+        return tx.execute( "CALL dbms.procedures()" );
     }
 
-    private Result invokeDbmsListQueries( GraphDatabaseService db )
+    private Result invokeDbmsListQueries( Transaction tx )
     {
-        return db.execute( "CALL dbms.listQueries()" );
+        return tx.execute( "CALL dbms.listQueries()" );
     }
 
-    private Result invokeDbmsClusterOverview( GraphDatabaseService db )
+    private Result invokeDbmsClusterOverview( Transaction tx )
     {
-        return db.execute( "CALL dbms.cluster.overview()" );
+        return tx.execute( "CALL dbms.cluster.overview()" );
     }
 
     private Result invokeRoutingProcedure( Transaction tx )
@@ -234,9 +234,9 @@ class CausalClusteringProceduresIT
         return tx.execute( "CALL dbms.cluster.routing.getRoutingTable($routingContext)", Map.of( "routingContext", emptyMap() ) );
     }
 
-    private Result invokeClusterProtocolsProcedure( GraphDatabaseService db )
+    private Result invokeClusterProtocolsProcedure( Transaction tx )
     {
-        return db.execute( "CALL dbms.cluster.protocols()" );
+        return tx.execute( "CALL dbms.cluster.protocols()" );
     }
 
     private Result invokeClusterRoleProcedure( Transaction tx, String databaseName )

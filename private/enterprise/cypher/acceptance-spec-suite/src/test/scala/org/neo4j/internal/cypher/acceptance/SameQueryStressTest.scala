@@ -29,8 +29,8 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
       var expected = ""
       val transaction = graphOps.beginTx()
       try {
-        graph.execute(TestGraph.movies).close()
-        expected = graph.execute(lookup).resultAsString()
+        transaction.execute(TestGraph.movies).close()
+        expected = transaction.execute(lookup).resultAsString()
         transaction.commit()
       } finally {
         transaction.close()
@@ -46,7 +46,7 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
               (for (_ <- 1 to 1000) yield {
                 val transaction = graphOps.beginTx()
                 try {
-                  graph.execute(lookup).resultAsString()
+                  transaction.execute(lookup).resultAsString()
                 } finally {
                   transaction.close()
                 }

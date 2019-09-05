@@ -25,36 +25,36 @@ public enum SchemaHelper
     CYPHER
             {
                 @Override
-                public void createIndex( GraphDatabaseService db, String label, String property )
+                public void createIndex( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    db.execute( format( "CREATE INDEX ON :`%s`(`%s`)", label, property ) );
+                    tx.execute( format( "CREATE INDEX ON :`%s`(`%s`)", label, property ) );
                 }
 
                 @Override
-                public void createUniquenessConstraint( GraphDatabaseService db, String label, String property )
+                public void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    db.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT n.`%s` IS UNIQUE", label, property ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT n.`%s` IS UNIQUE", label, property ) );
                 }
 
                 @Override
-                public void createNodeKeyConstraint( GraphDatabaseService db, Label label, String... properties )
+                public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties )
                 {
                     String keyProperties = Arrays.stream( properties )
                             .map( property -> format("n.`%s`", property))
                             .collect( joining( "," ) );
-                    db.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT (%s) IS NODE KEY", label.name(), keyProperties ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT (%s) IS NODE KEY", label.name(), keyProperties ) );
                 }
 
                 @Override
-                public void createNodePropertyExistenceConstraint( GraphDatabaseService db, String label, String property )
+                public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    db.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT exists(n.`%s`)", label, property ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT exists(n.`%s`)", label, property ) );
                 }
 
                 @Override
-                public void createRelPropertyExistenceConstraint( GraphDatabaseService db, String type, String property )
+                public void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String type, String property )
                 {
-                    db.execute( format( "CREATE CONSTRAINT ON ()-[r:`%s`]-() ASSERT exists(r.`%s`)", type, property ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON ()-[r:`%s`]-() ASSERT exists(r.`%s`)", type, property ) );
                 }
 
                 @Override
@@ -66,19 +66,19 @@ public enum SchemaHelper
     CORE_API
             {
                 @Override
-                public void createIndex( GraphDatabaseService db, String label, String property )
+                public void createIndex( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
                     db.schema().indexFor( Label.label( label ) ).on( property ).create();
                 }
 
                 @Override
-                public void createUniquenessConstraint( GraphDatabaseService db, String label, String property )
+                public void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
                     db.schema().constraintFor( Label.label( label ) ).assertPropertyIsUnique( property ).create();
                 }
 
                 @Override
-                public void createNodeKeyConstraint( GraphDatabaseService db, Label label, String... properties )
+                public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties )
                 {
                     ConstraintCreator creator = db.schema().constraintFor( label );
                     for ( String property : properties )
@@ -89,13 +89,13 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public void createNodePropertyExistenceConstraint( GraphDatabaseService db, String label, String property )
+                public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
                     db.schema().constraintFor( Label.label( label ) ).assertPropertyExists( property ).create();
                 }
 
                 @Override
-                public void createRelPropertyExistenceConstraint( GraphDatabaseService db, String type, String property )
+                public void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String type, String property )
                 {
                     db.schema().constraintFor( RelationshipType.withName( type ) ).assertPropertyExists( property ).create();
                 }
@@ -112,35 +112,35 @@ public enum SchemaHelper
                 }
             };
 
-    public abstract void createIndex( GraphDatabaseService db, String label, String property );
+    public abstract void createIndex( GraphDatabaseService db, Transaction tx, String label, String property );
 
-    public void createUniquenessConstraint( GraphDatabaseService db, Label label, String property )
+    public void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, Label label, String property )
     {
-        createUniquenessConstraint( db, label.name(), property );
+        createUniquenessConstraint( db, tx, label.name(), property );
     }
 
-    public abstract void createUniquenessConstraint( GraphDatabaseService db, String label, String property );
+    public abstract void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, String label, String property );
 
-    public void createNodeKeyConstraint( GraphDatabaseService db, String label, String... properties )
+    public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, String label, String... properties )
     {
-        createNodeKeyConstraint( db, Label.label( label ), properties );
+        createNodeKeyConstraint( db, tx, Label.label( label ), properties );
     }
 
-    public abstract void createNodeKeyConstraint( GraphDatabaseService db, Label label, String... properties );
+    public abstract void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties );
 
-    public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Label label, String property )
+    public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, Label label, String property )
     {
-        createNodePropertyExistenceConstraint( db, label.name(), property );
+        createNodePropertyExistenceConstraint( db, tx, label.name(), property );
     }
 
-    public abstract void createNodePropertyExistenceConstraint( GraphDatabaseService db, String label, String property );
+    public abstract void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String label, String property );
 
-    public void createRelPropertyExistenceConstraint( GraphDatabaseService db, RelationshipType type, String property )
+    public void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, RelationshipType type, String property )
     {
-        createRelPropertyExistenceConstraint( db, type.name(), property );
+        createRelPropertyExistenceConstraint( db, tx, type.name(), property );
     }
 
-    public abstract void createRelPropertyExistenceConstraint( GraphDatabaseService db, String type, String property );
+    public abstract void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String type, String property );
 
     public void awaitIndexes( GraphDatabaseService db )
     {

@@ -196,7 +196,7 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                database.execute( "create (n)" );
+                tx.execute( "create (n)" );
             }
         } );
         assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
@@ -214,7 +214,7 @@ class TransactionGuardIT
         {
             fakeClock.forward( 4, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            database.execute( "create (n)" );
+            transaction.execute( "create (n)" );
             transaction.rollback();
         }
 
@@ -224,7 +224,7 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 7, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                database.execute( "create (n)" );
+                tx.execute( "create (n)" );
             }
         } );
         assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
@@ -350,7 +350,7 @@ class TransactionGuardIT
             {
                 fakeClock.forward( 3, TimeUnit.SECONDS );
                 timeoutMonitor.run();
-                database.execute( "create (n)" );
+                tx.execute( "create (n)" );
             }
         } );
         assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
@@ -360,7 +360,7 @@ class TransactionGuardIT
         // Increase timeout
         try ( Transaction transaction = database.beginTx() )
         {
-            database.execute( "CALL dbms.setConfigValue('" + transaction_timeout.name() + "', '5s')" );
+            transaction.execute( "CALL dbms.setConfigValue('" + transaction_timeout.name() + "', '5s')" );
             transaction.commit();
         }
 
@@ -368,7 +368,7 @@ class TransactionGuardIT
         {
             fakeClock.forward( 3, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            database.execute( "create (n)" );
+            transaction.execute( "create (n)" );
             transaction.commit();
         }
 
@@ -381,7 +381,7 @@ class TransactionGuardIT
         // Reset timeout and cleanup
         try ( Transaction transaction = database.beginTx() )
         {
-            database.execute( "CALL dbms.setConfigValue('" + transaction_timeout.name() + "', '" + DEFAULT_TIMEOUT + "')" );
+            transaction.execute( "CALL dbms.setConfigValue('" + transaction_timeout.name() + "', '" + DEFAULT_TIMEOUT + "')" );
             try ( Stream<Node> stream = transaction.getAllNodes().stream() )
             {
                 stream.findFirst().map( node ->

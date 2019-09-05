@@ -252,7 +252,7 @@ public class SessionResetIT
         var db = db();
         try ( var transaction = db.beginTx() )
         {
-            try ( Result result = db.execute( "CALL dbms.listQueries() YIELD queryId RETURN count(queryId) AS result" ) )
+            try ( Result result = transaction.execute( "CALL dbms.listQueries() YIELD queryId RETURN count(queryId) AS result" ) )
             {
                 return (long) single( result ).get( "result" ) - 1; // do not count listQueries procedure invocation
             }

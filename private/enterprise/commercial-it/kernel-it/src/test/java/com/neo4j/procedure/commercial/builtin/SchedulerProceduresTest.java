@@ -29,7 +29,7 @@ class SchedulerProceduresTest
     {
         try ( Transaction tx = db.beginTx() )
         {
-            try ( Result result = db.execute( "CALL dbms.scheduler.groups" ) )
+            try ( Result result = tx.execute( "CALL dbms.scheduler.groups" ) )
             {
                 assertTrue( result.hasNext() );
                 while ( result.hasNext() )
@@ -46,7 +46,7 @@ class SchedulerProceduresTest
     {
         try ( Transaction tx = db.beginTx() )
         {
-            String result = db.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
+            String result = tx.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
             assertThat( result, containsString( "morsel.Worker.run" ) );
             tx.commit();
         }

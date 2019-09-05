@@ -730,10 +730,10 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(a, b)
     }
     //TODO move to LernaeanTestSupport
-    graph.inTx({
-      val resultNoAlias = graph.execute("CYPHER runtime=interpreted MATCH (a:A) with a SKIP 0 MATCH (a)-[]->(b:B) return a, b")
+    graph.withTx( tx => {
+      val resultNoAlias = tx.execute("CYPHER runtime=interpreted MATCH (a:A) with a SKIP 0 MATCH (a)-[]->(b:B) return a, b")
       resultNoAlias.asScala.toList.size should equal(11)
-      val resultWithAlias = graph.execute("CYPHER runtime=interpreted MATCH (a:A) with a as n SKIP 0 MATCH (n)-[]->(b:B) return n, b")
+      val resultWithAlias = tx.execute("CYPHER runtime=interpreted MATCH (a:A) with a as n SKIP 0 MATCH (n)-[]->(b:B) return n, b")
       resultWithAlias.asScala.toList.size should equal(11)
 
       var descriptionNoAlias = resultNoAlias.getExecutionPlanDescription

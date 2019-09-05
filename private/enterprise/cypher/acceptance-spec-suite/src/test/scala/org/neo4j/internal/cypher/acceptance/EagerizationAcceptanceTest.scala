@@ -423,7 +423,7 @@ class EagerizationAcceptanceTest
   }
 
   test("github issue #5653") {
-    graph.inTx(graph.execute("CREATE (a:Person {id: 42})-[:FRIEND_OF]->(b:Person {id:42}), (b)-[:FRIEND_OF]->(a), (:Person)-[:FRIEND_OF]->(b)"))
+    graph.withTx( tx => tx.execute("CREATE (a:Person {id: 42})-[:FRIEND_OF]->(b:Person {id:42}), (b)-[:FRIEND_OF]->(a), (:Person)-[:FRIEND_OF]->(b)"))
 
     val query = "MATCH (p1:Person {id: 42})-[r:FRIEND_OF]->(p2:Person {id:42}) DETACH DELETE r, p1, p2 RETURN count(*) AS count"
     val result = executeWith(Configs.InterpretedAndSlotted, query,
@@ -433,7 +433,7 @@ class EagerizationAcceptanceTest
   }
 
   test("github issue #5653 with path instead") {
-    graph.inTx(graph.execute("CREATE (a:Person {id: 42})-[:FRIEND_OF]->(b:Person {id:42}), (b)-[:FRIEND_OF]->(a), (:Person)-[:FRIEND_OF]->(b)"))
+    graph.withTx( tx => tx.execute("CREATE (a:Person {id: 42})-[:FRIEND_OF]->(b:Person {id:42}), (b)-[:FRIEND_OF]->(a), (:Person)-[:FRIEND_OF]->(b)"))
 
     val query = "MATCH p = (p1:Person {id: 42})-[r:FRIEND_OF]->(p2:Person {id:42}) DETACH DELETE p RETURN count(*) AS count"
     val result = executeWith(Configs.InterpretedAndSlotted, query,

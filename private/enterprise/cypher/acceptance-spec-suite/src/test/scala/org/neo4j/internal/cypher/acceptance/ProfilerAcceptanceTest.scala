@@ -168,8 +168,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("unfinished profiler complains [using MATCH]") {
     //GIVEN
     createNode("foo" -> "bar")
-    graph.inTx({
-      val result = graph.execute("PROFILE MATCH (n) WHERE id(n) = 0 RETURN n")
+    graph.withTx( tx => {
+      val result = tx.execute("PROFILE MATCH (n) WHERE id(n) = 0 RETURN n")
 
       //WHEN THEN
       val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
@@ -181,8 +181,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("unfinished profiler complains [using CALL]") {
     //GIVEN
     createLabeledNode("Person")
-    graph.inTx({
-      val result = graph.execute("PROFILE CALL db.labels")
+    graph.withTx( tx => {
+      val result = tx.execute("PROFILE CALL db.labels")
 
       //WHEN THEN
       val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
@@ -194,8 +194,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   test("unfinished profiler complains [using CALL within larger query]") {
     //GIVEN
     createLabeledNode("Person")
-    graph.inTx({
-      val result = graph.execute("PROFILE CALL db.labels() YIELD label WITH label AS r RETURN r")
+    graph.withTx( tx => {
+      val result = tx.execute("PROFILE CALL db.labels() YIELD label WITH label AS r RETURN r")
 
       //WHEN THEN
       val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
@@ -335,8 +335,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("reports COST planner when showing plan description") {
-    graph.inTx({
-      val result = graph.execute("CYPHER planner=cost MATCH (n) RETURN n")
+    graph.withTx( tx => {
+      val result = tx.execute("CYPHER planner=cost MATCH (n) RETURN n")
       result.resultAsString()
       result.getExecutionPlanDescription.toString should include("Planner COST" + System.lineSeparator())
     })
@@ -430,8 +430,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should throw if accessing profiled results before they have been materialized") {
     createNode()
-    graph.inTx({
-      val result = graph.execute("PROFILE MATCH (n) RETURN n")
+    graph.withTx( tx => {
+      val result = tx.execute("PROFILE MATCH (n) RETURN n")
 
       val ex = intercept[QueryExecutionException](result.getExecutionPlanDescription)
       ex.getCause.getCause shouldBe a[ProfilerStatisticsNotReadyException]

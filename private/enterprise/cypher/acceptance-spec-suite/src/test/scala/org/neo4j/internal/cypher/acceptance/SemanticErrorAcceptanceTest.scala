@@ -344,7 +344,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("error message should contain full query") {
     val query = "EXPLAIN MATCH (m), (n) RETURN m, n, o LIMIT 25"
-    val error = intercept[QueryExecutionException](graph.inTx(graph.execute(query)))
+    val error = intercept[QueryExecutionException](graph.withTx( tx => tx.execute(query)))
 
     val first :: second :: third :: Nil = error.getMessage.linesIterator.toList
     first should equal("Variable `o` not defined (line 1, column 37 (offset: 36))")
@@ -465,8 +465,6 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   private def executeAndEnsureError(query: String, expected: Seq[String], params: (String,Any)*) {
     import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper._
-
-    import scala.collection.JavaConverters._
 
     val expectedErrorString = expected.map(e => s"'$e'").mkString(" or ")
     graph.withTx( tx =>

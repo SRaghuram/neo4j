@@ -91,7 +91,7 @@ class MultiDatabaseProcedureIT
     {
         try ( Transaction transaction = facade.beginTx() )
         {
-            facade.execute( "call db.createLabel(\"" + label + "\")" ).close();
+            transaction.execute( "call db.createLabel(\"" + label + "\")" ).close();
             transaction.commit();
         }
     }

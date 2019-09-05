@@ -71,7 +71,7 @@ class QueryRestartIT
         createData( database );
         try ( Transaction transaction = database.beginTx() )
         {
-            var result = database.execute( "MATCH (n) RETURN n.c" );
+            var result = transaction.execute( "MATCH (n) RETURN n.c" );
             assertEquals( 1, testCursorContext.getAdditionalAttempts() );
             while ( result.hasNext() )
             {
@@ -91,7 +91,7 @@ class QueryRestartIT
         createData( database );
         try ( Transaction transaction = database.beginTx() )
         {
-            var result = database.execute( "MATCH (n) RETURN n.c" );
+            var result = transaction.execute( "MATCH (n) RETURN n.c" );
             assertEquals( 1, testCursorContext.getAdditionalAttempts() );
             while ( result.hasNext() )
             {

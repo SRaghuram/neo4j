@@ -177,7 +177,7 @@ public class ServerGroupsIT
         List<List<String>> serverGroups = new ArrayList<>();
         try ( Transaction transaction = db.beginTx() )
         {
-            try ( Result result = db.execute( "CALL dbms.cluster.overview" ) )
+            try ( Result result = transaction.execute( "CALL dbms.cluster.overview" ) )
             {
                 while ( result.hasNext() )
                 {

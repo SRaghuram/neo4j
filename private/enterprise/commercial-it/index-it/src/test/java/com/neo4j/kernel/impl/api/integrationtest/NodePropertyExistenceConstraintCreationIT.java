@@ -48,9 +48,9 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
     }
 
     @Override
-    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, String label, String property )
+    void createConstraintInRunningTx( SchemaHelper helper, GraphDatabaseService db, org.neo4j.graphdb.Transaction tx, String label, String property )
     {
-        helper.createNodePropertyExistenceConstraint( db, label, property );
+        helper.createNodePropertyExistenceConstraint( db, tx, label, property );
     }
 
     @Override

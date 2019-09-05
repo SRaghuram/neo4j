@@ -5,9 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen}
 import org.neo4j.graphdb.ResourceIterator
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.scalacheck.{Gen, Shrink}
 
 /*
@@ -29,19 +29,19 @@ class SemanticCreateAcceptanceTest extends ExecutionEngineFunSuite with PatternG
         val patternString = pattern.map(_.string).mkString
         withClue(s"failing on pattern $patternString") {
           //update
-          graph.inTx(graph.execute(s"CREATE $patternString").close())
+          graph.withTx( tx => tx.execute(s"CREATE $patternString").close())
 
           //find created pattern (cannot return * since everything might be unnamed)
-          graph.inTx({
-            val result1 = graph.execute(s"MATCH $patternString RETURN 42")
+          graph.withTx( tx => {
+            val result1 = tx.execute(s"MATCH $patternString RETURN 42")
             hasSingleRow(result1)
 
-            val result2 = graph.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
+            val result2 = tx.execute(s"CYPHER runtime=interpreted MATCH $patternString RETURN 42")
             hasSingleRow(result2)
           })
 
           //clean up
-          graph.inTx(graph.execute(s"MATCH (n) DETACH DELETE n").close())
+          graph.withTx( tx => tx.execute(s"MATCH (n) DETACH DELETE n").close())
         }
       }
     }

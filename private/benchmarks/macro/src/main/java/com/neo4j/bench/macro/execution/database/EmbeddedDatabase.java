@@ -270,11 +270,11 @@ public class EmbeddedDatabase implements Database
             schema.constraints()
                   .stream()
                   .map( Schema.SchemaEntry::createStatement )
-                  .forEach( db::execute );
+                  .forEach( tx::execute );
             schema.indexes()
                   .stream()
                   .map( Schema.SchemaEntry::createStatement )
-                  .forEach( db::execute );
+                  .forEach( tx::execute );
             tx.commit();
         }
         waitForSchema();

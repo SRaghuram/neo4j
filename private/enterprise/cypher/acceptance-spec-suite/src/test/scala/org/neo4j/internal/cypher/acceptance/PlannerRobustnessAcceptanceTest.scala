@@ -17,12 +17,12 @@ class PlannerRobustnessAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
       "MATCH " + (1 to 100).map(i => s"(user$i:User {userId:$i})").mkString(", ") +
       "RETURN count(*)"
 
-    graph.inTx(graph.execute("""FOREACH (n IN range(1, 100) | CREATE (:User {userId: n}))"""))
+    graph.withTx( tx => tx.execute("""FOREACH (n IN range(1, 100) | CREATE (:User {userId: n}))"""))
     graph.createIndex("User", "userId")
 
     val t1 = System.nanoTime() / 1000
-    graph.inTx({
-      val result = graph.execute(query)
+    graph.withTx( tx => {
+      val result = tx.execute(query)
       while (result.hasNext) result.next()
     })
     val t2 = System.nanoTime() / 1000

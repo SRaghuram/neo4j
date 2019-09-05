@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.ConstraintViolationException;
@@ -76,18 +75,19 @@ public class HalfAppliedConstraintRecoveryIT
     private static final Label LABEL = TestLabels.LABEL_ONE;
     private static final String KEY = "key";
     private static final String KEY2 = "key2";
-    private static final Consumer<GraphDatabaseAPI> UNIQUE_CONSTRAINT_CREATOR = db -> db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> UNIQUE_CONSTRAINT_CREATOR =
+            ( db, tx ) -> db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
 
-    private static final Consumer<GraphDatabaseAPI> NODE_KEY_CONSTRAINT_CREATOR =
-            db -> db.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ") IS NODE KEY" );
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR =
+            ( db, tx ) -> tx.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ") IS NODE KEY" );
 
-    private static final Consumer<GraphDatabaseAPI> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR =
-            db -> db.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ", n." + KEY2 + ") IS NODE KEY" );
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR =
+            ( db, tx ) -> tx.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ", n." + KEY2 + ") IS NODE KEY" );
     private static final BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> REAPPLY =
             ( db, txs ) -> apply( db, txs.subList( txs.size() - 1, txs.size() ) );
     private DatabaseManagementService managementService;
 
-    private static BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> recreate( Consumer<GraphDatabaseAPI> constraintCreator )
+    private static BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> recreate( BiConsumer<GraphDatabaseAPI,Transaction> constraintCreator )
     {
         return ( db, txs ) -> createConstraint( db, constraintCreator );
     }
@@ -135,7 +135,7 @@ public class HalfAppliedConstraintRecoveryIT
     }
 
     private void recoverFromHalfConstraintAppliedBeforeCrash( BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> applier,
-            Consumer<GraphDatabaseAPI> constraintCreator, boolean composite ) throws Exception
+            BiConsumer<GraphDatabaseAPI,Transaction> constraintCreator, boolean composite ) throws Exception
     {
         // GIVEN
         List<TransactionRepresentation> transactions = createTransactionsForCreatingConstraint( constraintCreator );
@@ -213,7 +213,7 @@ public class HalfAppliedConstraintRecoveryIT
         recoverFromConstraintAppliedBeforeCrash( COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR );
     }
 
-    private void recoverFromConstraintAppliedBeforeCrash( Consumer<GraphDatabaseAPI> constraintCreator ) throws Exception
+    private void recoverFromConstraintAppliedBeforeCrash( BiConsumer<GraphDatabaseAPI,Transaction> constraintCreator ) throws Exception
     {
         List<TransactionRepresentation> transactions = createTransactionsForCreatingConstraint( constraintCreator );
         EphemeralFileSystemAbstraction crashSnapshot;
@@ -351,7 +351,8 @@ public class HalfAppliedConstraintRecoveryIT
         } );
     }
 
-    private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator ) throws Exception
+    private List<TransactionRepresentation> createTransactionsForCreatingConstraint( BiConsumer<GraphDatabaseAPI,Transaction> uniqueConstraintCreator )
+            throws Exception
     {
         // A separate db altogether
         DatabaseManagementService managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent().build();
@@ -394,11 +395,11 @@ public class HalfAppliedConstraintRecoveryIT
         return transactions;
     }
 
-    private static void createConstraint( GraphDatabaseAPI db, Consumer<GraphDatabaseAPI> constraintCreator )
+    private static void createConstraint( GraphDatabaseAPI db, BiConsumer<GraphDatabaseAPI,Transaction> constraintCreator )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            constraintCreator.accept( db );
+            constraintCreator.accept( db, tx );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )

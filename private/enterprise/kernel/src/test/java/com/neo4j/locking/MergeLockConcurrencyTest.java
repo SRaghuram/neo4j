@@ -69,7 +69,7 @@ public class MergeLockConcurrencyTest
         // given
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( "CREATE CONSTRAINT ON (foo:Foo) ASSERT foo.bar IS UNIQUE" );
+            transaction.execute( "CREATE CONSTRAINT ON (foo:Foo) ASSERT foo.bar IS UNIQUE" );
             transaction.commit();
         }
         CyclicBarrier barrier = new CyclicBarrier( 2 );
@@ -89,7 +89,7 @@ public class MergeLockConcurrencyTest
         Node node;
         try ( Transaction transaction = db.beginTx() )
         {
-            node = mergeNode();
+            node = mergeNode( transaction );
             transaction.commit();
         }
         return node;
@@ -102,7 +102,7 @@ public class MergeLockConcurrencyTest
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Node node = mergeNode();
+                Node node = mergeNode( tx );
 
                 barrier.await();
 
@@ -114,9 +114,9 @@ public class MergeLockConcurrencyTest
         };
     }
 
-    private Node mergeNode()
+    private Node mergeNode( Transaction tx )
     {
-        return (Node) single( db.execute( "MERGE (foo:Foo{bar:'baz'}) RETURN foo" ) ).get( "foo" );
+        return (Node) single( tx.execute( "MERGE (foo:Foo{bar:'baz'}) RETURN foo" ) ).get( "foo" );
     }
 
     private void reassignProperties( Node node )

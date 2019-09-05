@@ -296,8 +296,8 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
   private def assertQuery(query: String) = {
     runWithTimeout(TIMEOUT_MS) {
       //this is an optimization just so that we only compare results when we have to
-      val runtimeUsed = graph.withTx { _ =>
-          graph.execute(s"EXPLAIN CYPHER runtime=compiled $query")
+      val runtimeUsed = graph.withTx { tx =>
+          tx.execute(s"EXPLAIN CYPHER runtime=compiled $query")
             .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
         }
       if (runtimeUsed == "COMPILED") {

@@ -28,9 +28,9 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should be able to switch between versions") {
     runWithConfig() {
       db =>
-        db.withTx( _ => {
-          db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
-          db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
+        db.withTx( tx => {
+          tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
+          tx.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
         })
     }
   }
@@ -38,9 +38,9 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should be able to switch between versions2") {
     runWithConfig() {
       db =>
-        db.withTx(_ => {
-          db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
-          db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
+        db.withTx(tx => {
+          tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty
+          tx.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
         })
     }
   }
@@ -48,15 +48,15 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should be able to override config") {
     runWithConfig(GraphDatabaseSettings.cypher_parser_version -> GraphDatabaseSettings.CypherParserVersion.V_40) {
       db =>
-        db.withTx(_ => db.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty)
+        db.withTx(tx => tx.execute(s"CYPHER 3.5 $QUERY").asScala.toList shouldBe empty)
     }
   }
 
   test("should be able to override config2") {
     runWithConfig(GraphDatabaseSettings.cypher_parser_version -> GraphDatabaseSettings.CypherParserVersion.V_35) {
       db =>
-        db.withTx(_ => {
-          db.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
+        db.withTx(tx => {
+          tx.execute(s"CYPHER 4.0 $QUERY").asScala.toList shouldBe empty
         })
     }
   }
@@ -64,8 +64,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should use default version by default") {
     runWithConfig() {
       db =>
-        db.withTx(_ => {
-          val result = db.execute(QUERY)
+        db.withTx(tx => {
+          val result = tx.execute(QUERY)
           result.asScala.toList shouldBe empty
           result.getExecutionPlanDescription.getArguments.get("version") should equal("CYPHER 4.0")
         })
@@ -108,10 +108,10 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should not fail if asked to execute query with runtime=compiled on simple query") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
       db =>
-        db.withTx(_ => {
-          db.execute("MATCH (n:Movie) RETURN n").close()
-          db.execute("CYPHER runtime=compiled MATCH (n:Movie) RETURN n").close()
-          shouldHaveNoWarnings(db.execute("EXPLAIN CYPHER runtime=compiled MATCH (n:Movie) RETURN n"))
+        db.withTx(tx => {
+          tx.execute("MATCH (n:Movie) RETURN n").close()
+          tx.execute("CYPHER runtime=compiled MATCH (n:Movie) RETURN n").close()
+          shouldHaveNoWarnings(tx.execute("EXPLAIN CYPHER runtime=compiled MATCH (n:Movie) RETURN n"))
         })
     }
   }
@@ -119,9 +119,9 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should fail if asked to execute query with runtime=compiled instead of falling back to interpreted if hint errors turned on") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
       db =>
-        db.withTx(_ => {
+        db.withTx(tx => {
           intercept[QueryExecutionException](
-            db.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
+            tx.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
           ).getStatusCode should equal("Neo.ClientError.Statement.RuntimeUnsupportedError")
         })
     }
@@ -130,8 +130,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should not fail if asked to execute query with runtime=compiled and instead fallback to interpreted and return a warning if hint errors turned off") {
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> FALSE) {
       db =>
-        db.withTx(_ => {
-          val result = db.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
+        db.withTx(tx => {
+          val result = tx.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
           shouldHaveWarning(result, Status.Statement.RuntimeUnsupportedWarning)
         })
     }
@@ -140,8 +140,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should not fail if asked to execute query with runtime=compiled and instead fallback to interpreted and return a warning by default") {
     runWithConfig() {
       db =>
-        db.withTx(_ => {
-          val result = db.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
+        db.withTx(tx => {
+          val result = tx.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
           shouldHaveWarning(result, Status.Statement.RuntimeUnsupportedWarning)
         })
     }
@@ -150,8 +150,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should not fail nor generate a warning if asked to execute query without specifying runtime, knowing that compiled is default but will fallback silently to interpreted") {
     runWithConfig() {
       db =>
-        db.withTx(_ => {
-          shouldHaveNoWarnings(db.execute(s"EXPLAIN $QUERY_NOT_COMPILED"))
+        db.withTx(tx => {
+          shouldHaveNoWarnings(tx.execute(s"EXPLAIN $QUERY_NOT_COMPILED"))
         })
     }
   }
@@ -159,18 +159,18 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should not support old compilers") {
     runWithConfig() {
       db =>
-        db.withTx(_ => {
-          intercept[QueryExecutionException](db.execute("CYPHER 1.9 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 2.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 2.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 2.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 2.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 3.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 3.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 3.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 3.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 3.4 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
-          intercept[QueryExecutionException](db.execute("CYPHER 3.6 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        db.withTx(tx => {
+          intercept[QueryExecutionException](tx.execute("CYPHER 1.9 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 2.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 2.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 2.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 2.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 3.0 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 3.1 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 3.2 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 3.3 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 3.4 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+          intercept[QueryExecutionException](tx.execute("CYPHER 3.6 MATCH (n) RETURN n")).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
         })
     }
   }
@@ -178,8 +178,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   test("should use settings without regard of case") {
     runWithConfig(GraphDatabaseSettings.cypher_runtime -> GraphDatabaseSettings.CypherRuntime.SLOTTED) {
       db =>
-        db.withTx(_ => {
-          val result = db.execute(QUERY)
+        db.withTx(tx => {
+          val result = tx.execute(QUERY)
           result.getExecutionPlanDescription.toString should include("SLOTTED")
           result.close()
         })
@@ -187,8 +187,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   private def assertProfiled(db: GraphDatabaseCypherService, q: String) {
-    db.withTx(_ => {
-      val result = db.execute(q)
+    db.withTx(tx => {
+      val result = tx.execute(q)
       result.resultAsString()
       assert(result.getExecutionPlanDescription.hasProfilerStatistics, s"$q was not profiled as expected")
       assert(result.getQueryExecutionType.requestedExecutionPlanDescription(), s"$q was not flagged for planDescription")
@@ -196,8 +196,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   private def assertExplained(db: GraphDatabaseCypherService, q: String) {
-    db.withTx(_ => {
-      val result = db.execute(q)
+    db.withTx(tx => {
+      val result = tx.execute(q)
       result.resultAsString()
       assert(!result.getExecutionPlanDescription.hasProfilerStatistics, s"$q was not explained as expected")
       assert(result.getQueryExecutionType.requestedExecutionPlanDescription(), s"$q was not flagged for planDescription")
@@ -205,8 +205,8 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
   }
 
   private def assertVersionAndRuntime(db: GraphDatabaseCypherService, version: String, runtime: String): Unit = {
-    db.withTx(_ => {
-      val result = db.execute(s"CYPHER $version runtime=$runtime MATCH (n) RETURN n")
+    db.withTx(tx => {
+      val result = tx.execute(s"CYPHER $version runtime=$runtime MATCH (n) RETURN n")
       result.getExecutionPlanDescription.getArguments.get("version") should be("CYPHER " + version)
       result.getExecutionPlanDescription.getArguments.get("runtime") should be(runtime.toUpperCase)
       result.close()

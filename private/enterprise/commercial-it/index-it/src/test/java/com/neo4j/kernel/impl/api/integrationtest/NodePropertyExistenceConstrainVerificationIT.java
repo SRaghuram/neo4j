@@ -11,6 +11,7 @@ import java.lang.reflect.Executable;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.impl.newapi.Operations;
 
@@ -19,9 +20,9 @@ import static org.neo4j.graphdb.Label.label;
 class NodePropertyExistenceConstrainVerificationIT extends PropertyExistenceConstraintVerificationIT
 {
     @Override
-    void createConstraint( SchemaHelper helper, GraphDatabaseService db, String label, String property )
+    void createConstraint( SchemaHelper helper, GraphDatabaseService db, Transaction tx, String label, String property )
     {
-        helper.createNodePropertyExistenceConstraint( db, label, property );
+        helper.createNodePropertyExistenceConstraint( db, tx, label, property );
     }
 
     @Override

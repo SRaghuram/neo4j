@@ -43,7 +43,7 @@ abstract class PropertyExistenceConstraintVerificationIT
     @Inject
     public Actor thread;
 
-    abstract void createConstraint( SchemaHelper helper, GraphDatabaseService db, String key, String property );
+    abstract void createConstraint( SchemaHelper helper, GraphDatabaseService db, Transaction tx, String key, String property );
 
     abstract Executable constraintCreationMethod() throws Exception;
 
@@ -67,7 +67,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                createConstraint( helper, db, KEY, PROPERTY );
+                createConstraint( helper, db, tx, KEY, PROPERTY );
                 tx.commit();
             }
             fail( "expected exception" );
@@ -89,7 +89,7 @@ abstract class PropertyExistenceConstraintVerificationIT
             Future<Void> nodeCreation;
             try ( Transaction tx = db.beginTx() )
             {
-                createConstraint( helper, db, KEY, PROPERTY );
+                createConstraint( helper, db, tx, KEY, PROPERTY );
 
                 nodeCreation = thread.submit( createOffender() );
                 thread.untilWaitingIn( offenderCreationMethod() );
@@ -164,7 +164,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                createConstraint( helper, db, KEY, PROPERTY );
+                createConstraint( helper, db, tx, KEY, PROPERTY );
                 tx.commit();
             }
             return null;

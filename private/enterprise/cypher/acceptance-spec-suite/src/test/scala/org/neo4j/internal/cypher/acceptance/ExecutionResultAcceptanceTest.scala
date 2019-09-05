@@ -60,8 +60,8 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
 
   private def executeQueryAndGetExecutionPlanDescription(query: String, runtime: String, iterateOverResult: Boolean) = {
     val executedQuery = "CYPHER runtime = " + runtime + " " + query
-    graph.inTx({
-      val result: Result = graph.execute(executedQuery)
+    graph.withTx( tx => {
+      val result: Result = tx.execute(executedQuery)
       if (iterateOverResult)
         result.hasNext should be (false) // don't really care for the assertion, just consume the results
       val description = result.getExecutionPlanDescription

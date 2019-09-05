@@ -51,9 +51,9 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   test("should close resources on failure") {
     val counters = setUpProcedures()
 
-    val caught = graph.inTx({
+    val caught = graph.withTx( tx => {
       intercept[QueryExecutionException] {
-        val result = graph.execute(defaultQuery)
+        val result = tx.execute(defaultQuery)
         result.resultAsString()
       }
     })
@@ -77,7 +77,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
     val counters = setUpProcedures()
 
     val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
-    val result = graph.execute(defaultQuery)
+    val result = tx.execute(defaultQuery)
 
     // Pull one row and then close the transaction
     result.next()
@@ -105,7 +105,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
     val counters = setUpProcedures()
 
     val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
-    graph.execute(defaultQuery)
+    tx.execute(defaultQuery)
 
     // Close the transaction directly without pulling the result
     tx.close()
@@ -120,7 +120,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
     val numberOfRows = 100
 
     val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
-    val result = graph.execute(s"UNWIND range(1,$numberOfRows) as i CALL org.neo4j.test.testResourceProcedure(1) YIELD value RETURN value")
+    val result = tx.execute(s"UNWIND range(1,$numberOfRows) as i CALL org.neo4j.test.testResourceProcedure(1) YIELD value RETURN value")
 
     // Pull one row and then close the transaction
     var i = 0
@@ -155,9 +155,9 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
          |RETURN line, v1, ok
          |""".stripMargin
 
-    val caught = graph.inTx({
+    val caught = graph.withTx( tx => {
       intercept[QueryExecutionException] {
-        val result = graph.execute(periodicCommitQuery)
+        val result = tx.execute(periodicCommitQuery)
         result.resultAsString()
       }
     })

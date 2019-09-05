@@ -25,7 +25,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   // Invoked once before the Tx and once in the same Tx
   def createSomeNodes(tx: InternalTransaction): Unit = {
-    graph.execute(
+    tx.execute(
       """
       CREATE (:Awesome {prop1: 40, prop2: 4})-[:R]->()
       CREATE (:Awesome {prop1: 41, prop2: 1})-[:R]->()

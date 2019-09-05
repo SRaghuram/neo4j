@@ -181,7 +181,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "CREATE DATABASE " + databaseName );
+            tx.execute( "CREATE DATABASE " + databaseName );
             tx.commit();
         } );
     }
@@ -190,7 +190,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "START DATABASE " + databaseName );
+            tx.execute( "START DATABASE " + databaseName );
             tx.commit();
         } );
     }
@@ -199,7 +199,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "STOP DATABASE " + databaseName );
+            tx.execute( "STOP DATABASE " + databaseName );
             tx.commit();
         } );
     }
@@ -208,7 +208,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            sys.execute( "DROP DATABASE " + databaseName );
+            tx.execute( "DROP DATABASE " + databaseName );
             tx.commit();
         } );
     }

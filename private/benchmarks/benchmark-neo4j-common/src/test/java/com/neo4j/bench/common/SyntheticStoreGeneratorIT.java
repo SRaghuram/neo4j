@@ -85,7 +85,7 @@ public class SyntheticStoreGeneratorIT
         try ( Transaction transaction = databaseService.beginTx() )
         {
             // this is hacky HACK, needs to be fixed in Neo4jExtension
-            databaseService.execute( "MATCH (n) DETACH DELETE n" ).close();
+            transaction.execute( "MATCH (n) DETACH DELETE n" ).close();
             transaction.commit();
         }
     }

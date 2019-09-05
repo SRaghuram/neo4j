@@ -760,13 +760,13 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   }
 
   test("should not require named nodes in shortest path") {
-    graph.inTx(graph.execute("CREATE (a:Person)-[:WATCH]->(b:Movie)").close())
+    graph.withTx( tx => tx.execute("CREATE (a:Person)-[:WATCH]->(b:Movie)").close())
 
     val query =
       """MATCH p=shortestPath( (:Person)-[*1..4]->(:Movie) )
         |RETURN length(p)
       """.stripMargin
-    graph.inTx(graph.execute(query).columnAs[Int]("length(p)").next() should be (1))
+    graph.withTx( tx => tx.execute(query).columnAs[Int]("length(p)").next() should be (1))
   }
 
   private def createLdbc14Model(): Unit = {

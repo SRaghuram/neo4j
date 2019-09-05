@@ -433,7 +433,7 @@ class SystemGraphRealmIT
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDB.beginTx() )
         {
-            systemDB.execute( String.format( "GRANT MATCH {*} ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
+            transaction.execute( String.format( "GRANT MATCH {*} ON GRAPH %s NODES * TO %s", DEFAULT_DATABASE_NAME, "custom" ) );
             transaction.commit();
         }
 

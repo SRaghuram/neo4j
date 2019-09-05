@@ -21,8 +21,8 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
 
   test("reverse function should work with collections of integers") {
     // When
-    inTx { _ =>
-      val result = graph.execute("with [4923,489,521,487] as ids RETURN reverse(ids)")
+    inTx { tx =>
+      val result = tx.execute("with [4923,489,521,487] as ids RETURN reverse(ids)")
 
       val results = result.columnAs("reverse(ids)").next().toString
 
@@ -32,9 +32,9 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
   }
 
   test("reverse function should work with collections that contains null") {
-    inTx { _ =>
+    inTx { tx =>
       // When
-      val result = graph.execute("with [4923,null,521,487] as ids RETURN reverse(ids)")
+      val result = tx.execute("with [4923,null,521,487] as ids RETURN reverse(ids)")
 
       val results = result.columnAs("reverse(ids)").next().toString
 
@@ -44,9 +44,9 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
   }
 
   test("reverse function should work with empty collections") {
-    inTx { _ =>
+    inTx { tx =>
       // When
-      val result = graph.execute("with [] as ids RETURN reverse(ids)")
+      val result = tx.execute("with [] as ids RETURN reverse(ids)")
 
       val results = result.columnAs("reverse(ids)").next().toString
 
@@ -56,9 +56,9 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
   }
 
   test("reverse function should work with collections of mixed types") {
-    inTx { _ =>
+    inTx { tx =>
       // When
-      val result = graph.execute("with [4923,'abc',521,487] as ids RETURN reverse(ids)")
+      val result = tx.execute("with [4923,'abc',521,487] as ids RETURN reverse(ids)")
 
       val results = result.columnAs("reverse(ids)").next().toString
 
@@ -68,7 +68,7 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
   }
 
   test("reverse should be able to concatenate to original list") {
-    inTx { _ =>
+    inTx { tx =>
       // When
       val query =
         """
@@ -76,7 +76,7 @@ class ReverseAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistics
           | RETURN xs + reverse(xs) AS res
           | """.stripMargin
 
-      val results = graph.execute(query).columnAs("res").next().toString
+      val results = tx.execute(query).columnAs("res").next().toString
 
       // Then
       results should equal("[1, 2, 2, 1]")

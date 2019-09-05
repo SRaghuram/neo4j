@@ -27,7 +27,7 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
   }
 
   protected def dropIndex(): Unit = {
-    graph.inTx(graph.execute(s"DROP INDEX ON :$LABEL($PROPERTY)"))
+    graph.withTx( tx => tx.execute(s"DROP INDEX ON :$LABEL($PROPERTY)"))
   }
 
   protected def createIndexedNode(value: Value): Node = {

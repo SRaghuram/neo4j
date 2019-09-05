@@ -171,7 +171,7 @@ class DatabaseMetricsExtensionIT
         // GIVEN
         try ( Transaction tx = db.beginTx() )
         {
-            db.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
+            tx.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
             tx.commit();
         }
 
@@ -183,7 +183,7 @@ class DatabaseMetricsExtensionIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                db.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
+                tx.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
                 tx.commit();
             }
             addNodes( 1 );

@@ -738,29 +738,29 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.allowedReadProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure1()
         {
-            Result result = db.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "foo" ).toString() ) );
         }
 
         @Procedure( name = "test.otherAllowedReadProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> otherAllowedProcedure()
         {
-            Result result = db.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "foo" ).toString() ) );
         }
 
         @Procedure( name = "test.allowedWriteProcedure", mode = Mode.WRITE )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure2()
         {
-            db.execute( "UNWIND [1, 2] AS i CREATE (:VeryUniqueLabel {prop: 'a'})" );
-            Result result = db.execute( "MATCH (n:VeryUniqueLabel) RETURN n.prop AS a LIMIT 2" );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "UNWIND [1, 2] AS i CREATE (:VeryUniqueLabel {prop: 'a'})" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n:VeryUniqueLabel) RETURN n.prop AS a LIMIT 2" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "a" ).toString() ) );
         }
 
         @Procedure( name = "test.allowedSchemaProcedure", mode = Mode.SCHEMA )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure3()
         {
-            db.execute( "CREATE INDEX ON :VeryUniqueLabel(prop)" );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE INDEX ON :VeryUniqueLabel(prop)" );
             return Stream.of( new AuthProceduresBase.StringResult( "OK" ) );
         }
 
@@ -769,21 +769,21 @@ public abstract class ProcedureInteractionTestBase<S>
                 @Name( "nestedProcedure" ) String nestedProcedure
         )
         {
-            Result result = db.execute( "CALL " + nestedProcedure );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL " + nestedProcedure );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
         @Procedure( name = "test.doubleNestedAllowedProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> doubleNestedAllowedProcedure()
         {
-            Result result = db.execute( "CALL test.nestedAllowedProcedure('test.allowedReadProcedure') YIELD value" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL test.nestedAllowedProcedure('test.allowedReadProcedure') YIELD value" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
         @Procedure( name = "test.failingNestedAllowedWriteProcedure", mode = Mode.WRITE )
         public Stream<AuthProceduresBase.StringResult> failingNestedAllowedWriteProcedure()
         {
-            Result result = db.execute( "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
@@ -792,14 +792,14 @@ public abstract class ProcedureInteractionTestBase<S>
                 @Name( "nestedProcedure" ) String nestedProcedure
         )
         {
-            Result result = db.execute( "CALL " + nestedProcedure );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL " + nestedProcedure );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
         @Procedure( name = "test.createNode", mode = WRITE )
         public void createNode()
         {
-            db.execute( "CREATE n()" );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE n()" );
 //            tx.createNode();
         }
 
@@ -904,14 +904,14 @@ public abstract class ProcedureInteractionTestBase<S>
         @UserFunction( name = "test.allowedFunction1" )
         public String allowedFunction1()
         {
-            Result result = db.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.next().get( "foo" ).toString();
         }
 
         @UserFunction( name = "test.allowedFunction2" )
         public String allowedFunction2()
         {
-            Result result = db.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.next().get( "foo" ).toString();
         }
 
@@ -920,7 +920,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 @Name( "nestedFunction" ) String nestedFunction
         )
         {
-            Result result = db.execute( "RETURN " + nestedFunction + " AS value" );
+            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "RETURN " + nestedFunction + " AS value" );
             return result.next().get( "value" ).toString();
         }
     }

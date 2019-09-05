@@ -121,7 +121,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("AllNodesInPath") {
-    graph.inTx(graph.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE all(i IN nodes(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
@@ -133,7 +133,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("AllRelationships") {
-    graph.inTx(graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3  {foo:'bar'}]->(pB)
                   |WHERE all(i IN relationships(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
@@ -145,7 +145,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("AllRelationshipsInPath") {
-    graph.inTx(graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE all(i IN relationships(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
@@ -157,7 +157,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("NoNodeInPath") {
-    graph.inTx(graph.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A {foo: 'bar'})-[:REL]->(b:B {foo: 'bar'})-[:REL]->(c:C {foo: 'bar'})-[:REL]->(d:D {foo: 'bar', name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE none(i IN nodes(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin
@@ -169,7 +169,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   }
 
   test("NoRelationshipInPath") {
-    graph.inTx(graph.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
+    graph.withTx( tx => tx.execute("CREATE (a:A)-[:REL {foo: 'bar'}]->(b:B)-[:REL {foo: 'bar'}]->(c:C)-[:REL {foo: 'bar'}]->(d:D {name: 'd'})"))
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE none(i IN relationships(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin

@@ -186,7 +186,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime return 1").asScala.length
+        transaction.execute(s"CYPHER runtime=$runtime return 1").asScala.length
       } finally {
         transaction.close()
       }
@@ -208,7 +208,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime profile return 1").asScala.length
+        transaction.execute(s"CYPHER runtime=$runtime profile return 1").asScala.length
       } finally {
         transaction.close()
       }
@@ -230,7 +230,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime explain return 1").asScala.length
+        transaction.execute(s"CYPHER runtime=$runtime explain return 1").asScala.length
       } finally {
         transaction.close()
       }
@@ -255,7 +255,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").asScala.length
+        transaction.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").asScala.length
       } finally {
         transaction.close()
       }
@@ -281,7 +281,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").asScala.length
+        transaction.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").asScala.length
       } finally {
         transaction.close()
       }
@@ -306,7 +306,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").asScala.length
+        transaction.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").asScala.length
       } finally {
         transaction.close()
       }
@@ -327,7 +327,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime return 1").accept(consumerVisitor)
+        transaction.execute(s"CYPHER runtime=$runtime return 1").accept(consumerVisitor)
       } finally {
         transaction.close()
       }
@@ -348,7 +348,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime profile return 1").accept(consumerVisitor)
+        transaction.execute(s"CYPHER runtime=$runtime profile return 1").accept(consumerVisitor)
       } finally {
         transaction.close()
       }
@@ -369,7 +369,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       // when
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime explain return 1").accept(consumerVisitor)
+        transaction.execute(s"CYPHER runtime=$runtime explain return 1").accept(consumerVisitor)
       } finally {
         transaction.close()
       }
@@ -392,7 +392,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").accept(consumerVisitor)
+        transaction.execute(s"CYPHER runtime=$runtime CALL org.neo4j.bench.getAllNodes()").accept(consumerVisitor)
       } finally {
         transaction.close()
       }
@@ -416,7 +416,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").accept(consumerVisitor)
+        transaction.execute(s"CYPHER runtime=$runtime profile CALL org.neo4j.bench.getAllNodes()").accept(consumerVisitor)
       } finally {
         transaction.close()
       }
@@ -440,7 +440,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
 
       val transaction = db.beginTx()
       try {
-        db.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").accept(consumerVisitor)
+        transaction.execute(s"CYPHER runtime=$runtime explain CALL org.neo4j.bench.getAllNodes()").accept(consumerVisitor)
       } finally {
         transaction.close()
       }

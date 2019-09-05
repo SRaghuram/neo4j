@@ -61,7 +61,7 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Then we can run an eagerized destructive procedure
-            Result res = db.execute( "MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
+            Result res = transaction.execute( "MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
                     "YIELD value RETURN value" );
             assertThat( "Should get as many rows as original nodes", res.resultAsString(), containsString( "2 rows" ) );
             transaction.commit();
@@ -77,7 +77,7 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When we try to run an eagerized destructive procedure
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> db.execute(
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
                             "YIELD value RETURN value" ) );
             assertThat( exception.getMessage(), equalTo( "Node with id 1 has been deleted in this transaction" ) );
@@ -94,7 +94,7 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // Then we can run an normal read procedure and it will be eagerized by normal Cypher eagerization
-            Result res = db.execute(
+            Result res = transaction.execute(
                     "MATCH (n) WHERE n.key = 'value' " + "CALL com.neo4j.procedure.findNeighboursNotEagerized(n) " + "YIELD relationship AS r, node as m " +
                             "DELETE r, m RETURN true" );
             assertThat( "Should get one fewer rows than original nodes", res.resultAsString(), containsString( (count - 1) + " rows" ) );
@@ -109,7 +109,7 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When explaining a call to an eagerized procedure
-            Result res = db.execute( "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
+            Result res = transaction.execute( "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
                     "YIELD value RETURN value" );
             assertThat( "The plan description should contain the 'Eager' operation", res.getExecutionPlanDescription().toString(), containsString( "+Eager" ) );
             transaction.commit();
@@ -122,7 +122,7 @@ public class EagerProcedureIT
         try ( Transaction transaction = db.beginTx() )
         {
             // When explaining a call to an non-eagerized procedure
-            Result res = db.execute(
+            Result res = transaction.execute(
                     "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
                             "YIELD value RETURN value" );
             assertThat( "The plan description shouldn't contain the 'Eager' operation", res.getExecutionPlanDescription().toString(),

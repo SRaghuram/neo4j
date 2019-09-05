@@ -78,23 +78,23 @@ class PrepareStoreCopyFilesIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( "CREATE INDEX ON :Person(id)" ).close();
+            transaction.execute( "CREATE INDEX ON :Person(id)" ).close();
             transaction.execute( "CALL db.createIndex(':Person(name)', $provider)", Map.of( "provider", NATIVE30.providerName() ) ).close();
-            db.execute( "CALL db.index.fulltext.createNodeIndex('nameAndTitle', ['Person'], ['name', 'title'])" ).close();
-            db.execute( "CALL db.index.fulltext.createRelationshipIndex('description', ['KNOWS'], ['description'])" ).close();
+            transaction.execute( "CALL db.index.fulltext.createNodeIndex('nameAndTitle', ['Person'], ['name', 'title'])" ).close();
+            transaction.execute( "CALL db.index.fulltext.createRelationshipIndex('description', ['KNOWS'], ['description'])" ).close();
             transaction.commit();
         }
         try ( Transaction transaction = db.beginTx() )
         {
-            db.execute( "CALL db.awaitIndexes(60)" ).close();
+            transaction.execute( "CALL db.awaitIndexes(60)" ).close();
 
-            db.execute( "UNWIND range(1, 100) AS x " +
+            transaction.execute( "UNWIND range(1, 100) AS x " +
                     "WITH x AS x, x + 1 AS y " +
                     "CREATE (p1:Person {id: x, name: 'name-' + x, title: 'title-' + x})," +
                     "       (p2:Person {id: y, name: 'name-' + y, title: 'title-' + y})," +
                     "       (p1)-[:KNOWS {description: 'description-' + x + '-' + y}]->(p2)" ).close();
 
-            db.execute( "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()" ).close();
+            transaction.execute( "CALL db.index.fulltext.awaitEventuallyConsistentIndexRefresh()" ).close();
             transaction.commit();
         }
     }

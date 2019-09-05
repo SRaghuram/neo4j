@@ -1217,8 +1217,8 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     graph.createIndex("Person", "gender")
 
-    graph.inTx({
-      val result = graph.execute("CYPHER PROFILE MATCH (a:Person) WHERE a.gender > 'female' RETURN count(a) as c")
+    graph.withTx( tx => {
+      val result = tx.execute("CYPHER PROFILE MATCH (a:Person) WHERE a.gender > 'female' RETURN count(a) as c")
 
       import scala.collection.JavaConverters._
       result.asScala.toList.map(_.asScala) should equal(List(Map("c" -> 60)))
@@ -1253,7 +1253,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   test("should not range seek index with 1 unique value (gt issue #12225)") {
 
-    graph.inTx(graph.execute(
+    graph.withTx( tx => tx.execute(
       """UNWIND range(1, 10) AS i
         |CREATE (t:Tweet {created_date: 1})
         |WITH t, i

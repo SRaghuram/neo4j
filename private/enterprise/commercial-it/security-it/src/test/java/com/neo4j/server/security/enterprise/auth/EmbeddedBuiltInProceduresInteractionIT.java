@@ -29,7 +29,6 @@ import org.neo4j.test.DoubleLatch;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 
 public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInteractionTestBase<CommercialLoginContext>
 {
@@ -62,7 +61,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
         try ( InternalTransaction tx = graph
                 .beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
         {
-            Result result = graph.execute(  "CALL dbms.listQueries" );
+            Result result = tx.execute(  "CALL dbms.listQueries" );
             assertFalse( result.hasNext() );
             tx.commit();
         }
@@ -84,7 +83,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
 
         try ( Transaction transaction = graph.beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
         {
-            graph.execute( "CALL dbms.killQuery('" + id + "')" );
+            transaction.execute( "CALL dbms.killQuery('" + id + "')" );
             throw new AssertionError( "Expected exception to be thrown" );
         }
         catch ( QueryExecutionException e )

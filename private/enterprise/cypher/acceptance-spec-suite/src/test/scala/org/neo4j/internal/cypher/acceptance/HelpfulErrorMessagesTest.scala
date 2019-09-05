@@ -226,8 +226,8 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
   }
 
   test("should be able to use compiled expression engine with slotted") {
-    inTx( _ =>
-      graph.execute("CYPHER runtime=slotted expressionEngine=compiled RETURN 1").resultAsString() should not be null
+    inTx( tx =>
+      tx.execute("CYPHER runtime=slotted expressionEngine=compiled RETURN 1").resultAsString() should not be null
     )
   }
 }

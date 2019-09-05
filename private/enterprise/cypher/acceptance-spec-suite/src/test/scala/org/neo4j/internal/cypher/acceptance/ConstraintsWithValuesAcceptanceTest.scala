@@ -27,7 +27,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when existence constraint for multiple labels") {
     // Given
     createSingleIndexes()
-    graph.inTx(graph.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
+    graph.withTx( tx => tx.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
     graph.createExistenceConstraint("Awesome", "prop1")
     graph.createExistenceConstraint("Label", "prop1")
 
@@ -38,7 +38,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when existence constraint for the first of multiple labels") {
     // Given
     createSingleIndexes()
-    graph.inTx(graph.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
+    graph.withTx( tx => tx.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
     graph.createExistenceConstraint("Label", "prop1")
 
     // Then
@@ -48,7 +48,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when existence constraint for the last of multiple labels") {
     // Given
     createSingleIndexes()
-    graph.inTx(graph.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
+    graph.withTx( tx => tx.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
     graph.createExistenceConstraint("Awesome", "prop1")
 
     // Then
@@ -147,7 +147,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     assertIndexScan(standardResult, "Awesome")
 
     // When
-    graph.inTx(graph.execute("DROP CONSTRAINT ON (n:Awesome) ASSERT exists(n.prop1)"))
+    graph.withTx( tx => tx.execute("DROP CONSTRAINT ON (n:Awesome) ASSERT exists(n.prop1)"))
 
     // Then
     assertNodeByLabelScan(standardResult)
@@ -162,7 +162,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     assertIndexScan(standardResult, "Awesome")
 
     // When
-    graph.inTx(graph.execute("DROP INDEX ON :Awesome(prop1)"))
+    graph.withTx( tx => tx.execute("DROP INDEX ON :Awesome(prop1)"))
 
     // Then
     assertNodeByLabelScan(standardResult)

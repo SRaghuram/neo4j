@@ -616,7 +616,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
                          label1: String = "User",
                  label2: String = "User",
                  type1: String = "KNOWS"): Unit = {
-    graph.execute(
+    tx.execute(
       s"""
          |CREATE (p:$label1 {name: 'Petra'})
          |CREATE (s:$label2 {name: 'Steve'})
@@ -644,8 +644,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
                        label3: String = "User",
                        type2: String = "KNOWS",
                        type3: String = "KNOWS"): Unit = {
-    graph.execute("MATCH (m:X)-[r]->() DELETE m, r")
-    graph.execute(
+    tx.execute("MATCH (m:X)-[r]->() DELETE m, r")
+    tx.execute(
       s"""
          |MATCH (p:$label1 {name: 'Petra'})
          |MATCH (s:$label2 {name: 'Steve'})

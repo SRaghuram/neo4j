@@ -57,7 +57,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
         try ( Transaction transaction1 = localGraph.beginTx() )
         {
-            Result result = localGraph.execute( "EXPLAIN CALL dbms.security.listUsers" );
+            Result result = transaction1.execute( "EXPLAIN CALL dbms.security.listUsers" );
             String description =
                     String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(), "dbms.security.listUsers only applies to native users." );
             assertThat( containsNotification( result, description ), equalTo( true ) );
@@ -76,7 +76,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
         try ( Transaction transaction1 = localGraph.beginTx() )
         {
-            Result result = localGraph.execute( "EXPLAIN CALL dbms.security.listUsers" );
+            Result result = transaction1.execute( "EXPLAIN CALL dbms.security.listUsers" );
             String description =
                     String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(), "dbms.security.listUsers only applies to native users." );
             assertThat( containsNotification( result, description ), equalTo( false ) );

@@ -95,7 +95,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( "CALL dbms.security.createUser('newAdmin', 'testPassword', false)" );
+            tx.execute( "CALL dbms.security.createUser('newAdmin', 'testPassword', false)" );
             tx.commit();
         } );
 
@@ -114,7 +114,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( "CALL dbms.security.createUser('" + preBackupUsername + "', 'testPassword', false)" );
+            tx.execute( "CALL dbms.security.createUser('" + preBackupUsername + "', 'testPassword', false)" );
             tx.commit();
         } );
 
@@ -122,7 +122,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( "CALL dbms.security.createUser('" + postBackupUsername + "', 'testPassword', false)" );
+            tx.execute( "CALL dbms.security.createUser('" + postBackupUsername + "', 'testPassword', false)" );
             tx.commit();
         } );
 
@@ -144,7 +144,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.coreTx( ( db, tx ) ->
         {
-            Result securityResults = db.execute( "CALL dbms.security.listUsers() YIELD username" );
+            Result securityResults = tx.execute( "CALL dbms.security.listUsers() YIELD username" );
             Set<String> systemUsernames = securityResults.stream().map( r -> (String) r.get( "username" ) ).collect( Collectors.toSet() );
             assertTrue( systemUsernames.contains( preBackupUsername ) );
             assertFalse( systemUsernames.contains( postBackupUsername ) );

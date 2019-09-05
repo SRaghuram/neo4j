@@ -98,7 +98,7 @@ public class LdbcIndexer
                 String query = "CREATE INDEX ON :" + label + "(" + property + ")";
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.execute( query );
+                    tx.execute( query );
                     tx.commit();
                 }
                 catch ( Exception createException )
@@ -130,7 +130,7 @@ public class LdbcIndexer
                 String query = "CREATE CONSTRAINT ON (node:" + label + ") ASSERT node." + property + " IS UNIQUE";
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.execute( query );
+                    tx.execute( query );
                     tx.commit();
                 }
                 catch ( Exception createException )
@@ -162,7 +162,7 @@ public class LdbcIndexer
                 LOGGER.info( format( "\t(%s , %s)", label, property ) );
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.execute(
+                    tx.execute(
                             "CREATE CONSTRAINT ON (node:" + label.name() + ") ASSERT exists(node." + property + ")" );
                     tx.commit();
                 }
@@ -188,7 +188,7 @@ public class LdbcIndexer
                 LOGGER.info( format( "\t(%s , %s)", type, property ) );
                 try ( Transaction tx = db.beginTx() )
                 {
-                    db.execute( "CREATE CONSTRAINT ON (rel:" + type.name() + ") ASSERT exists(rel." + property + ")" );
+                    tx.execute( "CREATE CONSTRAINT ON (rel:" + type.name() + ") ASSERT exists(rel." + property + ")" );
                     tx.commit();
                 }
                 catch ( Exception createException )

@@ -116,7 +116,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
         |OPTIONAL MATCH (h)<--(g:G)<--(c)
         |USING JOIN ON c
         |RETURN a,b,c,g,h""".stripMargin
-    graph.inTx(graph.execute(query).close()) // should not crash
+    graph.withTx( tx => tx.execute(query).close()) // should not crash
   }
 
 test("larger optional match join should not crash") {
@@ -127,7 +127,7 @@ test("larger optional match join should not crash") {
         |OPTIONAL MATCH (g:G)<--(c)
         |USING JOIN ON c
         |RETURN b,c,d,g""".stripMargin
-    graph.inTx(graph.execute(query).close()) // should not crash
+    graph.withTx( tx => tx.execute(query).close()) // should not crash
   }
 
   test("order in which join hints are solved should not matter") {
@@ -138,11 +138,11 @@ test("larger optional match join should not crash") {
         |USING JOIN ON d
         |WHERE a.prop = e.prop
         |RETURN b, d""".stripMargin
-    graph.inTx(graph.execute(query).close()) // should not crash
+    graph.withTx( tx => tx.execute(query).close()) // should not crash
   }
 
   test("should not crash on any() on rhs of NodeHashJoin") {
-    graph.inTx(graph.execute("CREATE (a: A {prop: 1})-[:X]->(b {prop: 2})-[:X]->(c {prop: 1, list: [1,3,4]})"))
+    graph.withTx( tx => tx.execute("CREATE (a: A {prop: 1})-[:X]->(b {prop: 2})-[:X]->(c {prop: 1, list: [1,3,4]})"))
 
     val query =
       """MATCH (a: A)-[:X]->(b)-[:X]->(c)

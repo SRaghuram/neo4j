@@ -836,9 +836,9 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("subtracting temporal instants should give meaningful error message") {
     for (func <- Seq("date", "localtime", "time", "localdatetime", "datetime")) {
       val query = s"RETURN $func() - $func()"
-      val exception =graph.inTx(
+      val exception =graph.withTx( tx =>
         intercept[QueryExecutionException] {
-          println(graph.execute(query).next())
+          println(tx.execute(query).next())
         })
       exception.getMessage should startWith("Type mismatch: expected Duration but was")
     }
@@ -1053,9 +1053,9 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   private def shouldReturnSomething(func: String): Unit = {
-    graph.inTx({
+    graph.withTx( tx => {
       val query = s"RETURN $func"
-      graph.execute(query).next() should not be null
+      tx.execute(query).next() should not be null
     })
   }
 

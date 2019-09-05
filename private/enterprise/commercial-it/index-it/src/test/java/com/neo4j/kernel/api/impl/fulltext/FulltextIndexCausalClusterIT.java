@@ -122,10 +122,10 @@ class FulltextIndexCausalClusterIT
         } );
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
-            db.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
             tx.commit();
         } );
 
@@ -146,10 +146,10 @@ class FulltextIndexCausalClusterIT
     {
         cluster.coreTx( ( db, tx ) ->
         {
-            db.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
-            db.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) ) ).close();
             tx.commit();
         } );
 
@@ -196,8 +196,8 @@ class FulltextIndexCausalClusterIT
         {
             String nodeString = asConfigString( asProcedureConfigMap( analyserNodeIndex, eventuallyConsistentNodeIndex ) );
             String relString = asConfigString( asProcedureConfigMap( analyzerRelIndex, eventuallyConsistentRelIndex ) );
-            db.execute( format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ), nodeString ) ).close();
-            db.execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, array( REL.name() ), array( PROP, PROP2 ), relString ) ).close();
+            tx.execute( format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ), nodeString ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, array( REL.name() ), array( PROP, PROP2 ), relString ) ).close();
             tx.commit();
         } );
 
@@ -249,7 +249,7 @@ class FulltextIndexCausalClusterIT
             try ( Transaction tx = db.beginTx() )
             {
                 db.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
-                db.execute( AWAIT_REFRESH ).close();
+                tx.execute( AWAIT_REFRESH ).close();
                 DependencyResolver dependencyResolver = db.getDependencyResolver();
                 TransactionIdStore transactionIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
                 appliedTransactions.add( transactionIdStore.getLastClosedTransactionId() );
@@ -307,7 +307,7 @@ class FulltextIndexCausalClusterIT
         {
             List<Long> expected = Arrays.stream( entityIds ).boxed().collect( Collectors.toList() );
             String queryCall = queryNodes ? QUERY_NODES : QUERY_RELS;
-            try ( Result result = db.execute( format( queryCall, index, queryString ) ) )
+            try ( Result result = transaction.execute( format( queryCall, index, queryString ) ) )
             {
                 Set<Long> results = new HashSet<>();
                 while ( result.hasNext() )

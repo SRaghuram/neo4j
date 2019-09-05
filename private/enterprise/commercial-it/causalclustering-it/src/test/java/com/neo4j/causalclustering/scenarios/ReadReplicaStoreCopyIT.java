@@ -88,7 +88,7 @@ class ReadReplicaStoreCopyIT
         {
             cluster.coreTx( ( db, tx ) ->
             {
-                db.execute( "CREATE ()" );
+                tx.execute( "CREATE ()" );
                 tx.commit();
             } );
 

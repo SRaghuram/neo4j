@@ -11,9 +11,9 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 class RemoveAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   test("remove with case expression should work gh #10831") {
-    inTx { _ =>
+    inTx { tx =>
       // given
-      graph.execute("CREATE (:Person {name: 'Alice', age: 23})-[:KNOWS]->(:Person {name:'Bob', age: 24})")
+      tx.execute("CREATE (:Person {name: 'Alice', age: 23})-[:KNOWS]->(:Person {name:'Bob', age: 24})")
     }
 
     // when

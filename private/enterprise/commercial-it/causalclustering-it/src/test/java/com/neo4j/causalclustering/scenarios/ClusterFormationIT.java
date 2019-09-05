@@ -61,7 +61,7 @@ public class ClusterFormationIT
             // (1) BuiltInProcedures from community
             try ( var transaction = gdb.beginTx() )
             {
-                try ( var result = gdb.execute( "CALL dbms.procedures()" ) )
+                try ( var result = transaction.execute( "CALL dbms.procedures()" ) )
                 {
                     assertTrue( result.hasNext() );
                 }
@@ -70,7 +70,7 @@ public class ClusterFormationIT
             // (2) BuiltInProcedures from enterprise
             try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
             {
-                try ( Result result = gdb.execute( "CALL dbms.listQueries()" ) )
+                try ( Result result = tx.execute( "CALL dbms.listQueries()" ) )
                 {
                     assertTrue( result.hasNext() );
                 }

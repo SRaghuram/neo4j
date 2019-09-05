@@ -82,7 +82,7 @@ class ClusterOverviewProcedureIT
         var db = member.defaultDatabase();
         try ( var transaction = db.beginTx() )
         {
-            try ( var result = db.execute( "CALL dbms.cluster.overview()" ) )
+            try ( var result = transaction.execute( "CALL dbms.cluster.overview()" ) )
             {
                 return asList( result );
             }
