@@ -28,6 +28,7 @@ object PipelineTreeBuilder {
                                 val headPlan: LogicalPlan) {
     var inputBuffer: BufferDefinitionBuild = _
     var outputDefinition: OutputDefinition = NoOutput
+    val fusedHeadPlans = new ArrayBuffer[LogicalPlan]
     val middlePlans = new ArrayBuffer[LogicalPlan]
     var serial: Boolean = false
   }
@@ -177,6 +178,7 @@ object PipelineTreeBuilder {
   * Final conversion to [[ExecutionGraphDefinition]] is done by [[PipelineBuilder]].
   */
 class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
+                          operatorFusionPolicy: OperatorFusionPolicy,
                           stateDefinition: ExecutionStateDefinitionBuild,
                           slotConfigurations: SlotConfigurations)
   extends TreeBuilder[PipelineDefinitionBuild, ApplyBufferDefinitionBuild] {
@@ -187,6 +189,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def newPipeline(plan: LogicalPlan) = {
     val pipeline = new PipelineDefinitionBuild(PipelineId(pipelines.size), plan)
     pipelines += pipeline
+    if (operatorFusionPolicy.canFuse(plan))
+      pipeline.fusedHeadPlans += plan
     pipeline
   }
 
@@ -257,6 +261,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   override protected def onOneChildPlan(plan: LogicalPlan,
                                         source: PipelineDefinitionBuild,
                                         argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
+
+    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuse(plan)
+
     plan match {
       case produceResult: ProduceResult =>
         if (breakingPolicy.breakOn(plan)) {
@@ -283,7 +290,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Optional =>
-        if (breakingPolicy.breakOn(plan)) {
+        if (canFuse) {
+          source.fusedHeadPlans += plan
+          source
+        } else if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           val optionalMorselBuffer = outputToOptionalMorselBuffer(source, plan, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = optionalMorselBuffer
@@ -298,7 +308,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: OptionalExpand |
            _: FindShortestPaths |
            _: UnwindCollection =>
-        if (breakingPolicy.breakOn(plan)) {
+        if (canFuse) {
+          source.fusedHeadPlans += plan
+          source
+        } else if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           pipeline.inputBuffer = outputToBuffer(source, plan)
           pipeline
@@ -308,10 +321,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Limit =>
-        val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
-        markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
-        source.middlePlans += plan
-        source
+        if (canFuse) {
+          source.fusedHeadPlans += plan
+          source
+        } else {
+          val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
+          markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
+          source.middlePlans += plan
+          source
+        }
 
       case _: Distinct =>
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, false)
@@ -319,9 +337,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         source.middlePlans += plan
         source
 
+        //TODO shouldn't we ask the breaking policy here?
       case _ =>
-        source.middlePlans += plan
-        source
+        if (canFuse) {
+          source.fusedHeadPlans += plan
+          source
+        } else {
+          source.middlePlans += plan
+          source
+        }
     }
   }
 

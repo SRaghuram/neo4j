@@ -6,12 +6,14 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
+import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
 
-object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
+case class MorselPipelineBreakingPolicy(fusingPolicy: OperatorFusionPolicy) extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
+
+    def canFuseOneChildOperator: Boolean = fusingPolicy.canFuse(lp) && fusingPolicy.canFuse(lp.lhs.get)
 
     lp match {
       // leaf operators
@@ -33,8 +35,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
       // 1 child operators
       case e: Expand =>
-        if (e.mode == ExpandAll)
-          true
+        if (e.mode == ExpandAll) !canFuseOneChildOperator
         else
           throw unsupported("ExpandInto")
       case _: UnwindCollection |
@@ -43,7 +44,7 @@ object MorselPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: Aggregation |
            _: Optional |
            _: VarExpand
-    => true
+    => !canFuseOneChildOperator
 
       case _: ProduceResult |
            _: Limit |

@@ -11,7 +11,7 @@ import java.util.Optional
 import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PhysicalPlanner, PipelineBuilder}
+import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, OperatorFusionPolicy, PhysicalPlanner, PipelineBuilder}
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
@@ -43,10 +43,12 @@ class MorselRuntime(parallelExecution: Boolean,
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
+    val operatorFusionPolicy = OperatorFusionPolicy(context.config.fuseOperators)
+    val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
-                                            MorselPipelineBreakingPolicy,
+                                            breakingPolicy,
                                             allocateArgumentSlots = true)
 
     MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
@@ -65,7 +67,9 @@ class MorselRuntime(parallelExecution: Boolean,
     val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
 
     DebugLog.logDiff("PhysicalPlanner.plan")
-    val executionGraphDefinition = PipelineBuilder.build(MorselPipelineBreakingPolicy, physicalPlan)
+    val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
+
+    //val executionGraphDefinition = PipelineBuilder.build(MorselPipelineBreakingPolicy, physicalPlan)
     val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexRegistrator, query.semanticTable)
 
     DebugLog.logDiff("PipelineBuilder")

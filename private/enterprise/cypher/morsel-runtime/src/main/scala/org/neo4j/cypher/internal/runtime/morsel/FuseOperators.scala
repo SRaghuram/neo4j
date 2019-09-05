@@ -23,9 +23,9 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id.INVALID_ID
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.schema.IndexOrder
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id.INVALID_ID
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     fusingEnabled: Boolean,
@@ -121,50 +121,64 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // HeadPlan    -> Template3(inner=Template2)
     val innermostTemplate = new DelegateOperatorTaskTemplate()(expressionCompiler)
 
-    val (innerTemplate, initFusedPlans, initUnhandledOutput) =
-      output match {
-        case ProduceResultOutput(p) =>
-          innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
-          innermostTemplate.shouldCheckDemand = true // The produce pipeline should follow subscription demand for reactive result support
-          val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(expressionCompiler)
-          (template, List(p), NoOutput)
+    val (innerTemplate, initFusedPlans, initUnhandledOutput) = {
+      if (middlePlans.nonEmpty) {
+        (innermostTemplate, List.empty[LogicalPlan], output)
+      } else {
+        output match {
+          case ProduceResultOutput(p) =>
+            innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
+            innermostTemplate
+              .shouldCheckDemand = true // The produce pipeline should follow subscription demand for reactive result support
+          val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(
+            expressionCompiler)
+            (template, List(p), NoOutput)
 
-        case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap)) if groupingExpressions.nonEmpty =>
-          innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
-          innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
-          innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
+          case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions,
+                                                          aggregationExpressionsMap)) if groupingExpressions.nonEmpty =>
+            innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
+            innermostTemplate
+              .shouldCheckDemand = false // No need to check subscription demand when not in final pipeline
+            innermostTemplate
+              .shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
           val applyPlanId = physicalPlan.applyPlans(id)
-          val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
+            val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
 
-          // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
-          val outputSlots = physicalPlan.slotConfigurations(p.id)
+            // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
+            val outputSlots = physicalPlan.slotConfigurations(p.id)
 
-          val aggregators = Array.newBuilder[Aggregator]
-          val aggregationExpressions = Array.newBuilder[Expression]
-          aggregationExpressionsMap.foreach {
-            case (_, astExpression) =>
-              val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
-              aggregators += aggregator
-              aggregationExpressions += innerAstExpression
-          }
+            val aggregators = Array.newBuilder[Aggregator]
+            val aggregationExpressions = Array.newBuilder[Expression]
+            aggregationExpressionsMap.foreach {
+              case (_, astExpression) =>
+                val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
+                aggregators += aggregator
+                aggregationExpressions += innerAstExpression
+            }
 
-          val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
-          val template =
-            new AggregationMapperOperatorTaskTemplate(innermostTemplate,
-                                                      p.id,
-                                                      argumentSlotOffset,
-                                                      aggregators.result(),
-                                                      bufferId,
-                                                      aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
-                                                      groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
-                                                      aggregationAstExpressions)(expressionCompiler)
-          (template, List(p), NoOutput)
+            val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
+            val template =
+              new AggregationMapperOperatorTaskTemplate(innermostTemplate,
+                                                        p.id,
+                                                        argumentSlotOffset,
+                                                        aggregators.result(),
+                                                        bufferId,
+                                                        aggregationExpressionsCreator = () => aggregationAstExpressions
+                                                          .map(e => compileExpression(e)()),
+                                                        groupingKeyExpressionCreator = compileGroupingKey(
+                                                          groupingExpressions, outputSlots,
+                                                          orderToLeverage = Seq.empty),
+                                                        aggregationAstExpressions)(expressionCompiler)
+            (template, List(p), NoOutput)
 
-        case unhandled =>
-          (innermostTemplate, List.empty[LogicalPlan], unhandled)
+          case unhandled =>
+            (innermostTemplate, List.empty[LogicalPlan], unhandled)
+        }
       }
+    }
 
-    val reversePlans = (headPlan +: middlePlans).reverse
+    //val reversePlans = (headPlan +: middlePlans).reverse
+    val reversePlans = pipeline.fusedHeadPlans.reverse
 
     def cantHandle(acc: FusionPlan,
                    nextPlan: LogicalPlan) = {
@@ -262,7 +276,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val serialExecutionOnly: Boolean = !parallelExecution || pipeline.serial
 
     val fusedPipeline =
-      reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, List.empty, initUnhandledOutput)) {
+      reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, middlePlans.toList, initUnhandledOutput)) {
         case (acc, nextPlan) => nextPlan match {
 
           case plan@plans.AllNodesScan(nodeVariableName, _) =>
@@ -444,9 +458,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
             val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
             }
+
             val newTemplate = new ExpandAllOperatorTaskTemplate(acc.template,
                                                                 plan.id,
                                                                 innermostTemplate,
+                                                                plan eq headPlan,
                                                                 fromSlot,
                                                                 relOffset,
                                                                 toOffset,

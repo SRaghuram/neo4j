@@ -33,6 +33,7 @@ object PipelineId {
   */
 case class PipelineDefinition(id: PipelineId,
                               headPlan: LogicalPlan,
+                              fusedHeadPlans: IndexedSeq[LogicalPlan],
                               inputBuffer: BufferDefinition,
                               outputDefinition: OutputDefinition,
                               middlePlans: IndexedSeq[LogicalPlan],

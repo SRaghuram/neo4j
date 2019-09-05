@@ -87,6 +87,11 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguratio
     }
   }
 
+  final def getLongAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
+    val local = locals.getLocalForLongSlot(offset)
+    if (local == null) orElse else load(local)
+  }
+
   override final def getRefAt(offset: Int): IntermediateRepresentation = {
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
@@ -100,6 +105,11 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguratio
     }
   }
 
+  final def getRefAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
+    val local = locals.getLocalForRefSlot(offset)
+    if (local == null) orElse else load(local)
+  }
+
   override final def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {
     var local = locals.getLocalForLongSlot(offset)
     if (local == null) {
@@ -107,6 +117,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguratio
     }
     assign(local, value)
   }
+
+  def hasLongAt(offset: Int): Boolean = locals.getLocalForLongSlot(offset) != null
+
+  def hasRefAt(offset: Int): Boolean = locals.getLocalForRefSlot(offset) != null
 
   override final def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {
     var local = locals.getLocalForRefSlot(offset)

@@ -140,6 +140,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   def produceResult(out: String*): LogicalPlan => LogicalPlan = ProduceResult(_, out.toSeq)
 
   class PipelineBuilder(head: LogicalPlan) {
+    private val policy = OperatorFusionPolicy(true)
     private val slots = mutable.Map.empty[String, Slot]
     private var longCount = 0
     private var refCount = 0
@@ -148,6 +149,13 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     private val applyPlansOffsets = mutable.Map[Id, Int](Id(0) -> 0)
     val applyPlans = new ApplyPlans()
     val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
+    if (policy.canFuse(head)) {
+      pipeline.fusedHeadPlans += head
+    }
+
+    private def canFuse(plan: LogicalPlan): Boolean =
+      pipeline.fusedHeadPlans.nonEmpty && (pipeline.fusedHeadPlans.last eq plan.lhs.get) && policy.canFuse(plan)
+
 
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
       current = f(current)
@@ -155,7 +163,12 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       current match {
         case p: ProduceResult => pipeline.outputDefinition = ProduceResultOutput(p)
         case p: Aggregation => pipeline.outputDefinition = ReduceOutput(buffer(), p)
-        case p => pipeline.middlePlans.append(p)
+        case p =>
+          if (canFuse(p)) {
+            pipeline.fusedHeadPlans += p
+          } else {
+            pipeline.middlePlans.append(p)
+          }
       }
       this
     }
@@ -216,6 +229,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                   parallelExecution = true)
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
                                       pipelineBuilder.pipeline.headPlan,
+                                      pipelineBuilder.pipeline.fusedHeadPlans,
                                       mock[BufferDefinition](RETURNS_DEEP_STUBS),
                                       pipelineBuilder.pipeline.outputDefinition,
                                       pipelineBuilder.pipeline.middlePlans,

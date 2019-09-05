@@ -14,10 +14,11 @@ object PipelineBuilder {
     * Builds an [[ExecutionGraphDefinition]], including [[PipelineDefinition]]s, for a given physical plan.
     */
   def build(breakingPolicy: PipelineBreakingPolicy,
+            operatorFusionPolicy: OperatorFusionPolicy,
             physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
 
     val executionStateDefinitionBuild = new ExecutionStateDefinitionBuild(physicalPlan)
-    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations)
+    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, operatorFusionPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations)
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,
@@ -31,6 +32,7 @@ object PipelineBuilder {
     PipelineDefinition(
       pipeline.id,
       pipeline.headPlan,
+      pipeline.fusedHeadPlans,
       mapBuffer(pipeline.inputBuffer),
       pipeline.outputDefinition,
       pipeline.middlePlans,
