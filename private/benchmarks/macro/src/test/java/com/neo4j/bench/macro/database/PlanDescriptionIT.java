@@ -20,7 +20,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
@@ -48,9 +47,6 @@ import static org.junit.Assert.assertTrue;
 public class PlanDescriptionIT
 {
     @Rule
-    public final ExpectedException exception = ExpectedException.none();
-
-    @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
@@ -64,7 +60,7 @@ public class PlanDescriptionIT
                 Path neo4jConfigFile = temporaryFolder.newFile().toPath();
                 try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
                                                                        temporaryFolder.newFolder().toPath(), /* store */
-                                                                       neo4jConfigFile ) /* neo4j config */ )
+                                                                       neo4jConfigFile ) )
                 {
                     for ( Query query : workload.queries() )
                     {
