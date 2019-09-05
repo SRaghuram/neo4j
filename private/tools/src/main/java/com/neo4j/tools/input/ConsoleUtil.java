@@ -44,7 +44,7 @@ public class ConsoleUtil
         {
             String token = quoteTokenizer.nextToken();
             token = token.trim();
-            if ( token.length() == 0 )
+            if ( token.isEmpty() )
             {
                 // Skip it
             }
