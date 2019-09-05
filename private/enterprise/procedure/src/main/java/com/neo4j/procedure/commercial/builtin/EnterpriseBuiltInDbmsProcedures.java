@@ -43,6 +43,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.KernelTransactions;
@@ -91,6 +92,7 @@ public class EnterpriseBuiltInDbmsProcedures
     @Context
     public SecurityContext securityContext;
 
+    @SystemProcedure
     @Description( "List all accepted network connections at this instance that are visible to the user." )
     @Procedure( name = "dbms.listConnections", mode = DBMS )
     public Stream<ListConnectionResult> listConnections()
@@ -106,6 +108,7 @@ public class EnterpriseBuiltInDbmsProcedures
                 .map( connection -> new ListConnectionResult( connection, timeZone ) );
     }
 
+    @SystemProcedure
     @Description( "Kill network connection with the given connection id." )
     @Procedure( name = "dbms.killConnection", mode = DBMS )
     public Stream<ConnectionTerminationResult> killConnection( @Name( "id" ) String id )
@@ -113,6 +116,7 @@ public class EnterpriseBuiltInDbmsProcedures
         return killConnections( singletonList( id ) );
     }
 
+    @SystemProcedure
     @Description( "Kill all network connections with the given connection ids." )
     @Procedure( name = "dbms.killConnections", mode = DBMS )
     public Stream<ConnectionTerminationResult> killConnections( @Name( "ids" ) List<String> ids )
@@ -144,7 +148,8 @@ public class EnterpriseBuiltInDbmsProcedures
         return new ConnectionTerminationFailedResult( id );
     }
 
-    @Description( "List all user functions in the DBMS." )
+    @SystemProcedure
+    @Description( "List all functions in the DBMS." )
     @Procedure( name = "dbms.functions", mode = DBMS )
     public Stream<FunctionResult> listFunctions()
     {
@@ -197,6 +202,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SystemProcedure
     @Description( "List all procedures in the DBMS." )
     @Procedure( name = "dbms.procedures", mode = DBMS )
     public Stream<ProcedureResult> listProcedures()
@@ -219,8 +225,9 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String name;
         public final String signature;
         public final String description;
-        public final List<String> roles;
         public final String mode;
+        public final List<String> roles;
+        public final boolean worksOnSystem;
 
         public ProcedureResult( ProcedureSignature signature )
         {
@@ -228,6 +235,7 @@ public class EnterpriseBuiltInDbmsProcedures
             this.signature = signature.toString();
             this.description = signature.description().orElse( "" );
             this.mode = signature.mode().toString();
+            this.worksOnSystem = signature.systemProcedure();
             roles = new ArrayList<>();
             switch ( signature.mode() )
             {
@@ -267,6 +275,7 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Updates a given setting value. Passing an empty value will result in removing the configured value " +
             "and falling back to the default value. Changes will not persist and will be lost if the server is restarted." )
     @Procedure( name = "dbms.setConfigValue", mode = DBMS )
@@ -281,6 +290,7 @@ public class EnterpriseBuiltInDbmsProcedures
     ==================================================================================
      */
 
+    @SystemProcedure
     @Description( "List all queries currently executing at this instance that are visible to the user." )
     @Procedure( name = "dbms.listQueries", mode = DBMS )
     public Stream<QueryStatusResult> listQueries() throws InvalidArgumentsException
@@ -304,6 +314,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SystemProcedure
     @Description( "List all transactions currently executing at this instance that are visible to the user." )
     @Procedure( name = "dbms.listTransactions", mode = DBMS )
     public Stream<TransactionStatusResult> listTransactions() throws InvalidArgumentsException
@@ -335,6 +346,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SystemProcedure
     @Description( "Kill transaction with provided id." )
     @Procedure( name = "dbms.killTransaction", mode = DBMS )
     public Stream<TransactionMarkForTerminationResult> killTransaction( @Name( "id" ) String transactionId )
@@ -343,6 +355,7 @@ public class EnterpriseBuiltInDbmsProcedures
         return killTransactions( singletonList( transactionId ) );
     }
 
+    @SystemProcedure
     @Description( "Kill transactions with provided ids." )
     @Procedure( name = "dbms.killTransactions", mode = DBMS )
     public Stream<TransactionMarkForTerminationResult> killTransactions( @Name( "ids" ) List<String> transactionIds )
@@ -375,6 +388,7 @@ public class EnterpriseBuiltInDbmsProcedures
         return transactionHandle -> transactionHandle.executingQuery().map( ExecutingQuery::snapshot );
     }
 
+    @SystemProcedure
     @Description( "List the active lock requests granted for the transaction executing the query with the given query id." )
     @Procedure( name = "dbms.listActiveLocks", mode = DBMS )
     public Stream<ActiveLocksResult> listActiveLocks( @Name( "queryId" ) String queryId )
@@ -394,6 +408,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SystemProcedure
     @Description( "Kill all transactions executing the query with the given query id." )
     @Procedure( name = "dbms.killQuery", mode = DBMS )
     public Stream<QueryTerminationResult> killQuery( @Name( "id" ) String idText ) throws InvalidArgumentsException
@@ -419,6 +434,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SystemProcedure
     @Description( "Kill all transactions executing a query with any of the given query ids." )
     @Procedure( name = "dbms.killQueries", mode = DBMS )
     public Stream<QueryTerminationResult> killQueries( @Name( "ids" ) List<String> idTexts ) throws InvalidArgumentsException
@@ -453,6 +469,7 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @Admin
+    @SystemProcedure
     @Description( "List the job groups that are active in the database internal job scheduler." )
     @Procedure( name = "dbms.scheduler.groups", mode = DBMS )
     public Stream<ActiveSchedulingGroup> schedulerActiveGroups()
@@ -462,6 +479,7 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Begin profiling all threads within the given job group, for the specified duration. " +
             "Note that profiling incurs overhead to a system, and will slow it down." )
     @Procedure( name = "dbms.scheduler.profile", mode = DBMS )
@@ -516,6 +534,7 @@ public class EnterpriseBuiltInDbmsProcedures
         return Stream.of( new ProfileResult( baos.toString() ) );
     }
 
+    @SystemProcedure
     @Description( "Initiate and wait for a new check point, or wait any already on-going check point to complete. Note that this temporarily disables the " +
             "`dbms.checkpoint.iops.limit` setting in order to make the check point complete faster. This might cause transaction throughput to degrade " +
             "slightly, due to increased IO load." )
