@@ -9,8 +9,6 @@ import com.ldbc.driver.Db;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.control.LoggingService;
-import com.ldbc.driver.util.Tuple;
-import com.ldbc.driver.util.Tuple3;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery1;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery10;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcQuery11;
@@ -78,34 +76,19 @@ import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.LdbcUpdate7Handl
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.LdbcUpdate8HandlerEmbeddedCypher;
 import com.neo4j.bench.ldbc.operators.Warmup;
 import com.neo4j.bench.ldbc.utils.AnnotatedQueries;
-import com.neo4j.bench.ldbc.utils.AnnotatedQuery;
-import com.neo4j.bench.ldbc.utils.LdbcCompilationTimeEventListener;
-import com.neo4j.bench.ldbc.utils.PlanMeta;
-import com.neo4j.bench.ldbc.utils.PlansSerializer;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
 
-import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.monitoring.Monitors;
 
 import static java.lang.String.format;
 
 public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbCommands
 {
-    public static final String PLANS_FILE_NAME = "-plans.json";
     private final File dbDir;
     private final File configFile;
-    private final File resultsDir;
-    private final String benchmarkName;
-    private final LdbcCompilationTimeEventListener ldbcCompilationTimeEventListener;
     private final LoggingService loggingService;
     private Neo4jConnectionState connection;
     private final AnnotatedQueries annotatedQueries;
@@ -114,18 +97,13 @@ public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbComma
     public SnbInteractiveEmbeddedCypherRegularCommands(
             File dbDir,
             File configFile,
-            File resultsDir,
-            String benchmarkName,
             LoggingService loggingService,
             AnnotatedQueries annotatedQueries,
             boolean doWarmup )
     {
         this.dbDir = dbDir;
         this.configFile = configFile;
-        this.resultsDir = resultsDir;
-        this.benchmarkName = benchmarkName;
         this.loggingService = loggingService;
-        this.ldbcCompilationTimeEventListener = new LdbcCompilationTimeEventListener();
         this.annotatedQueries = annotatedQueries;
         this.doWarmup = doWarmup;
     }
@@ -136,10 +114,6 @@ public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbComma
         GraphDatabaseService db = Neo4jDb.newDb( dbDir, configFile );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( db );
-
-        LdbcCompilationTimeEventListener ldbcCompilationTimeEventListener = new LdbcCompilationTimeEventListener();
-        Monitors monitors = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( Monitors.class );
-        monitors.addMonitorListener( ldbcCompilationTimeEventListener );
 
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         if ( !metadata.timestampResolution().equals( LdbcDateCodec.Resolution.NOT_APPLICABLE ) ||
@@ -168,95 +142,7 @@ public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbComma
     @Override
     public void close() throws IOException
     {
-        try
-        {
-            connection.close();
-            com.ldbc.driver.util.FileUtils.assertDirectoryExists( resultsDir );
-            String plansFilename = benchmarkName + PLANS_FILE_NAME;
-            File plansFile = new File( resultsDir, plansFilename );
-            com.ldbc.driver.util.FileUtils.assertFileDoesNotExist( plansFile );
-            com.ldbc.driver.util.FileUtils.tryCreateFile( plansFile, true );
-            serializePlansAndWriteToFile( plansFile );
-        }
-        catch ( Exception e )
-        {
-            throw new IOException( "Error writing plans file", e );
-        }
-    }
-
-    private void serializePlansAndWriteToFile( File file ) throws DbException
-    {
-        try ( PrintStream out = new PrintStream( new FileOutputStream( file ) ) )
-        {
-            PlansSerializer plansSerializer = new PlansSerializer( out );
-
-            for ( AnnotatedQuery annotatedQuery : annotatedQueries.allQueries() )
-            {
-                if ( connection.hasPlanStatsFor( annotatedQuery.operationType() ) )
-                {
-                    setCompilationTimesAsUndefined(
-                            connection.planMetaFor( annotatedQuery.operationType() ),
-                            annotatedQuery.queryString()
-                    );
-                }
-            }
-
-        List<Tuple3<String,ExecutionPlanDescription,PlanMeta>> plans = new ArrayList<>();
-            for ( AnnotatedQuery annotatedQuery : annotatedQueries.allQueries() )
-            {
-                if ( connection.hasPlanStatsFor( annotatedQuery.operationType() ) )
-                {
-                    plans.add(
-                            Tuple.tuple3(
-                                    annotatedQuery.operationDescription(),
-                                    connection.planDescriptionFor( annotatedQuery.operationType() ),
-                                    connection.planMetaFor( annotatedQuery.operationType() )
-                            )
-                    );
-                }
-            }
-
-            plansSerializer.serializePlansToJson( plans );
-            out.flush();
-            out.close();
-        }
-        catch ( Exception e )
-        {
-            throw new DbException( format( "Error writing query plans to file\nFile: %s", file.getAbsolutePath() ), e );
-        }
-    }
-
-    private void setCompilationTimesAsUndefined(
-            PlanMeta planMeta,
-            String queryString )
-    {
-        setCompilationTimes(
-                planMeta,
-                ldbcCompilationTimeEventListener.getTotalTime( queryString ),
-                ldbcCompilationTimeEventListener.getParsingTimeElapsed( queryString ),
-                ldbcCompilationTimeEventListener.getAstRewritingTimeElapsed( queryString ),
-                ldbcCompilationTimeEventListener.getSemanticCheckTimeElapsed( queryString ),
-                ldbcCompilationTimeEventListener.getLogicalPlanTimeElapsed( queryString ),
-                ldbcCompilationTimeEventListener.getExecutionPlanTimeElapsed( queryString )
-        );
-        planMeta.setQuery( queryString );
-    }
-
-    private void setCompilationTimes(
-            PlanMeta planMeta,
-            long totalTime,
-            long parsingTime,
-            long rewritingTime,
-            long semanticCheckTime,
-            long planningTime,
-            long executionPlanBuildingTime )
-    {
-        planMeta.setTotalTime( totalTime );
-        planMeta.setParsingTime( parsingTime );
-        planMeta.setRewritingTime( rewritingTime );
-        planMeta.setSemanticCheckTime( semanticCheckTime );
-        planMeta.setPlanningTime( planningTime );
-        planMeta.setExecutionPlanBuildingTime( executionPlanBuildingTime );
+        connection.close();
     }
 
     @Override

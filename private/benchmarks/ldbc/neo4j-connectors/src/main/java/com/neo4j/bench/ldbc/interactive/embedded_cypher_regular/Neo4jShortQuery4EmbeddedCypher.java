@@ -6,22 +6,15 @@
 package com.neo4j.bench.ldbc.interactive.embedded_cypher_regular;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Iterators;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery4MessageContent;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery4MessageContentResult;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 import com.neo4j.bench.ldbc.connection.QueryDateUtil;
 import com.neo4j.bench.ldbc.interactive.Neo4jShortQuery4;
-import com.neo4j.bench.ldbc.utils.PlanMeta;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import org.neo4j.graphdb.Result;
-
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withExplain;
-import static com.neo4j.bench.ldbc.utils.AnnotatedQuery.withProfile;
 
 public class Neo4jShortQuery4EmbeddedCypher extends Neo4jShortQuery4<Neo4jConnectionState>
 {
@@ -31,36 +24,11 @@ public class Neo4jShortQuery4EmbeddedCypher extends Neo4jShortQuery4<Neo4jConnec
     public LdbcShortQuery4MessageContentResult execute( Neo4jConnectionState connection,
             LdbcShortQuery4MessageContent operation ) throws DbException
     {
-        if ( connection.isFirstForType( operation.type() ) )
-        {
-            Result defaultPlannerResult = connection.db().execute(
-                    withExplain( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            Result executionResult = connection.db().execute(
-                    withProfile( connection.queries().queryFor( operation ).queryString() ),
-                    buildParams( operation ) );
-            LdbcShortQuery4MessageContentResult results =
-                    Iterators.transform(
-                            executionResult,
-                            new TransformFun( connection.dateUtil() ) ).next();
-            // Commented out because Profile blows up in 2.1
-//            PLAN = executionResult.executionPlanDescription();
-            connection.reportPlanStats(
-                    operation,
-                    PlanMeta.extractPlanner( defaultPlannerResult.getExecutionPlanDescription() ),
-                    PlanMeta.extractPlanner( executionResult.getExecutionPlanDescription() ),
-                    executionResult.getExecutionPlanDescription()
-            );
-            return results;
-        }
-        else
-        {
-            return new TransformFun( connection.dateUtil() ).apply(
-                    connection.db().execute(
-                            connection.queries().queryFor( operation ).queryString(),
-                            buildParams( operation )
-                    ).next() );
-        }
+        return new TransformFun( connection.dateUtil() ).apply(
+                connection.db().execute(
+                        connection.queries().queryFor( operation ).queryString(),
+                        buildParams( operation )
+                ).next() );
     }
 
     private static class TransformFun implements Function<Map<String,Object>,LdbcShortQuery4MessageContentResult>

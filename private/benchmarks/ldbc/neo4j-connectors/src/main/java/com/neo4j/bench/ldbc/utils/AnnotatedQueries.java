@@ -11,6 +11,4 @@ import com.ldbc.driver.Operation;
 public interface AnnotatedQueries
 {
     AnnotatedQuery queryFor( Operation operation ) throws DbException;
-
-    Iterable<AnnotatedQuery> allQueries() throws DbException;
 }
