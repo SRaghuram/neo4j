@@ -13,15 +13,12 @@ import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
-import com.neo4j.bench.ldbc.connection.Neo4jImporter;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 import java.io.File;
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
@@ -29,9 +26,8 @@ import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 public class LdbcCli
 {
     public static final Charset CHARSET = Charsets.UTF_8;
-    public static final Map<String,Object> EMPTY_MAP = new HashMap<>();
 
-    public static void main( String[] args ) throws Exception
+    public static void main( String[] args )
     {
         Cli.<Runnable>builder( "ldbc" )
                 .withDefaultCommand( Help.class )
@@ -47,70 +43,16 @@ public class LdbcCli
                 .run();
     }
 
-    public static void importBatchRegular(
-            File dbDir,
-            File csvDataDir,
-            File importerPropertiesFile,
-            boolean createUniqueConstraints,
-            boolean createMandatoryConstraints,
-            LdbcDateCodec.Format fromCsvFormat,
-            LdbcDateCodec.Format toNeo4JFormat ) throws Exception
-    {
-        main(
-                ImportCommand.buildArgs(
-                        Neo4jImporter.BATCH,
-                        CsvSchema.CSV_REGULAR,
-                        Neo4jSchema.NEO4J_REGULAR,
-                        dbDir,
-                        csvDataDir,
-                        importerPropertiesFile,
-                        createUniqueConstraints,
-                        createMandatoryConstraints,
-                        fromCsvFormat,
-                        toNeo4JFormat,
-                        LdbcDateCodec.Resolution.NOT_APPLICABLE
-                )
-        );
-    }
-
-    public static void importBatchDense1(
-            File dbDir,
-            File csvDataDir,
-            File importerPropertiesFile,
-            boolean createUniqueConstraints,
-            boolean createMandatoryConstraints,
-            LdbcDateCodec.Format fromCsvFormat,
-            LdbcDateCodec.Format toNeo4JFormat,
-            LdbcDateCodec.Resolution timestampResolution ) throws Exception
-    {
-        main(
-                ImportCommand.buildArgs(
-                        Neo4jImporter.BATCH,
-                        CsvSchema.CSV_MERGE,
-                        Neo4jSchema.NEO4J_DENSE_1,
-                        dbDir,
-                        csvDataDir,
-                        importerPropertiesFile,
-                        createUniqueConstraints,
-                        createMandatoryConstraints,
-                        fromCsvFormat,
-                        toNeo4JFormat,
-                        timestampResolution
-                )
-        );
-    }
-
     public static void importParallelRegular(
             File dbDir,
             File csvDataDir,
             boolean createUniqueConstraints,
             boolean createMandatoryConstraints,
             LdbcDateCodec.Format fromCsvFormat,
-            LdbcDateCodec.Format toNeo4JFormat ) throws Exception
+            LdbcDateCodec.Format toNeo4JFormat )
     {
         main(
                 ImportCommand.buildArgs(
-                        Neo4jImporter.PARALLEL,
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
                         dbDir,
@@ -132,11 +74,10 @@ public class LdbcCli
             boolean createMandatoryConstraints,
             LdbcDateCodec.Format fromCsvFormat,
             LdbcDateCodec.Format toNeo4JFormat,
-            LdbcDateCodec.Resolution timestampResolution ) throws Exception
+            LdbcDateCodec.Resolution timestampResolution )
     {
         main(
                 ImportCommand.buildArgs(
-                        Neo4jImporter.PARALLEL,
                         CsvSchema.CSV_MERGE,
                         Neo4jSchema.NEO4J_DENSE_1,
                         dbDir,
@@ -157,7 +98,7 @@ public class LdbcCli
             Neo4jSchema neo4jSchema,
             boolean withUnique,
             boolean withMandatory,
-            boolean dropFirst ) throws Exception
+            boolean dropFirst )
     {
         main(
                 IndexCommand.buildArgs(
@@ -173,7 +114,7 @@ public class LdbcCli
 
     public static void inspect(
             File dbDir,
-            File dbConfigurationFile ) throws Exception
+            File dbConfigurationFile )
     {
         main(
                 InspectCommand.buildArgs(

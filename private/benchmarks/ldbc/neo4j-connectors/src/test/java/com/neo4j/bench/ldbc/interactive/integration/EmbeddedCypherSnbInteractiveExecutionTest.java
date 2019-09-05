@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.interactive.integration;
 
-import com.ldbc.driver.DbException;
 import com.ldbc.driver.control.DriverConfiguration;
 import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
@@ -19,12 +18,11 @@ import com.neo4j.bench.ldbc.utils.RuntimeType;
 public class EmbeddedCypherSnbInteractiveExecutionTest extends SnbInteractiveExecutionTest
 {
     @Override
-    Scenario buildValidationData() throws DbException
+    Scenario buildValidationData()
     {
         return Scenario.randomInteractiveFor(
                 CsvSchema.CSV_REGULAR,
                 Neo4jSchema.NEO4J_REGULAR,
-                Scenario.randomNeo4jImporterFor( CsvSchema.CSV_REGULAR, Neo4jSchema.NEO4J_REGULAR ),
                 Neo4jApi.EMBEDDED_CYPHER,
                 PlannerType.DEFAULT,
                 RuntimeType.DEFAULT );

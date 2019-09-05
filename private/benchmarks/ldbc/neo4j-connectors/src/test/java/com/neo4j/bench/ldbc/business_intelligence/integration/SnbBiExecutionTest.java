@@ -10,13 +10,13 @@ import com.ldbc.driver.client.ResultsDirectory;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -76,8 +76,7 @@ public abstract class SnbBiExecutionTest
         File dbDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 dbDir,
                 scenario.csvDir(),
@@ -219,7 +218,7 @@ public abstract class SnbBiExecutionTest
                 );
 
         File ldbcConfigFile = temporaryFolder.newFile();
-        FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
+        BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
         LdbcCli.benchmark(
                 dbDir,
                 scenario.updatesDir(),
