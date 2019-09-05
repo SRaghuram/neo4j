@@ -35,7 +35,7 @@ public class ShortQuery6EmbeddedCore_0_1_2 extends Neo4jShortQuery6<Neo4jConnect
     public LdbcShortQuery6MessageForumResult execute( Neo4jConnectionState connection,
             LdbcShortQuery6MessageForum operation ) throws DbException
     {
-        Node message = Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.messageId() );
+        Node message = Operators.findNode( connection.getTx(), Nodes.Message, Message.ID, operation.messageId() );
         Node post;
         if ( message.hasLabel( Nodes.Comment ) )
         {

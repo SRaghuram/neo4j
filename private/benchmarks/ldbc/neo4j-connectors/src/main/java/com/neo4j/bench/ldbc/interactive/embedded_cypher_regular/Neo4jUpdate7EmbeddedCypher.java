@@ -29,7 +29,7 @@ public class Neo4jUpdate7EmbeddedCypher extends Neo4jUpdate7<Neo4jConnectionStat
     public LdbcNoResult execute( Neo4jConnectionState connection, LdbcUpdate7AddComment operation )
             throws DbException
     {
-        connection.getTransaction().get().execute(
+        connection.execute(
                 connection.queries().queryFor( operation ).queryString(),
                 buildParams( operation, connection.dateUtil() ) );
         return LdbcNoResult.INSTANCE;

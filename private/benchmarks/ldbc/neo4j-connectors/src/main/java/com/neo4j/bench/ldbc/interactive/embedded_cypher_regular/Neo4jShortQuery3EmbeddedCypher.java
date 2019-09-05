@@ -36,10 +36,10 @@ public class Neo4jShortQuery3EmbeddedCypher extends Neo4jShortQuery3<Neo4jConnec
     {
         if ( connection.isFirstForType( operation.type() ) )
         {
-            Result defaultPlannerResult = connection.getTransaction().get().execute(
+            Result defaultPlannerResult = connection.execute(
                     withExplain( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation ) );
-            Result executionResult = connection.getTransaction().get().execute(
+            Result executionResult = connection.execute(
                     withProfile( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation ) );
             List<LdbcShortQuery3PersonFriendsResult> results =
@@ -59,7 +59,7 @@ public class Neo4jShortQuery3EmbeddedCypher extends Neo4jShortQuery3<Neo4jConnec
         else
         {
             return Lists.newArrayList( Iterators.transform(
-                    connection.getTransaction().get().execute(
+                    connection.execute(
                             connection.queries().queryFor( operation ).queryString(),
                             buildParams( operation )
                     ),

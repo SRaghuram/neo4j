@@ -32,7 +32,7 @@ public class Update1EmbeddedCore_1 extends Neo4jUpdate1<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = connection.getTransaction().get().createNode( Nodes.Person );
+        Node person = connection.getTx().createNode( Nodes.Person );
         person.setProperty( Person.ID, operation.personId() );
         person.setProperty( Person.FIRST_NAME, operation.personFirstName() );
         person.setProperty( Person.LAST_NAME, operation.personLastName() );
@@ -46,18 +46,18 @@ public class Update1EmbeddedCore_1 extends Neo4jUpdate1<Neo4jConnectionState>
         person.setProperty( Person.EMAIL_ADDRESSES,
                 operation.emails().toArray( new String[0] ) );
 
-        Node city = Operators.findNode( connection.getTransaction().get(), Place.Type.City, Place.ID, operation.cityId() );
+        Node city = Operators.findNode( connection.getTx(), Place.Type.City, Place.ID, operation.cityId() );
         person.createRelationshipTo( city, Rels.PERSON_IS_LOCATED_IN );
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTx(), Nodes.Tag, Tag.ID, tagId );
             person.createRelationshipTo( tag, Rels.HAS_INTEREST );
         }
 
         for ( LdbcUpdate1AddPerson.Organization organization : operation.studyAt() )
         {
-            Node university = Operators.findNode( connection.getTransaction().get(), Organisation.Type.University,
+            Node university = Operators.findNode( connection.getTx(), Organisation.Type.University,
                     Organisation.ID,
                     organization.organizationId() );
             Relationship studyAt = person.createRelationshipTo( university, Rels.STUDY_AT );
@@ -69,7 +69,7 @@ public class Update1EmbeddedCore_1 extends Neo4jUpdate1<Neo4jConnectionState>
 
         for ( LdbcUpdate1AddPerson.Organization organization : operation.workAt() )
         {
-            Node company = Operators.findNode( connection.getTransaction().get(), Organisation.Type.Company,
+            Node company = Operators.findNode( connection.getTx(), Organisation.Type.Company,
                     Organisation.ID,
                     organization.organizationId() );
             RelationshipType workAtForYear =

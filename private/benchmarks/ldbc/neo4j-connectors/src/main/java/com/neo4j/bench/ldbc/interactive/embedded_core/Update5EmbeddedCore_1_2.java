@@ -33,8 +33,8 @@ public class Update5EmbeddedCore_1_2 extends Neo4jUpdate5<Neo4jConnectionState>
         QueryDateUtil dateUtil = connection.dateUtil();
         Calendar calendar = connection.calendar();
         TimeStampedRelationshipTypesCache timeStampedRelationshipTypes = connection.timeStampedRelationshipTypesCache();
-        Node forum = Operators.findNode( connection.getTransaction().get(), Nodes.Forum, Forum.ID, operation.forumId() );
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node forum = Operators.findNode( connection.getTx(), Nodes.Forum, Forum.ID, operation.forumId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
         long joinDate = dateUtil.utcToFormat( operation.joinDate().getTime() );
         long joinDateAtResolution = dateUtil.formatToEncodedDateAtResolution( joinDate );
         RelationshipType hasMemberAtTime = timeStampedRelationshipTypes.hasMemberForDateAtResolution(

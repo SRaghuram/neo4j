@@ -25,7 +25,7 @@ public class ShortQuery4EmbeddedCore_0_1_2 extends Neo4jShortQuery4<Neo4jConnect
             LdbcShortQuery4MessageContent operation ) throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node message = Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.messageId() );
+        Node message = Operators.findNode( connection.getTx(), Nodes.Message, Message.ID, operation.messageId() );
         long messageCreationDate = dateUtil.formatToUtc( (long) message.getProperty( Message.CREATION_DATE ) );
         String messageContent = (message.hasProperty( Message.CONTENT ))
                                 ? (String) message.getProperty( Message.CONTENT )

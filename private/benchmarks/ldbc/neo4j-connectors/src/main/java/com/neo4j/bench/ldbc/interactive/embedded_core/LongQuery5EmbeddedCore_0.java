@@ -43,7 +43,7 @@ public class LongQuery5EmbeddedCore_0 extends Neo4jQuery5<Neo4jConnectionState>
         QueryDateUtil dateUtil = connection.dateUtil();
         long minDate = dateUtil.utcToFormat( operation.minDate().getTime() );
 
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         Set<Node> friends = new HashSet<>();
         for ( Relationship knows : person.getRelationships( Rels.KNOWS ) )

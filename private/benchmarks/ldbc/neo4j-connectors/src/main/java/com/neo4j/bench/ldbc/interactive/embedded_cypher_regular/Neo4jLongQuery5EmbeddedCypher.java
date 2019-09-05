@@ -38,10 +38,10 @@ public class Neo4jLongQuery5EmbeddedCypher extends Neo4jQuery5<Neo4jConnectionSt
     {
         if ( connection.isFirstForType( operation.type() ) )
         {
-            Result defaultPlannerResult = connection.getTransaction().get().execute(
+            Result defaultPlannerResult = connection.execute(
                     withExplain( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation, connection.dateUtil() ) );
-            Result executionResult = connection.getTransaction().get().execute(
+            Result executionResult = connection.execute(
                     withProfile( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation, connection.dateUtil() ) );
             List<LdbcQuery5Result> results =
@@ -59,7 +59,7 @@ public class Neo4jLongQuery5EmbeddedCypher extends Neo4jQuery5<Neo4jConnectionSt
         else
         {
             return Lists.newArrayList( Iterators.transform(
-                    connection.getTransaction().get().execute(
+                    connection.execute(
                             connection.queries().queryFor( operation ).queryString(),
                             buildParams( operation, connection.dateUtil() ) ),
                     TRANSFORM_FUN ) );

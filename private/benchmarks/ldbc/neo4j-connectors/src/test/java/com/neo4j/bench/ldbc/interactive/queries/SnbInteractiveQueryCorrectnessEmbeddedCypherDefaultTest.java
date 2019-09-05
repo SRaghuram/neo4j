@@ -117,7 +117,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
         System.out.println( operation.toString() );
         System.out.println( query.getClass().getSimpleName() + "\n" );
         OPERATION_RESULT results;
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             results = query.execute( connection, operation );
             tx.commit();
@@ -125,6 +125,10 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            connection.freeTx();
         }
         return results;
     }
@@ -137,7 +141,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
         // TODO uncomment to print query
         System.out.println( operation.toString() );
         System.out.println( query.getClass().getSimpleName() + "\n" );
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             query.execute( connection, operation );
             tx.commit();
@@ -145,6 +149,10 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            connection.freeTx();
         }
     }
 
@@ -167,7 +175,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
     @Override
     public void closeConnection( Neo4jConnectionState connection ) throws Exception
     {
-        connection.getManagementService().shutdown();
+        connection.close();
     }
 
     @Override

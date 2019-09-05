@@ -41,7 +41,7 @@ public class LongQuery7EmbeddedCore_0_1 extends Neo4jQuery7<Neo4jConnectionState
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         Map<Node,Long> personsLikeTimes = new HashMap<>();
         Map<Node,Node> personsLikedMessages = new HashMap<>();

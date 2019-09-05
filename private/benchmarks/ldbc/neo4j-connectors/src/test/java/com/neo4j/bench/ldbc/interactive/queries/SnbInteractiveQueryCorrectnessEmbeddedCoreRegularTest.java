@@ -114,7 +114,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         // TODO uncomment to print query
         System.out.println( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
         OPERATION_RESULT results;
-        try ( Transaction tx = neo4jConnectionState.db().beginTx() )
+        try ( Transaction tx = neo4jConnectionState.beginTx() )
         {
             results = query.execute( neo4jConnectionState, operation );
             tx.commit();
@@ -122,6 +122,10 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            neo4jConnectionState.freeTx();
         }
         return results;
     }
@@ -133,7 +137,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
     {
         // TODO uncomment to print query
         System.out.println( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
-        try ( Transaction tx = neo4jConnectionState.db().beginTx() )
+        try ( Transaction tx = neo4jConnectionState.beginTx() )
         {
             query.execute( neo4jConnectionState, operation );
             tx.commit();
@@ -141,6 +145,10 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            neo4jConnectionState.freeTx();
         }
     }
 
@@ -162,7 +170,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
     @Override
     public void closeConnection( Neo4jConnectionState connection ) throws Exception
     {
-        connection.getManagementService().shutdown();
+        connection.close();
     }
 
     @Override

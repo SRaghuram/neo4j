@@ -28,7 +28,7 @@ public class Update7EmbeddedCore_0 extends Neo4jUpdate7<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node comment = connection.getTransaction().get().createNode( Nodes.Comment, Nodes.Message );
+        Node comment = connection.getTx().createNode( Nodes.Comment, Nodes.Message );
         comment.setProperty( Message.ID, operation.commentId() );
         comment.setProperty( Message.CREATION_DATE, dateUtil.utcToFormat( operation.creationDate().getTime() ) );
         comment.setProperty( Message.LOCATION_IP, operation.locationIp() );
@@ -36,30 +36,30 @@ public class Update7EmbeddedCore_0 extends Neo4jUpdate7<Neo4jConnectionState>
         comment.setProperty( Message.CONTENT, operation.content() );
         comment.setProperty( Message.LENGTH, operation.length() );
 
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.authorPersonId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.authorPersonId() );
         comment.createRelationshipTo( person, Rels.COMMENT_HAS_CREATOR );
 
         if ( -1 == operation.replyToPostId() )
         {
-            Node replyToComment = Operators.findNode( connection.getTransaction().get(), Nodes.Message,
+            Node replyToComment = Operators.findNode( connection.getTx(), Nodes.Message,
                     Message.ID,
                     operation.replyToCommentId() );
             comment.createRelationshipTo( replyToComment, Rels.REPLY_OF_COMMENT );
         }
         else
         {
-            Node replyToPost = Operators.findNode( connection.getTransaction().get(), Nodes.Message,
+            Node replyToPost = Operators.findNode( connection.getTx(), Nodes.Message,
                     Message.ID,
                     operation.replyToPostId() );
             comment.createRelationshipTo( replyToPost, Rels.REPLY_OF_POST );
         }
 
-        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.ID, operation.countryId() );
+        Node country = Operators.findNode( connection.getTx(), Place.Type.Country, Place.ID, operation.countryId() );
         comment.createRelationshipTo( country, Rels.COMMENT_IS_LOCATED_IN );
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTx(), Nodes.Tag, Tag.ID, tagId );
             comment.createRelationshipTo( tag, Rels.COMMENT_HAS_TAG );
         }
 

@@ -32,10 +32,10 @@ public class Neo4jLongQuery13EmbeddedCypher extends Neo4jQuery13<Neo4jConnection
     {
         if ( connection.isFirstForType( operation.type() ) )
         {
-            Result defaultPlannerResult = connection.getTransaction().get().execute(
+            Result defaultPlannerResult = connection.execute(
                     withExplain( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation ) );
-            Result executionResult = connection.getTransaction().get().execute(
+            Result executionResult = connection.execute(
                     withProfile( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation ) );
             LdbcQuery13Result results = Iterators.transform( executionResult, TRANSFORM_FUN ).next();
@@ -50,7 +50,7 @@ public class Neo4jLongQuery13EmbeddedCypher extends Neo4jQuery13<Neo4jConnection
         }
         else
         {
-            Result result = connection.getTransaction().get().execute(
+            Result result = connection.execute(
                     connection.queries().queryFor( operation ).queryString(),
                     buildParams( operation ) );
             if ( !result.hasNext() )

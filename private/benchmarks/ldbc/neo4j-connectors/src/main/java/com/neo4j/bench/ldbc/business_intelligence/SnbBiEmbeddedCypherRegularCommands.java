@@ -247,7 +247,7 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
         }
         else
         {
-            Result result = connection.getTransaction().get().execute(
+            Result result = connection.execute(
                     connection.queries().queryFor( operation ).queryString(),
                     params );
             return resultTransformer.apply( result );

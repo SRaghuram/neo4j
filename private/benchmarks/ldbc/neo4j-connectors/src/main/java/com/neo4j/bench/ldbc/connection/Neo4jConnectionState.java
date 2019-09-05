@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.connection;
 
-import com.google.common.collect.Lists;
 import com.ldbc.driver.DbConnectionState;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.Operation;
@@ -23,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -55,7 +53,8 @@ public class Neo4jConnectionState extends DbConnectionState
     private final IntSet seenOperationTypes;
     private final Int2ObjectMap<ExecutionPlanDescription> planMap;
     private final Int2ObjectMap<PlanMeta> planMetaMap;
-    private Transaction transaction;
+
+    private Transaction tx;
 
     public Neo4jConnectionState( DatabaseManagementService managementService, GraphDatabaseService db, URI uri, AuthToken authToken,
             LoggingService loggingService, AnnotatedQueries annotatedQueries, final LdbcDateCodec.Format dateFormat,
@@ -74,29 +73,47 @@ public class Neo4jConnectionState extends DbConnectionState
         this.calendarThreadLocal = withInitial( LdbcDateCodecUtil::newCalendar );
     }
 
-    public GraphDatabaseService db()
-    {
-        return db;
-    }
-
-    public DatabaseManagementService getManagementService()
-    {
-        return managementService;
-    }
-
     public Session session()
     {
         return driverSupplier.get().session();
     }
 
-    public void setTransaction( Transaction transaction )
+    public GraphDatabaseService getDb()
     {
-        this.transaction = transaction;
+        return db;
     }
 
-    public Optional<Transaction> getTransaction()
+    public Transaction beginTx()
     {
-        return Optional.ofNullable( transaction );
+        if ( null != tx )
+        {
+            throw new RuntimeException( "There is already an open transaction!" );
+        }
+        tx = db.beginTx();
+        return tx;
+    }
+
+    public Transaction getTx()
+    {
+        if ( null == tx )
+        {
+            throw new RuntimeException( "There is no open transaction!" );
+        }
+        return tx;
+    }
+
+    public void freeTx()
+    {
+        if ( null == tx )
+        {
+            throw new RuntimeException( "There is no open transaction!" );
+        }
+        tx = null;
+    }
+
+    public Result execute( String query, Map<String,Object> parameters )
+    {
+        return tx.execute( query, parameters );
     }
 
     public TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache()
@@ -127,12 +144,12 @@ public class Neo4jConnectionState extends DbConnectionState
             Function<Result,T> resultMapper ) throws DbException
     {
 
-        Result defaultResult = transaction.execute( withExplain( annotatedQuery.defaultQueryString() ), params );
+        Result defaultResult = tx.execute( withExplain( annotatedQuery.defaultQueryString() ), params );
         // exhaust result
-        Lists.newArrayList( defaultResult ).size();
+        defaultResult.accept( row -> true );
         String defaultPlanner = PlanMeta.extractPlanner( defaultResult.getExecutionPlanDescription() );
 
-        Result result = transaction.execute( withProfile( annotatedQuery.queryString() ), params );
+        Result result = tx.execute( withProfile( annotatedQuery.queryString() ), params );
         // exhaust result
         T mappedResults = resultMapper.apply( result );
         ExecutionPlanDescription plan = result.getExecutionPlanDescription();
@@ -227,7 +244,7 @@ public class Neo4jConnectionState extends DbConnectionState
             throw new IOException( "Error while closing driver connection", e );
         }
 
-        if ( null != db )
+        if ( null != managementService )
         {
             managementService.shutdown();
         }

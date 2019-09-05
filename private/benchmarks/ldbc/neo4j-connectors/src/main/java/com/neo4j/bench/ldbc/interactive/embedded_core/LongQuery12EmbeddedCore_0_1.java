@@ -44,8 +44,8 @@ public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionSta
     @Override
     public List<LdbcQuery12Result> execute( Neo4jConnectionState connection, LdbcQuery12 operation ) throws DbException
     {
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
-        Node tagClass = Operators.findNode( connection.getTransaction().get(), Nodes.TagClass, TagClass.NAME, operation.tagClassName() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
+        Node tagClass = Operators.findNode( connection.getTx(), Nodes.TagClass, TagClass.NAME, operation.tagClassName() );
 
         Map<Node,LdbcQuery12PreResult> preResults = new HashMap<>();
         for ( Relationship knows : person.getRelationships( Rels.KNOWS ) )
@@ -124,7 +124,7 @@ public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionSta
                             (long) friendProperties.get( Person.ID ),
                             (String) friendProperties.get( Person.FIRST_NAME ),
                             (String) friendProperties.get( Person.LAST_NAME ),
-                            preResult.tags( tagNameCache, connection.getTransaction().get() ),
+                            preResult.tags( tagNameCache, connection.getTx() ),
                             preResult.commentCount()
                     )
             );

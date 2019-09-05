@@ -40,8 +40,8 @@ public class LongQuery6EmbeddedCore_0_1 extends Neo4jQuery6<Neo4jConnectionState
     public List<LdbcQuery6Result> execute( Neo4jConnectionState connection, LdbcQuery6 operation )
             throws DbException
     {
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
-        Node knownTag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.NAME, operation.tagName() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
+        Node knownTag = Operators.findNode( connection.getTx(), Nodes.Tag, Tag.NAME, operation.tagName() );
 
         Set<Node> friends = new HashSet<>();
         for ( Relationship knows : person.getRelationships( Rels.KNOWS ) )

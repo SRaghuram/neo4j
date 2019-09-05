@@ -32,7 +32,7 @@ public class ShortQuery5EmbeddedCore_0_1 extends Neo4jShortQuery5<Neo4jConnectio
     public LdbcShortQuery5MessageCreatorResult execute( Neo4jConnectionState connection,
             LdbcShortQuery5MessageCreator operation ) throws DbException
     {
-        Node message = Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.messageId() );
+        Node message = Operators.findNode( connection.getTx(), Nodes.Message, Message.ID, operation.messageId() );
         Node creator;
         if ( message.hasLabel( Nodes.Comment ) )
         {

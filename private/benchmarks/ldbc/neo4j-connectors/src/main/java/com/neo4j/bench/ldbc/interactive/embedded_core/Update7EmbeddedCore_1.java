@@ -41,7 +41,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node comment = connection.getTransaction().get().createNode( Nodes.Comment, Nodes.Message );
+        Node comment = connection.getTx().createNode( Nodes.Comment, Nodes.Message );
         comment.setProperty( Message.ID, operation.commentId() );
         long creationDate = dateUtil.utcToFormat( operation.creationDate().getTime() );
         comment.setProperty( Message.CREATION_DATE, creationDate );
@@ -50,7 +50,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
         comment.setProperty( Message.CONTENT, operation.content() );
         comment.setProperty( Message.LENGTH, operation.length() );
 
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.authorPersonId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.authorPersonId() );
 
         comment.createRelationshipTo( person, Rels.COMMENT_HAS_CREATOR );
 
@@ -63,7 +63,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
         if ( -1 == operation.replyToPostId() )
         {
             Node replyToComment =
-                    Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.replyToCommentId() );
+                    Operators.findNode( connection.getTx(), Nodes.Message, Message.ID, operation.replyToCommentId() );
             comment.createRelationshipTo( replyToComment, Rels.REPLY_OF_COMMENT );
 
             // maintain edge weights between persons - for query 14
@@ -94,7 +94,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
         else
         {
             Node replyToPost =
-                    Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.replyToPostId() );
+                    Operators.findNode( connection.getTx(), Nodes.Message, Message.ID, operation.replyToPostId() );
             comment.createRelationshipTo( replyToPost, Rels.REPLY_OF_POST );
 
             // maintain edge weights between persons - for query 14
@@ -123,7 +123,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
             }
         }
 
-        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.ID, operation.countryId() );
+        Node country = Operators.findNode( connection.getTx(), Place.Type.Country, Place.ID, operation.countryId() );
         RelationshipType isLocatedInAtTime =
                 connection.timeStampedRelationshipTypesCache().commentIsLocatedInForDateAtResolution(
                         dateUtil.formatToEncodedDateAtResolution( creationDate ),
@@ -132,7 +132,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTx(), Nodes.Tag, Tag.ID, tagId );
             comment.createRelationshipTo( tag, Rels.COMMENT_HAS_TAG );
         }
 

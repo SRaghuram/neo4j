@@ -44,7 +44,7 @@ public class ShortQuery2EmbeddedCore_0_1 extends Neo4jShortQuery2<Neo4jConnectio
             LdbcShortQuery2PersonPosts operation ) throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         MinMaxPriorityQueue<MessageDetails> messages = MinMaxPriorityQueue
                 .orderedBy( DESCENDING_CREATION_DATE_DESCENDING_ID_COMPARATOR )

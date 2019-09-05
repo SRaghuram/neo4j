@@ -33,7 +33,7 @@ public class LongQuery8EmbeddedCore_0_1 extends Neo4jQuery8<Neo4jConnectionState
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         MinMaxPriorityQueue<Reply> replies = MinMaxPriorityQueue.maximumSize( operation.limit() ).create();
 

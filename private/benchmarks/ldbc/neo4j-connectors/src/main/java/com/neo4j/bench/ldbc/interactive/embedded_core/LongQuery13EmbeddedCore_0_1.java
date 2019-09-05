@@ -30,9 +30,9 @@ public class LongQuery13EmbeddedCore_0_1 extends Neo4jQuery13<Neo4jConnectionSta
     @Override
     public LdbcQuery13Result execute( Neo4jConnectionState connection, LdbcQuery13 operation ) throws DbException
     {
-        Node person1 = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.person1Id() );
-        Node person2 = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.person2Id() );
-        var context = new BasicEvaluationContext( connection.getTransaction().get(), connection.db() );
+        Node person1 = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.person1Id() );
+        Node person2 = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.person2Id() );
+        var context = new BasicEvaluationContext( connection.getTx(), connection.getDb() );
         PathFinder<Path> finder = GraphAlgoFactory
                 .shortestPath( context, PathExpanders.forTypeAndDirection( Rels.KNOWS, Direction.BOTH ), Integer.MAX_VALUE );
         Path shortestPath = finder.findSinglePath( person1, person2 );

@@ -36,8 +36,8 @@ public class LongQuery11EmbeddedCore_1_2 extends Neo4jQuery11<Neo4jConnectionSta
     public List<LdbcQuery11Result> execute( Neo4jConnectionState connection, LdbcQuery11 operation )
             throws DbException
     {
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
-        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.NAME, operation.countryName() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
+        Node country = Operators.findNode( connection.getTx(), Place.Type.Country, Place.NAME, operation.countryName() );
 
         Set<Node> companies = new HashSet<>();
         for ( Relationship isLocatedIn : country

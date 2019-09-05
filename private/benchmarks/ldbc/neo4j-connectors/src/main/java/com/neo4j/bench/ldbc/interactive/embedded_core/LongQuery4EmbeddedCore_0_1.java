@@ -47,7 +47,7 @@ public class LongQuery4EmbeddedCore_0_1 extends Neo4jQuery4<Neo4jConnectionState
                 operation.startDate().getTime() );
         long endDate = dateUtil.utcToFormat(
                 operation.startDate().getTime() + TimeUnit.DAYS.toMillis( operation.durationDays() ) );
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         Set<Node> tagsOnOldPosts = new HashSet<>();
 

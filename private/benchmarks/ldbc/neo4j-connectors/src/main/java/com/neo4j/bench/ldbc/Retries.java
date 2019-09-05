@@ -169,7 +169,7 @@ public class Retries<OPERATION_TYPE extends Operation<OPERATION_RESULT_TYPE>, OP
         do
         {
             succeeded = false;
-            try ( Transaction tx = connection.db().beginTx() )
+            try ( Transaction tx = connection.beginTx() )
             {
                 result = query.execute( connection, operation );
                 tx.commit();
@@ -178,6 +178,10 @@ public class Retries<OPERATION_TYPE extends Operation<OPERATION_RESULT_TYPE>, OP
             catch ( Exception e )
             {
                 backOffOrFail( retries, e );
+            }
+            finally
+            {
+                connection.freeTx();
             }
         }
         while ( !succeeded );

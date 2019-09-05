@@ -50,10 +50,10 @@ public class LongQuery1EmbeddedCore_1_2 extends Neo4jQuery1<Neo4jConnectionState
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node startPerson = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
+        Node startPerson = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         Set<Node> personsWithFirstName = Sets.newHashSet(
-                connection.getTransaction().get().findNodes( Nodes.Person, Person.FIRST_NAME, operation.firstName() )
+                connection.getTx().findNodes( Nodes.Person, Person.FIRST_NAME, operation.firstName() )
         );
 
         // friends

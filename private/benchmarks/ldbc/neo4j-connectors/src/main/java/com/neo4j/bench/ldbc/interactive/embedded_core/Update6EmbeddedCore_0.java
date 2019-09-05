@@ -29,7 +29,7 @@ public class Update6EmbeddedCore_0 extends Neo4jUpdate6<Neo4jConnectionState>
     public LdbcNoResult execute( Neo4jConnectionState connection, LdbcUpdate6AddPost operation ) throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node post = connection.getTransaction().get().createNode( Nodes.Post, Nodes.Message );
+        Node post = connection.getTx().createNode( Nodes.Post, Nodes.Message );
         post.setProperty( Message.ID, operation.postId() );
         if ( !operation.imageFile().isEmpty() )
         {
@@ -45,18 +45,18 @@ public class Update6EmbeddedCore_0 extends Neo4jUpdate6<Neo4jConnectionState>
         }
         post.setProperty( Message.LENGTH, operation.length() );
 
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.authorPersonId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.authorPersonId() );
         post.createRelationshipTo( person, Rels.POST_HAS_CREATOR );
 
-        Node forum = Operators.findNode( connection.getTransaction().get(), Nodes.Forum, Forum.ID, operation.forumId() );
+        Node forum = Operators.findNode( connection.getTx(), Nodes.Forum, Forum.ID, operation.forumId() );
         forum.createRelationshipTo( post, Rels.CONTAINER_OF );
 
-        Node country = Operators.findNode( connection.getTransaction().get(), Place.Type.Country, Place.ID, operation.countryId() );
+        Node country = Operators.findNode( connection.getTx(), Place.Type.Country, Place.ID, operation.countryId() );
         post.createRelationshipTo( country, Rels.POST_IS_LOCATED_IN );
 
         for ( Long tagId : operation.tagIds() )
         {
-            Node tag = Operators.findNode( connection.getTransaction().get(), Nodes.Tag, Tag.ID, tagId );
+            Node tag = Operators.findNode( connection.getTx(), Nodes.Tag, Tag.ID, tagId );
             post.createRelationshipTo( tag, Rels.POST_HAS_TAG );
         }
 

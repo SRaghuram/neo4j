@@ -28,8 +28,8 @@ public class Update3EmbeddedCore_0_1_2 extends Neo4jUpdate3<Neo4jConnectionState
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.personId() );
-        Node comment = Operators.findNode( connection.getTransaction().get(), Nodes.Message, Message.ID, operation.commentId() );
+        Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
+        Node comment = Operators.findNode( connection.getTx(), Nodes.Message, Message.ID, operation.commentId() );
         Relationship like = person.createRelationshipTo( comment, Rels.LIKES_COMMENT );
         like.setProperty( Likes.CREATION_DATE, dateUtil.utcToFormat( operation.creationDate().getTime() ) );
         return LdbcNoResult.INSTANCE;

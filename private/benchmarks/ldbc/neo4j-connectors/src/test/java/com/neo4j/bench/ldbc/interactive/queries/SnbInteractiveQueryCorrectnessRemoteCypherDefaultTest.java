@@ -133,7 +133,7 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
         // TODO uncomment to print query
         System.out.println( operation.toString() );
         System.out.println( query.getClass().getSimpleName() + "\n" );
-        try ( Transaction tx = connectionState.db().beginTx() )
+        try ( Transaction tx = connectionState.beginTx() )
         {
             query.execute( connectionState, operation );
             tx.commit();
@@ -141,6 +141,10 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            connectionState.freeTx();
         }
     }
 

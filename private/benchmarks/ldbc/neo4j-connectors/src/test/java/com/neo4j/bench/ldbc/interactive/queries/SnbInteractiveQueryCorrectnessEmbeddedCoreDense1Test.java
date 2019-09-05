@@ -133,7 +133,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         // TODO uncomment to print query
         System.out.println( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
         OPERATION_RESULT results;
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             results = query.execute( connection, operation );
             tx.commit();
@@ -141,6 +141,10 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            connection.freeTx();
         }
         return results;
     }
@@ -152,7 +156,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     {
         // TODO uncomment to print query
         System.out.println( operation.toString() + "\n" + query.getClass().getSimpleName() + "\n" );
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             query.execute( connection, operation );
             tx.commit();
@@ -160,6 +164,10 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
         catch ( Exception e )
         {
             throw new DbException( "Error executing query", e );
+        }
+        finally
+        {
+            connection.freeTx();
         }
     }
 
@@ -186,7 +194,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
 
     private void decorateWithTimeStampedHasCreatorRelationships( Neo4jConnectionState connection )
     {
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             for ( Relationship relationship : tx.getAllRelationships() )
             {
@@ -227,11 +235,15 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             }
             tx.commit();
         }
+        finally
+        {
+            connection.freeTx();
+        }
     }
 
     private void replaceHasMemberRelationshipsWithTimeStampedVersions( Neo4jConnectionState connection )
     {
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             List<Relationship> hasMemberRelationships = new ArrayList<>();
             for ( Relationship relationship : tx.getAllRelationships() )
@@ -282,11 +294,15 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             }
             tx.commit();
         }
+        finally
+        {
+            connection.freeTx();
+        }
     }
 
     private void decorateWithHasMemberWithPostsRelationships( Neo4jConnectionState connection )
     {
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             try ( ResourceIterator<Node> persons = tx.findNodes( Nodes.Person ) )
             {
@@ -334,11 +350,15 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             }
             tx.commit();
         }
+        finally
+        {
+            connection.freeTx();
+        }
     }
 
     private void decorateWithTimeStampedWorksAtRelationships( Neo4jConnectionState connection )
     {
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             int minYear = Integer.MAX_VALUE;
             int maxYear = Integer.MIN_VALUE;
@@ -382,11 +402,15 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             }
             tx.commit();
         }
+        finally
+        {
+            connection.freeTx();
+        }
     }
 
     private void replaceMessageIsLocatedInRelationshipsWithTimeStampedVersions( Neo4jConnectionState connection )
     {
-        try ( Transaction tx = connection.db().beginTx() )
+        try ( Transaction tx = connection.beginTx() )
         {
             List<Relationship> messageIsLocatedInRelationships = new ArrayList<>();
             for ( Relationship relationship : tx.getAllRelationships() )
@@ -460,12 +484,16 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
             }
             tx.commit();
         }
+        finally
+        {
+            connection.freeTx();
+        }
     }
 
     @Override
     public void closeConnection( Neo4jConnectionState connection ) throws Exception
     {
-        connection.getManagementService().shutdown();
+        connection.close();
     }
 
     @Override

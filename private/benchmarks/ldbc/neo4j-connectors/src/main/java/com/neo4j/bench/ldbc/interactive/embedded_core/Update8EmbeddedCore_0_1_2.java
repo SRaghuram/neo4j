@@ -27,8 +27,8 @@ public class Update8EmbeddedCore_0_1_2 extends Neo4jUpdate8<Neo4jConnectionState
             throws DbException
     {
         QueryDateUtil dateUtil = connection.dateUtil();
-        Node person1 = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.person1Id() );
-        Node person2 = Operators.findNode( connection.getTransaction().get(), Nodes.Person, Person.ID, operation.person2Id() );
+        Node person1 = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.person1Id() );
+        Node person2 = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.person2Id() );
         Relationship knows = person1.createRelationshipTo( person2, Rels.KNOWS );
         knows.setProperty( Knows.CREATION_DATE, dateUtil.utcToFormat( operation.creationDate().getTime() ) );
         return LdbcNoResult.INSTANCE;

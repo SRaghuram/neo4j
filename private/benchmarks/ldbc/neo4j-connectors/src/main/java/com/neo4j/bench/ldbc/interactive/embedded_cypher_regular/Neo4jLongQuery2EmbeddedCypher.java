@@ -38,10 +38,10 @@ public class Neo4jLongQuery2EmbeddedCypher extends Neo4jQuery2<Neo4jConnectionSt
     {
         if ( connection.isFirstForType( operation.type() ) )
         {
-            Result defaultPlannerResult = connection.getTransaction().get().execute(
+            Result defaultPlannerResult = connection.execute(
                     withExplain( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation, connection.dateUtil() ) );
-            Result executionResult = connection.getTransaction().get().execute(
+            Result executionResult = connection.execute(
                     withProfile( connection.queries().queryFor( operation ).queryString() ),
                     buildParams( operation, connection.dateUtil() ) );
             List<LdbcQuery2Result> results = ImmutableList.copyOf( Iterators.transform(
@@ -60,7 +60,7 @@ public class Neo4jLongQuery2EmbeddedCypher extends Neo4jQuery2<Neo4jConnectionSt
         else
         {
             return Lists.newArrayList( Iterators.transform(
-                    connection.getTransaction().get().execute(
+                    connection.execute(
                             connection.queries().queryFor( operation ).queryString(),
                             buildParams( operation, connection.dateUtil() ) ),
                     new TransformFun( connection.dateUtil() ) ) );
