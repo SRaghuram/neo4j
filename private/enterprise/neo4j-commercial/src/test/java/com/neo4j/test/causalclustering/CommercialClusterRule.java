@@ -153,4 +153,9 @@ public class CommercialClusterRule extends ClusterRule
         return startCluster( CommercialDiscoveryServiceType.SHARED::createFactory, CommercialCluster::new );
     }
 
+    @Override
+    protected void addDefaultConfig( Map<String,String> coreParams, Map<String,String> readReplicaParams )
+    {
+        coreParams.put( SecuritySettings.auth_provider.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+    }
 }

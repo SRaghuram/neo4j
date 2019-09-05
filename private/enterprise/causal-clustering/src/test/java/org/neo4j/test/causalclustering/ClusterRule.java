@@ -30,6 +30,7 @@ import org.neo4j.causalclustering.scenarios.DiscoveryServiceType;
 import org.neo4j.causalclustering.scenarios.EnterpriseDiscoveryServiceType;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.VerboseTimeout;
 
@@ -135,6 +136,7 @@ public class ClusterRule extends ExternalResource
     {
         if ( cluster == null )
         {
+            addDefaultConfig( coreParams, readReplicaParams );
             cluster = factory.create( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceFactory.get(), coreParams, instanceCoreParams,
                     readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, dbNames );
         }
@@ -279,5 +281,12 @@ public class ClusterRule extends ExternalResource
     {
         this.timeoutBuilder = null;
         return this;
+    }
+
+    protected void addDefaultConfig( Map<String,String> coreParams, Map<String,String> readReplicaParams )
+    {
+        //SYSTEM_GRAPH_REALM is the default in Security Settings, but is only actually used by the Commercial edition.
+        //Cluster rule creates enterprise clusters, rather than commercial ones
+        coreParams.put( SecuritySettings.auth_provider.name(), SecuritySettings.NATIVE_REALM_NAME );
     }
 }
