@@ -44,7 +44,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class PlanDescriptionIT
+public class PlannerDescriptionIT
 {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -91,7 +91,7 @@ public class PlanDescriptionIT
         Map<PlanOperator,PlanOperator> parentMap = new HashMap<>();
         Map<PlanOperator,Set<PlanOperator>> childrenMap = new HashMap<>();
 
-        int expectedPlanCount = operatorPlanCountFor( planDescriptionRoot );
+        int expectedPlanCount = operatorPlanCountFor( planDescriptionRoot, rootPlanOperator );
         int actualVisitedPlans = 0;
 
         planOperators.push( rootPlanOperator );
@@ -105,9 +105,9 @@ public class PlanDescriptionIT
             PlanOperator planOperator = planOperators.pop();
             ExecutionPlanDescription planDescription = planDescriptions.pop();
 
+            // sort children to ensure both plan representations are traversed in the same (deterministic) order
             List<PlanOperator> planOperatorChildren = planOperator.children();
             planOperatorChildren.sort( Comparator.comparing( PlanOperator::id ) );
-
             List<ExecutionPlanDescription> planDescriptionChildren = Lists.newArrayList( planDescription.getChildren() );
             planDescriptionChildren.sort( Comparator.comparing( PlannerDescription::idFor ) );
 
@@ -147,14 +147,14 @@ public class PlanDescriptionIT
                 assertThat( errorMessage, planOperatorName, equalTo( planDescriptionName ) );
             }
         }
+        // sanity checks, to make sure test code is actually traversing and comparing the entire logical plan
         assertTrue( ERROR_IN_TEST_CODE, planDescriptions.isEmpty() );
-        // sanity check, to make sure test code is actually traversing and comparing the entire logical plan
         assertThat( ERROR_IN_TEST_CODE, actualVisitedPlans, equalTo( expectedPlanCount ) );
     }
 
     private static String fullNameFor( ExecutionPlanDescription planDescription )
     {
-        List<String> children = planDescription.getChildren().stream().map( PlanDescriptionIT::nameFor ).sorted().collect( toList() );
+        List<String> children = planDescription.getChildren().stream().map( PlannerDescriptionIT::nameFor ).sorted().collect( toList() );
         return nameFor( planDescription ) + children;
     }
 
@@ -169,7 +169,7 @@ public class PlanDescriptionIT
 
     private static String fullNameFor( PlanOperator planOperator )
     {
-        List<String> children = planOperator.children().stream().map( PlanDescriptionIT::nameFor ).sorted().collect( toList() );
+        List<String> children = planOperator.children().stream().map( PlannerDescriptionIT::nameFor ).sorted().collect( toList() );
         return nameFor( planOperator ) + children;
     }
 
@@ -180,17 +180,30 @@ public class PlanDescriptionIT
         return planOperator.operatorType() + "[" + planOperator.id() + "]" + identifiers;
     }
 
-    private static int operatorPlanCountFor( ExecutionPlanDescription root )
+    private static int operatorPlanCountFor( ExecutionPlanDescription rootPlanDescription, PlanOperator rootPlanOperator )
     {
-        Stack<ExecutionPlanDescription> plans = new Stack<>();
-        int count = 0;
-        plans.push( root );
-        while ( !plans.isEmpty() )
+        Stack<ExecutionPlanDescription> planDescriptions = new Stack<>();
+        int descriptionCount = 0;
+        planDescriptions.push( rootPlanDescription );
+        while ( !planDescriptions.isEmpty() )
         {
-            count++;
-            ExecutionPlanDescription plan = plans.pop();
-            plan.getChildren().forEach( plans::push );
+            descriptionCount++;
+            ExecutionPlanDescription plan = planDescriptions.pop();
+            plan.getChildren().forEach( planDescriptions::push );
         }
-        return count;
+
+        Stack<PlanOperator> planOperators = new Stack<>();
+        int operatorCount = 0;
+        planOperators.push( rootPlanOperator );
+        while ( !planOperators.isEmpty() )
+        {
+            operatorCount++;
+            PlanOperator plan = planOperators.pop();
+            plan.children().forEach( planOperators::push );
+        }
+
+        assertThat( "Plan representations should be of equal size", descriptionCount, equalTo( operatorCount ) );
+
+        return operatorCount;
     }
 }
