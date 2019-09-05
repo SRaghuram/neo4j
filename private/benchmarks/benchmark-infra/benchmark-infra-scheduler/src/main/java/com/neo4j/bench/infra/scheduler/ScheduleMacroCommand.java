@@ -54,6 +54,11 @@ public class ScheduleMacroCommand extends BaseInfraCommand
              title = "AWS Batch Job Definition Name" )
     private String jobDefinition = "macro-benchmark-job-definition";
 
+    @Option( type = OptionType.COMMAND,
+            name = InfraParams.CMD_BATCH_STACK,
+            title = "AWS Batch Stack Name" )
+   private String batchStack = "benchmarking";
+
     @Override
     protected void doRunInfra( RunWorkloadParams runWorkloadParams, InfraParams infraParams )
     {
@@ -74,7 +79,8 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                                                                      infraParams.awsKey(),
                                                                      infraParams.awsSecret(),
                                                                      jobQueue,
-                                                                     jobDefinition );
+                                                                     jobDefinition,
+                                                                     batchStack );
 
             JobId jobId = jobScheduler.schedule( workerArtifactUri, infraParams, runWorkloadParams );
             LOG.info( "job scheduled, with id {}", jobId.id() );
