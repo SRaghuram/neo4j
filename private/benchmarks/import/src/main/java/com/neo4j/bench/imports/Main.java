@@ -188,19 +188,26 @@ public class Main
             throw new RuntimeException( "Csv directory doesn't exist, dir=" + csvDir.getAbsolutePath() );
         }
 
+        print( "Setup benchmark group" );
         BenchmarkGroup importGroup = new BenchmarkGroup( "Import" );
         BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
+        print( "Setup Neo4jConfig" );
         Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
+        print( "Neo4jConfig: " + neo4jConfig );
 
         for ( String size : sizes )
         {
             String databaseName = "db" + size;
             long startTime = System.currentTimeMillis();
             BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
+            print( "Start import " + databaseName );
             int exitCode = runImport( size, storeDir, confDir, csvDir, databaseName, benchmarkGroupBenchmarkMetrics, importGroup, neo4jConfig );
+            print( "End import " + databaseName );
             if ( exitCode == 0 )
             {
+                print( "Start index population " + databaseName );
                 createIndexes( size, storeDir, databaseName, benchmarkGroupBenchmarkMetrics, indexGroup, neo4jConfig );
+                print( "End index population " + databaseName );
             }
             report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
         }
