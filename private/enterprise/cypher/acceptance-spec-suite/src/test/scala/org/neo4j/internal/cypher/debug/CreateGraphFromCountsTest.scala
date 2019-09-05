@@ -20,7 +20,9 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.constraints").toList should be(
       List(
-        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name) IS UNIQUE")
+        Map(
+          "name" -> "Uniqueness constraint on :User (name)",
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name) IS UNIQUE")
       )
     )
 
@@ -48,7 +50,9 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.constraints").toList should be(
       List(
-        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name, user.surname) IS NODE KEY")
+        Map(
+          "name" -> "Node key constraint on :User (name,surname)",
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name, user.surname) IS NODE KEY")
       )
     )
   }
@@ -61,7 +65,9 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.constraints").toList should be(
       List(
-        Map("description" -> "CONSTRAINT ON ( user:User ) ASSERT exists(user.name)")
+        Map(
+          "name" -> "Property existence constraint on :User (name)",
+          "description" -> "CONSTRAINT ON ( user:User ) ASSERT exists(user.name)")
       )
     )
   }
@@ -74,7 +80,9 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
 
     executeSingle("CALL db.constraints").toList should be(
       List(
-        Map("description" -> "CONSTRAINT ON ()-[ user:User ]-() ASSERT exists(user.name)")
+        Map(
+          "name" -> "Property existence constraint on ()-[:User]-() (name)",
+          "description" -> "CONSTRAINT ON ()-[ user:User ]-() ASSERT exists(user.name)")
       )
     )
   }
