@@ -13,7 +13,6 @@ import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
-import com.neo4j.bench.ldbc.connection.Neo4jImporter;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
@@ -46,7 +45,6 @@ public class Scenario
     private final File validationParamsFile;
     private final CsvSchema csvSchema;
     private final Neo4jSchema neo4jSchema;
-    private final Neo4jImporter neo4jImporter;
     private final Neo4jApi neo4JApi;
     private final PlannerType planner;
     private final RuntimeType runtime;
@@ -61,7 +59,6 @@ public class Scenario
             File validationParamsFile,
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
-            Neo4jImporter neo4jImporter,
             Neo4jApi neo4JApi,
             PlannerType planner,
             RuntimeType runtime,
@@ -75,7 +72,6 @@ public class Scenario
         this.validationParamsFile = validationParamsFile;
         this.csvSchema = csvSchema;
         this.neo4jSchema = neo4jSchema;
-        this.neo4jImporter = neo4jImporter;
         this.neo4JApi = neo4JApi;
         this.planner = planner;
         this.runtime = runtime;
@@ -112,11 +108,6 @@ public class Scenario
     public Neo4jSchema neo4jSchema()
     {
         return neo4jSchema;
-    }
-
-    public Neo4jImporter neo4jImporter()
-    {
-        return neo4jImporter;
     }
 
     public Neo4jApi neo4jApi()
@@ -159,7 +150,6 @@ public class Scenario
                "   validationParamsFile=" + fileToString( validationParamsFile ) + "\n" +
                "   csvSchema=" + csvSchema.name() + "\n" +
                "   neo4jSchema=" + neo4jSchema.name() + "\n" +
-               "   neo4jImporter=" + neo4jImporter.name() + "\n" +
                "   neo4JApi=" + neo4JApi.name() + "\n" +
                "   planner=" + planner.name() + "\n" +
                "   runtime=" + runtime.name() + "\n" +
@@ -247,7 +237,7 @@ public class Scenario
         else
         {
             throw new RuntimeException(
-                    format( "Unsupported workload: %s", workloadClass.getClass().getSimpleName() ) );
+                    format( "Unsupported workload: %s", workloadClass.getSimpleName() ) );
         }
     }
 
@@ -271,42 +261,6 @@ public class Scenario
         }
     }
 
-    public static Neo4jImporter randomNeo4jImporter()
-    {
-        return (Math.abs( RANDOM.nextInt() ) % 2 == 0) ? Neo4jImporter.BATCH : Neo4jImporter.PARALLEL;
-    }
-
-    public static Neo4jImporter randomNeo4jImporterFor(
-            CsvSchema csvSchema,
-            Neo4jSchema neo4jSchema )
-    {
-        switch ( csvSchema )
-        {
-        case CSV_REGULAR:
-            switch ( neo4jSchema )
-            {
-            case NEO4J_REGULAR:
-                return randomNeo4jImporter();
-            case NEO4J_DENSE_1:
-                throw new RuntimeException( format( "Unsupported Combination: %s / %s", csvSchema, neo4jSchema ) );
-            default:
-                throw new RuntimeException( "unsupported Neo4j schema" );
-            }
-        case CSV_MERGE:
-            switch ( neo4jSchema )
-            {
-            case NEO4J_REGULAR:
-                throw new RuntimeException( format( "Unsupported Combination: %s / %s", csvSchema, neo4jSchema ) );
-            case NEO4J_DENSE_1:
-                return randomNeo4jImporter();
-            default:
-                throw new RuntimeException( "unsupported Neo4j schema" );
-            }
-        default:
-            throw new RuntimeException( format( "Unsupported Combination: %s / %s", csvSchema, neo4jSchema ) );
-        }
-    }
-
     public static Neo4jApi randomInteractiveNeo4jConnectorFor( Neo4jSchema neo4jSchema )
     {
         switch ( neo4jSchema )
@@ -317,13 +271,9 @@ public class Scenario
             {
                 return Neo4jApi.EMBEDDED_CORE;
             }
-            else if ( 1 == random % 2 )
-            {
-                return Neo4jApi.EMBEDDED_CYPHER;
-            }
             else
             {
-                throw new RuntimeException( format( "Unexpected random number: %s", random % 2 ) );
+                return Neo4jApi.EMBEDDED_CYPHER;
             }
         case NEO4J_DENSE_1:
             return Neo4jApi.EMBEDDED_CORE;
@@ -422,19 +372,10 @@ public class Scenario
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema ) throws DbException
     {
-        return randomInteractiveFor( csvSchema, neo4jSchema, randomNeo4jImporterFor( csvSchema, neo4jSchema ) );
-    }
-
-    public static Scenario randomInteractiveFor(
-            CsvSchema csvSchema,
-            Neo4jSchema neo4jSchema,
-            Neo4jImporter neo4jImporter ) throws DbException
-    {
         Neo4jApi neo4jApi = randomInteractiveNeo4jConnectorFor( neo4jSchema );
         return randomInteractiveFor(
                 csvSchema,
                 neo4jSchema,
-                neo4jImporter,
                 neo4jApi,
                 randomInteractivePlannerFor( neo4jApi ),
                 randomInteractiveRuntimeFor( neo4jApi ) );
@@ -443,15 +384,13 @@ public class Scenario
     public static Scenario randomInteractiveFor(
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
-            Neo4jImporter neo4jImporter,
             Neo4jApi neo4JApi,
             PlannerType planner,
-            RuntimeType runtime ) throws DbException
+            RuntimeType runtime )
     {
         return randomInteractiveFor(
                 csvSchema,
                 neo4jSchema,
-                neo4jImporter,
                 neo4JApi,
                 planner,
                 runtime,
@@ -462,17 +401,15 @@ public class Scenario
     public static Scenario randomInteractiveFor(
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
-            Neo4jImporter neo4jImporter,
             Neo4jApi neo4JApi,
             PlannerType planner,
             RuntimeType runtime,
             LdbcDateCodec.Format csvFormat,
-            LdbcDateCodec.Format neo4JFormat ) throws DbException
+            LdbcDateCodec.Format neo4JFormat )
     {
         return randomInteractiveFor(
                 csvSchema,
                 neo4jSchema,
-                neo4jImporter,
                 neo4JApi,
                 planner,
                 runtime,
@@ -484,13 +421,12 @@ public class Scenario
     public static Scenario randomInteractiveFor(
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
-            Neo4jImporter neo4jImporter,
             Neo4jApi neo4JApi,
             PlannerType planner,
             RuntimeType runtime,
             LdbcDateCodec.Format csvFormat,
             LdbcDateCodec.Format neo4JFormat,
-            LdbcDateCodec.Resolution timestampResolution ) throws DbException
+            LdbcDateCodec.Resolution timestampResolution )
     {
         return new Scenario(
                 csvDirFor( csvFormat, neo4jSchema, LdbcSnbInteractiveWorkload.class ),
@@ -499,7 +435,6 @@ public class Scenario
                 INTERACTIVE_VALIDATION_SET,
                 csvSchema,
                 neo4jSchema,
-                neo4jImporter,
                 neo4JApi,
                 planner,
                 runtime,
@@ -508,11 +443,10 @@ public class Scenario
                 timestampResolution );
     }
 
-    public static Scenario randomBi() throws DbException
+    public static Scenario randomBi()
     {
         CsvSchema csvSchema = CsvSchema.CSV_REGULAR;
         Neo4jSchema neo4jSchema = Neo4jSchema.NEO4J_REGULAR;
-        Neo4jImporter neo4jImporter = randomNeo4jImporterFor( csvSchema, neo4jSchema );
         Neo4jApi neo4JApi = Neo4jApi.EMBEDDED_CYPHER;
         LdbcDateCodec.Format csvFormat = randomCsvDateFormat();
         LdbcDateCodec.Format neo4JFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
@@ -523,7 +457,6 @@ public class Scenario
                 BI_VALIDATION_SET,
                 csvSchema,
                 neo4jSchema,
-                neo4jImporter,
                 neo4JApi,
                 PlannerType.DEFAULT,
                 RuntimeType.DEFAULT,

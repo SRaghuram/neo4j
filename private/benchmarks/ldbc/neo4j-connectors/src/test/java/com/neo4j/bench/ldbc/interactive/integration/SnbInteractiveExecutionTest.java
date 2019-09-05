@@ -13,6 +13,7 @@ import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
@@ -20,7 +21,6 @@ import com.neo4j.bench.ldbc.TestUtils;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -56,7 +56,7 @@ public abstract class SnbInteractiveExecutionTest
         }
 
         @Override
-        public void close() throws Exception
+        public void close()
         {
             if ( null != db )
             {
@@ -115,8 +115,7 @@ public abstract class SnbInteractiveExecutionTest
         File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
@@ -185,7 +184,7 @@ public abstract class SnbInteractiveExecutionTest
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
             File ldbcConfigFile = temporaryFolder.newFile();
-            FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
+            BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
                     scenario.updatesDir(),
@@ -252,8 +251,7 @@ public abstract class SnbInteractiveExecutionTest
         File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
@@ -335,7 +333,7 @@ public abstract class SnbInteractiveExecutionTest
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
             File ldbcConfigFile = temporaryFolder.newFile();
-            FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
+            BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
                     scenario.updatesDir(),
@@ -403,8 +401,7 @@ public abstract class SnbInteractiveExecutionTest
         File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
@@ -485,7 +482,7 @@ public abstract class SnbInteractiveExecutionTest
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
             File ldbcConfigFile = temporaryFolder.newFile();
-            FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
+            BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
                     scenario.updatesDir(),
