@@ -66,7 +66,7 @@ class GetRoutingTableProcedureForMultiDCTest
     {
         // given
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = databaseManager.databaseIdRepository().get( "my_database" ).get();
+        var databaseId = databaseManager.databaseIdRepository().getByName( "my_database" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
@@ -129,7 +129,7 @@ class GetRoutingTableProcedureForMultiDCTest
     void shouldThrowWhenPluginReturnsAnEmptyRoutingTable() throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = databaseManager.databaseIdRepository().get( "customers" ).get();
+        var databaseId = databaseManager.databaseIdRepository().getByName( "customers" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );

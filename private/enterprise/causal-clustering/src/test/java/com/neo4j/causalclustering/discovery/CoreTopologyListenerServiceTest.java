@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -25,8 +24,8 @@ import static org.mockito.Mockito.when;
 class CoreTopologyListenerServiceTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId id1 = databaseIdRepository.get( "database_one" ).get();
-    private final DatabaseId id2 = databaseIdRepository.get( "database_two" ).get();
+    private final DatabaseId id1 = databaseIdRepository.getByName( "database_one" ).get();
+    private final DatabaseId id2 = databaseIdRepository.getByName( "database_two" ).get();
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
 

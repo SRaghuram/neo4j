@@ -75,7 +75,7 @@ class TransitionsTest
     void transitionLookupsShouldReturnCorrectMappings()
     {
         // given
-        var id = databaseIdRepository.get( "foo" ).get();
+        var id = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id, STARTED );
         var desired = new DatabaseState( id, DROPPED );
 
@@ -102,7 +102,7 @@ class TransitionsTest
                 .build();
         var extendedTransitions = this.transitions.extendWith( extraTransitions );
 
-        var id = databaseIdRepository.get( "foo" ).get();
+        var id = databaseIdRepository.getByName( "foo" ).get();
         var currentBase = new DatabaseState( id, STARTED );
         var desiredBase = new DatabaseState( id, DROPPED );
         var currentExtended = new DatabaseState( id, STORE_COPYING );
@@ -141,7 +141,7 @@ class TransitionsTest
                 .build();
         var extendedTransitions = this.transitions.extendWith( extraTransitions );
 
-        var id = databaseIdRepository.get( "foo" ).get();
+        var id = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id, STARTED );
         var desired = new DatabaseState( id, DROPPED );
 
@@ -163,7 +163,7 @@ class TransitionsTest
     void lookupDroppedToAnyShouldThrowForSameDbId()
     {
         // given
-        var id = databaseIdRepository.get( "foo" ).get();
+        var id = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id, DROPPED );
         var desired = new DatabaseState( id, STARTED );
 
@@ -183,9 +183,9 @@ class TransitionsTest
     void lookupDroppedToAnyForDifferentDbIdsShouldPrepareTransitionsWithCorrectIds()
     {
         // given
-        var id1 = databaseIdRepository.get( "foo" ).get();
+        var id1 = databaseIdRepository.getByName( "foo" ).get();
         databaseIdRepository.invalidate( id1 );
-        var id2 = databaseIdRepository.get( "foo" ).get();
+        var id2 = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id1, DROPPED );
         var desired = new DatabaseState( id2, STARTED );
 
@@ -211,9 +211,9 @@ class TransitionsTest
     void lookupAnyToAnyForDifferentDbIdsShouldPrepareDropTransition()
     {
         // given
-        var id1 = databaseIdRepository.get( "foo" ).get();
+        var id1 = databaseIdRepository.getByName( "foo" ).get();
         databaseIdRepository.invalidate( id1 );
-        var id2 = databaseIdRepository.get( "foo" ).get();
+        var id2 = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id1, STARTED );
         var desired = new DatabaseState( id2, STARTED );
 
@@ -244,7 +244,7 @@ class TransitionsTest
     {
 
         // given
-        var id = databaseIdRepository.get( "foo" ).get();
+        var id = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id, STARTED );
         var desired = new DatabaseState( id, STORE_COPYING );
 
@@ -264,7 +264,7 @@ class TransitionsTest
     void lookupTransitionToSameStateShouldReturnEmptyStream()
     {
         // given
-        var id = databaseIdRepository.get( "foo" ).get();
+        var id = databaseIdRepository.getByName( "foo" ).get();
         var current = new DatabaseState( id, STARTED );
         var desired = new DatabaseState( id, STARTED );
 

@@ -45,7 +45,7 @@ class LocalDbmsOperatorTest
         operator.dropDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
-        assertEquals( DROPPED, operatorState( databaseIdRepository.get( databaseName ) ) );
+        assertEquals( DROPPED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
 
     @Test
@@ -54,7 +54,7 @@ class LocalDbmsOperatorTest
         operator.startDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
-        assertEquals( STARTED, operatorState( databaseIdRepository.get( databaseName ) ) );
+        assertEquals( STARTED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
 
     @Test
@@ -63,7 +63,7 @@ class LocalDbmsOperatorTest
         operator.stopDatabase( databaseName );
         verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
 
-        assertEquals( STOPPED, operatorState( databaseIdRepository.get( databaseName ) ) );
+        assertEquals( STOPPED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )

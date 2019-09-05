@@ -34,7 +34,7 @@ import static org.neo4j.values.storable.Values.stringValue;
 class CoreRoleProcedureTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.get( "cars" ).get();
+    private final DatabaseId databaseId = databaseIdRepository.getByName( "cars" ).get();
     private final MemberId memberId = new MemberId( UUID.randomUUID() );
     private final IdentityModule identityModule = mock( IdentityModule.class );
     private final TopologyService topologyService = mock( TopologyService.class );

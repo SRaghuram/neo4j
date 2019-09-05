@@ -32,9 +32,9 @@ class DefaultDiscoveryMemberFactoryTest
 
     private final MemberId id = new MemberId( UUID.randomUUID() );
 
-    private final DatabaseId databaseId1 = databaseIdRepository.get( "one" ).get();
-    private final DatabaseId databaseId2 = databaseIdRepository.get( "two" ).get();
-    private final DatabaseId databaseId3 = databaseIdRepository.get( "three" ).get();
+    private final DatabaseId databaseId1 = databaseIdRepository.getByName( "one" ).get();
+    private final DatabaseId databaseId2 = databaseIdRepository.getByName( "two" ).get();
+    private final DatabaseId databaseId3 = databaseIdRepository.getByName( "three" ).get();
 
     @Test
     void shouldCreateDiscoveryMemberWithId()

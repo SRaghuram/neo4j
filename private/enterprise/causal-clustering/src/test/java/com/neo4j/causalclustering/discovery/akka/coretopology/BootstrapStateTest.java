@@ -40,8 +40,8 @@ import static org.neo4j.internal.helpers.collection.Iterables.last;
 class BootstrapStateTest
 {
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.get( "known" ).get();
-    private final DatabaseId unknownDatabaseId = databaseIdRepository.get( "unknown" ).get();
+    private final DatabaseId databaseId = databaseIdRepository.getByName( "known" ).get();
+    private final DatabaseId unknownDatabaseId = databaseIdRepository.getByName( "unknown" ).get();
 
     private final Member member1 = newMemberMock();
     private final Member member2 = newMemberMock();

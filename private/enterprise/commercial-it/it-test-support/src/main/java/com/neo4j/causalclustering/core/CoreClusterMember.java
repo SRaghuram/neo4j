@@ -316,6 +316,6 @@ public class CoreClusterMember implements ClusterMember
             DatabaseManager databaseManager = defaultDatabase.getDependencyResolver().resolveDependency( DatabaseManager.class );
             databaseIdRepository = databaseManager.databaseIdRepository();
         }
-        return databaseIdRepository.get( databaseName ).orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
+        return databaseIdRepository.getByName( databaseName ).orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
     }
 }

@@ -29,7 +29,7 @@ public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<Get
     protected void channelRead0( ChannelHandlerContext ctx, GetDatabaseIdRequest msg )
     {
         var databaseName = msg.databaseName();
-        var databaseIdOptional = databaseIdRepository.get( databaseName );
+        var databaseIdOptional = databaseIdRepository.getByName( databaseName );
 
         if ( databaseIdOptional.isPresent() )
         {

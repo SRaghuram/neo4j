@@ -64,7 +64,7 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         if ( value instanceof TextValue )
         {
             String databaseName = ((TextValue) value).stringValue();
-            return databaseIdRepository.get( databaseName )
+            return databaseIdRepository.getByName( databaseName )
                     .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
         }
         throw new IllegalArgumentException( "Parameter '" + PARAMETER_NAME + "' value should be a string: " + value );

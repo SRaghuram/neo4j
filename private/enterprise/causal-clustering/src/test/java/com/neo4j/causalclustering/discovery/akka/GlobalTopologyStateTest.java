@@ -46,8 +46,8 @@ class GlobalTopologyStateTest
     private final GlobalTopologyState state = new GlobalTopologyState( NullLogProvider.getInstance(), listener );
 
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId1 = databaseIdRepository.get( "db1" ).get();
-    private final DatabaseId databaseId2 = databaseIdRepository.get( "db2" ).get();
+    private final DatabaseId databaseId1 = databaseIdRepository.getByName( "db1" ).get();
+    private final DatabaseId databaseId2 = databaseIdRepository.getByName( "db2" ).get();
 
     private final MemberId coreId1 = new MemberId( UUID.randomUUID() );
     private final MemberId coreId2 = new MemberId( UUID.randomUUID() );

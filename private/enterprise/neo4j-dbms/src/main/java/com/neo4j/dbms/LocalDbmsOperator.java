@@ -48,7 +48,7 @@ public final class LocalDbmsOperator extends DbmsOperator
 
     private DatabaseId databaseId( String databaseName )
     {
-        return databaseIdRepository.get( databaseName )
+        return databaseIdRepository.getByName( databaseName )
                 .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );
     }
 }

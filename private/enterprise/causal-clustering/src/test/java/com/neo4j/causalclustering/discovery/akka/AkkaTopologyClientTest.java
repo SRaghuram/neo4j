@@ -35,7 +35,7 @@ class AkkaTopologyClientTest
     void shouldReportEmptyTopologiesWhenShutdown() throws Exception
     {
 
-        var databaseId = databaseIdRepository.get( "people" ).get();
+        var databaseId = databaseIdRepository.getByName( "people" ).get();
         var memberId1 = new MemberId( UUID.randomUUID() );
         var memberId2 = new MemberId( UUID.randomUUID() );
         var memberId3 = new MemberId( UUID.randomUUID() );

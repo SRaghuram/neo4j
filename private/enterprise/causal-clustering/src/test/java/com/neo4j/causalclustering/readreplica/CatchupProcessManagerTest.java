@@ -54,7 +54,7 @@ class CatchupProcessManagerTest
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.get( "db1" ).get();
+    private final DatabaseId databaseId = databaseIdRepository.getByName( "db1" ).get();
     private final ReadReplicaDatabaseContext databaseContext = mock( ReadReplicaDatabaseContext.class );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
     private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );

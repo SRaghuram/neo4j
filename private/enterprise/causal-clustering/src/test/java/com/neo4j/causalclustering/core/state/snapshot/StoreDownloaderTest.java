@@ -48,7 +48,7 @@ class StoreDownloaderTest
     private final SocketAddress secondaryAddress = new SocketAddress( "secondary", 2 );
 
     private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.get( "target" ).get();
+    private final DatabaseId databaseId = databaseIdRepository.getByName( "target" ).get();
     private final StoreId storeId = randomStoreId();
 
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
@@ -140,7 +140,7 @@ class StoreDownloaderTest
     {
         // given
         StoreDownloadContext wrongDb = mock( StoreDownloadContext.class );
-        when( wrongDb.databaseId() ).thenReturn( databaseIdRepository.get( "wrong" ).get() );
+        when( wrongDb.databaseId() ).thenReturn( databaseIdRepository.getByName( "wrong" ).get() );
 
         // when & then
         assertThrows( IllegalStateException.class, () -> downloader.bringUpToDate( wrongDb, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) );

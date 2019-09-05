@@ -52,7 +52,7 @@ class GetDatabaseIdRequestHandlerTest
         var databaseName = "foo";
         var databaseId = randomDatabaseId();
         var request = new GetDatabaseIdRequest( databaseName );
-        when( databaseIdRepository.get( databaseName ) ).thenReturn( Optional.of( databaseId ) );
+        when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.of( databaseId ) );
 
         assertFalse( channel.writeInbound( request ) );
 
@@ -66,7 +66,7 @@ class GetDatabaseIdRequestHandlerTest
     {
         var databaseName = "bar";
         var request = new GetDatabaseIdRequest( databaseName );
-        when( databaseIdRepository.get( databaseName ) ).thenReturn( Optional.empty() );
+        when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.empty() );
 
         assertFalse( channel.writeInbound( request ) );
 

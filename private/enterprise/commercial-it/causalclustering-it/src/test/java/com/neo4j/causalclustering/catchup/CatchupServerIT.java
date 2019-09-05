@@ -169,7 +169,7 @@ class CatchupServerIT
 
         // when the list of files are requested from the server with the wrong storeId
         PrepareStoreCopyResponse prepareStoreCopyResponse =
-                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, databaseIdRepository.get( DEFAULT_DATABASE_NAME ).get() );
+                simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, databaseIdRepository.getByName( DEFAULT_DATABASE_NAME ).get() );
         simpleCatchupClient.close();
 
         // then the response is not a list of files but an error
@@ -213,8 +213,8 @@ class CatchupServerIT
         SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // when we copy that file using a different storeId
-        StoreCopyFinishedResponse storeCopyFinishedResponse =
-                simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID, databaseIdRepository.get( DEFAULT_DATABASE_NAME ).get() );
+        StoreCopyFinishedResponse storeCopyFinishedResponse = simpleCatchupClient.requestIndividualFile( expectedExistingFile, WRONG_STORE_ID,
+                databaseIdRepository.getByName( DEFAULT_DATABASE_NAME ).get() );
         simpleCatchupClient.close();
 
         // then the response from the server should be an error message that describes a store ID mismatch
@@ -248,7 +248,7 @@ class CatchupServerIT
         var databaseName = "foo";
         managementService.createDatabase( databaseName );
 
-        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.get( databaseName ).get() ) )
+        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.getByName( databaseName ).get() ) )
         {
             managementService.shutdownDatabase( databaseName );
 
@@ -263,7 +263,7 @@ class CatchupServerIT
         var databaseName = "bar";
         managementService.createDatabase( databaseName );
 
-        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.get( databaseName ).get() ) )
+        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.getByName( databaseName ).get() ) )
         {
             makeDatabaseUnavailable( databaseName, managementService );
 
@@ -329,7 +329,7 @@ class CatchupServerIT
 
     private SimpleCatchupClient newSimpleCatchupClient()
     {
-        return newSimpleCatchupClient( databaseIdRepository.get( DEFAULT_DATABASE_NAME ).get() );
+        return newSimpleCatchupClient( databaseIdRepository.getByName( DEFAULT_DATABASE_NAME ).get() );
     }
 
     private SimpleCatchupClient newSimpleCatchupClient( DatabaseId databaseId )

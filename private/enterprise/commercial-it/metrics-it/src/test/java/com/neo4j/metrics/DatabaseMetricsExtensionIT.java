@@ -235,7 +235,7 @@ class DatabaseMetricsExtensionIT
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
 
-        DatabaseId testdb = databaseIdRepository.get( "testdb" ).get();
+        DatabaseId testdb = databaseIdRepository.getByName( "testdb" ).get();
         databaseManager.createDatabase( testdb );
 
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
@@ -248,7 +248,7 @@ class DatabaseMetricsExtensionIT
         DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
-        DatabaseId testDbName = databaseIdRepository.get( "testdb" ).get();
+        DatabaseId testDbName = databaseIdRepository.getByName( "testdb" ).get();
         databaseManager.createDatabase( testDbName );
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
 

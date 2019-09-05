@@ -113,7 +113,7 @@ class GetRoutingTableProcedureForSingleDCTest
     private void setUp()
     {
         var databaseManager = new StubClusteredDatabaseManager();
-        this.databaseId = databaseManager.databaseIdRepository().get( "my_test_database" ).get();
+        this.databaseId = databaseManager.databaseIdRepository().getByName( "my_test_database" ).get();
         this.raftId = RaftId.from( databaseId );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
         this.databaseManager = databaseManager;
@@ -441,7 +441,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldThrowWhenDatabaseIsStopped() throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = databaseManager.databaseIdRepository().get( "stopped database" ).get();
+        var databaseId = databaseManager.databaseIdRepository().getByName( "stopped database" ).get();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
         var topologyService = mock( CoreTopologyService.class );
         var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
@@ -455,7 +455,7 @@ class GetRoutingTableProcedureForSingleDCTest
     @Test
     void shouldThrowWhenTopologyServiceContainsNoInfoAboutTheDatabase() throws Exception
     {
-        var unknownDatabaseId = databaseManager.databaseIdRepository().get( "unknown" ).get();
+        var unknownDatabaseId = databaseManager.databaseIdRepository().getByName( "unknown" ).get();
         var topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseCoreTopology.EMPTY );
         when( topologyService.readReplicaTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseReadReplicaTopology.EMPTY );
