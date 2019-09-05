@@ -33,7 +33,7 @@ public class Workspace
                 .withArtifacts(
                         // required artifacts
                         Paths.get( "neo4j.conf" ),
-                        Paths.get( "benchmark-infra-scheduler.jar" ),
+                        Paths.get( "benchmark-infra-worker.jar" ),
                         Paths.get( format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion ) ),
                         Paths.get( "macro/target/macro.jar" ),
                         Paths.get( "macro/run-report-benchmarks.sh" )
