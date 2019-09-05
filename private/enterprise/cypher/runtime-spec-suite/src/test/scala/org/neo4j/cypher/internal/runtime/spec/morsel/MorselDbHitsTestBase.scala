@@ -16,6 +16,8 @@ abstract class MorselDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Edition[
                                 runtime,
                                 sizeHint,
                                 costOfLabelLookup = 0,
-                                costOfProperty = 2,
+                                costOfGetPropertyChain = 1,
+                                costOfPropertyJumpedOverInChain = 1,
+                                costOfProperty = 1,
                                 costOfExpand = 2,
                                 costOfRelationshipTypeLookup = 0)
