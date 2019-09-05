@@ -5,11 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
-
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
@@ -20,6 +15,10 @@ import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabasePageCache;
@@ -28,6 +27,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -40,11 +40,14 @@ import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
 /**
  * Bootstraps a raft group for a core database. A single instance is chosen as the bootstrapper, by the discovery service.
@@ -92,13 +95,24 @@ public class RaftBootstrapper
 
     public CoreSnapshot bootstrap( Set<MemberId> members )
     {
+        return bootstrap( members, null );
+    }
+
+    public CoreSnapshot bootstrap( Set<MemberId> members, StoreId storeId )
+    {
         try
         {
             log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
-            ensureRecoveredOrThrow( bootstrapContext, config );
-            initializeStoreIfNeeded( bootstrapContext );
+            if ( isStorePresent() )
+            {
+                ensureRecoveredOrThrow( bootstrapContext, config );
+            }
+            else
+            {
+                createStore( storeId );
+            }
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext );
-            CoreSnapshot snapshot = buildCoreSnapshot( members, bootstrapContext );
+            CoreSnapshot snapshot = buildCoreSnapshot( members );
             log.info( "Bootstrapping of the database " + bootstrapContext.databaseId().name() + " completed " + snapshot );
             return snapshot;
         }
@@ -108,40 +122,43 @@ public class RaftBootstrapper
         }
     }
 
-    private void initializeStoreIfNeeded( BootstrapContext bootstrapContext ) throws IOException
+    private boolean isStorePresent()
     {
-        if ( !isStorePresent( bootstrapContext ) )
-        {
-            File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-            fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
-            try
-            {
-                String databaseName = bootstrapContext.databaseId().name();
-                log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
-                File bootstrapDbDir = initializeStoreUsingTempDatabase( bootstrapRootDir );
+        return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
+    }
 
-                log.info( "Moving created store files from " + bootstrapDbDir + " to " + bootstrapContext.databaseLayout() );
-                bootstrapContext.replaceWith( bootstrapDbDir );
-            }
-            finally
+    private void createStore( StoreId storeId ) throws IOException
+    {
+        File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
+        fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
+        try
+        {
+            String databaseName = bootstrapContext.databaseId().name();
+            log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
+            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir );
+            if ( storeId != null )
             {
-                fs.deleteRecursively( bootstrapRootDir );
+                log.info( "Changing store ID of bootstrapped database to " + storeId );
+                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP );
             }
+            log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
+            bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory() );
+        }
+        finally
+        {
+            fs.deleteRecursively( bootstrapRootDir );
         }
     }
 
-    private File initializeStoreUsingTempDatabase( File bootstrapRootDir )
+    private DatabaseLayout initializeStoreUsingTempDatabase( File bootstrapRootDir )
     {
+        DatabaseLayout databaseLayout;
         try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config ) )
         {
             databaseInitializer.initialize( tempDatabase.graphDatabaseService() );
-            return tempDatabase.defaultDatabaseDirectory();
+            databaseLayout = tempDatabase.defaultDatabaseDirectory();
         }
-    }
-
-    private boolean isStorePresent( BootstrapContext bootstrapContext )
-    {
-        return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
+        return databaseLayout;
     }
 
     private void ensureRecoveredOrThrow( BootstrapContext bootstrapContext, Config config ) throws Exception
@@ -156,7 +173,7 @@ public class RaftBootstrapper
         }
     }
 
-    private CoreSnapshot buildCoreSnapshot( Set<MemberId> members, BootstrapContext bootstrapContext )
+    private CoreSnapshot buildCoreSnapshot( Set<MemberId> members )
     {
         var raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) );
         var sessionTrackerState = new GlobalSessionTrackerState();

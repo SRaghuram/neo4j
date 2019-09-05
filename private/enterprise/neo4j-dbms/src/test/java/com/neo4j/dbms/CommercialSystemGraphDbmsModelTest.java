@@ -34,24 +34,27 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DELETED_DATABASE_LABEL;
 
 @ImpermanentDbmsExtension
-class SystemGraphDbmsModelTest
+class CommercialSystemGraphDbmsModelTest
 {
     @Inject
     private DatabaseManagementService managementService;
+
     @Inject
     private GraphDatabaseService db;
     private Collection<DatabaseId> updatedDatabases = new ArrayList<>();
-    private SystemGraphDbmsModel dbmsModel;
+    private CommercialSystemGraphDbmsModel dbmsModel;
 
     @BeforeEach
     void before()
     {
-        dbmsModel = new SystemGraphDbmsModel();
-        dbmsModel.setSystemDatabase( db );
+        dbmsModel = new CommercialSystemGraphDbmsModel( () -> db );
 
         managementService.registerTransactionEventListener( DEFAULT_DATABASE_NAME, new TransactionEventListenerAdapter<>()
         {
@@ -99,7 +102,6 @@ class SystemGraphDbmsModelTest
     @Test
     void shouldReturnDatabaseStates()
     {
-
         // when
         HashMap<DatabaseId,DatabaseState> expectedIds = new HashMap<>();
         try ( var tx = db.beginTx() )
@@ -128,9 +130,9 @@ class SystemGraphDbmsModelTest
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DATABASE_LABEL );
-        node.setProperty( "name", new NormalizedDatabaseName( databaseName ).name() );
-        node.setProperty( "status", online ? "online" : "offline" );
-        node.setProperty( "uuid", uuid.toString() );
+        node.setProperty( DATABASE_NAME_PROPERTY, new NormalizedDatabaseName( databaseName ).name() );
+        node.setProperty( DATABASE_STATUS_PROPERTY, online ? "online" : "offline" );
+        node.setProperty( DATABASE_UUID_PROPERTY, uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
         expected.put( id, online ? new DatabaseState( id, STARTED ) : new DatabaseState( id, STOPPED ) );
     }
@@ -139,10 +141,9 @@ class SystemGraphDbmsModelTest
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DELETED_DATABASE_LABEL );
-        node.setProperty( "name", new NormalizedDatabaseName( databaseName ).name() );
-        node.setProperty( "uuid", uuid.toString() );
+        node.setProperty( DATABASE_NAME_PROPERTY, new NormalizedDatabaseName( databaseName ).name() );
+        node.setProperty( DATABASE_UUID_PROPERTY, uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
-        expected.put( id , new DatabaseState( id, DROPPED ) );
+        expected.put( id, new DatabaseState( id, DROPPED ) );
     }
-
 }

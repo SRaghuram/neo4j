@@ -44,11 +44,6 @@ public class ClientConnectorAddresses implements Iterable<ClientConnectorAddress
     {
         List<ConnectorUri> connectorUris = new ArrayList<>();
 
-        if ( !config.get( BoltConnector.enabled ) )
-        {
-            throw new IllegalArgumentException( "The Bolt connector must be configured to run a cluster" );
-        }
-
         connectorUris.add( new ConnectorUri( bolt, config.get( BoltConnector.advertised_address ) ) );
 
         if ( config.get( HttpConnector.enabled ) )

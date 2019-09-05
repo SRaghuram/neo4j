@@ -28,7 +28,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
@@ -200,7 +200,7 @@ class CausalClusteringProceduresIT
         verifyClusterRoleProcedure( databaseName );
 
         dropDatabase( databaseName, cluster );
-        assertDatabaseDoesNotExist( databaseName, cluster );
+        assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
 
         assertRoleProcedureThrowsOnAllMembers( databaseName, Status.Database.DatabaseNotFound );
     }

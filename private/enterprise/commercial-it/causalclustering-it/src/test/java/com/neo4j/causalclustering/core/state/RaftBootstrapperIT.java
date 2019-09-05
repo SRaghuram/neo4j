@@ -35,6 +35,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
@@ -43,6 +44,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -62,6 +64,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @PageCacheExtension
@@ -79,6 +82,7 @@ class RaftBootstrapperIT
 
     private final DatabaseInitializer databaseInitializer = DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
+    private StoreId storeId = new StoreId( MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
 
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final Monitors monitors = new Monitors();
@@ -117,7 +121,7 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig );
@@ -137,7 +141,7 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig );
@@ -162,7 +166,7 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig );
@@ -194,7 +198,7 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, config );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
 
         // then
         verifySnapshot( snapshot, membership, config );
@@ -221,7 +225,7 @@ class RaftBootstrapperIT
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig );
 
         // when
-        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
 
         // then
         assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
@@ -250,7 +254,7 @@ class RaftBootstrapperIT
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
         assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
         assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
@@ -284,7 +288,7 @@ class RaftBootstrapperIT
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
-        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership ) );
+        BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
         assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
     }
 

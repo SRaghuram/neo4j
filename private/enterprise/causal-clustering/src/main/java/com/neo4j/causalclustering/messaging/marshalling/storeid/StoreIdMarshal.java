@@ -34,7 +34,7 @@ public final class StoreIdMarshal extends SafeChannelMarshal<StoreId>
         channel.putLong( storeId.getRandomId() );
         channel.putLong( storeId.getStoreVersion() );
         channel.putLong( storeId.getUpgradeTime() );
-        channel.putLong( storeId.getUpgradeId() );
+        channel.putLong( storeId.getUpgradeTxId() );
     }
 
     @Override

@@ -9,9 +9,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.database.SystemGraphDbmsModel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.LabelEntry;
@@ -24,20 +26,15 @@ import org.neo4j.kernel.database.DatabaseIdFactory;
 import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_NAME_PROPERTY;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_STATUS_PROPERTY;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_UUID_PROPERTY;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DELETED_DATABASE_LABEL;
 
 /**
  * Utility class for accessing the DBMS model in the system database.
  */
-class SystemGraphDbmsModel
+public class CommercialSystemGraphDbmsModel extends SystemGraphDbmsModel
 {
-    private GraphDatabaseService systemDatabase;
+    protected final Supplier<GraphDatabaseService> systemDatabase;
 
-    void setSystemDatabase( GraphDatabaseService systemDatabase )
+    public CommercialSystemGraphDbmsModel( Supplier<GraphDatabaseService> systemDatabase )
     {
         this.systemDatabase = systemDatabase;
     }
@@ -46,7 +43,7 @@ class SystemGraphDbmsModel
     {
         Collection<DatabaseId> updatedDatabases;
 
-        try ( var tx = systemDatabase.beginTx() )
+        try ( var tx = systemDatabase.get().beginTx() )
         {
             var changedDatabases = Iterables.stream( transactionData.assignedNodeProperties() )
                     .map( PropertyEntry::entity )
@@ -70,7 +67,7 @@ class SystemGraphDbmsModel
     {
         Map<String,DatabaseState> databases = new HashMap<>();
 
-        try ( var tx = systemDatabase.beginTx() )
+        try ( var tx = systemDatabase.get().beginTx() )
         {
             var deletedDatabases = tx.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
             deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), DROPPED ) ) );

@@ -240,13 +240,13 @@ public final class CausalClusteringTestHelpers
                 () -> membersHaveDatabaseState( DatabaseAvailability.STOPPED, members, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertDatabaseDoesNotExist( String databaseName, Cluster cluster ) throws InterruptedException
+    public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertDatabaseDoesNotExist( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Set<ClusterMember> members ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
                 () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), is( true ), 1, MINUTES );

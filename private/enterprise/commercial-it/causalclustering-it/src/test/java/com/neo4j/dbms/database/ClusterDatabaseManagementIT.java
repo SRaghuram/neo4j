@@ -34,7 +34,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
 import static co.unruly.matchers.OptionalMatchers.empty;
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
@@ -72,7 +72,7 @@ class ClusterDatabaseManagementIT
     {
         // given
         var cluster = startCluster();
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
         // when
         createDatabase( "foo", cluster );
@@ -126,7 +126,7 @@ class ClusterDatabaseManagementIT
                 .withNumberOfCoreMembers( 4 )
                 .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" );
         var cluster = startCluster( modifiedConfig );
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
         var rejoiningMembers = oneCoreAndOneReadReplica( cluster );
         var remainingMembers = cluster.allMembers().stream().filter( m -> !rejoiningMembers.contains( m ) ).collect( toSet() );
@@ -238,7 +238,7 @@ class ClusterDatabaseManagementIT
         dropDatabase( "foo", cluster );
 
         // then
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
     }
 
     @Test
@@ -256,7 +256,7 @@ class ClusterDatabaseManagementIT
         dropDatabase( "foo", cluster );
 
         // then
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
     }
 
     @Test
@@ -271,7 +271,7 @@ class ClusterDatabaseManagementIT
         dropDatabase( "foo", cluster );
 
         // then
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
         // when
         createDatabase( "foo", cluster );
@@ -291,7 +291,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
 
         dropDatabase( "foo", cluster );
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
         var someMembers = oneCoreAndOneReadReplica( cluster );
 
@@ -300,7 +300,7 @@ class ClusterDatabaseManagementIT
         assertDefaultDatabasesAreAvailable( cluster );
 
         // then
-        assertDatabaseDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
     }
 
     @Test
@@ -318,16 +318,16 @@ class ClusterDatabaseManagementIT
         dropDatabase( "foo", cluster );
         dropDatabase( "bar", cluster );
 
-        assertDatabaseDoesNotExist( "foo", cluster );
-        assertDatabaseDoesNotExist( "bar", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "bar", cluster );
 
         // when
         restartCluster( cluster );
 
         // then
 
-        assertDatabaseDoesNotExist( "foo", cluster );
-        assertDatabaseDoesNotExist( "bar", cluster );
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
+        assertDatabaseEventuallyDoesNotExist( "bar", cluster );
     }
 
     @Test
@@ -348,13 +348,13 @@ class ClusterDatabaseManagementIT
 
         // when
         dropDatabase( "foo", cluster );
-        assertDatabaseDoesNotExist( "foo", remainingMembers );
+        assertDatabaseEventuallyDoesNotExist( "foo", remainingMembers );
 
         rejoiningMembers.forEach( ClusterMember::start );
         assertDefaultDatabasesAreAvailable( cluster );
 
         // then
-        assertDatabaseDoesNotExist( "foo", rejoiningMembers );
+        assertDatabaseEventuallyDoesNotExist( "foo", rejoiningMembers );
     }
 
     @Test
@@ -390,7 +390,7 @@ class ClusterDatabaseManagementIT
         // Drop and recreate database
         cluster.awaitLeader( databaseName );
         dropDatabase( databaseName, cluster );
-        assertDatabaseDoesNotExist( databaseName, remaining );
+        assertDatabaseEventuallyDoesNotExist( databaseName, remaining );
         createDatabase( databaseName, cluster );
         assertDatabaseEventuallyStarted( databaseName, remaining );
 
@@ -443,7 +443,7 @@ class ClusterDatabaseManagementIT
             assertEventually( () -> dbIdRepo.getByName( databaseName ), empty(), 30, SECONDS );
         }
 
-        assertDatabaseDoesNotExist( databaseName, cluster );
+        assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
     }
 
     private static long hasNodeCount( CoreClusterMember member, String databaseName, Label label )

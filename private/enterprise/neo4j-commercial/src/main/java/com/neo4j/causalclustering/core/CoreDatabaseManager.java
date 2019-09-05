@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,6 +42,7 @@ import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
@@ -54,7 +56,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId ) throws Exception
+    protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
         // TODO: Remove need for resolving this dependency? Remove internal operator completely?
         ClusterInternalDbmsOperator internalDbmsOperator = globalModule.getGlobalDependencies().resolveDependency( ClusterInternalDbmsOperator.class );
@@ -68,9 +70,13 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 
+        ClusterSystemGraphDbmsModel systemGraph = new ClusterSystemGraphDbmsModel( () -> getDatabaseContext( SYSTEM_DATABASE_ID )
+                .orElseThrow( IllegalArgumentException::new )
+                .databaseFacade() );
+
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
-        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext(
-                databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService );
+        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, coreDatabaseLife,
+                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, systemGraph );
 
         var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );

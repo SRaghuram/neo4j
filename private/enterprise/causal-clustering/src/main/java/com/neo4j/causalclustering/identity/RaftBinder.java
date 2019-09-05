@@ -10,20 +10,24 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toSet;
 
 public class RaftBinder implements Supplier<Optional<RaftId>>
 {
@@ -41,7 +45,9 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final DatabaseId databaseId;
     private final SimpleStorage<RaftId> raftIdStorage;
     private final CoreTopologyService topologyService;
+    private final ClusterSystemGraphDbmsModel systemGraph;
     private final RaftBootstrapper raftBootstrapper;
+    private final MemberId myIdentity;
     private final Monitor monitor;
     private final Clock clock;
     private final ThrowingAction<InterruptedException> retryWaiter;
@@ -50,11 +56,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private RaftId raftId;
 
-    public RaftBinder( DatabaseId databaseId, SimpleStorage<RaftId> raftIdStorage,
-            CoreTopologyService topologyService, Clock clock, ThrowingAction<InterruptedException> retryWaiter,
-            Duration timeout, RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors )
+    public RaftBinder( DatabaseId databaseId, MemberId myIdentity, SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService,
+            ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter, Duration timeout,
+            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors )
     {
         this.databaseId = databaseId;
+        this.myIdentity = myIdentity;
+        this.systemGraph = systemGraph;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.raftIdStorage = raftIdStorage;
         this.topologyService = topologyService;
@@ -118,7 +126,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             return new BoundState( raftId );
         }
 
-        CoreSnapshot snapshot = null;
+        CoreSnapshot snapshot;
         DatabaseCoreTopology topology;
         long endTime = clock.millis() + timeout.toMillis();
 
@@ -126,17 +134,37 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         {
             topology = topologyService.coreTopologyForDatabase( databaseId );
 
-            if ( topology.raftId() != null )
+            if ( databaseId.isSystemDatabase() || systemGraph.getInitialMembers( databaseId ).isEmpty() )
             {
+                // Used for initial databases (system + default) in conjunction with cluster formation.
+                snapshot = tryBootstrapUsingDiscoveryService( topology );
+            }
+            else
+            {
+                Set<MemberId> initialMembers = systemGraph
+                        .getInitialMembers( databaseId )
+                        .stream()
+                        .map( MemberId::new )
+                        .collect( toSet() );
+
+                StoreId storeId = systemGraph.getStoreId( databaseId );
+
+                // Used for databases created during runtime in response to operator commands.
+                snapshot = tryBootstrapUsingSystemDatabase( initialMembers, storeId );
+            }
+
+            if ( snapshot != null )
+            {
+                // Alright, we managed to bootstrap, we're done!
+                raftId = RaftId.from( databaseId );
+                publishRaftId( raftId );
+                monitor.bootstrapped( snapshot, databaseId, raftId );
+            }
+            else if ( topology.raftId() != null )
+            {
+                // Someone else bootstrapped, we're done!
                 raftId = topology.raftId();
                 monitor.boundToRaft( databaseId, raftId );
-            }
-            else if ( hostShouldBootstrapRaft( topology ) )
-            {
-                raftId = RaftId.from( databaseId );
-                snapshot = raftBootstrapper.bootstrap( topology.members().keySet() );
-                monitor.bootstrapped( snapshot, databaseId, raftId );
-                publishRaftId( raftId );
             }
 
             retryWaiter.apply();
@@ -153,6 +181,24 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
         raftIdStorage.writeState( raftId );
         return new BoundState( raftId, snapshot );
+    }
+
+    private CoreSnapshot tryBootstrapUsingSystemDatabase( Set<MemberId> initialMembers, StoreId storeId )
+    {
+        if ( !initialMembers.contains( myIdentity ) )
+        {
+            return null;
+        }
+        return raftBootstrapper.bootstrap( initialMembers, storeId );
+    }
+
+    private CoreSnapshot tryBootstrapUsingDiscoveryService( DatabaseCoreTopology topology )
+    {
+        if ( !hostShouldBootstrapRaft( topology ) )
+        {
+            return null;
+        }
+        return raftBootstrapper.bootstrap( topology.members().keySet() );
     }
 
     @Override

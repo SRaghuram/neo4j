@@ -6,7 +6,9 @@
 package org.neo4j.cypher.internal
 
 import java.util
+import java.util.concurrent.ThreadLocalRandom
 
+import com.neo4j.causalclustering.core.consensus.RaftMachine
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
@@ -28,9 +30,13 @@ import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.exceptions.{InvalidArgumentsException, Status}
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
+import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues
+
+import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 /**
   * This runtime takes on queries that require no planning, such as multidatabase administration commands
@@ -403,6 +409,37 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
       val default = dbName.equals(defaultDbName)
 
+      val clusterOptions = Try(resolver.resolveDependency(classOf[RaftMachine])) match {
+        case Success(raftMachine) =>
+          val initialMembersSet = raftMachine.coreState.committed.members.asScala
+          val opts = (initialMembersSet.map(_.getUuid.toString).toArray, System.currentTimeMillis(),
+            ThreadLocalRandom.current().nextLong(), Standard.LATEST_STORE_VERSION)
+          Some(opts)
+
+        case Failure(_) => None
+      }
+
+      val virtualKeys: Array[String] = Array("name", "status", "default", "maxNumberOfDatabases")
+      val virtualValues: Array[AnyValue] = Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))
+
+      val clusterProperties =
+        """
+          |  SET d.initial_members = $initialMembers
+          |  SET d.store_creation_time = $creationTime
+          |  SET d.store_random_id = $randomId
+          |  SET d.store_version = $storeVersion """.stripMargin
+
+      val (queryAdditions, virtualMap) = clusterOptions match {
+        case Some(opts) =>
+          val (initial, creation, randomId, storeVersion) = opts
+
+          (clusterProperties, VirtualValues.map(
+            virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion"),
+            virtualValues ++ Array(Values.stringArray(initial:_*), Values.longValue(creation), Values.longValue(randomId), Values.stringValue(storeVersion))))
+
+        case None => ("",VirtualValues.map(virtualKeys, virtualValues))
+      }
+
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
         """MATCH (d:Database)
           |WITH count(d) as numberOfDatabases
@@ -413,14 +450,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  SET d.status = $status
           |  SET d.default = $default
           |  SET d.created_at = datetime()
-          |  SET d.uuid = randomUUID()
-          |)
+          |  SET d.uuid = randomUUID()""".stripMargin +
+          queryAdditions +
+          """)
           |WITH "ignoreMe" as ignore
           |MATCH (d:Database {name: $name})
           |RETURN d.name as name, d.status as status, d.uuid as uuid""".stripMargin,
-        VirtualValues.map(Array("name", "status", "default", "maxNumberOfDatabases"),
-          Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default), Values.longValue(maxDBLimit))),
-        QueryHandler
+        virtualMap, QueryHandler
           .handleNoResult(() => Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName': ")))
           .handleError(error => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>

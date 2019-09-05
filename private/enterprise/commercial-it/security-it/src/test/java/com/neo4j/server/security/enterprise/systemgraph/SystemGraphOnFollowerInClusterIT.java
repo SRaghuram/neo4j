@@ -93,7 +93,7 @@ class SystemGraphOnFollowerInClusterIT
                     }
                 } );
             }
-            CausalClusteringTestHelpers.assertDatabaseDoesNotExist( dbName, cluster );
+            CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
             CausalClusteringTestHelpers.assertRoleDoesNotExist( roleName, cluster );
             CausalClusteringTestHelpers.assertUserDoesNotExist( userName, cluster );
         }
@@ -720,7 +720,7 @@ class SystemGraphOnFollowerInClusterIT
             assertFalse( result.hasNext() );
             tx.commit();
         } );
-        CausalClusteringTestHelpers.assertDatabaseDoesNotExist( dbName, cluster );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
     }
 
     @Test

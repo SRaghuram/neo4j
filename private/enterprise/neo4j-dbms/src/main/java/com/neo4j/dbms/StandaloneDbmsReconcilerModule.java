@@ -28,7 +28,6 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private final GlobalModule globalModule;
     private final DM databaseManager;
     private final LocalDbmsOperator localOperator;
-    private final SystemGraphDbmsModel dbmsModel;
     private final SystemGraphDbmsOperator systemOperator;
     private final ShutdownOperator shutdownOperator;
     protected final DatabaseIdRepository databaseIdRepository;
@@ -44,7 +43,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         this.databaseIdRepository = databaseManager.databaseIdRepository();
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
-        this.dbmsModel = new SystemGraphDbmsModel();
+        CommercialSystemGraphDbmsModel dbmsModel = new CommercialSystemGraphDbmsModel( () -> getSystemDatabase( databaseManager ) );
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, txBridge, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
@@ -72,13 +71,11 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
         systemOperator.trigger( ReconcilerRequest.simple() ).await( SYSTEM_DATABASE_ID );
 
-        var systemDatabase = getSystemDatabase( databaseManager );
-        dbmsModel.setSystemDatabase( systemDatabase );
-
         // Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
         systemOperator.trigger( ReconcilerRequest.simple() ).awaitAll();
 
+        var systemDatabase = getSystemDatabase( databaseManager );
         initializeReconciledTxTracker( systemDatabase );
     }
 

@@ -74,6 +74,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
@@ -88,6 +89,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -102,6 +104,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
@@ -196,14 +199,14 @@ class CoreDatabaseFactory
         this.cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
     }
 
-    CoreRaftContext createRaftContext( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
-            BootstrapContext bootstrapContext, DatabaseLogService logService ) throws Exception
+    CoreRaftContext createRaftContext( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies, BootstrapContext bootstrapContext,
+            DatabaseLogService logService, ClusterSystemGraphDbmsModel systemGraph )
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
         DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( databaseId, NO_INITIALIZATION );
-        RaftBinder raftBinder = createRaftBinder(
-                databaseId, config, monitors, storageFactory, bootstrapContext, temporaryDatabaseFactory, databaseInitializer, debugLog );
+        RaftBinder raftBinder = createRaftBinder( databaseId, config, monitors, storageFactory, bootstrapContext,
+                temporaryDatabaseFactory, databaseInitializer, debugLog, systemGraph );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life, debugLog );
@@ -326,16 +329,17 @@ class CoreDatabaseFactory
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, ClusterStateStorageFactory storageFactory,
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
-            DatabaseLogProvider debugLog )
+            DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph )
     {
+        DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
                 storageEngineFactory, config );
 
         SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( databaseId.name(), debugLog );
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
-        return new RaftBinder( databaseId, raftIdStorage, topologyService, Clocks.systemClock(), () -> sleep( 100 ), clusterBindingTimeout, raftBootstrapper,
-                minimumCoreHosts, monitors );
+        return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, Clocks.systemClock(), () -> sleep( 100 ),
+                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,
