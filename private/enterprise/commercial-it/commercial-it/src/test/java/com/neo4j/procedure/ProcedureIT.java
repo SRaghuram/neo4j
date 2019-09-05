@@ -1557,10 +1557,10 @@ public class ProcedureIT
     void shouldBeAbleToChangeBehaviourBasedOnProcedureCallContextDatabase()
     {
         // Given
-        try ( Transaction ignore = db.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = db.execute( "CALL com.neo4j.procedure.outputDependsOnDatabase()" );
+            Result res = tx.execute( "CALL com.neo4j.procedure.outputDependsOnDatabase()" );
 
             // Then
             assertTrue(res.hasNext());
@@ -1571,10 +1571,10 @@ public class ProcedureIT
         }
 
         // Given
-        try ( Transaction ignore = system.beginTx() )
+        try ( Transaction tx = system.beginTx() )
         {
             // When
-            Result res = system.execute( "CALL com.neo4j.procedure.outputDependsOnDatabase()" );
+            Result res = tx.execute( "CALL com.neo4j.procedure.outputDependsOnDatabase()" );
 
             // Then
             assertTrue(res.hasNext());
