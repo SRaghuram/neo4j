@@ -11,17 +11,16 @@ import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -83,8 +82,7 @@ public abstract class SnbBiExecutionTest
         File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
@@ -227,7 +225,7 @@ public abstract class SnbBiExecutionTest
                 );
 
         File ldbcConfigFile = createTempFile( temporaryFolder.absolutePath() );
-        FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString(), StandardCharsets.UTF_8 );
+        BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
         LdbcCli.benchmark(
                 store,
                 scenario.updatesDir(),

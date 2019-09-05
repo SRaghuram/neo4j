@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.interactive.integration;
 
-import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
@@ -18,12 +17,11 @@ import org.junit.jupiter.api.Disabled;
 public class EmbeddedCoreDense1SnbInteractiveExecutionTest extends SnbInteractiveExecutionTest
 {
     @Override
-    Scenario buildValidationData() throws DbException
+    Scenario buildValidationData()
     {
         return Scenario.randomInteractiveFor(
                 CsvSchema.CSV_MERGE,
                 Neo4jSchema.NEO4J_DENSE_1,
-                Scenario.randomNeo4jImporterFor( CsvSchema.CSV_MERGE, Neo4jSchema.NEO4J_DENSE_1 ),
                 Neo4jApi.EMBEDDED_CORE,
                 PlannerType.DEFAULT,
                 RuntimeType.DEFAULT );

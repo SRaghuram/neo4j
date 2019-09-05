@@ -21,11 +21,9 @@ import com.neo4j.bench.ldbc.TestUtils;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +45,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestDirectoryExtension
-public abstract class SnbInteractiveExecutionTest
+abstract class SnbInteractiveExecutionTest
 {
     static class DatabaseAndUrl implements AutoCloseable
     {
@@ -61,7 +59,7 @@ public abstract class SnbInteractiveExecutionTest
         }
 
         @Override
-        public void close() throws Exception
+        public void close()
         {
             if ( null != managementService )
             {
@@ -120,8 +118,7 @@ public abstract class SnbInteractiveExecutionTest
         File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
@@ -254,8 +251,7 @@ public abstract class SnbInteractiveExecutionTest
         File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
@@ -337,7 +333,7 @@ public abstract class SnbInteractiveExecutionTest
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
             File ldbcConfigFile = createTempFile( temporaryFolder.absolutePath() );
-            FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString(), StandardCharsets.UTF_8 );
+            BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
                     scenario.updatesDir(),
@@ -402,8 +398,7 @@ public abstract class SnbInteractiveExecutionTest
         File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
-                scenario.neo4jSchema(),
-                scenario.neo4jImporter()
+                scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
@@ -484,7 +479,7 @@ public abstract class SnbInteractiveExecutionTest
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
             File ldbcConfigFile = createTempFile( temporaryFolder.absolutePath() );
-            FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString(), StandardCharsets.UTF_8 );
+            BenchmarkUtil.stringToFile( configuration.toPropertiesString(), ldbcConfigFile.toPath() );
             LdbcCli.benchmark(
                     store,
                     scenario.updatesDir(),

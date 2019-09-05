@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.ldbc.interactive.integration;
 
-import com.ldbc.driver.DbException;
 import com.ldbc.driver.control.DriverConfiguration;
 import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
@@ -29,12 +28,11 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecutionTest
 {
     @Override
-    Scenario buildValidationData() throws DbException
+    Scenario buildValidationData()
     {
         return Scenario.randomInteractiveFor(
                 CsvSchema.CSV_REGULAR,
                 Neo4jSchema.NEO4J_REGULAR,
-                Scenario.randomNeo4jImporterFor( CsvSchema.CSV_REGULAR, Neo4jSchema.NEO4J_REGULAR ),
                 Neo4jApi.REMOTE_CYPHER,
                 PlannerType.DEFAULT,
                 RuntimeType.DEFAULT );
