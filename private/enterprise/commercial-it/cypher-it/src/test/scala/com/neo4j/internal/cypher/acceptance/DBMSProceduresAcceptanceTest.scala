@@ -106,7 +106,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
     // WHEN
     val exception = the[RuntimeException] thrownBy {
-      executeOnSystem("neo4j", "neo", "CALL dbms.functions()") // any procedure that we will never allow on system should be here
+      executeOnSystem("neo4j", "neo", "CALL db.createLabel('Foo')") // any procedure that we will never allow on system should be here
     }
     exception.getMessage should include("Not a recognised system command or procedure")
   }
@@ -122,6 +122,4 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     }
     exception.getMessage should include("There is no procedure with the name `dbms.something.something.profit` registered for this database instance.")
   }
-
-  // TODO: Add test for running a system procedure towards a non-system database when that check is implemented
 }
