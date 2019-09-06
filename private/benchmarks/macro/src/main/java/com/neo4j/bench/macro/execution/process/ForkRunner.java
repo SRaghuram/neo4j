@@ -10,8 +10,10 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.process.JpsPid;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
+import com.neo4j.bench.common.process.PgrepAndPsPid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -26,6 +28,7 @@ import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -187,7 +190,8 @@ public class ForkRunner
             ProcessBuilder.Redirect errorRedirect = ProcessBuilder.Redirect.to( forkDirectory.newErrorLog().toFile() );
             JvmProcess.start( jvmProcessArgs,
                               outputRedirect,
-                              errorRedirect ).waitFor();
+                              errorRedirect,
+                              Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) ).waitFor();
         }
         else
         {
