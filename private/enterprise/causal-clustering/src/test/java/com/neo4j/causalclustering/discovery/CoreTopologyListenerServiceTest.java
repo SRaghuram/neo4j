@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -23,9 +22,9 @@ import static org.mockito.Mockito.when;
 
 class CoreTopologyListenerServiceTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId id1 = databaseIdRepository.getByName( "database_one" ).get();
-    private final DatabaseId id2 = databaseIdRepository.getByName( "database_two" ).get();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId id1 = databaseIdRepository.getRaw( "database_one" );
+    private final DatabaseId id2 = databaseIdRepository.getRaw( "database_two" );
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
 

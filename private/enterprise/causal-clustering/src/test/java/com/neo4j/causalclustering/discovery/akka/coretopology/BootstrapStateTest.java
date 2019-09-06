@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
@@ -39,9 +38,9 @@ import static org.neo4j.internal.helpers.collection.Iterables.last;
 
 class BootstrapStateTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.getByName( "known" ).get();
-    private final DatabaseId unknownDatabaseId = databaseIdRepository.getByName( "unknown" ).get();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = databaseIdRepository.getRaw( "known" );
+    private final DatabaseId unknownDatabaseId = databaseIdRepository.getRaw( "unknown" );
 
     private final Member member1 = newMemberMock();
     private final Member member2 = newMemberMock();

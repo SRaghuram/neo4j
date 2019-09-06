@@ -28,7 +28,6 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.CallingThreadExecutor;
@@ -53,8 +52,8 @@ class CatchupProcessManagerTest
     private final PageCursorTracerSupplier pageCursorTracerSupplier = mock( PageCursorTracerSupplier.class );
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.getByName( "db1" ).get();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = databaseIdRepository.getRaw( "db1" );
     private final ReadReplicaDatabaseContext databaseContext = mock( ReadReplicaDatabaseContext.class );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
     private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );

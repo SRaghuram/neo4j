@@ -12,17 +12,16 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DefaultDiscoveryMemberTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
-    private final DatabaseId databaseId1 = databaseIdRepository.getByName( "one" ).get();
-    private final DatabaseId databaseId2 = databaseIdRepository.getByName( "two" ).get();
+    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "one" );
+    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "two" );
 
     @Test
     void shouldReturnMemberId()

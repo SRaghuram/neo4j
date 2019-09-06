@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
@@ -29,13 +28,13 @@ import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class AkkaTopologyClientTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Test
     void shouldReportEmptyTopologiesWhenShutdown() throws Exception
     {
 
-        var databaseId = databaseIdRepository.getByName( "people" ).get();
+        var databaseId = databaseIdRepository.getRaw( "people" );
         var memberId1 = new MemberId( UUID.randomUUID() );
         var memberId2 = new MemberId( UUID.randomUUID() );
         var memberId3 = new MemberId( UUID.randomUUID() );

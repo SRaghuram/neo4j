@@ -19,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
@@ -34,7 +33,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith( {LifeExtension.class} )
 class CoreDatabaseLifeTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Inject
     private LifeSupport life;
@@ -42,7 +41,7 @@ class CoreDatabaseLifeTest
     @Test
     void shouldNotifyTopologyServiceOnStart() throws Exception
     {
-        var databaseId = databaseIdRepository.getByName( "customers" ).get();
+        var databaseId = databaseIdRepository.getRaw( "customers" );
         var topologyService = mock( CoreTopologyService.class );
         var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 
@@ -55,7 +54,7 @@ class CoreDatabaseLifeTest
     @Test
     void shouldNotifyTopologyServiceOnStop() throws Exception
     {
-        var databaseId = databaseIdRepository.getByName( "orders" ).get();
+        var databaseId = databaseIdRepository.getRaw( "orders" );
         var topologyService = mock( CoreTopologyService.class );
         var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
 

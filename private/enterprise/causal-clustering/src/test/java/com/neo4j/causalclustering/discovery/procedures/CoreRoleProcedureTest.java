@@ -18,7 +18,6 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 
@@ -33,8 +32,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 class CoreRoleProcedureTest
 {
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.getByName( "cars" ).get();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId = databaseIdRepository.getRaw( "cars" );
     private final MemberId memberId = new MemberId( UUID.randomUUID() );
     private final IdentityModule identityModule = mock( IdentityModule.class );
     private final TopologyService topologyService = mock( TopologyService.class );

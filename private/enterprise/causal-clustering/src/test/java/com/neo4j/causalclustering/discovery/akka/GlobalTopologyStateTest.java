@@ -25,7 +25,6 @@ import java.util.function.Consumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
@@ -45,9 +44,9 @@ class GlobalTopologyStateTest
     private final Consumer<DatabaseCoreTopology> listener = mock( Consumer.class );
     private final GlobalTopologyState state = new GlobalTopologyState( NullLogProvider.getInstance(), listener );
 
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId1 = databaseIdRepository.getByName( "db1" ).get();
-    private final DatabaseId databaseId2 = databaseIdRepository.getByName( "db2" ).get();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "db1" );
+    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "db2" );
 
     private final MemberId coreId1 = new MemberId( UUID.randomUUID() );
     private final MemberId coreId2 = new MemberId( UUID.randomUUID() );
