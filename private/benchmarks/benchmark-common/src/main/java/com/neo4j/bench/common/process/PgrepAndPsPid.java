@@ -7,11 +7,11 @@ package com.neo4j.bench.common.process;
 
 import com.neo4j.bench.common.util.Jvm;
 
-public class JpsPid extends PidStrategy
+public class PgrepAndPsPid extends PidStrategy
 {
     @Override
     protected String[] getCommand( Jvm jvm )
     {
-        return new String[]{jvm.launchJps(), "-v"};
+        return new String[]{"bash", "-c", "pgrep java | xargs ps -p"};
     }
 }
