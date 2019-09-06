@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.planning.Cypher4_0Planner
+import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -52,7 +52,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
     }
 
     val planner =
-      Cypher4_0Planner(
+      CypherPlanner(
         plannerConfig,
         MasterCompiler.CLOCK,
         spi.monitors(),

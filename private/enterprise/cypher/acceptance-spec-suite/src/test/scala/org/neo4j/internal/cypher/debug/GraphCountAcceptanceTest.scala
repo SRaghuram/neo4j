@@ -9,7 +9,7 @@ import java.io.File
 
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
-import org.neo4j.cypher.internal.planning.Cypher4_0Planner
+import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
@@ -36,7 +36,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
       context
     }
 
-    Cypher4_0Planner.customPlanContextCreator = Some(getPlanContext)
+    CypherPlanner.customPlanContextCreator = Some(getPlanContext)
 
     createGraph(graphCounts)
 

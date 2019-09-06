@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.internal.LastCommittedTxIdProvider
-import org.neo4j.cypher.internal.planning.Cypher4_0Planner
+import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.logical.plans.{ProcedureSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundTokenContext, TransactionalContextWrapper}
@@ -21,7 +21,7 @@ import scala.collection.mutable
 /**
   * This PlanContext is used for injecting customer statistics into the planner, which can help in
   * reproducing bug and support cases. It is not fit for production use. You can plug it into the
-  * product, _temporarily_, overriding the var [[org.neo4j.cypher.internal.planning.Cypher4_0Planner].customPlanContextCreator
+  * product, _temporarily_, overriding the var [[org.neo4j.cypher.internal.planning.CypherPlanner].customPlanContextCreator
   * with an instance of this class in your test.
   *
   * @param row The parsed graph counts data.
