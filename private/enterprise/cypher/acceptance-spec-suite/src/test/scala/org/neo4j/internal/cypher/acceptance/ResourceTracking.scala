@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.ResourceMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResource
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.internal.kernel.api.AutoCloseablePlus
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.monitoring.Monitors
@@ -35,7 +36,7 @@ trait ResourceTracking extends CypherFunSuite {
     private var traced: Map[URL, Int] = Map()
     private var closed: Map[URL, Int] = Map()
 
-    override def trace(resource: AutoCloseable): Unit =
+    override def trace(resource: AutoCloseablePlus): Unit =
       resource match {
         case CSVResource(url, _) =>
           val currCount = traced.getOrElse(url, 0)
@@ -43,7 +44,7 @@ trait ResourceTracking extends CypherFunSuite {
         case _ =>
       }
 
-    override def close(resource: AutoCloseable): Unit =
+    override def close(resource: AutoCloseablePlus): Unit =
       resource match {
         case CSVResource(url, _) =>
           val currCount = closed.getOrElse(url, 0)
