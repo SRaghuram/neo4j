@@ -25,44 +25,37 @@ import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
 
 case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) extends ExpressionConverter {
 
-  override def toCommandExpression(id: Id, expression: ast.Expression, self: ExpressionConverters): Option[commandexpressions.Expression] = {
-    val result = expression match {
-      case e: ast.Property => toCommandProperty(id, e, self)
-      case e: ast.HasLabels => hasLabels(id, e, self)
+  override def toCommandExpression(id: Id, expression: ast.Expression, self: ExpressionConverters): Option[commandexpressions.Expression] =
+    expression match {
+      case e: ast.Property           => toCommandProperty(id, e, self)
+      case e: ast.HasLabels          => hasLabels(id, e, self)
       case e: ast.FunctionInvocation => toCommandExpression(id, e.function, e, self)
-      case _ => null
+      case _                         => None
     }
 
-    Option(result)
-  }
-
   override def toGroupingExpression(id: Id, groupings: Map[String, ast.Expression], orderToLeverage: Seq[ast.Expression],
-                                    self: ExpressionConverters): Option[GroupingExpression] = {
-    None
-  }
+                                    self: ExpressionConverters): Option[GroupingExpression] = None
 
-  override def toCommandProjection(id: Id, projections: Map[String, ast.Expression], self: ExpressionConverters): Option[CommandProjection] = {
-    None
-  }
+  override def toCommandProjection(id: Id, projections: Map[String, ast.Expression], self: ExpressionConverters): Option[CommandProjection] = None
 
   private def toCommandExpression(id: Id, expression: Function, invocation: ast.FunctionInvocation,
-                                  self: ExpressionConverters): commandexpressions.Expression =
+                                  self: ExpressionConverters): Option[commandexpressions.Expression] =
     expression match {
       case Exists =>
         invocation.arguments.head match {
           case property: ast.Property =>
             val propertyKey = getPropertyKey(property.propertyKey)
-            MaterializedEntityPropertyExists(self.toCommandExpression(id, property.map), propertyKey)
+            Some(MaterializedEntityPropertyExists(self.toCommandExpression(id, property.map), propertyKey))
         }
-      case Keys => MaterializedEntityKeysFunction(self.toCommandExpression(id, invocation.arguments.head))
-      case Labels => MaterializedEntityLabelsFunction(self.toCommandExpression(id, invocation.arguments.head))
-      case _ => null 
+      case Keys   => Some(MaterializedEntityKeysFunction(self.toCommandExpression(id, invocation.arguments.head)))
+      case Labels => Some(MaterializedEntityLabelsFunction(self.toCommandExpression(id, invocation.arguments.head)))
+      case _      => None
     }
 
-  private def toCommandProperty(id: Id, e: ast.LogicalProperty, self: ExpressionConverters): commandexpressions.Expression =
+  private def toCommandProperty(id: Id, e: ast.LogicalProperty, self: ExpressionConverters): Option[commandexpressions.Expression] =
     e match {
-      case Property(map, propertyKey) => MaterializedEntityProperty(self.toCommandExpression(id, map), getPropertyKey(propertyKey))
-      case _ => null
+      case Property(map, propertyKey) => Some(MaterializedEntityProperty(self.toCommandExpression(id, map), getPropertyKey(propertyKey)))
+      case _                          => None
     }
 
   private def getPropertyKey(propertyKey: PropertyKeyName) = tokenContext.getOptPropertyKeyId(propertyKey.name) match {
@@ -72,13 +65,14 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
       PropertyKey(propertyKey.name)
   }
 
-  private def hasLabels(id: Id, e: ast.HasLabels, self: ExpressionConverters) = e.labels.map {
-    l =>
-      MaterializedEntityHasLabel(self.toCommandExpression(id, e.expression),
-        commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
-  } reduceLeft {
-    predicates.And(_, _)
-  }
+  private def hasLabels(id: Id, e: ast.HasLabels, self: ExpressionConverters): Option[Predicate] =
+    Some(e.labels
+      .map { l =>
+        MaterializedEntityHasLabel(self.toCommandExpression(id, e.expression),
+          commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
+      }
+      .reduceLeft(predicates.And.apply)
+    )
 }
 
 case class MaterializedEntityProperty(mapExpr: commandexpressions.Expression, propertyKey: KeyToken) extends commandexpressions.Expression
@@ -107,17 +101,17 @@ case class MaterializedEntityPropertyExists(variable: commandexpressions.Express
   private val propertyExists = commands.predicates.PropertyExists(variable, propertyKey)
 
   override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = variable(m, state) match {
-    case n: NodeValue => Some(n.properties().containsKey(propertyKey.name))
+    case n: NodeValue         => Some(n.properties().containsKey(propertyKey.name))
     case r: RelationshipValue => Some(r.properties().containsKey(propertyKey.name))
-    case _ => propertyExists.isMatch(m, state)
+    case _                    => propertyExists.isMatch(m, state)
   }
 
   override def toString: String = s"hasProp($variable.${propertyKey.name})"
 
   override def containsIsNull = false
 
-  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression
-  = f(MaterializedEntityPropertyExists(variable.rewrite(f), propertyKey.rewrite(f)))
+  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression =
+    f(MaterializedEntityPropertyExists(variable.rewrite(f), propertyKey.rewrite(f)))
 
   override def arguments: Seq[commandexpressions.Expression] = Seq(variable)
 
@@ -133,7 +127,7 @@ case class MaterializedEntityHasLabel(entity: commandexpressions.Expression, lab
 
     case value =>
       val node = CastSupport.castOrFail[NodeValue](value)
-      
+
       var i = 0
       while (i < node.labels().length()) {
         if (node.labels().stringValue(i).equals(label.name)) {
@@ -160,13 +154,13 @@ case class MaterializedEntityHasLabel(entity: commandexpressions.Expression, lab
 
 case class MaterializedEntityKeysFunction(expr: Expression) extends NullInNullOutExpression(expr) {
 
-  override def compute(value: AnyValue, ctx: ExecutionContext, state: QueryState): ListValue = {
+  override def compute(value: AnyValue, ctx: ExecutionContext, state: QueryState): ListValue =
     value match {
-      case n: NodeValue => n.properties().keys()
+      case n: NodeValue         => n.properties().keys()
       case r: RelationshipValue => r.properties().keys()
-      case _ => CypherFunctions.keys(value, state.query, state.cursors.nodeCursor, state.cursors.relationshipScanCursor, state.cursors.propertyCursor)
+      case _                    =>
+        CypherFunctions.keys(value, state.query, state.cursors.nodeCursor, state.cursors.relationshipScanCursor, state.cursors.propertyCursor)
     }
-  }
 
   override def rewrite(f: Expression => Expression): Expression = f(MaterializedEntityKeysFunction(expr.rewrite(f)))
 
