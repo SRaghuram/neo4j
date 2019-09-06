@@ -47,6 +47,15 @@ public class Workload
         return fromFile( workloadFileForName( workloadName, resources, mode ), mode );
     }
 
+    public static List<Workload> all( Resources resources, DeploymentMode mode )
+    {
+        List<Path> allWorkloadFiles = allWorkloadFiles( resources );
+        return allWorkloadFiles.stream()
+                               .filter( file -> file.toString().toLowerCase().endsWith( ".json" ) )
+                               .map( file -> fromFile( file, mode ) )
+                               .collect( toList() );
+    }
+
     private static Path workloadFileForName( String workloadName, Resources resources, DeploymentMode mode )
     {
         List<Path> allWorkloadFiles = allWorkloadFiles( resources );
