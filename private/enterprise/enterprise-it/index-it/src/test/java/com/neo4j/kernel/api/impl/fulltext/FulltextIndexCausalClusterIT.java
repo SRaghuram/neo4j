@@ -237,7 +237,7 @@ class FulltextIndexCausalClusterIT
     {
         IndexDescriptor indexReference = transaction.kernelTransaction().schemaRead().indexGetForName( indexName );
         IndexingService indexingService = db.getDependencyResolver().resolveDependency( IndexingService.class );
-        IndexProxy indexProxy = indexingService.getIndexProxy( indexReference.schema() );
+        IndexProxy indexProxy = indexingService.getIndexProxy( indexReference );
         return indexProxy.indexConfig();
     }
 

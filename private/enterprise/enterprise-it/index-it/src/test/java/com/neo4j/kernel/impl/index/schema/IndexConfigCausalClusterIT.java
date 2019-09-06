@@ -102,7 +102,7 @@ class IndexConfigCausalClusterIT
             IndexingService indexingService = getIndexingService( db );
             try
             {
-                IndexProxy indexProxy = indexingService.getIndexProxy( index.schema() );
+                IndexProxy indexProxy = indexingService.getIndexProxy( index );
                 indexConfig = indexProxy.indexConfig();
             }
             catch ( IndexNotFoundKernelException e )
