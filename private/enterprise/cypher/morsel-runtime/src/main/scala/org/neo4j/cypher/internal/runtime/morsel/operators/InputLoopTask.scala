@@ -232,7 +232,10 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                 )
               )
             ),
-          innermost.resetCachedPropertyVariables
+          innermost.resetCachedPropertyVariables,
+          condition(and(loadField(canContinue), not(innermost.predicate))) (
+            break(OUTER_LOOP_LABEL_NAME)
+            )
           )
         )
       )
