@@ -6,24 +6,16 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
-import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
-import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
 import org.neo4j.cypher.internal.runtime.{InputDataStreamTestSupport, NoInput}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticState
-import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Statement}
-import org.neo4j.cypher.internal.v4_0.frontend.phases._
-import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, IfNoParameter}
-import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions}
+import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class ExecutionEngineFullyParsedQueryTest
   extends ExecutionEngineFunSuite
     with CypherComparisonSupport
     with AstConstructionTestSupport
-    with InputDataStreamTestSupport {
+    with InputDataStreamTestSupport
+    with FullyParsedQueryTestSupport {
 
   test("InputDataStream gets forwarded to runtime") {
     val q = query(
@@ -56,36 +48,6 @@ class ExecutionEngineFullyParsedQueryTest
       val result = execute(parse(query.query), query.params, NoInput).toComparableResult
       result shouldEqual query.expectedResult
     }
-
   }
 
-  private def noParams: Map[String, Any] = Map.empty
-
-  private val parsing = CompilationPhases.parsing(
-    RewriterStepSequencer.newPlain,
-    new GeneratingNamer()
-  )
-
-  private def parse(qs: String, options: QueryOptions = QueryOptions.default) =
-    FullyParsedQuery(
-      state = parsing.transform(
-        InitialState(qs, None, PlannerNameFor(options.planner.name)),
-        ContextHelper.create()
-      ),
-      options = options
-    )
-
-  private val semanticAnalysis =
-    SemanticAnalysis(warn = true, Cypher9Comparability, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
-    AstRewriting(RewriterStepSequencer.newPlain, IfNoParameter, innerVariableNamer = new GeneratingNamer())
-
-  private def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =
-    FullyParsedQuery(
-      state = semanticAnalysis.transform(
-        InitialState("", None, PlannerNameFor(options.planner.name))
-          .withStatement(query),
-        ContextHelper.create()
-      ),
-      options = options
-    )
 }

@@ -7,21 +7,14 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption, ExecutionEngineFunSuite}
-import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
-import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
+import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.runtime.InputDataStreamTestSupport
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticState
-import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Statement}
-import org.neo4j.cypher.internal.v4_0.frontend.phases._
-import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, IfNoParameter}
-import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions}
+import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption, ExecutionEngineFunSuite}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{MapValue, NodeValue, VirtualValues}
+import org.neo4j.values.virtual.{NodeValue, VirtualValues}
 
 import scala.collection.JavaConverters._
 
@@ -29,7 +22,8 @@ class ExecutionEngineInputDataStreamTest
   extends ExecutionEngineFunSuite
     with CypherComparisonSupport
     with AstConstructionTestSupport
-    with InputDataStreamTestSupport {
+    with InputDataStreamTestSupport
+    with FullyParsedQueryTestSupport {
 
   test("pass through integers") {
     val q = query(
@@ -103,7 +97,11 @@ class ExecutionEngineInputDataStreamTest
     execute(
       prepare(q),
       noParams,
-      iteratorInput(Iterator(Array(map("p" -> 1)), Array(map("p" -> 2)), Array(map("p" -> "a")), Array(map("p" -> "b"))))
+      iteratorInput(Iterator(
+        Array(map("p" -> 1)),
+        Array(map("p" -> 2)),
+        Array(map("p" -> "a")),
+        Array(map("p" -> "b"))))
     )
       .toComparableResult
       .shouldEqual(List(
@@ -181,25 +179,9 @@ class ExecutionEngineInputDataStreamTest
   private def relationship(id: Long, start: NodeValue, end: NodeValue, label: String, props: util.Map[String, Any]) =
     VirtualValues.relationshipValue(id, start, end, ValueUtils.asTextValue(label), ValueUtils.asMapValue(props))
 
-  private def noParams: Map[String, Any] = Map.empty
-
-  private val semanticAnalysis =
-    SemanticAnalysis(warn = true, Cypher9Comparability, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
-      AstRewriting(RewriterStepSequencer.newPlain, IfNoParameter, innerVariableNamer = new GeneratingNamer())
-
   private val materializedEntities = QueryOptions.default.copy(
     runtime = CypherRuntimeOption.slotted,
     expressionEngine = CypherExpressionEngineOption.interpreted,
     materializedEntitiesMode = true,
   )
-
-  private def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =
-    FullyParsedQuery(
-      state = semanticAnalysis.transform(
-        InitialState("", None, PlannerNameFor(options.planner.name))
-          .withStatement(query),
-        ContextHelper.create()
-      ),
-      options = options
-    )
 }
