@@ -321,12 +321,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Limit =>
+        val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
+        markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
         if (canFuse) {
           source.fusedHeadPlans += plan
           source
         } else {
-          val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
-          markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
           source.middlePlans += plan
           source
         }
