@@ -22,15 +22,11 @@ import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
-import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import com.neo4j.common.util.TestSupport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -98,10 +94,10 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
-    @Disabled
     @Test
     void executeReadWorkloadForkedWithServer() throws Exception
     {
+        // TODO run with GC profiler too, once it works
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Deployment.server( getNeo4jDir() ),
@@ -114,6 +110,7 @@ class RunWorkloadCommandIT
     @Test
     void executeWriteWorkloadsForkedWithServer() throws Exception
     {
+        // TODO run with GC profiler too, once it works
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Deployment.server( getNeo4jDir() ),
@@ -126,6 +123,7 @@ class RunWorkloadCommandIT
     @Test
     void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
+        // TODO run with GC profiler too, once it works
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Deployment.server( getNeo4jDir() ),
@@ -176,10 +174,10 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
-    @Disabled
     @Test
     void executeReadWorkloadInProcessWithServer() throws Exception
     {
+        // TODO run with GC profiler too, once it works
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Deployment.server( getNeo4jDir() ),
@@ -193,6 +191,7 @@ class RunWorkloadCommandIT
     @Test
     void executeWriteWorkloadInProcessWithServer() throws Exception
     {
+        // TODO run with GC profiler too, once it works
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Deployment.server( getNeo4jDir() ),
@@ -206,6 +205,7 @@ class RunWorkloadCommandIT
     @Test
     void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
+        // TODO run with GC profiler too, once it works
         ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Deployment.server( getNeo4jDir() ),
@@ -227,7 +227,10 @@ class RunWorkloadCommandIT
             Workload workload = Workload.fromName( workloadName, resources, deployment );
             Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
-            Store store = createEmptyStoreFor( workload, neo4jConfigFile );
+            Store store = StoreTestUtil.createEmptyStoreFor( workload,
+                                                             createTempDirectoryPath( temporaryFolder.absolutePath() ), // store
+                                                             neo4jConfigFile );
+
             Path resultsJson = createTempFilePath( temporaryFolder.absolutePath() );
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
             Files.createDirectories( profilerRecordingsDir );
@@ -318,15 +321,6 @@ class RunWorkloadCommandIT
                 assertThat( attachedProfilerRecordingsCount, greaterThanOrEqualTo( minimumExpectedProfilerRecordingCount ) );
             }
         }
-    }
-
-    // Create empty store with valid schema, as expected by workload
-    private Store createEmptyStoreFor( Workload workload, Path neo4jConfigFile ) throws IOException
-    {
-        Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( createTempDirectoryPath( temporaryFolder.absolutePath() ), neo4jConfigFile );
-        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
-        return store;
     }
 
     private Path getNeo4jDir()

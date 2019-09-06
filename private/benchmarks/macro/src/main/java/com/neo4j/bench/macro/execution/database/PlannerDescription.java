@@ -5,19 +5,23 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.model.Plan;
 import com.neo4j.bench.common.model.PlanCompilationMetrics;
 import com.neo4j.bench.common.model.PlanOperator;
 import com.neo4j.bench.common.model.PlanTree;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class PlannerDescription
@@ -164,9 +168,51 @@ public class PlannerDescription
         return !NON_ARGUMENT_MAP_KEYS.contains( key );
     }
 
-    private static PlanOperator toPlanOperator( ExecutionPlanDescription executionPlanDescription )
+    public static PlanOperator toPlanOperator( ExecutionPlanDescription root )
     {
-        String name = executionPlanDescription.getName();
+        Map<ExecutionPlanDescription,ExecutionPlanDescription> parentMap = new HashMap<>();
+        Map<ExecutionPlanDescription,List<PlanOperator>> childrenMap = new HashMap<>();
+        Stack<ExecutionPlanDescription> planDescriptionStack = new Stack<>();
+
+        // initialization
+        planDescriptionStack.push( root );
+        childrenMap.put( root, new ArrayList<>() );
+
+        while ( !planDescriptionStack.isEmpty() )
+        {
+            ExecutionPlanDescription planDescription = planDescriptionStack.pop();
+            List<ExecutionPlanDescription> childrenDescriptions = planDescription.getChildren();
+            List<PlanOperator> childOperators = childrenMap.get( planDescription );
+            // this is a leaf plan _OR_ all leaves of this plan have already been processed
+            if ( childrenDescriptions.isEmpty() || !childOperators.isEmpty() )
+            {
+                PlanOperator planOperator = toPlanOperator( planDescription, childOperators );
+                ExecutionPlanDescription parentDescription = parentMap.get( planDescription );
+                // if is not root
+                if ( null != parentDescription )
+                {
+                    // add processed plan to children of parent
+                    childrenMap.get( parentDescription ).add( planOperator );
+                }
+            }
+            else
+            {
+                planDescriptionStack.push( planDescription );
+                childrenDescriptions.forEach( child ->
+                                              {
+                                                  parentMap.put( child, planDescription );
+                                                  childrenMap.put( child, new ArrayList<>() );
+                                                  planDescriptionStack.push( child );
+                                              } );
+            }
+        }
+
+        return toPlanOperator( root, childrenMap.get( root ) );
+    }
+
+    private static PlanOperator toPlanOperator( ExecutionPlanDescription executionPlanDescription, List<PlanOperator> children )
+    {
+        String operatorType = executionPlanDescription.getName();
         Number estimatedRows = (Number) executionPlanDescription.getArguments().get( ESTIMATED_ROWS );
         // some queries are run with 'explain' instead of 'profile', e.g., those with PERIODIC COMMIT
         long dbHits = executionPlanDescription.hasProfilerStatistics()
@@ -179,9 +225,25 @@ public class PlannerDescription
         Map<String,String> arguments = executionPlanDescription.getArguments().entrySet().stream()
                                                                .filter( e -> isArgumentKey( e.getKey() ) )
                                                                .collect( toMap( Map.Entry::getKey, e -> e.getValue().toString() ) );
-        List<PlanOperator> children = executionPlanDescription.getChildren().stream()
-                                                              .map( PlannerDescription::toPlanOperator )
-                                                              .collect( toList() );
-        return new PlanOperator( name, estimatedRows, dbHits, rows, arguments, children );
+
+        List<String> identifiers = Lists.newArrayList( executionPlanDescription.getIdentifiers() );
+
+        int id = idFor( executionPlanDescription );
+
+        return new PlanOperator( id, operatorType, estimatedRows, dbHits, rows, arguments, identifiers, children );
+    }
+
+    public static int idFor( ExecutionPlanDescription planDescription )
+    {
+        if ( planDescription instanceof InternalPlanDescription )
+        {
+            return ((InternalPlanDescription) planDescription).id();
+        }
+        else
+        {
+            // Alternatively, this method could fallback to System::identityHashCode which is enough for our current tests to pass
+            // System.identityHashCode( executionPlanDescription );
+            throw new RuntimeException( "Plan description does not have an id\n" + planDescription );
+        }
     }
 }

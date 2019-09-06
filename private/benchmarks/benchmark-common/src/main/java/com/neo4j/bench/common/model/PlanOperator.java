@@ -18,6 +18,7 @@ public class PlanOperator
     private static final String DB_HITS = "db_hits";
     private static final String ROWS = "rows";
 
+    private final int id;
     private final String operatorType;
     private final Number estimatedRows;
     private final Number dbHits;
@@ -29,6 +30,7 @@ public class PlanOperator
     ExpandExpression: '(t)-[  UNNAMED33 APPEARS_ON]->(al)'
      */
     private final Map<String,String> arguments;
+    private final List<String> identifiers;
     private final List<PlanOperator> children;
 
     /**
@@ -37,31 +39,36 @@ public class PlanOperator
      */
     public PlanOperator()
     {
-        this( "-1", -1, -1, -1 );
+        this( 1, "-1", -1, -1, -1 );
     }
 
     public PlanOperator(
+            int id,
             String operatorType,
             Number estimatedRows,
             Number dbHits,
             Number rows )
     {
-        this( operatorType, estimatedRows, dbHits, rows, new HashMap<>(), new ArrayList<>() );
+        this( id, operatorType, estimatedRows, dbHits, rows, new HashMap<>(), new ArrayList<>(), new ArrayList<>() );
     }
 
     public PlanOperator(
+            int id,
             String operatorType,
             Number estimatedRows,
             Number dbHits,
             Number rows,
             Map<String,String> arguments,
+            List<String> identifiers,
             List<PlanOperator> children )
     {
+        this.id = id;
         this.operatorType = operatorType;
         this.estimatedRows = estimatedRows;
         this.dbHits = dbHits;
         this.rows = rows;
         this.arguments = arguments;
+        this.identifiers = identifiers;
         this.children = children;
     }
 
@@ -73,6 +80,11 @@ public class PlanOperator
     public void addChild( PlanOperator child )
     {
         children.add( child );
+    }
+
+    public int id()
+    {
+        return id;
     }
 
     public String operatorType()
@@ -98,6 +110,11 @@ public class PlanOperator
     public Map<String,String> arguments()
     {
         return arguments;
+    }
+
+    public List<String> identifiers()
+    {
+        return identifiers;
     }
 
     public List<PlanOperator> children()
@@ -128,18 +145,20 @@ public class PlanOperator
             return false;
         }
         PlanOperator that = (PlanOperator) o;
-        return Objects.equals( operatorType, that.operatorType ) &&
+        return id == that.id &&
+               Objects.equals( operatorType, that.operatorType ) &&
                Objects.equals( estimatedRows, that.estimatedRows ) &&
                Objects.equals( dbHits, that.dbHits ) &&
                Objects.equals( rows, that.rows ) &&
                Objects.equals( arguments, that.arguments ) &&
+               Objects.equals( identifiers, that.identifiers ) &&
                Objects.equals( children, that.children );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( operatorType, estimatedRows, dbHits, rows, arguments, children );
+        return id;
     }
 
     @Override

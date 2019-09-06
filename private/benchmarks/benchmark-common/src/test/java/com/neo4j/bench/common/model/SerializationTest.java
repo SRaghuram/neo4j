@@ -340,8 +340,9 @@ public class SerializationTest
         // given
         Map<String,String> arguments = new HashMap<>();
         arguments.put( "key", "value" );
-        PlanOperator before = new PlanOperator( "operator type1", 1, 2, 3, arguments,
-                                                Lists.newArrayList( new PlanOperator( "operator type2", 4, 5, 6, arguments, emptyList() ) ) );
+        PlanOperator before = new PlanOperator( 0, "operator type1", 1, 2, 3, arguments,
+                                                emptyList(),
+                                                Lists.newArrayList( new PlanOperator( 1, "operator type2", 4, 5, 6, arguments, emptyList(), emptyList() ) ) );
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -427,27 +428,27 @@ public class SerializationTest
 
     private static Plan testPlan( String description )
     {
-        PlanOperator leftLeaf1 = new PlanOperator( "left-leaf", 1, 2.0, 3 );
+        PlanOperator leftLeaf1 = new PlanOperator( 0, "left-leaf", 1, 2.0, 3 );
         leftLeaf1.addArgument( "a", "b" );
-        PlanOperator leftLeaf2 = new PlanOperator( "left-leaf", 1, 2.0, 3 );
+        PlanOperator leftLeaf2 = new PlanOperator( 1, "left-leaf", 1, 2.0, 3 );
         leftLeaf1.addArgument( "a", "b" );
 
-        PlanOperator rightLeaf1 = new PlanOperator( "right-leaf-1", 2, 3.0, 4 );
+        PlanOperator rightLeaf1 = new PlanOperator( 2, "right-leaf-1", 2, 3.0, 4 );
         rightLeaf1.addArgument( "a", "7" );
         rightLeaf1.addArgument( "b", "42" );
-        PlanOperator rightLeaf2 = new PlanOperator( "right-leaf-2", 3, 4.0, 5 );
+        PlanOperator rightLeaf2 = new PlanOperator( 3, "right-leaf-2", 3, 4.0, 5 );
         rightLeaf2.addArgument( "c", "pies" );
 
-        PlanOperator left = new PlanOperator( "left", 1, 1.0, 1 );
+        PlanOperator left = new PlanOperator( 4, "left", 1, 1.0, 1 );
         left.addChild( leftLeaf1 );
         left.addChild( leftLeaf2 );
 
-        PlanOperator right = new PlanOperator( "right", 1, 1.0, 1 );
+        PlanOperator right = new PlanOperator( 5, "right", 1, 1.0, 1 );
         right.addArgument( "cakes", "not as good as pies" );
         right.addChild( rightLeaf1 );
         right.addChild( rightLeaf2 );
 
-        PlanOperator root = new PlanOperator( "root", 0, 0.0, 0 );
+        PlanOperator root = new PlanOperator( 6, "root", 0, 0.0, 0 );
         root.addArgument( "knock_knock", "who is there?" );
         root.addChild( left );
         root.addChild( right );

@@ -152,6 +152,11 @@ public class EmbeddedDatabase implements Database
         }
     }
 
+    public GraphDatabaseService inner()
+    {
+        return db;
+    }
+
     public Store store()
     {
         return store;
