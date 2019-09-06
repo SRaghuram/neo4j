@@ -141,21 +141,23 @@ object StaticEvaluation {
 
     override def getNodesByLabelPrimitive(id: Int): LongIterator = notAvailable()
 
-    override def createNodeKeyConstraint(labelId: Int, propertyKeyIds: Seq[Int]): Boolean = notAvailable()
+    override def createNodeKeyConstraint(labelId: Int, propertyKeyIds: Seq[Int], name: Option[String]): Boolean = notAvailable()
 
     override def dropNodeKeyConstraint(labelId: Int, propertyKeyIds: Seq[Int]): Unit = notAvailable()
 
-    override def createUniqueConstraint(labelId: Int, propertyKeyIds: Seq[Int]): Boolean = notAvailable()
+    override def createUniqueConstraint(labelId: Int, propertyKeyIds: Seq[Int], name: Option[String]): Boolean = notAvailable()
 
     override def dropUniqueConstraint(labelId: Int, propertyKeyIds: Seq[Int]): Unit = notAvailable()
 
-    override def createNodePropertyExistenceConstraint(labelId: Int, propertyKeyId: Int): Boolean = notAvailable()
+    override def createNodePropertyExistenceConstraint(labelId: Int, propertyKeyId: Int, name: Option[String]): Boolean = notAvailable()
 
     override def dropNodePropertyExistenceConstraint(labelId: Int, propertyKeyId: Int): Unit = notAvailable()
 
-    override def createRelationshipPropertyExistenceConstraint(relTypeId: Int, propertyKeyId: Int): Boolean = notAvailable()
+    override def createRelationshipPropertyExistenceConstraint(relTypeId: Int, propertyKeyId: Int, name: Option[String]): Boolean = notAvailable()
 
     override def dropRelationshipPropertyExistenceConstraint(relTypeId: Int, propertyKeyId: Int): Unit = notAvailable()
+
+    override def dropNamedConstraint(name: String): Unit = notAvailable()
 
     override def getImportURL(url: URL): Either[String, URL] = notAvailable()
 

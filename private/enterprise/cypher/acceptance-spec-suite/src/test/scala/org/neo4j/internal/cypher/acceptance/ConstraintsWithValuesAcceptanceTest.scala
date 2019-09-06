@@ -18,7 +18,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when existence constraint for property") {
     // Given
     createSingleIndexes()
-    graph.createExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
 
     // Then
     assertIndexScan(standardResult, "Awesome")
@@ -28,8 +28,8 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Given
     createSingleIndexes()
     graph.withTx( tx => tx.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
-    graph.createExistenceConstraint("Awesome", "prop1")
-    graph.createExistenceConstraint("Label", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Label", "prop1")
 
     // Then
     assertIndexScan(standardResult, "Label", "Awesome")
@@ -39,7 +39,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Given
     createSingleIndexes()
     graph.withTx( tx => tx.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
-    graph.createExistenceConstraint("Label", "prop1")
+    graph.createNodeExistenceConstraint("Label", "prop1")
 
     // Then
     assertIndexScan(standardResult, "Label")
@@ -49,7 +49,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Given
     createSingleIndexes()
     graph.withTx( tx => tx.execute("CREATE (:Awesome {prop1: 1337, prop2: 5})"))
-    graph.createExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
 
     // Then
     val expectedResult = List(Map("n.prop1" -> 40), Map("n.prop1" -> 41), Map("n.prop1" -> 42), Map("n.prop1" -> 43), Map("n.prop1" -> 44), Map("n.prop1" -> 1337))
@@ -59,8 +59,8 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when existence constraint for multiple properties") {
     // Given
     createSingleIndexes()
-    graph.createExistenceConstraint("Awesome", "prop1")
-    graph.createExistenceConstraint("Awesome", "prop2")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop2")
 
     // Then
     assertIndexScan(standardResult, "Awesome")
@@ -69,8 +69,8 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when existence constraint for multiple returned properties") {
     // Given
     createSingleIndexes()
-    graph.createExistenceConstraint("Awesome", "prop1")
-    graph.createExistenceConstraint("Awesome", "prop2")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop2")
 
     createLabeledNode(Map("prop1" -> 45, "prop2" -> 7, "prop3" -> "abc"), "Awesome")
 
@@ -141,7 +141,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should handle constraint drop") {
     // Given
     createSingleIndexes()
-    graph.createExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
 
     // Then
     assertIndexScan(standardResult, "Awesome")
@@ -156,7 +156,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should handle index drop") {
     // Given
     createSingleIndexes()
-    graph.createExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
 
     // Then
     assertIndexScan(standardResult, "Awesome")
@@ -170,7 +170,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("existence constraint without index should give labelscan") {
     // Given
-    graph.createExistenceConstraint("Awesome", "prop1")
+    graph.createNodeExistenceConstraint("Awesome", "prop1")
 
     // Then
     assertNodeByLabelScan(standardResult)
