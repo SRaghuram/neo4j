@@ -355,6 +355,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
 
       case _: plans.Argument => None
+
+      case _ => throw new CantCompileQueryException(s"$plan cannot be used as a middle plan")
     }
   }
 

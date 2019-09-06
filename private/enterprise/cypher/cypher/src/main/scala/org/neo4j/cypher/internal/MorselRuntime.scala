@@ -11,7 +11,7 @@ import java.util.Optional
 import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, OperatorFusionPolicy, PhysicalPlanner, PipelineBuilder}
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpression
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
@@ -43,47 +44,57 @@ class MorselRuntime(parallelExecution: Boolean,
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
-    val operatorFusionPolicy = OperatorFusionPolicy(context.config.fuseOperators)
-    val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
-    val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-                                            query.logicalPlan,
-                                            query.semanticTable,
-                                            breakingPolicy,
-                                            allocateArgumentSlots = true)
-
-    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
-
-    val converters: ExpressionConverters = if (context.compileExpressions) {
-      new ExpressionConverters(
-        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
-        SlottedExpressionConverters(physicalPlan),
-        CommunityExpressionConverter(context.tokenContext))
-    } else {
-      new ExpressionConverters(
-        SlottedExpressionConverters(physicalPlan),
-        CommunityExpressionConverter(context.tokenContext))
-    }
-
+    var shouldFuseOperators = context.config.fuseOperators
+    var compilationCompleted = false
+    var physicalPlan: PhysicalPlan = null
+    var executablePipelines: IndexedSeq[ExecutablePipeline] = null
+    var executionGraphDefinition: ExecutionGraphDefinition = null
     val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
 
-    DebugLog.logDiff("PhysicalPlanner.plan")
-    val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
 
-    //val executionGraphDefinition = PipelineBuilder.build(MorselPipelineBreakingPolicy, physicalPlan)
-    val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexRegistrator, query.semanticTable)
+    while (!compilationCompleted) {
+      val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators)
+      val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
+      physicalPlan = PhysicalPlanner.plan(context.tokenContext,
+                                          query.logicalPlan,
+                                          query.semanticTable,
+                                          breakingPolicy,
+                                          allocateArgumentSlots = true)
 
-    DebugLog.logDiff("PipelineBuilder")
-    //=======================================================
-    val fuseOperators = new FuseOperators(
-      operatorFactory,
-      context.operatorEngine == CypherOperatorEngineOption.compiled,
-      context.tokenContext,
-      parallelExecution)
+      MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
 
-    val executablePipelines = fuseOperators.compilePipelines(executionGraphDefinition)
+      val converters: ExpressionConverters = if (context.compileExpressions) {
+        new ExpressionConverters(
+          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
+          SlottedExpressionConverters(physicalPlan),
+          CommunityExpressionConverter(context.tokenContext))
+      } else {
+        new ExpressionConverters(
+          SlottedExpressionConverters(physicalPlan),
+          CommunityExpressionConverter(context.tokenContext))
+      }
 
-    DebugLog.logDiff("FuseOperators")
-    //=======================================================
+      DebugLog.logDiff("PhysicalPlanner.plan")
+      executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
+      val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexRegistrator,
+                                                query.semanticTable)
+
+      DebugLog.logDiff("PipelineBuilder")
+      //=======================================================
+      val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution)
+
+      try {
+        executablePipelines = fuseOperators.compilePipelines(executionGraphDefinition)
+        compilationCompleted = true
+        DebugLog.logDiff("FuseOperators")
+        //=======================================================
+      } catch {
+        case e: CantCompileQueryException =>
+          // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
+          DebugLog.log("Could not compile pipeline because of %s", e)
+          shouldFuseOperators = false
+      }
+    }
 
     val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
 
