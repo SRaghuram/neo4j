@@ -26,6 +26,8 @@ class ExecutionEngineInputDataStreamTest
     with FullyParsedQueryTestSupport {
 
   test("pass through integers") {
+    // WITH input[0] AS x, input[1] AS y, input[2] AS z
+    // RETURN x AS r, y AS s, z AS t
     val q = query(
       input(varFor("x"), varFor("y"), varFor("z")),
       return_(varFor("x").as("r"), varFor("y").as("s"), varFor("z").as("t"))
@@ -44,6 +46,9 @@ class ExecutionEngineInputDataStreamTest
   }
 
   test("compute on integers") {
+    // WITH input[0] AS x
+    // UNWIND [10,20] AS y
+    // RETURN x + y AS r
     val q = query(
       input(varFor("x")),
       unwind(listOf(literal(10), literal(20)), varFor("y")),
@@ -69,6 +74,8 @@ class ExecutionEngineInputDataStreamTest
   }
 
   test("pass through strings") {
+    // WITH input[0] AS x
+    // RETURN x AS r
     val q = query(
       input(varFor("x")),
       return_(varFor("x").as("r"))
@@ -89,6 +96,8 @@ class ExecutionEngineInputDataStreamTest
   }
 
   test("operations on streamed maps") {
+    // WITH input[0] AS x
+    // RETURN x.p AS r
     val q = query(
       input(varFor("x")),
       return_(prop(varFor("x"), "p").as("r"))
@@ -113,6 +122,11 @@ class ExecutionEngineInputDataStreamTest
   }
 
   test("operations on streamed nodes (in Materialized Entities mode)") {
+    // WITH input[0] AS x
+    // RETURN id(x) AS id,
+    //        x.p AS r,
+    //        x.l[1] AS s,
+    //        'A' IN labels(x) AS t
     val q = query(
       input(varFor("x")),
       return_(
@@ -141,6 +155,10 @@ class ExecutionEngineInputDataStreamTest
   }
 
   test("operations on streamed relationships (in Materialized Entities mode)") {
+    // WITH input[0] AS x
+    // RETURN id(x) AS id,
+    //        x.p AS r,
+    //        x.l[1] AS s
     val q = query(
       input(varFor("x")),
       return_(
