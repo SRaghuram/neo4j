@@ -7,12 +7,15 @@ package com.neo4j.server.security.enterprise.auth;
 
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.server.security.auth.AuthProcedures;
 import org.neo4j.test.DoubleLatch;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -681,6 +684,24 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     //---------- list users -----------
+
+    @Test
+    void checkUserResultClassesHaveSameFieldsInCommunityAndEnterprise()
+    {
+        Field[] communityFields = AuthProcedures.UserResult.class.getFields();
+        Field[] enterpriseFields = AuthProceduresBase.UserResult.class.getFields();
+        assertEquals( communityFields.length, enterpriseFields.length );
+
+        for ( int i = 0; i < communityFields.length; i++ )
+        {
+            Field comField = communityFields[i];
+            Field entField = enterpriseFields[i];
+
+            assertTrue( Modifier.isFinal( comField.getModifiers() ) );
+            assertTrue( Modifier.isFinal( entField.getModifiers() ) );
+            assertEquals( comField.getName(), entField.getName() );
+        }
+    }
 
     @Test
     void shouldListUsers()
