@@ -48,18 +48,18 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(physicalPlan.logicalPlan)
       }
-      
+
       val baseConverters = List(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(context.tokenContext))
 
       val allConverters =
-        if (context.noDatabaseAccess) {
+        if (context.materializedEntitiesMode) {
           MaterializedEntitiesExpressionConverter(context.tokenContext) +: baseConverters
         } else if (context.compileExpressions) {
           new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly) +: baseConverters
         } else {
           baseConverters
         }
-      
+
       val converters = new ExpressionConverters(allConverters:_*)
 
       val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)

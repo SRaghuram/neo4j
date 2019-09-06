@@ -29,7 +29,7 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                       clock: Clock,
                       debugOptions: Set[String],
                       compileExpressions: Boolean,
-                      noDatabaseAccess: Boolean): EnterpriseRuntimeContext = {
+                      materializedEntitiesMode: Boolean): EnterpriseRuntimeContext = {
 
     EnterpriseRuntimeContext(tokenContext,
                              schemaRead,
@@ -40,7 +40,7 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                              config,
                              new RuntimeEnvironment(config, queryExecutor, newTracer(), cursors),
                              compileExpressions,
-                             noDatabaseAccess)
+                             materializedEntitiesMode)
   }
 
   override def assertAllReleased(): Unit = {

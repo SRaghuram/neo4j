@@ -130,15 +130,15 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     }
   }
 
-  private def getContext(cypherRuntime         : CypherRuntime,
-                         planContext           : PlanContext,
-                         useCompiledExpressions: Boolean = true,
-                         schemaRead            : SchemaRead,
-                         cursors               : CursorFactory,
-                         txBridge              : ThreadToStatementContextBridge,
-                         lifeSupport           : LifeSupport,
-                         workerManager         : WorkerManagement,
-                         noDatabaseAccess      : Boolean = false): EnterpriseRuntimeContext =
+  private def getContext(cypherRuntime           : CypherRuntime,
+                         planContext             : PlanContext,
+                         useCompiledExpressions  : Boolean = true,
+                         schemaRead              : SchemaRead,
+                         cursors                 : CursorFactory,
+                         txBridge                : ThreadToStatementContextBridge,
+                         lifeSupport             : LifeSupport,
+                         workerManager           : WorkerManagement,
+                         materializedEntitiesMode: Boolean = false): EnterpriseRuntimeContext =
     ContextHelper.create(
       codeStructure = GeneratedQueryStructure,
       planContext = planContext,
@@ -150,7 +150,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       txBridge = txBridge,
       lifeSupport = lifeSupport,
       workerManager = workerManager,
-      noDatabaseAccess = noDatabaseAccess)
+      materializedEntitiesMode = materializedEntitiesMode)
 
   private def getPlanContext(tx: TransactionalContext): PlanContext =
     new TransactionBoundPlanContext(
