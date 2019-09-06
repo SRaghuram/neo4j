@@ -7,22 +7,17 @@ package com.neo4j.bench.macro;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.OptionsBuilder;
-import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
-import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import com.neo4j.common.util.TestSupport;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +40,9 @@ public class InteractiveExecutionIT
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, neo4jDeployment.deployment() );
-            Store store = createEmptyStoreFor( workload );
+            Store store = StoreTestUtil.createEmptyStoreFor( workload,
+                                                             temporaryFolder.newFolder().toPath(), // store
+                                                             temporaryFolder.newFile().toPath() ); // neo4j config
 
             Path neo4jConfigFile = temporaryFolder.newFile().toPath();
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
@@ -69,15 +66,5 @@ public class InteractiveExecutionIT
                 Main.runInteractive( options );
             }
         }
-    }
-
-    // Create empty store with valid schema, as expected by workload
-    private Store createEmptyStoreFor( Workload workload ) throws IOException
-    {
-        Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
-        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
-        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
-        return store;
     }
 }
