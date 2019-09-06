@@ -5,20 +5,30 @@
  */
 package com.neo4j.bench.common.process;
 
+import com.google.common.collect.Lists;
+
 import java.lang.ProcessBuilder.Redirect;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class JvmProcess implements BaseProcess, HasPid
 {
     public static JvmProcess start( JvmProcessArgs jvmProcessArgs )
     {
-        return start( jvmProcessArgs, Redirect.INHERIT, Redirect.INHERIT );
+        return start( jvmProcessArgs, Redirect.INHERIT, Redirect.INHERIT, Lists.asList( new JpsPid(), new PgrepAndPsPid[]{new PgrepAndPsPid()} ) );
     }
 
-    public static JvmProcess start( JvmProcessArgs jvmProcessArgs, Redirect outputRedirect, Redirect errorRedirect )
+    public static JvmProcess start( JvmProcessArgs jvmProcessArgs, Redirect outputRedirect, Redirect errorRedirect, List<PidStrategy> discoverPidStrategy )
     {
+        if ( discoverPidStrategy.isEmpty() )
+        {
+            throw new RuntimeException( "Error starting process. Expected at least one discoverPidStrategy but got none" );
+        }
+
         try
         {
             ProcessBuilder processBuilder = new ProcessBuilder()
@@ -26,10 +36,7 @@ public class JvmProcess implements BaseProcess, HasPid
                     .redirectOutput( outputRedirect )
                     .redirectError( errorRedirect );
             ProcessWrapper process = ProcessWrapper.start( processBuilder );
-            Instant start = Instant.now();
-            Duration timeout = Duration.of( 5, ChronoUnit.MINUTES );
-            JpsPid jpsPid = JpsPid.tryFindFor( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
-            long pid = jpsPid.pid().orElseThrow( () -> failedToStartExceptionFor( jvmProcessArgs, process, jpsPid ) );
+            long pid = getPid( jvmProcessArgs, process, discoverPidStrategy );
             return new JvmProcess( process, pid );
         }
         catch ( Exception e )
@@ -38,17 +45,36 @@ public class JvmProcess implements BaseProcess, HasPid
         }
     }
 
-    private static RuntimeException failedToStartExceptionFor( JvmProcessArgs jvmProcessArgs, ProcessWrapper process, JpsPid jpsPid )
+    private static Long getPid( JvmProcessArgs jvmProcessArgs, ProcessWrapper process, List<PidStrategy> discoverPidStrategy )
     {
-        // It may be that the process started, but could not be discovered via JPS
-        // Make every effort to ensure it is not running
-        process.stop();
-        return new RuntimeException( "Failed to start process, and was not reported by 'jps'\n" +
-                                     "Process '-Dname' : '" + jvmProcessArgs.processName() + "'\n" +
-                                     "------------------  JPS Output  ----------------\n" +
-                                     jpsPid.jpsOutput() + "\n" +
-                                     "------------------  Process Output  ------------\n" +
-                                     process.infoString() );
+        Duration timeout = Duration.of( 5, ChronoUnit.MINUTES );
+        boolean haveFoundPid = false;
+        Iterator<PidStrategy> pidIterator = discoverPidStrategy.iterator();
+        PidStrategy pidStrategy = null;
+        while ( !haveFoundPid && pidIterator.hasNext() )
+        {
+            pidStrategy = pidIterator.next();
+            System.out.println( pidStrategy );
+            Instant start = Instant.now();
+            pidStrategy.tryFindFor( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
+            haveFoundPid = pidStrategy.pid().isPresent();
+        }
+        if ( pidStrategy.pid().isPresent() )
+        {
+            return pidStrategy.pid().get();
+        }
+        else
+        {
+            process.stop();
+            throw new RuntimeException( "Failed to start process, and was not reported by 'jps'\n" +
+                                        "Process '-Dname' : '" + jvmProcessArgs.processName() + "'\n" +
+                                        "------------------  JPS Output  ----------------\n" +
+                                        discoverPidStrategy.stream().
+                                                map( PidStrategy::toString ).collect( Collectors.joining( "\n ---------------------- \n" ) ) +
+                                        "\n" +
+                                        "------------------  Process Output  ------------\n" +
+                                        process.infoString() );
+        }
     }
 
     private final ProcessWrapper process;
