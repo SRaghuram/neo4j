@@ -76,7 +76,7 @@ class FilteringMorselExecutionContext(morsel: Morsel,
   override def getValidRows: Int = numberOfRows - numberOfCancelledRows // NOTE: This assumes cancelledRows are always cropped by startRow and endRow
 
   override def getFirstRow: Int = {
-    // TODO: Cache the result, invalidate on cancelRow()?
+    // If this shows up as a hot method we could attempt to cache the result and invalidate it when calling cancelRow() [HN]
     var firstRow = startRow
     while (isCancelled(firstRow) && firstRow < endRow) {
       firstRow += 1
@@ -85,19 +85,12 @@ class FilteringMorselExecutionContext(morsel: Morsel,
   }
 
   override def getLastRow: Int = {
-    // TODO: Cache the result, invalidate on cancelRow()?
+    // If this shows up as a hot method we could attempt to cache the result and invalidate it when calling cancelRow() [HN]
     var lastRow = endRow - 1
     while (isCancelled(lastRow) && lastRow > startRow) {
       lastRow -= 1
     }
     lastRow
-  }
-
-  override def moveToRow(row: Int): Unit = {
-    currentRow = row
-    while (isCancelled(currentRow) && currentRow < endRow) {
-      currentRow += 1
-    }
   }
 
   override def resetToFirstRow(): Unit = currentRow = getFirstRow

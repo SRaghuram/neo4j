@@ -70,7 +70,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   @inline def getRefsPerRow: Int = refsPerRow
 
-  @inline def moveToRow(row: Int): Unit = currentRow = row
+  @inline def setCurrentRow(row: Int): Unit = currentRow = row
 
   @inline def resetToFirstRow(): Unit = currentRow = startRow
   @inline def resetToBeforeFirstRow(): Unit = currentRow = startRow - 1

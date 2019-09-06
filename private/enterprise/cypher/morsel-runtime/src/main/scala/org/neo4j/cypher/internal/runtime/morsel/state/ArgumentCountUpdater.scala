@@ -46,7 +46,7 @@ abstract class ArgumentCountUpdater {
       }
       morsel.moveToNextRow()
     }
-    morsel.moveToRow(originalRow)
+    morsel.setCurrentRow(originalRow)
   }
 
   private def downstreamLoop[T](downstreamAccumulatingBuffers: IndexedSeq[T],

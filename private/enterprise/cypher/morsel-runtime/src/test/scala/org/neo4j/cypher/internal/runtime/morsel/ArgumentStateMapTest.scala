@@ -110,7 +110,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
         .addRow(Longs(5, 51))
         .build()
 
-      row.moveToRow(inputPos)
+      row.setCurrentRow(inputPos)
       ArgumentStateMap.filter[SumUntil32](0, row,
         (_, _) => new SumUntil32(),
         (state, currentRow) => state.sumAndCheckIfPast32(currentRow.getLongAt(1)))
@@ -138,7 +138,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
         .addRow(Longs(6, 51))
         .build()
 
-      row.moveToRow(inputPos)
+      row.setCurrentRow(inputPos)
       ArgumentStateMap.filterCancelledArguments(0,
         row,
         argumentRowId => argumentRowId % 2 == 0)

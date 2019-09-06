@@ -17,27 +17,27 @@ object MorselSorting {
   def compareMorselIndexesByColumnOrder(row: MorselExecutionContext)(order: ColumnOrder): Comparator[Integer] = order.slot match {
     case LongSlot(offset, true, _) =>
       (idx1: Integer, idx2: Integer) => {
-        row.moveToRow(idx1)
+        row.setCurrentRow(idx1)
         val aVal = row.getLongAt(offset)
-        row.moveToRow(idx2)
+        row.setCurrentRow(idx2)
         val bVal = row.getLongAt(offset)
         order.compareNullableLongs(aVal, bVal)
       }
 
     case LongSlot(offset, false, _) =>
       (idx1: Integer, idx2: Integer) => {
-        row.moveToRow(idx1)
+        row.setCurrentRow(idx1)
         val aVal = row.getLongAt(offset)
-        row.moveToRow(idx2)
+        row.setCurrentRow(idx2)
         val bVal = row.getLongAt(offset)
         order.compareLongs(aVal, bVal)
       }
 
     case RefSlot(offset, _, _) =>
       (idx1: Integer, idx2: Integer) => {
-        row.moveToRow(idx1)
+        row.setCurrentRow(idx1)
         val aVal = row.getRefAt(offset)
-        row.moveToRow(idx2)
+        row.setCurrentRow(idx2)
         val bVal = row.getRefAt(offset)
         order.compareValues(aVal, bVal)
       }
@@ -56,7 +56,7 @@ object MorselSorting {
       i += 1
     }
     assert(!row.isValidRow)
-    row.moveToRow(currentRow)
+    row.setCurrentRow(currentRow)
     indexes
   }
 
@@ -76,7 +76,7 @@ object MorselSorting {
 
     while (outputRow.isValidRow) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)
-      inputRow.moveToRow(fromIndex)
+      inputRow.setCurrentRow(fromIndex)
 
       outputRow.copyFrom(inputRow)
       outputRow.moveToNextRow()
