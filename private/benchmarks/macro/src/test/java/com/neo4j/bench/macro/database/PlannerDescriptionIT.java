@@ -18,9 +18,7 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.PlannerDescription;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -33,47 +31,57 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription;
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class PlannerDescriptionIT
+@TestDirectoryExtension
+class PlannerDescriptionIT
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @Inject
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldExtractPlans() throws IOException
+    void shouldExtractPlans() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
                 System.out.println( "Verifying plan extraction on workload: " + workload.name() );
-                Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+                Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
                 try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                                       temporaryFolder.newFolder().toPath(), /* store */
+                                                                       createTempDirectoryPath( temporaryFolder.absolutePath() ), /* store */
                                                                        neo4jConfigFile ) )
                 {
                     for ( Query query : workload.queries() )
                     {
                         try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
                         {
-                            Result result = database.inner().execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
-                            result.accept( row -> true );
-                            ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
-                            PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
-                            String errorMessage = format( "Plans were not equal!\n" +
-                                                          "%s %s\n" +
-                                                          "%s", workload.name(), query.name(), rootPlanDescription );
-                            assertPlansEqual( errorMessage, rootPlanOperator, rootPlanDescription );
+                            try ( Transaction tx = database.inner().beginTx() )
+                            {
+                                Result result = tx.execute( query.copyWith( ExecutionMode.PLAN ).queryString().value() );
+                                result.accept( row -> true );
+                                ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
+                                PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
+                                String errorMessage = format( "Plans were not equal!\n" +
+                                                              "%s %s\n" +
+                                                              "%s", workload.name(), query.name(), rootPlanDescription );
+                                assertPlansEqual( errorMessage, rootPlanOperator, rootPlanDescription );
+                            }
                         }
                     }
                 }
@@ -100,7 +108,7 @@ public class PlannerDescriptionIT
         while ( !planOperators.isEmpty() )
         {
             // plan representations should have the same size
-            assertFalse( ERROR_IN_TEST_CODE, planDescriptions.isEmpty() );
+            assertFalse( planDescriptions.isEmpty(), ERROR_IN_TEST_CODE );
 
             PlanOperator planOperator = planOperators.pop();
             ExecutionPlanDescription planDescription = planDescriptions.pop();
@@ -133,9 +141,9 @@ public class PlannerDescriptionIT
             else if ( parentMap.containsKey( planOperator ) && /*is not root*/
                       !childrenMap.get( parentMap.get( planOperator ) ).isEmpty() /*has not yet been visited on traversal UP tree*/ )
             {
-                assertTrue( ERROR_IN_TEST_CODE + "\n" +
-                            "Was not the first time this plan was removed: " + planDescriptionName,
-                            childrenMap.get( parentMap.get( planOperator ) ).remove( planOperator ) );
+                assertTrue( childrenMap.get( parentMap.get( planOperator ) ).remove( planOperator ),
+                            ERROR_IN_TEST_CODE + "\n" +
+                            "Was not the first time this plan was removed: " + planDescriptionName );
 
                 actualVisitedPlans++;
                 assertThat( errorMessage, planOperatorName, equalTo( planDescriptionName ) );
@@ -148,7 +156,7 @@ public class PlannerDescriptionIT
             }
         }
         // sanity checks, to make sure test code is actually traversing and comparing the entire logical plan
-        assertTrue( ERROR_IN_TEST_CODE, planDescriptions.isEmpty() );
+        assertTrue( planDescriptions.isEmpty(), ERROR_IN_TEST_CODE );
         assertThat( ERROR_IN_TEST_CODE, actualVisitedPlans, equalTo( expectedPlanCount ) );
     }
 

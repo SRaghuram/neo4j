@@ -12,16 +12,27 @@ import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.common.util.TestSupport;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
+
+import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 
 public class StoreTestUtil
 {
     // Create empty store with valid schema, as expected by workload
     public static Store createEmptyStoreFor( Workload workload, Path storePath, Path neo4jConfigFile )
     {
-        Schema schema = workload.expectedSchema();
-        Store store = TestSupport.createEmptyStore( storePath );
-        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
-        return store;
+        try
+        {
+            Schema schema = workload.expectedSchema();
+            Store store = TestSupport.createEmptyStore( createTempDirectoryPath( storePath.toFile() ), neo4jConfigFile );
+            EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
+            return store;
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 }

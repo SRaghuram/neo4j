@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription;
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 
 import static java.util.stream.Collectors.toMap;
