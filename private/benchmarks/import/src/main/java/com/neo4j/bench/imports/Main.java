@@ -58,8 +58,7 @@ import static java.util.stream.Collectors.joining;
 @Command( name = "import-benchmarks", description = "benchmarks for import performance" )
 public class Main
 {
-//    private static final String[] sizes = {"100m", "1bn", "10bn", "100bn"};
-    private static final String[] sizes = {"100m"};
+    private static final String[] sizes = {"100m", "1bn", "10bn", "100bn"};
     private static final String forceBlockBasedSize = "100bn";
     private static final String IMPORT_OWNER = "neo-technology";
     private static final String NEO4J_ENTERPRISE = "Enterprise";
