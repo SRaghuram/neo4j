@@ -127,6 +127,7 @@ class ExecutionEngineInputDataStreamTest
     //        x.p AS r,
     //        x.l[1] AS s,
     //        'A' IN labels(x) AS t
+    //        exists((x)--(x)) AS u
     val q = query(
       input(varFor("x")),
       return_(
