@@ -16,6 +16,7 @@ import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
+import com.neo4j.bench.infra.aws.AWSBatchJobLogs;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.commands.BaseInfraCommand;
@@ -83,7 +84,7 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                                                                      batchStack );
 
             JobId jobId = jobScheduler.schedule( workerArtifactUri, infraParams, runWorkloadParams );
-            LOG.info( "job scheduled, with id {}", jobId.id() );
+            LOG.info( "job scheduled, with id {} and logs stream at {}", jobId.id(), AWSBatchJobLogs.getLogStreamName( jobDefinition, jobId ) );
             // wait until they are done, or fail
             RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
                     .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )

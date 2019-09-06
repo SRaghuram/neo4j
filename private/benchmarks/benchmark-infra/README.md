@@ -33,6 +33,14 @@ AWS Batch is deployed using CloudFormation. Here is easy one liner to deploy/upd
 
 	aws --region eu-north-1 cloudformation deploy --stack-name benchmarking --template-file src/main/stack/aws-batch-formation.json
 
+# get logs of batch job
+
+Scheduler will output log stream name when job is scheduled, later on you can use it
+in AWS console (go to CloudWatch->Logs) or through AWS CLI, with little bit of
+magic from `jq`:
+
+       aws logs get-log-events --log-group-name "/aws/batch/job" --log-stream-name [log-stream-name] --query "events[].message"  | jq -r 'join("\n")'
+
 # working locally with worker
 
 The best way to develop and debug worker is to do it through docker container
