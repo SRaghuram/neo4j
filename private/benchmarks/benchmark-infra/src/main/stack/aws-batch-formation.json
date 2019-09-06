@@ -16,6 +16,11 @@
     "BUILDID": {
       "Description": "build id",
       "Type": "String"
+    },
+    "RESULTSTORESECRET": {
+      "Description": "result store secret",
+      "NoEcho": true,
+      "Type": "String"
     }
   },
   "Resources": {
@@ -201,7 +206,7 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "Ref::--results_store_pass",
+            "{{resolve:secretsmanager:ResultStoreSecret}}",
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -313,21 +318,25 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "Ref::--results_store_pass",
+            "{{resolve:secretsmanager:ResultStoreSecret}}",
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
-          "Volumes": [{
-            "Host": {
-              "SourcePath": "/work"
-            },
-            "Name": "work"
-          }],
-          "MountPoints": [{
-            "SourceVolume": "work",
-            "ContainerPath": "/work/run",
-            "ReadOnly": false
-          }],
+          "Volumes": [
+            {
+              "Host": {
+                "SourcePath": "/work"
+              },
+              "Name": "work"
+            }
+          ],
+          "MountPoints": [
+            {
+              "SourceVolume": "work",
+              "ContainerPath": "/work/run",
+              "ReadOnly": false
+            }
+          ],
           "Privileged": true,
           "Vcpus": 4,
           "Memory": 8384
@@ -421,21 +430,25 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "Ref::--results_store_pass",
+            "{{resolve:secretsmanager:ResultStoreSecret}}",
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
-          "Volumes": [{
-            "Host": {
-              "SourcePath": "/work"
-            },
-            "Name": "work"
-          }],
-          "MountPoints": [{
-            "SourceVolume": "work",
-            "ContainerPath": "/work/run",
-            "ReadOnly": false
-          }],
+          "Volumes": [
+            {
+              "Host": {
+                "SourcePath": "/work"
+              },
+              "Name": "work"
+            }
+          ],
+          "MountPoints": [
+            {
+              "SourceVolume": "work",
+              "ContainerPath": "/work/run",
+              "ReadOnly": false
+            }
+          ],
           "Privileged": true,
           "Vcpus": 8,
           "Memory": 16384
@@ -529,7 +542,7 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "Ref::--results_store_pass",
+            "{{resolve:secretsmanager:ResultStoreSecret}}",
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -552,6 +565,14 @@
           "Vcpus": 4,
           "Memory": 8384
         }
+      }
+    },
+    "ResultStoreSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": "Secret to submit results to the result store",
+        "Name": "ResultStoreSecret-${STAGE}",
+        "SecretString": "${RESULTSTORESECRET}"
       }
     }
   },
