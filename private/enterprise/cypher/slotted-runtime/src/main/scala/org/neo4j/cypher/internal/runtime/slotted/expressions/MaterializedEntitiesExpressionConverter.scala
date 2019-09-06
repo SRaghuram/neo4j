@@ -40,16 +40,13 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
 
   private def toCommandExpression(id: Id, expression: Function, invocation: ast.FunctionInvocation,
                                   self: ExpressionConverters): Option[commandexpressions.Expression] =
-    expression match {
-      case Exists =>
-        invocation.arguments.head match {
-          case property: ast.Property =>
-            val propertyKey = getPropertyKey(property.propertyKey)
-            Some(MaterializedEntityPropertyExists(self.toCommandExpression(id, property.map), propertyKey))
-        }
-      case Keys   => Some(MaterializedEntityKeysFunction(self.toCommandExpression(id, invocation.arguments.head)))
-      case Labels => Some(MaterializedEntityLabelsFunction(self.toCommandExpression(id, invocation.arguments.head)))
-      case _      => None
+    (expression, invocation.arguments.head) match {
+      case (Exists, property: ast.Property) =>
+        Some(MaterializedEntityPropertyExists(self.toCommandExpression(id, property.map), getPropertyKey(property.propertyKey)))
+
+      case (Keys, arg)   => Some(MaterializedEntityKeysFunction(self.toCommandExpression(id, arg)))
+      case (Labels, arg) => Some(MaterializedEntityLabelsFunction(self.toCommandExpression(id, arg)))
+      case _             => None
     }
 
   private def toCommandProperty(id: Id, e: ast.LogicalProperty, self: ExpressionConverters): Option[commandexpressions.Expression] =
@@ -61,7 +58,7 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
   private def getPropertyKey(propertyKey: PropertyKeyName) = tokenContext.getOptPropertyKeyId(propertyKey.name) match {
     case Some(propertyKeyId) =>
       PropertyKey(propertyKey.name, propertyKeyId)
-    case _ =>
+    case _                   =>
       PropertyKey(propertyKey.name)
   }
 
@@ -81,9 +78,9 @@ case class MaterializedEntityProperty(mapExpr: commandexpressions.Expression, pr
   private val property = commandexpressions.Property(mapExpr, propertyKey)
 
   def apply(ctx: ExecutionContext, state: QueryState): AnyValue = mapExpr(ctx, state) match {
-    case n: NodeValue => n.properties().get(propertyKey.name)
+    case n: NodeValue         => n.properties().get(propertyKey.name)
     case r: RelationshipValue => r.properties().get(propertyKey.name)
-    case _ => property.apply(ctx, state)
+    case _                    => property.apply(ctx, state)
   }
 
   override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression
@@ -174,7 +171,7 @@ case class MaterializedEntityLabelsFunction(nodeExpr: Expression) extends NullIn
   override def compute(value: AnyValue, m: ExecutionContext, state: QueryState): AnyValue = {
     value match {
       case n: NodeValue => n.labels()
-      case _ => CypherFunctions.labels(value, state.query, state.cursors.nodeCursor)
+      case _            => CypherFunctions.labels(value, state.query, state.cursors.nodeCursor)
     }
   }
 

@@ -133,7 +133,8 @@ class ExecutionEngineInputDataStreamTest
         function("id", varFor("x")).as("id"),
         prop(varFor("x"), "p").as("r"),
         index(prop(varFor("x"), "l"), 1).as("s"),
-        hasLabels(varFor("x"), "A").as("t")
+        hasLabels(varFor("x"), "A").as("t"),
+        exists(patternExpression(varFor("x"), varFor("x"))).as("u")
       )
     )
 
@@ -148,9 +149,9 @@ class ExecutionEngineInputDataStreamTest
     )
       .toComparableResult
       .shouldEqual(List(
-        Map("id" -> 1, "r" -> "a", "s" -> 2, "t" -> true),
-        Map("id" -> 2, "r" -> "b", "s" -> null, "t" -> false),
-        Map("id" -> 3, "r" -> "c", "s" -> null, "t" -> true),
+        Map("id" -> 1, "r" -> "a", "s" -> 2,    "t" -> true,  "u" -> false),
+        Map("id" -> 2, "r" -> "b", "s" -> null, "t" -> false, "u" -> false),
+        Map("id" -> 3, "r" -> "c", "s" -> null, "t" -> true,  "u" -> false),
       ))
   }
 
