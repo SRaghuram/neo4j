@@ -27,9 +27,9 @@ import static org.mockito.Mockito.mock;
 
 class VerbosePageCacheTracerTest
 {
-    private AssertableLogProvider logProvider = new AssertableLogProvider( true );
-    private Log log = logProvider.getLog( getClass() );
-    private FakeClock clock = Clocks.fakeClock();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    private final Log log = logProvider.getLog( getClass() );
+    private final FakeClock clock = Clocks.fakeClock();
 
     @Test
     void traceFileMap()

@@ -5,12 +5,9 @@
  */
 package com.neo4j.locking;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
@@ -20,58 +17,56 @@ import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.config.Setting;
-import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.ImpermanentDbmsRule;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.ImpermanentDbmsExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.rule.concurrent.ThreadingExtension;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.test.rule.concurrent.ThreadingRule.await;
 
-@RunWith( Parameterized.class )
-public class MergeLockConcurrencyTest
+@ImpermanentDbmsExtension( configurationCallback = "configure" )
+@ExtendWith( ThreadingExtension.class )
+abstract class MergeLockConcurrencyTemplate
 {
-    @Rule
-    public final DbmsRule db = new ImpermanentDbmsRule();
-    @Rule
-    public final ThreadingRule threads = new ThreadingRule();
+    @Inject
+    private GraphDatabaseAPI db;
+    @Inject
+    private ThreadingRule threads;
 
-    @Parameterized.Parameters( name = "{0}" )
-    public static Iterable<Object[]> configurations()
+    private final String lockManager;
+
+    MergeLockConcurrencyTemplate( String lockManager )
     {
-        return Arrays.asList(
-                new Object[] { Map.of( lock_manager, "community" ) },
-                new Object[] { Map.of( lock_manager, "forseti" ) }
-        );
+        this.lockManager = lockManager;
     }
 
-    public MergeLockConcurrencyTest( Map<Setting<?>, Object> config )
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        db.withSettings( config );
+        builder.setConfig( lock_manager, lockManager );
     }
 
     @Test
-    public void shouldNotDeadlockOnMergeFollowedByPropertyAssignment() throws Exception
+    void shouldNotDeadlockOnMergeFollowedByPropertyAssignment() throws Exception
     {
         withConstraint( mergeThen( this::reassignProperties ) );
     }
 
     @Test
-    public void shouldNotDeadlockOnMergeFollowedByLabelReAddition() throws Exception
+    void shouldNotDeadlockOnMergeFollowedByLabelReAddition() throws Exception
     {
         withConstraint( mergeThen( this::reassignLabels ) );
     }
 
     private void withConstraint( ThrowingFunction<CyclicBarrier,Node,Exception> action ) throws Exception
     {
-        // given
-        try ( Transaction transaction = db.beginTx() )
-        {
-            transaction.execute( "CREATE CONSTRAINT ON (foo:Foo) ASSERT foo.bar IS UNIQUE" );
-            transaction.commit();
-        }
+        db.executeTransactionally( "CREATE CONSTRAINT ON (foo:Foo) ASSERT foo.bar IS UNIQUE" );
         CyclicBarrier barrier = new CyclicBarrier( 2 );
         Node node = createMergeNode();
 
@@ -79,7 +74,7 @@ public class MergeLockConcurrencyTest
         List<Node> result = await( threads.multiple( barrier.getParties(), action, barrier ) );
 
         // then
-        assertEquals( "size of result", 2, result.size() );
+        assertEquals( 2, result.size(), "size of result" );
         assertEquals( node, result.get( 0 ) );
         assertEquals( node, result.get( 1 ) );
     }
@@ -95,8 +90,7 @@ public class MergeLockConcurrencyTest
         return node;
     }
 
-    private ThrowingFunction<CyclicBarrier,Node,Exception> mergeThen(
-            ThrowingConsumer<Node,? extends Exception> action )
+    private ThrowingFunction<CyclicBarrier,Node,Exception> mergeThen( ThrowingConsumer<Node,? extends Exception> action )
     {
         return barrier ->
         {

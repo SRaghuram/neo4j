@@ -5,23 +5,15 @@
  */
 package com.neo4j.consistency;
 
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -29,65 +21,63 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.EmbeddedDbmsRule;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
-@RunWith( Parameterized.class )
-public class ConsistencyCheckServiceRecordFormatIT
+@TestDirectoryExtension
+@ExtendWith( SuppressOutputExtension.class )
+class ConsistencyCheckServiceRecordFormatIT
 {
-    private final DbmsRule db = new EmbeddedDbmsRule()
-            .withSetting( OnlineBackupSettings.online_backup_enabled, false )
-            .startLazily();
+    @Inject
+    private TestDirectory testDirectory;
 
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( SuppressOutput.suppressAll() ).around( db );
-
-    @Parameter
-    public String recordFormat;
-
-    @Parameters( name = "{0}" )
-    public static List<String> recordFormats()
+    @ParameterizedTest
+    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME} )
+    void checkTinyConsistentStore( String recordFormat ) throws Exception
     {
-        return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME );
+        testDirectory.databaseLayout();
+        var managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+                .setConfig( record_format, recordFormat ).build();
+        try
+        {
+            var database = managementService.database( DEFAULT_DATABASE_NAME );
+            createTestData( database );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
+        assertConsistentStore( testDirectory.databaseLayout() );
     }
 
-    @Before
-    public void configureRecordFormat()
-    {
-        db.withSetting( GraphDatabaseSettings.record_format, recordFormat );
-    }
-
-    @Test
-    public void checkTinyConsistentStore() throws Exception
-    {
-        db.ensureStarted();
-        createLinkedList( db, 1_000 );
-        db.shutdown();
-
-        assertConsistentStore( db );
-    }
-
-    private static void createLinkedList( GraphDatabaseService db, int size )
+    private static void createTestData( GraphDatabaseService db )
     {
         Node previous = null;
+        var robot = Label.label( "robot" );
+        var human = Label.label( "human" );
+        var create = RelationshipType.withName( "create" );
+        var destroy = RelationshipType.withName( "destroy" );
         try ( Transaction tx = db.beginTx() )
         {
-            for ( int i = 0; i < size; i++ )
+            for ( int i = 0; i < 1000; i++ )
             {
-                Label label = (i % 2 == 0) ? TestLabel.FOO : TestLabel.BAR;
+                Label label = (i % 2 == 0) ? robot : human;
                 Node current = tx.createNode( label );
                 current.setProperty( "value", ThreadLocalRandom.current().nextLong() );
 
                 if ( previous != null )
                 {
-                    previous.createRelationshipTo( current, TestRelType.FORWARD );
-                    current.createRelationshipTo( previous, TestRelType.BACKWARD );
+                    previous.createRelationshipTo( current, create );
+                    current.createRelationshipTo( previous, destroy );
                 }
                 previous = current;
             }
@@ -95,25 +85,11 @@ public class ConsistencyCheckServiceRecordFormatIT
         }
     }
 
-    private static void assertConsistentStore( GraphDatabaseAPI db ) throws Exception
+    private static void assertConsistentStore( DatabaseLayout databaseLayout ) throws Exception
     {
         ConsistencyCheckService service = new ConsistencyCheckService();
-
-        ConsistencyCheckService.Result result = service.runFullConsistencyCheck( db.databaseLayout(), Config.defaults(),
+        ConsistencyCheckService.Result result = service.runFullConsistencyCheck( databaseLayout, Config.defaults(),
                 ProgressMonitorFactory.textual( System.out ), FormattedLogProvider.toOutputStream( System.out ), true );
-
-        assertTrue( "Store is inconsistent", result.isSuccessful() );
-    }
-
-    private enum TestLabel implements Label
-    {
-        FOO,
-        BAR
-    }
-
-    private enum TestRelType implements RelationshipType
-    {
-        FORWARD,
-        BACKWARD
+        assertTrue( result.isSuccessful(), "Store is inconsistent" );
     }
 }

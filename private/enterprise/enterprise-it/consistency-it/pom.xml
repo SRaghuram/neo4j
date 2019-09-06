@@ -17,6 +17,7 @@
 
     <properties>
         <moduleName>com.neo4j.enterprise.consistency.it</moduleName>
+        <default.jupiter.test.mode>concurrent</default.jupiter.test.mode>
     </properties>
 
     <scm>
@@ -103,10 +104,6 @@
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

@@ -16,7 +16,6 @@ import org.neo4j.graphdb.config.Setting;
 
 public class HighLimitExecutionOrderIT extends ExecutionOrderIntegrationTest
 {
-
     @Override
     protected String getRecordFormatName()
     {
