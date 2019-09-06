@@ -17,26 +17,6 @@ class ExecutionEngineFullyParsedQueryTest
     with InputDataStreamTestSupport
     with FullyParsedQueryTestSupport {
 
-  test("InputDataStream gets forwarded to runtime") {
-    val q = query(
-      input(varFor("x")),
-      return_(varFor("x").as("x"))
-    )
-
-    val result =
-      execute(
-        prepare(q),
-        noParams,
-        iteratorInput(Iterator(Array(1), Array(2), Array(3), Array(4)))
-      ).toComparableResult
-    result shouldEqual List(
-      Map("x" -> 1),
-      Map("x" -> 2),
-      Map("x" -> 3),
-      Map("x" -> 4),
-    )
-  }
-
   // Using these just to get a sample of queries
   LdbcQueries.LDBC_QUERIES.foreach { query =>
 
