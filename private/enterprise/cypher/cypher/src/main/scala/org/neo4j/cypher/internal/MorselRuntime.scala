@@ -53,7 +53,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
 
     while (!compilationCompleted) {
-      val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators)
+      val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
       val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
       physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                           query.logicalPlan,

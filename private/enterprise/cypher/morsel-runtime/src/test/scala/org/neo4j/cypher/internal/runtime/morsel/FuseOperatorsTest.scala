@@ -140,7 +140,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   def produceResult(out: String*): LogicalPlan => LogicalPlan = ProduceResult(_, out.toSeq)
 
   class PipelineBuilder(head: LogicalPlan) {
-    private val policy = OperatorFusionPolicy(true)
+    private val policy = OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false)
     private val slots = mutable.Map.empty[String, Slot]
     private var longCount = 0
     private var refCount = 0

@@ -39,15 +39,22 @@ trait PipelineBreakingPolicy {
 
 sealed trait OperatorFusionPolicy {
   def canFuse(lp: LogicalPlan): Boolean
+  def canFuseMiddle(lp: LogicalPlan): Boolean
 }
 
 object OperatorFusionPolicy {
 
-  def apply(fusingEnabled: Boolean): OperatorFusionPolicy = if (fusingEnabled) OPERATOR_FUSION_ENABLED else OPERATOR_FUSION_DISABLED
+  def apply(fusingEnabled: Boolean, parallelExecution: Boolean): OperatorFusionPolicy =
+    if (!fusingEnabled) OPERATOR_FUSION_DISABLED
+    else {
+      if (parallelExecution) OPERATOR_FUSION_ENABLED_PARALLEL else OPERATOR_FUSION_ENABLED
+    }
 
   private case object OPERATOR_FUSION_DISABLED extends OperatorFusionPolicy {
 
     override def canFuse(lp: LogicalPlan): Boolean = false
+
+    override def canFuseMiddle(lp: LogicalPlan): Boolean = false
   }
 
   private case object OPERATOR_FUSION_ENABLED extends OperatorFusionPolicy {
@@ -84,6 +91,15 @@ object OperatorFusionPolicy {
           false
       }
     }
+
+    override def canFuseMiddle(lp: LogicalPlan): Boolean = canFuse(lp)
+  }
+
+  private case object OPERATOR_FUSION_ENABLED_PARALLEL extends OperatorFusionPolicy {
+
+    override def canFuse(lp: LogicalPlan): Boolean = OPERATOR_FUSION_ENABLED.canFuse(lp)
+
+    override def canFuseMiddle(lp: LogicalPlan): Boolean = false
   }
 }
 

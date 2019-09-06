@@ -262,7 +262,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                         source: PipelineDefinitionBuild,
                                         argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
 
-    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuse(plan)
+    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuseMiddle(plan)
 
     plan match {
       case produceResult: ProduceResult =>

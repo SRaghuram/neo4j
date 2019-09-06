@@ -13,7 +13,7 @@ case class MorselPipelineBreakingPolicy(fusingPolicy: OperatorFusionPolicy) exte
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 
-    def canFuseOneChildOperator: Boolean = fusingPolicy.canFuse(lp) && fusingPolicy.canFuse(lp.lhs.get)
+    def canFuseOneChildOperator: Boolean = fusingPolicy.canFuseMiddle(lp) && fusingPolicy.canFuse(lp.lhs.get)
 
     lp match {
       // leaf operators
