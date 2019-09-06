@@ -23,11 +23,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.internal.kernel.api.SchemaRead;
-import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
@@ -182,7 +179,7 @@ class ClusterIndexProcedureIT
             // with correct pattern and provider
             assertEquals( "Person", label.name(), "correct label" );
             assertEquals( "name", property, "correct property" );
-            assertCorrectProvider( tx, label, property );
+            assertCorrectProvider( indexDefinition );
 
             tx.commit();
         }
@@ -211,14 +208,9 @@ class ClusterIndexProcedureIT
         }
     }
 
-    private static void assertCorrectProvider( Transaction tx, Label label, String property )
+    private static void assertCorrectProvider( IndexDefinition indexDefinition )
     {
-        KernelTransaction kernelTransaction = ((InternalTransaction) tx).kernelTransaction();
-        TokenRead tokenRead = kernelTransaction.tokenRead();
-        int labelId = tokenRead.nodeLabel( label.name() );
-        int propId = tokenRead.propertyKey( property );
-        SchemaRead schemaRead = kernelTransaction.schemaRead();
-        IndexDescriptor index = schemaRead.index( labelId, propId );
+        IndexDescriptor index = ((IndexDefinitionImpl) indexDefinition).getIndexReference();
         assertEquals( "lucene+native", index.getIndexProvider().getKey(), "correct provider key" );
         assertEquals( "3.0", index.getIndexProvider().getVersion(), "correct provider version" );
     }

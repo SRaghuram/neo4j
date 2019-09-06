@@ -19,12 +19,11 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.internal.schema.SchemaDescriptor;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.Inject;
@@ -44,6 +43,7 @@ class IndexConfigCausalClusterIT
     private static Cluster cluster;
     private final TestLabels label = TestLabels.LABEL_ONE;
     private final String prop = "prop";
+    private IndexDescriptor index;
 
     @BeforeAll
     static void startCluster() throws Exception
@@ -71,7 +71,8 @@ class IndexConfigCausalClusterIT
         // Create index and make sure it propagates to all cores.
         cluster.coreTx( ( db, tx ) ->
         {
-            tx.schema().indexFor( label ).on( prop ).create();
+            IndexDefinitionImpl indexDefinition = (IndexDefinitionImpl) tx.schema().indexFor( label ).on( prop ).create();
+            index = indexDefinition.getIndexReference();
             tx.commit();
         } );
 
@@ -98,13 +99,10 @@ class IndexConfigCausalClusterIT
         Map<String,Value> indexConfig;
         try ( Transaction tx = db.beginTx() )
         {
-            TokenRead tokenRead = tokenRead( tx );
             IndexingService indexingService = getIndexingService( db );
-            int labelId = tokenRead.nodeLabel( label.name() );
-            int propKeyId = tokenRead.propertyKey( prop );
             try
             {
-                IndexProxy indexProxy = indexingService.getIndexProxy( SchemaDescriptor.forLabel( labelId, propKeyId ) );
+                IndexProxy indexProxy = indexingService.getIndexProxy( index.schema() );
                 indexConfig = indexProxy.indexConfig();
             }
             catch ( IndexNotFoundKernelException e )
@@ -119,10 +117,5 @@ class IndexConfigCausalClusterIT
     private static IndexingService getIndexingService( GraphDatabaseFacade db )
     {
         return db.getDependencyResolver().resolveDependency( IndexingService.class );
-    }
-
-    private static TokenRead tokenRead( Transaction tx )
-    {
-        return ((InternalTransaction) tx).kernelTransaction().tokenRead();
     }
 }

@@ -32,6 +32,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
@@ -55,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -284,7 +286,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // and then
         transaction = newTransaction( AnonymousContext.read() );
         SchemaRead schemaRead = transaction.schemaRead();
-        IndexDescriptor index = schemaRead.index( labelId, propertyKeyIds );
+        IndexDescriptor index = single( schemaRead.index( SchemaDescriptor.forLabel( labelId, propertyKeyIds ) ) );
         assertCorrectIndex( labelId, propertyKeyIds, uniquenessConstraint, index );
         assertIndexData( transaction, propertyKeyIds, value, node, index );
         commit();

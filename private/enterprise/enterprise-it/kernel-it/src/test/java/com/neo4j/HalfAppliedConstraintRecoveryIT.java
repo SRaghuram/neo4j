@@ -39,6 +39,9 @@ import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.Level;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -77,14 +80,13 @@ public class HalfAppliedConstraintRecoveryIT
     private static final String KEY = "key";
     private static final String KEY2 = "key2";
 
-    private static final BiConsumer<GraphDatabaseAPI,Transaction> UNIQUE_CONSTRAINT_CREATOR =
-            ( db, tx ) ->
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> UNIQUE_CONSTRAINT_CREATOR = ( db, tx ) ->
             tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).withName( NAME ).create();
 
-    private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR =( db, tx ) ->
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR = ( db, tx ) ->
             db.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).withName( NAME ).create();
 
-    private static final BiConsumer<GraphDatabaseAPI,Transaction> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR =( db, tx ) ->
+    private static final BiConsumer<GraphDatabaseAPI,Transaction> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR = ( db, tx ) ->
             db.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).assertPropertyIsNodeKey( KEY2 ).withName( NAME ).create();
 
     private static final BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> REAPPLY =
@@ -106,7 +108,8 @@ public class HalfAppliedConstraintRecoveryIT
     {
         return ( db, txs ) ->
         {
-            db.schema().getIndexByName( NAME ).drop();
+            IndexDefinition index = db.schema().getIndexByName( NAME );
+            index.drop();
             createConstraint.accept( db, txs );
         };
     }
@@ -173,8 +176,13 @@ public class HalfAppliedConstraintRecoveryIT
         }
 
         // WHEN
-        DatabaseManagementService managementService =
-                new TestEnterpriseDatabaseManagementServiceBuilder().setFileSystem( crashSnapshot ).impermanent().build();
+        LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.err );
+        TestCommercialDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder()
+                .setFileSystem( crashSnapshot )
+                .impermanent()
+                .setInternalLogProvider( logProvider )
+                .setUserLogProvider( logProvider );
+        DatabaseManagementService managementService = builder.build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

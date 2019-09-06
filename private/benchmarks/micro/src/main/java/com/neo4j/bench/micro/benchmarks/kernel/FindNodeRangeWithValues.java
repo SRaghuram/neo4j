@@ -33,6 +33,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -54,6 +55,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -152,7 +154,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
 
             propertyKey = propertyKeyToId( ascPropertyFor( type, min ) );
 
-            index = kernelTx.schemaRead.index( labelToId( LABEL ), propertyKey );
+            index = single( kernelTx.schemaRead.index( SchemaDescriptor.forLabel( labelToId( LABEL ), propertyKey ) ) );
             indexReadSession = kernelTx.read.indexReadSession( index );
             node = kernelTx.cursors.allocateNodeValueIndexCursor();
             read = kernelTx.read;

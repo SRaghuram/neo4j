@@ -34,6 +34,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
+import org.neo4j.internal.schema.SchemaDescriptor;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.LABEL;
@@ -54,6 +55,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -148,7 +150,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
             labelId = labelToId( LABEL );
 
             valueFun = propertyDefinition.value().create();
-            index = kernelTx.schemaRead.index( labelId, propertyKey );
+            index = single( kernelTx.schemaRead.index( SchemaDescriptor.forLabel( labelId, propertyKey ) ) );
             indexReadSession = kernelTx.read.indexReadSession( index );
             node = kernelTx.cursors.allocateNodeValueIndexCursor();
             read = kernelTx.read;

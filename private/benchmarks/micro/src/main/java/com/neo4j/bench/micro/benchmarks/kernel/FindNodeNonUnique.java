@@ -30,6 +30,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -57,6 +58,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -165,7 +167,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
             lowSelectivityMin = minEstimateFor( expectedLowSelectivityCount() );
             lowSelectivityMax = maxEstimateFor( expectedLowSelectivityCount() );
 
-            index = kernelTx.schemaRead.index( labelId, propertyKey );
+            index = single( kernelTx.schemaRead.index( SchemaDescriptor.forLabel( labelId, propertyKey ) ) );
             indexReadSession = kernelTx.read.indexReadSession( index );
             node = kernelTx.cursors.allocateNodeValueIndexCursor();
             read = kernelTx.read;
