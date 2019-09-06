@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.compatibility.v3_5.Cypher3_5Planner
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
@@ -47,27 +46,21 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                               cypherUpdateStrategy: CypherUpdateStrategy,
                               executionEngineProvider: () => ExecutionEngine): Compiler = {
 
-    val planner = cypherVersion match {
-      case CypherVersion.`v3_5` =>
-        Cypher3_5Planner(
-          plannerConfig,
-          MasterCompiler.CLOCK,
-          spi.monitors(),
-          log,
-          cypherPlanner,
-          cypherUpdateStrategy,
-          LastCommittedTxIdProvider(graph))
-
-      case CypherVersion.v4_0 =>
-        Cypher4_0Planner(
-          plannerConfig,
-          MasterCompiler.CLOCK,
-          spi.monitors(),
-          log,
-          cypherPlanner,
-          cypherUpdateStrategy,
-          LastCommittedTxIdProvider(graph))
+    val compatibilityMode = cypherVersion match {
+      case CypherVersion.`v3_5` => true
+      case CypherVersion.v4_0 => false
     }
+
+    val planner =
+      Cypher4_0Planner(
+        plannerConfig,
+        MasterCompiler.CLOCK,
+        spi.monitors(),
+        log,
+        cypherPlanner,
+        cypherUpdateStrategy,
+        LastCommittedTxIdProvider(graph),
+        compatibilityMode)
 
     val runtime = if (plannerConfig.planSystemCommands) {
       EnterpriseAdministrationCommandRuntime(executionEngineProvider(), graph.getDependencyResolver)
