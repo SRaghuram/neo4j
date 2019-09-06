@@ -1,537 +1,565 @@
 {
-	"Resources": {
-		"M5D2XLargeComputeEnvironment": {
-			"Type": "AWS::Batch::ComputeEnvironment",
-			"Properties": {
-				"ComputeEnvironmentName": "benchmarking_m5d_2xlarge",
-				"Type": "MANAGED",
-				"ComputeResources": {
-					"Type": "EC2",
-					"ImageId": "ami-054a4336b77edd10e",
-					"Ec2KeyPair" : "jpalka",
-					"MinvCpus": 0,
-					"DesiredvCpus": 0,
-					"MaxvCpus": 256,
-					"InstanceTypes": [
-						"m5d.2xlarge"
-					],
-					"Subnets": [
-						"subnet-ff6f40b5",
-						"subnet-3a8c6e53",
-						"subnet-553c312d"
-					],
-					"SecurityGroupIds": [
-						"sg-bcab66d5"
-					],
-					"InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
-					"Tags": {
-						"role": "benchmarking run worker"
-					}
-				},
-				"ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
-			}
-		},
-		"M5DLargeComputeEnvironment": {
-			"Type": "AWS::Batch::ComputeEnvironment",
-			"Properties": {
-				"ComputeEnvironmentName": "benchmarking_m5d_large",
-				"Type": "MANAGED",
-				"ComputeResources": {
-					"Type": "EC2",
-					"ImageId": "ami-054a4336b77edd10e",
-					"Ec2KeyPair" : "jpalka",
-					"MinvCpus": 0,
-					"DesiredvCpus": 0,
-					"MaxvCpus": 256,
-					"InstanceTypes": [
-						"m5d.large"
-					],
-					"Subnets": [
-						"subnet-ff6f40b5",
-						"subnet-3a8c6e53",
-						"subnet-553c312d"
-					],
-					"SecurityGroupIds": [
-						"sg-bcab66d5"
-					],
-					"InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
-					"Tags": {
-						"role": "benchmarking run worker"
-					}
-				},
-				"ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
-			}
-		},
-		"MacroBenchmarkRunQueue": {
-			"Type": "AWS::Batch::JobQueue",
-			"Properties": {
-				"JobQueueName": "macro-benchmark-run-queue",
-				"ComputeEnvironmentOrder": [
-					{
-						"Order": 1,
-						"ComputeEnvironment": {
-							"Ref": "M5D2XLargeComputeEnvironment"
-						}
-					}
-				],
-				"Priority": 1
-			}
-		},
-		"MacroBenchmarkRunJobDefintionLargeJDK11": {
-			"Type": "AWS::Batch::JobDefinition",
-			"Properties": {
-				"JobDefinitionName": "macro-benchmark-job-definition-oracle11",
-				"Type": "container",
-				"ContainerProperties": {
-					"Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_11",
-					"Command": [
-						"/work/bootstrap-worker.sh",
+  "Parameters": {
+    "AMIID": {
+      "Description": "AMI Id",
+      "Type": "String"
+    },
+    "NEO4JCOMMIT": {
+      "Description": "commit cloud formation was build from",
+      "Type": "String"
+    },
+    "STAGE": {
+      "Description": "current production stage",
+      "Type": "String",
+      "Default": "test"
+    },
+    "BUILDID": {
+      "Description": "build id",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "M5D2XLargeComputeEnvironment": {
+      "Type": "AWS::Batch::ComputeEnvironment",
+      "Properties": {
+        "Type": "MANAGED",
+        "ComputeResources": {
+          "Type": "EC2",
+          "ImageId": {
+            "Ref": "AMIID"
+          },
+          "Ec2KeyPair": "benchmark",
+          "MinvCpus": 0,
+          "DesiredvCpus": 0,
+          "MaxvCpus": 256,
+          "InstanceTypes": [
+            "m5d.2xlarge"
+          ],
+          "Subnets": [
+            "subnet-ff6f40b5",
+            "subnet-3a8c6e53",
+            "subnet-553c312d"
+          ],
+          "SecurityGroupIds": [
+            "sg-bcab66d5"
+          ],
+          "InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
+          "Tags": {
+            "team": "benchmarking",
+            "project": "infrastructure",
+            "neo4jcommit": {
+              "Ref": "NEO4JCOMMIT"
+            },
+            "stage": {
+              "Ref": "STAGE"
+            }
+          }
+        },
+        "ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
+      }
+    },
+    "M5DLargeComputeEnvironment": {
+      "Type": "AWS::Batch::ComputeEnvironment",
+      "Properties": {
+        "Type": "MANAGED",
+        "ComputeResources": {
+          "Type": "EC2",
+          "ImageId": {
+            "Ref": "AMIID"
+          },
+          "Ec2KeyPair": "benchmark",
+          "MinvCpus": 0,
+          "DesiredvCpus": 0,
+          "MaxvCpus": 256,
+          "InstanceTypes": [
+            "m5d.large"
+          ],
+          "Subnets": [
+            "subnet-ff6f40b5",
+            "subnet-3a8c6e53",
+            "subnet-553c312d"
+          ],
+          "SecurityGroupIds": [
+            "sg-bcab66d5"
+          ],
+          "InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
+          "Tags": {
+            "team": "benchmarking",
+            "project": "infrastructure",
+            "neo4jcommit": {
+              "Ref": "NEO4JCOMMIT"
+            },
+            "stage": {
+              "Ref": "STAGE"
+            }
+          }
+        },
+        "ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
+      }
+    },
+    "MacroBenchmarkRunQueue": {
+      "Type": "AWS::Batch::JobQueue",
+      "Properties": {
+        "ComputeEnvironmentOrder": [
+          {
+            "Order": 1,
+            "ComputeEnvironment": {
+              "Ref": "M5D2XLargeComputeEnvironment"
+            }
+          }
+        ],
+        "JobQueueName": {
+          "Fn::Sub": "M5D2XLargeJobQueue-${BUILDID}"
+        },
+        "Priority": 1
+      }
+    },
+    "MacroBenchmarkRunJobDefintionLargeJDK11": {
+      "Type": "AWS::Batch::JobDefinition",
+      "Properties": {
+        "JobDefinitionName": {
+          "Fn::Sub": "macro-benchmark-job-definition-oracle11-${STAGE}"
+        },
+        "Type": "container",
+        "ContainerProperties": {
+          "Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_11",
+          "Command": [
+            "/work/bootstrap-worker.sh",
+            "--worker-artifact-uri",
+            "Ref::--worker-artifact-uri",
+            "run-worker",
 
-						"--worker-artifact-uri",
-						"Ref::--worker-artifact-uri",
+            "--workload",
+            "Ref::--workload",
+            "--db-edition",
+            "Ref::--db-edition",
+            "--jvm",
+            "Ref::--jvm",
+            "--profilers",
+            "Ref::--profilers",
+            "--warmup-count",
+            "Ref::--warmup-count",
+            "--measurement-count",
+            "Ref::--measurement-count",
+            "--min-measurement-duration",
+            "Ref::--min-measurement-duration",
+            "--max-measurement-duration",
+            "Ref::--max-measurement-duration",
+            "--forks",
+            "Ref::--forks",
+            "--time-unit",
+            "Ref::--time-unit",
+            "--runtime",
+            "Ref::--runtime",
+            "--planner",
+            "Ref::--planner",
+            "--execution-mode",
+            "Ref::--execution-mode",
+            "--error-policy",
+            "Ref::--error-policy",
+            "--jvm-args",
+            "Ref::--jvm-args",
+            "--neo4j-deployment",
+            "Ref::--neo4j-deployment",
+            "--recreate-schema",
+            "Ref::--recreate-schema",
+            "--skip-flamegraphs",
+            "Ref::--skip-flamegraphs",
 
-						"run-worker",
+            "--neo4j-commit",
+            "Ref::--neo4j-commit",
+            "--neo4j-version",
+            "Ref::--neo4j-version",
+            "--neo4j-branch",
+            "Ref::--neo4j-branch",
+            "--neo4j-branch-owner",
+            "Ref::--neo4j-branch-owner",
+            "--tool-commit",
+            "Ref::--tool-commit",
+            "--tool-branch-owner",
+            "Ref::--tool-branch-owner",
+            "--tool-branch",
+            "Ref::--tool-branch",
+            "--teamcity-build",
+            "Ref::--teamcity-build",
+            "--parent-teamcity-build",
+            "Ref::--parent-teamcity-build",
+            "--triggered-by",
+            "Ref::--triggered-by",
 
-						"--workload",
-						"Ref::--workload",
-						"--db-edition",
-						"Ref::--db-edition",
-						"--jvm",
-						"Ref::--jvm",
-						"--profilers",
-						"Ref::--profilers",
-						"--warmup-count",
-						"Ref::--warmup-count",
-						"--measurement-count",
-						"Ref::--measurement-count",
-						"--min-measurement-duration",
-						"Ref::--min-measurement-duration",
-						"--max-measurement-duration",
-						"Ref::--max-measurement-duration",
-						"--forks",
-						"Ref::--forks",
-						"--time-unit",
-						"Ref::--time-unit",
-						"--runtime",
-						"Ref::--runtime",
-						"--planner",
-						"Ref::--planner",
-						"--execution-mode",
-						"Ref::--execution-mode",
-						"--error-policy",
-						"Ref::--error-policy",
-						"--jvm-args",
-						"Ref::--jvm-args",
-						"--neo4j-deployment",
-						"Ref::--neo4j-deployment",
-						"--recreate-schema",
-						"Ref::--recreate-schema",
-						"--skip-flamegraphs",
-						"Ref::--skip-flamegraphs",
+            "--workspace-dir",
+            "Ref::--workspace-dir",
+            "--aws-secret",
+            "Ref::--aws-secret",
+            "--aws-key",
+            "Ref::--aws-key",
+            "--aws-region",
+            "Ref::--aws-region",
+            "--db-name",
+            "Ref::--db-name",
 
-						"--neo4j-commit",
-						"Ref::--neo4j-commit",
-						"--neo4j-version",
-						"Ref::--neo4j-version",
-						"--neo4j-branch",
-						"Ref::--neo4j-branch",
-						"--neo4j-branch-owner",
-						"Ref::--neo4j-branch-owner",
-						"--tool-commit",
-						"Ref::--tool-commit",
-						"--tool-branch-owner",
-						"Ref::--tool-branch-owner",
-						"--tool-branch",
-						"Ref::--tool-branch",
-						"--teamcity-build",
-						"Ref::--teamcity-build",
-						"--parent-teamcity-build",
-						"Ref::--parent-teamcity-build",
-						"--triggered-by",
-						"Ref::--triggered-by",
+            "--results_store_user",
+            "Ref::--results_store_user",
+            "--results_store_pass",
+            "Ref::--results_store_pass",
+            "--results_store_uri",
+            "Ref::--results_store_uri"
+          ],
+          "Volumes": [
+            {
+              "Host": {
+                "SourcePath": "/work"
+              },
+              "Name": "work"
+            }
+          ],
+          "MountPoints": [
+            {
+              "SourceVolume": "work",
+              "ContainerPath": "/work/run",
+              "ReadOnly": false
+            }
+          ],
+          "Privileged": true,
+          "Vcpus": 8,
+          "Memory": 16384
+        }
+      }
+    },
+    "MacroBenchmarkRunJobDefintionSmallJDK11": {
+      "Type": "AWS::Batch::JobDefinition",
+      "Properties": {
+        "JobDefinitionName": {
+          "Fn::Sub": "macro-benchmark-job-definition-small-oracle11-${STAGE}"
+        },
+        "Type": "container",
+        "ContainerProperties": {
+          "Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_11",
+          "Command": [
+            "/work/bootstrap-worker.sh",
+            "--worker-artifact-uri",
+            "Ref::--worker-artifact-uri",
+            "run-worker",
 
-						"--workspace-dir",
-						"Ref::--workspace-dir",
-						"--aws-secret",
-						"Ref::--aws-secret",
-						"--aws-key",
-						"Ref::--aws-key",
-						"--aws-region",
-						"Ref::--aws-region",
-						"--db-name",
-						"Ref::--db-name",
+            "--workload",
+            "Ref::--workload",
+            "--db-edition",
+            "Ref::--db-edition",
+            "--jvm",
+            "Ref::--jvm",
+            "--profilers",
+            "Ref::--profilers",
+            "--warmup-count",
+            "Ref::--warmup-count",
+            "--measurement-count",
+            "Ref::--measurement-count",
+            "--min-measurement-duration",
+            "Ref::--min-measurement-duration",
+            "--max-measurement-duration",
+            "Ref::--max-measurement-duration",
+            "--forks",
+            "Ref::--forks",
+            "--time-unit",
+            "Ref::--time-unit",
+            "--runtime",
+            "Ref::--runtime",
+            "--planner",
+            "Ref::--planner",
+            "--execution-mode",
+            "Ref::--execution-mode",
+            "--error-policy",
+            "Ref::--error-policy",
+            "--jvm-args",
+            "Ref::--jvm-args",
+            "--neo4j-deployment",
+            "Ref::--neo4j-deployment",
+            "--recreate-schema",
+            "Ref::--recreate-schema",
+            "--skip-flamegraphs",
+            "Ref::--skip-flamegraphs",
 
-						"--results_store_user",
-						"Ref::--results_store_user",
-						"--results_store_pass",
-						"Ref::--results_store_pass",
-						"--results_store_uri",
-						"Ref::--results_store_uri"
-					],
-					"Volumes": [
-						{
-							"Host": {
-								"SourcePath": "/work"
-							},
-							"Name": "work"
-						}
-					],
-					"MountPoints": [
-						{
-							"SourceVolume": "work",
-							"ContainerPath": "/work/run",
-							"ReadOnly": false
-						}
-					],
-					"Privileged": true,
-					"Vcpus": 8,
-					"Memory": 16384
-				}
-			}
-		},
-		"MacroBenchmarkRunJobDefintionSmallJDK11": {
-			"Type": "AWS::Batch::JobDefinition",
-			"Properties": {
-				"JobDefinitionName": "macro-benchmark-job-definition-small-oracle11",
-				"Type": "container",
-				"ContainerProperties": {
-					"Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_11",
-					"Command": [
-						"/work/bootstrap-worker.sh",
+            "--neo4j-commit",
+            "Ref::--neo4j-commit",
+            "--neo4j-version",
+            "Ref::--neo4j-version",
+            "--neo4j-branch",
+            "Ref::--neo4j-branch",
+            "--neo4j-branch-owner",
+            "Ref::--neo4j-branch-owner",
+            "--tool-commit",
+            "Ref::--tool-commit",
+            "--tool-branch-owner",
+            "Ref::--tool-branch-owner",
+            "--tool-branch",
+            "Ref::--tool-branch",
+            "--teamcity-build",
+            "Ref::--teamcity-build",
+            "--parent-teamcity-build",
+            "Ref::--parent-teamcity-build",
+            "--triggered-by",
+            "Ref::--triggered-by",
 
-						"--worker-artifact-uri",
-						"Ref::--worker-artifact-uri",
+            "--workspace-dir",
+            "Ref::--workspace-dir",
+            "--aws-secret",
+            "Ref::--aws-secret",
+            "--aws-key",
+            "Ref::--aws-key",
+            "--aws-region",
+            "Ref::--aws-region",
+            "--db-name",
+            "Ref::--db-name",
 
-						"run-worker",
+            "--results_store_user",
+            "Ref::--results_store_user",
+            "--results_store_pass",
+            "Ref::--results_store_pass",
+            "--results_store_uri",
+            "Ref::--results_store_uri"
+          ],
+          "Volumes": [{
+            "Host": {
+              "SourcePath": "/work"
+            },
+            "Name": "work"
+          }],
+          "MountPoints": [{
+            "SourceVolume": "work",
+            "ContainerPath": "/work/run",
+            "ReadOnly": false
+          }],
+          "Privileged": true,
+          "Vcpus": 4,
+          "Memory": 8384
+        }
+      }
+    },
+    "MacroBenchmarkRunJobDefintionLargeJDK8": {
+      "Type": "AWS::Batch::JobDefinition",
+      "Properties": {
+        "JobDefinitionName": {
+          "Fn::Sub": "macro-benchmark-job-definition-oracle8-${STAGE}"
+        },
+        "Type": "container",
+        "ContainerProperties": {
+          "Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_8",
+          "Command": [
+            "/work/bootstrap-worker.sh",
+            "--worker-artifact-uri",
+            "Ref::--worker-artifact-uri",
+            "run-worker",
 
-						"--workload",
-						"Ref::--workload",
-						"--db-edition",
-						"Ref::--db-edition",
-						"--jvm",
-						"Ref::--jvm",
-						"--profilers",
-						"Ref::--profilers",
-						"--warmup-count",
-						"Ref::--warmup-count",
-						"--measurement-count",
-						"Ref::--measurement-count",
-						"--min-measurement-duration",
-						"Ref::--min-measurement-duration",
-						"--max-measurement-duration",
-						"Ref::--max-measurement-duration",
-						"--forks",
-						"Ref::--forks",
-						"--time-unit",
-						"Ref::--time-unit",
-						"--runtime",
-						"Ref::--runtime",
-						"--planner",
-						"Ref::--planner",
-						"--execution-mode",
-						"Ref::--execution-mode",
-						"--error-policy",
-						"Ref::--error-policy",
-						"--jvm-args",
-						"Ref::--jvm-args",
-						"--neo4j-deployment",
-						"Ref::--neo4j-deployment",
-						"--recreate-schema",
-						"Ref::--recreate-schema",
-						"--skip-flamegraphs",
-						"Ref::--skip-flamegraphs",
+            "--workload",
+            "Ref::--workload",
+            "--db-edition",
+            "Ref::--db-edition",
+            "--jvm",
+            "Ref::--jvm",
+            "--profilers",
+            "Ref::--profilers",
+            "--warmup-count",
+            "Ref::--warmup-count",
+            "--measurement-count",
+            "Ref::--measurement-count",
+            "--min-measurement-duration",
+            "Ref::--min-measurement-duration",
+            "--max-measurement-duration",
+            "Ref::--max-measurement-duration",
+            "--forks",
+            "Ref::--forks",
+            "--time-unit",
+            "Ref::--time-unit",
+            "--runtime",
+            "Ref::--runtime",
+            "--planner",
+            "Ref::--planner",
+            "--execution-mode",
+            "Ref::--execution-mode",
+            "--error-policy",
+            "Ref::--error-policy",
+            "--jvm-args",
+            "Ref::--jvm-args",
+            "--neo4j-deployment",
+            "Ref::--neo4j-deployment",
+            "--recreate-schema",
+            "Ref::--recreate-schema",
+            "--skip-flamegraphs",
+            "Ref::--skip-flamegraphs",
 
-						"--neo4j-commit",
-						"Ref::--neo4j-commit",
-						"--neo4j-version",
-						"Ref::--neo4j-version",
-						"--neo4j-branch",
-						"Ref::--neo4j-branch",
-						"--neo4j-branch-owner",
-						"Ref::--neo4j-branch-owner",
-						"--tool-commit",
-						"Ref::--tool-commit",
-						"--tool-branch-owner",
-						"Ref::--tool-branch-owner",
-						"--tool-branch",
-						"Ref::--tool-branch",
-						"--teamcity-build",
-						"Ref::--teamcity-build",
-						"--parent-teamcity-build",
-						"Ref::--parent-teamcity-build",
-						"--triggered-by",
-						"Ref::--triggered-by",
+            "--neo4j-commit",
+            "Ref::--neo4j-commit",
+            "--neo4j-version",
+            "Ref::--neo4j-version",
+            "--neo4j-branch",
+            "Ref::--neo4j-branch",
+            "--neo4j-branch-owner",
+            "Ref::--neo4j-branch-owner",
+            "--tool-commit",
+            "Ref::--tool-commit",
+            "--tool-branch-owner",
+            "Ref::--tool-branch-owner",
+            "--tool-branch",
+            "Ref::--tool-branch",
+            "--teamcity-build",
+            "Ref::--teamcity-build",
+            "--parent-teamcity-build",
+            "Ref::--parent-teamcity-build",
+            "--triggered-by",
+            "Ref::--triggered-by",
 
-						"--workspace-dir",
-						"Ref::--workspace-dir",
-						"--aws-secret",
-						"Ref::--aws-secret",
-						"--aws-key",
-						"Ref::--aws-key",
-						"--aws-region",
-						"Ref::--aws-region",
-						"--db-name",
-						"Ref::--db-name",
+            "--workspace-dir",
+            "Ref::--workspace-dir",
+            "--aws-secret",
+            "Ref::--aws-secret",
+            "--aws-key",
+            "Ref::--aws-key",
+            "--aws-region",
+            "Ref::--aws-region",
+            "--db-name",
+            "Ref::--db-name",
 
-						"--results_store_user",
-						"Ref::--results_store_user",
-						"--results_store_pass",
-						"Ref::--results_store_pass",
-						"--results_store_uri",
-						"Ref::--results_store_uri"
-					],
-					"Volumes": [
-						{
-							"Host": {
-								"SourcePath": "/work"
-							},
-							"Name": "work"
-						}
-					],
-					"MountPoints": [
-						{
-							"SourceVolume": "work",
-							"ContainerPath": "/work/run",
-							"ReadOnly": false
-						}
-					],
-					"Privileged": true,
-					"Vcpus": 4,
-					"Memory": 8384
-				}
-			}
-		}
-	,
-	"MacroBenchmarkRunJobDefintionLargeJDK8": {
-		"Type": "AWS::Batch::JobDefinition",
-		"Properties": {
-			"JobDefinitionName": "macro-benchmark-job-definition-oracle8",
-			"Type": "container",
-			"ContainerProperties": {
-				"Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_8",
-				"Command": [
-					"/work/bootstrap-worker.sh",
+            "--results_store_user",
+            "Ref::--results_store_user",
+            "--results_store_pass",
+            "Ref::--results_store_pass",
+            "--results_store_uri",
+            "Ref::--results_store_uri"
+          ],
+          "Volumes": [{
+            "Host": {
+              "SourcePath": "/work"
+            },
+            "Name": "work"
+          }],
+          "MountPoints": [{
+            "SourceVolume": "work",
+            "ContainerPath": "/work/run",
+            "ReadOnly": false
+          }],
+          "Privileged": true,
+          "Vcpus": 8,
+          "Memory": 16384
+        }
+      }
+    },
+    "MacroBenchmarkRunJobDefintionSmallJDK8": {
+      "Type": "AWS::Batch::JobDefinition",
+      "Properties": {
+        "JobDefinitionName": {
+          "Fn::Sub": "macro-benchmark-job-definition-small-oracle8-${STAGE}"
+        },
+        "Type": "container",
+        "ContainerProperties": {
+          "Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_8",
+          "Command": [
+            "/work/bootstrap-worker.sh",
+            "--worker-artifact-uri",
+            "Ref::--worker-artifact-uri",
+            "run-worker",
 
-					"--worker-artifact-uri",
-					"Ref::--worker-artifact-uri",
+            "--workload",
+            "Ref::--workload",
+            "--db-edition",
+            "Ref::--db-edition",
+            "--jvm",
+            "Ref::--jvm",
+            "--profilers",
+            "Ref::--profilers",
+            "--warmup-count",
+            "Ref::--warmup-count",
+            "--measurement-count",
+            "Ref::--measurement-count",
+            "--min-measurement-duration",
+            "Ref::--min-measurement-duration",
+            "--max-measurement-duration",
+            "Ref::--max-measurement-duration",
+            "--forks",
+            "Ref::--forks",
+            "--time-unit",
+            "Ref::--time-unit",
+            "--runtime",
+            "Ref::--runtime",
+            "--planner",
+            "Ref::--planner",
+            "--execution-mode",
+            "Ref::--execution-mode",
+            "--error-policy",
+            "Ref::--error-policy",
+            "--jvm-args",
+            "Ref::--jvm-args",
+            "--neo4j-deployment",
+            "Ref::--neo4j-deployment",
+            "--recreate-schema",
+            "Ref::--recreate-schema",
+            "--skip-flamegraphs",
+            "Ref::--skip-flamegraphs",
 
-					"run-worker",
+            "--neo4j-commit",
+            "Ref::--neo4j-commit",
+            "--neo4j-version",
+            "Ref::--neo4j-version",
+            "--neo4j-branch",
+            "Ref::--neo4j-branch",
+            "--neo4j-branch-owner",
+            "Ref::--neo4j-branch-owner",
+            "--tool-commit",
+            "Ref::--tool-commit",
+            "--tool-branch-owner",
+            "Ref::--tool-branch-owner",
+            "--tool-branch",
+            "Ref::--tool-branch",
+            "--teamcity-build",
+            "Ref::--teamcity-build",
+            "--parent-teamcity-build",
+            "Ref::--parent-teamcity-build",
+            "--triggered-by",
+            "Ref::--triggered-by",
 
-					"--workload",
-					"Ref::--workload",
-					"--db-edition",
-					"Ref::--db-edition",
-					"--jvm",
-					"Ref::--jvm",
-					"--profilers",
-					"Ref::--profilers",
-					"--warmup-count",
-					"Ref::--warmup-count",
-					"--measurement-count",
-					"Ref::--measurement-count",
-					"--min-measurement-duration",
-					"Ref::--min-measurement-duration",
-					"--max-measurement-duration",
-					"Ref::--max-measurement-duration",
-					"--forks",
-					"Ref::--forks",
-					"--time-unit",
-					"Ref::--time-unit",
-					"--runtime",
-					"Ref::--runtime",
-					"--planner",
-					"Ref::--planner",
-					"--execution-mode",
-					"Ref::--execution-mode",
-					"--error-policy",
-					"Ref::--error-policy",
-					"--jvm-args",
-					"Ref::--jvm-args",
-					"--neo4j-deployment",
-					"Ref::--neo4j-deployment",
-					"--recreate-schema",
-					"Ref::--recreate-schema",
-					"--skip-flamegraphs",
-					"Ref::--skip-flamegraphs",
+            "--workspace-dir",
+            "Ref::--workspace-dir",
+            "--aws-secret",
+            "Ref::--aws-secret",
+            "--aws-key",
+            "Ref::--aws-key",
+            "--aws-region",
+            "Ref::--aws-region",
+            "--db-name",
+            "Ref::--db-name",
 
-					"--neo4j-commit",
-					"Ref::--neo4j-commit",
-					"--neo4j-version",
-					"Ref::--neo4j-version",
-					"--neo4j-branch",
-					"Ref::--neo4j-branch",
-					"--neo4j-branch-owner",
-					"Ref::--neo4j-branch-owner",
-					"--tool-commit",
-					"Ref::--tool-commit",
-					"--tool-branch-owner",
-					"Ref::--tool-branch-owner",
-					"--tool-branch",
-					"Ref::--tool-branch",
-					"--teamcity-build",
-					"Ref::--teamcity-build",
-					"--parent-teamcity-build",
-					"Ref::--parent-teamcity-build",
-					"--triggered-by",
-					"Ref::--triggered-by",
-
-					"--workspace-dir",
-					"Ref::--workspace-dir",
-					"--aws-secret",
-					"Ref::--aws-secret",
-					"--aws-key",
-					"Ref::--aws-key",
-					"--aws-region",
-					"Ref::--aws-region",
-					"--db-name",
-					"Ref::--db-name",
-
-					"--results_store_user",
-					"Ref::--results_store_user",
-					"--results_store_pass",
-					"Ref::--results_store_pass",
-					"--results_store_uri",
-					"Ref::--results_store_uri"
-				],
-				"Volumes": [
-					{
-						"Host": {
-							"SourcePath": "/work"
-						},
-						"Name": "work"
-					}
-				],
-				"MountPoints": [
-					{
-						"SourceVolume": "work",
-						"ContainerPath": "/work/run",
-						"ReadOnly": false
-					}
-				],
-				"Privileged": true,
-				"Vcpus": 8,
-				"Memory": 16384
-			}
-		}
-	},
-	"MacroBenchmarkRunJobDefintionSmallJDK8": {
-		"Type": "AWS::Batch::JobDefinition",
-		"Properties": {
-			"JobDefinitionName": "macro-benchmark-job-definition-small-oracle8",
-			"Type": "container",
-			"ContainerProperties": {
-				"Image": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_8",
-				"Command": [
-					"/work/bootstrap-worker.sh",
-
-					"--worker-artifact-uri",
-					"Ref::--worker-artifact-uri",
-
-					"run-worker",
-
-					"--workload",
-					"Ref::--workload",
-					"--db-edition",
-					"Ref::--db-edition",
-					"--jvm",
-					"Ref::--jvm",
-					"--profilers",
-					"Ref::--profilers",
-					"--warmup-count",
-					"Ref::--warmup-count",
-					"--measurement-count",
-					"Ref::--measurement-count",
-					"--min-measurement-duration",
-					"Ref::--min-measurement-duration",
-					"--max-measurement-duration",
-					"Ref::--max-measurement-duration",
-					"--forks",
-					"Ref::--forks",
-					"--time-unit",
-					"Ref::--time-unit",
-					"--runtime",
-					"Ref::--runtime",
-					"--planner",
-					"Ref::--planner",
-					"--execution-mode",
-					"Ref::--execution-mode",
-					"--error-policy",
-					"Ref::--error-policy",
-					"--jvm-args",
-					"Ref::--jvm-args",
-					"--neo4j-deployment",
-					"Ref::--neo4j-deployment",
-					"--recreate-schema",
-					"Ref::--recreate-schema",
-					"--skip-flamegraphs",
-					"Ref::--skip-flamegraphs",
-
-					"--neo4j-commit",
-					"Ref::--neo4j-commit",
-					"--neo4j-version",
-					"Ref::--neo4j-version",
-					"--neo4j-branch",
-					"Ref::--neo4j-branch",
-					"--neo4j-branch-owner",
-					"Ref::--neo4j-branch-owner",
-					"--tool-commit",
-					"Ref::--tool-commit",
-					"--tool-branch-owner",
-					"Ref::--tool-branch-owner",
-					"--tool-branch",
-					"Ref::--tool-branch",
-					"--teamcity-build",
-					"Ref::--teamcity-build",
-					"--parent-teamcity-build",
-					"Ref::--parent-teamcity-build",
-					"--triggered-by",
-					"Ref::--triggered-by",
-
-					"--workspace-dir",
-					"Ref::--workspace-dir",
-					"--aws-secret",
-					"Ref::--aws-secret",
-					"--aws-key",
-					"Ref::--aws-key",
-					"--aws-region",
-					"Ref::--aws-region",
-					"--db-name",
-					"Ref::--db-name",
-
-					"--results_store_user",
-					"Ref::--results_store_user",
-					"--results_store_pass",
-					"Ref::--results_store_pass",
-					"--results_store_uri",
-					"Ref::--results_store_uri"
-				],
-				"Volumes": [
-					{
-						"Host": {
-							"SourcePath": "/work"
-						},
-						"Name": "work"
-					}
-				],
-				"MountPoints": [
-					{
-						"SourceVolume": "work",
-						"ContainerPath": "/work/run",
-						"ReadOnly": false
-					}
-				],
-				"Privileged": true,
-				"Vcpus": 4,
-				"Memory": 8384
-			}
-		}
-	}
-},
-	"Outputs": {
-		"ComputeEnvironmentArn": {
-			"Value": {
-				"Ref": "M5D2XLargeComputeEnvironment"
-			}
-		}
-	}
+            "--results_store_user",
+            "Ref::--results_store_user",
+            "--results_store_pass",
+            "Ref::--results_store_pass",
+            "--results_store_uri",
+            "Ref::--results_store_uri"
+          ],
+          "Volumes": [
+            {
+              "Host": {
+                "SourcePath": "/work"
+              },
+              "Name": "work"
+            }
+          ],
+          "MountPoints": [
+            {
+              "SourceVolume": "work",
+              "ContainerPath": "/work/run",
+              "ReadOnly": false
+            }
+          ],
+          "Privileged": true,
+          "Vcpus": 4,
+          "Memory": 8384
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "M5D2XLargeJobQueue": {
+      "Value": {
+        "Fn::Sub": "M5D2XLargeJobQueue-${BUILDID}"
+      }
+    }
+  }
 }
