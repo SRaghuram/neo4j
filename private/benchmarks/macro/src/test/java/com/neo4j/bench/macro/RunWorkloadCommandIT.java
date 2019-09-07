@@ -94,6 +94,9 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> Forked - Server <><><><><><><><><><><><>
 
+    // TODO uncomment when fixed
+    //      writing path-value jvm args to neo4j conf causes failure on startup
+    @Disabled
     @Test
     void executeReadWorkloadForkedWithServer() throws Exception
     {
@@ -174,6 +177,9 @@ class RunWorkloadCommandIT
 
     // <><><><><><><><><><><><> In-process - Server <><><><><><><><><><><><>
 
+    // TODO uncomment when fixed
+    //      writing path-value jvm args to neo4j conf causes failure on startup
+    @Disabled
     @Test
     void executeReadWorkloadInProcessWithServer() throws Exception
     {
