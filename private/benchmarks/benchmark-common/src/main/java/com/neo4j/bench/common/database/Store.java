@@ -29,6 +29,9 @@ import static java.util.stream.Collectors.toList;
 
 public class Store implements AutoCloseable
 {
+    // Copy from GraphDatabaseSettings
+    private static final String SYSTEM_DATABASE_NAME = "system.db";
+
     private final Path topLevelDir;
     private final Path graphDbDir;
     private final boolean isTemporaryCopy;
@@ -93,7 +96,7 @@ public class Store implements AutoCloseable
             return Files.list( topLevelDir )
                         .filter( Files::isDirectory )
                         .filter( Store::isGraphDb )
-                        // TODO filter out system database here, in 4.0
+                        .filter( path -> !path.endsWith( SYSTEM_DATABASE_NAME ) )
                         .collect( Collectors.toList() );
         }
         catch ( IOException e )
