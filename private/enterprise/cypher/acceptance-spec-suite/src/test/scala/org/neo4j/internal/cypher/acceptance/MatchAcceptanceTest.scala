@@ -16,6 +16,53 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
+  test("Optional Match over or-union-index query should retain incoming arguments") {
+    graph.createIndex("Person", "name")
+    graph.createIndex("Person", "number")
+    createLabeledNode(Map("name" -> "x", "number" -> 0), "Person")
+    createLabeledNode(Map("name" -> "y", "number" -> 1), "Person")
+    createLabeledNode(Map("name" -> "z", "number" -> 2), "Person")
+    Map(
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'x' OR n.number = 1 RETURN variable, n.name, n.number" -> Seq(Seq(100, "x", 0), Seq(100, "y", 1)),
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'X' OR n.number = 1 RETURN variable, n.name, n.number" -> Seq(Seq(100, "y", 1)),
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'x' OR n.number = -1 RETURN variable, n.name, n.number" -> Seq(Seq(100, "x", 0)),
+      "WITH 100 as variable OPTIONAL MATCH (n:Person) WHERE n.name STARTS WITH 'X' OR n.number = -1 RETURN variable, n.name, n.number" -> Seq(Seq(100, null, null))
+    ).foreach {
+      case (query: String, res: Seq[Seq[Any]]) =>
+        val expected = res.map(v => Map("variable" -> v.head, "n.name" -> v(1), "n.number" -> v(2)))
+        val result = executeWith(Configs.InterpretedAndSlotted, query)
+        result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Distinct").onTopOf(aPlan("Union").onTopOf(aPlan("NodeIndexSeekByRange"))))
+        result.toList should equal(expected)
+    }
+  }
+
+  test("Optional Match with OR and preceding match should not loose variables from first match") {
+    val uuid = "6799d30c-f5c9-4a3a-9557-6883d11d5ef8"
+    val geonameid = 290557
+    val query =
+      s"""
+         |MATCH (p)
+         |        WHERE (p:Person OR p:Company or p:Product) AND p.uuid='$uuid'
+         |      OPTIONAL MATCH (l)
+         |        WHERE (l:City OR l:AdministrativeLocation1 OR l:AdministrativeLocation2 OR l:Country OR l:Region) AND
+         |          l.geonameId IN [$geonameid]
+         |      return labels(p), p, labels(l), l
+         |""".stripMargin
+    createLabeledNode(Map("name" -> "if we see this it is only because we incorrectly return Node[0]"), "WeShouldNotSeeThisNode")
+    val p = createLabeledNode(Map("uuid" -> uuid), "Person")
+    val l = createLabeledNode(Map("geonameId" -> geonameid), "Region", "Location")
+    Range(0, 1000).foreach { i =>
+      Seq("Person", "Company", "Product").foreach(l => createLabeledNode(Map("uuid" -> s"xxx$i"), l))
+      Seq("City", "AdministrativeLocation1", "AdministrativeLocation2", "Country", "Region").foreach(l => createLabeledNode(Map("geonameId" -> i), l, "Location"))
+    }
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Filter").onTopOf(aPlan("Distinct").onTopOf(aPlan("Union"))))
+    val results: Seq[Map[String, AnyRef]] = result.toList
+    results.size should be(1)
+    results.head("p") should be(p)
+    results.head("l") should be(l)
+  }
+
   test("should handle negative node id gracefully") {
     createNode("id" -> 0)
     for (i <- 1 to 1000) createNode("id" -> i)

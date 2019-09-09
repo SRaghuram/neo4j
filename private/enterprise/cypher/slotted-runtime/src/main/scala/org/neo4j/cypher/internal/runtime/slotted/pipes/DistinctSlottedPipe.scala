@@ -49,6 +49,7 @@ case class DistinctSlottedPipe(source: Pipe,
     val result = input.map(incoming => {
       val outgoing = SlottedExecutionContext(slots)
       outgoing.copyCachedFrom(incoming)
+      state.copyArgumentStateTo(outgoing)
       groupingSetInSlotFunctions.foreach { _(incoming, state, outgoing) }
       outgoing
     })
