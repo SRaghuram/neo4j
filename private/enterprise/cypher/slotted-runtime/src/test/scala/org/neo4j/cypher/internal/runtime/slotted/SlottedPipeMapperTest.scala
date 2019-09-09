@@ -504,29 +504,29 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       SlottedCommandProjection(Map(0 -> NodeProperty(slots("x.propertyKey").offset, 0)))
     )())
   }
-
-  test("cartesian product") {
-    // given
-    val lhs = NodeByLabelScan("x", labelName("label1"), Set.empty)
-    val rhs = NodeByLabelScan("y", labelName("label2"), Set.empty)
-    val Xproduct = CartesianProduct(lhs, rhs)
-
-    // when
-    val pipe = build(Xproduct)
-
-    val lhsSlots = SlotConfiguration.empty.newLong("x", nullable = false, CTNode)
-    val rhsSlots = SlotConfiguration.empty.newLong("y", nullable = false, CTNode)
-    val xProdSlots = SlotConfiguration.empty
-      .newLong("x", nullable = false, CTNode)
-      .newLong("y", nullable = false, CTNode)
-
-    // then
-    pipe should equal(CartesianProductSlottedPipe(
-      NodesByLabelScanSlottedPipe("x", LazyLabel("label1"), lhsSlots, Size.zero)(),
-      NodesByLabelScanSlottedPipe("y", LazyLabel("label2"), rhsSlots, Size.zero)(),
-      lhsLongCount = 1, lhsRefCount = 0, xProdSlots, argumentSize = Size.zero)()
-    )
-  }
+//
+//  test("cartesian product") {
+//    // given
+//    val lhs = NodeByLabelScan("x", labelName("label1"), Set.empty)
+//    val rhs = NodeByLabelScan("y", labelName("label2"), Set.empty)
+//    val Xproduct = CartesianProduct(lhs, rhs)
+//
+//    // when
+//    val pipe = build(Xproduct)
+//
+//    val lhsSlots = SlotConfiguration.empty.newLong("x", nullable = false, CTNode)
+//    val rhsSlots = SlotConfiguration.empty.newLong("y", nullable = false, CTNode)
+//    val xProdSlots = SlotConfiguration.empty
+//      .newLong("x", nullable = false, CTNode)
+//      .newLong("y", nullable = false, CTNode)
+//
+//    // then
+//    pipe should equal(CartesianProductSlottedPipe(
+//      NodesByLabelScanSlottedPipe("x", LazyLabel("label1"), lhsSlots, Size.zero)(),
+//      NodesByLabelScanSlottedPipe("y", LazyLabel("label2"), rhsSlots, Size.zero)(),
+//      lhsLongCount = 1, lhsRefCount = 0, xProdSlots, argumentSize = Size.zero)()
+//    )
+//  }
 
   test("foreach") {
     // given
