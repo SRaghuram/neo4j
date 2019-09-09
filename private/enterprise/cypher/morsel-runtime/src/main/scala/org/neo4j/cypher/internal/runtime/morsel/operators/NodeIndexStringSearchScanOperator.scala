@@ -200,6 +200,7 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
     block(
       assign(seekVariable, nullCheckIfRequired(seekExpression)),
       declareAndAssign(typeRefOf[Boolean], hasInnerLoop, constant(false)),
+      setField(canContinue, constant(false)),
       condition(invokeStatic(isValidOrThrowMethod, load(seekVariable)))(
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
