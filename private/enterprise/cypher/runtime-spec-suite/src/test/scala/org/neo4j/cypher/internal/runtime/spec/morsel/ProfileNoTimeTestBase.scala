@@ -38,12 +38,13 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
 
     // then
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    println(queryProfile)
     queryProfile.operatorProfile(0).time() should not be(OperatorProfile.NO_DATA) // produce results - not fused
     queryProfile.operatorProfile(1).time() should not be(OperatorProfile.NO_DATA) // sort - not fused
     queryProfile.operatorProfile(2).time() should not be(OperatorProfile.NO_DATA) // aggregation - not fused
     queryProfile.operatorProfile(3).time() should be(OperatorProfile.NO_DATA) // filter - fused
-    queryProfile.operatorProfile(4).time() should not be(OperatorProfile.NO_DATA) // expand - fused, but the prepare output time is attributed here
-    queryProfile.operatorProfile(5).time() should not be(OperatorProfile.NO_DATA) // node by label scan - not fused
+    queryProfile.operatorProfile(4).time() should be(OperatorProfile.NO_DATA) // expand - fused
+    queryProfile.operatorProfile(5).time() should be(OperatorProfile.NO_DATA) // node by label scan - fused
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
