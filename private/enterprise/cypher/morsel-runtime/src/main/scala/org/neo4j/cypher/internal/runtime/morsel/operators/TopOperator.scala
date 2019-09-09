@@ -101,8 +101,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              queryContext: QueryContext,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[MorselExecutionContext, TopTable] = {
-      // TODO note: limit is only allowed to be an Int for top table. do this safely
-      val limit = LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression).toInt
+      val limit = Math.min(LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression), Int.MaxValue).toInt
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit))
       this
     }
