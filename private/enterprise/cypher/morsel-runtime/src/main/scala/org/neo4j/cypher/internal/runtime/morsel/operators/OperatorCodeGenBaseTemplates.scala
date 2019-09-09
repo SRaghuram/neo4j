@@ -113,7 +113,10 @@ object CompiledStreamingOperator {
                           owner = typeRefOf[CompiledStreamingOperator],
                           returnType = typeRefOf[OperatorState],
                           parameters = Seq(param[ArgumentStateMapCreator]("argumentStateCreator"),
-                                           param[StateFactory]("stateFactory")),
+                                           param[StateFactory]("stateFactory"),
+                                           param[QueryContext]("queryContext"),
+                                           param[QueryState]("state"),
+                                           param[QueryResources]("resources")),
                           body = block(createState, self()))
       ),
       // NOTE: This has to be called after genOperate!
