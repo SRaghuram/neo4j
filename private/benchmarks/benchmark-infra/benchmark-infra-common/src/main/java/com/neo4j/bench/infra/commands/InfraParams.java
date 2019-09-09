@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class InfraParams
 {
-    public static final String CMD_WORKER_ARTIFACT_URI = "--worker-artifact-uri";
+    public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     public static final String CMD_JOB_QUEUE = "--job-queue";
     public static final String CMD_JOB_DEFINITION = "--job-definition";
     public static final String CMD_BATCH_STACK = "--batch-stack";

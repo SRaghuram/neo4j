@@ -39,11 +39,11 @@ public class ScheduleMacroCommand extends BaseInfraCommand
     private static final Logger LOG = LoggerFactory.getLogger( ScheduleMacroCommand.class );
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_WORKER_ARTIFACT_URI,
-             description = "Location of worker jar (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/benchmark-infra-worker.jar) in S3",
+             name = InfraParams.CMD_ARTIFACT_BASE_URI,
+             description = "Location of worker jar and other artifacts needed (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
              title = "Location of worker jar" )
     @Required
-    private URI workerArtifactUri;
+    private URI artifactBaseUri;
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_JOB_QUEUE,
@@ -83,7 +83,7 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                                                                      jobDefinition,
                                                                      batchStack );
 
-            JobId jobId = jobScheduler.schedule( workerArtifactUri, infraParams, runWorkloadParams );
+            JobId jobId = jobScheduler.schedule( artifactBaseUri, infraParams, runWorkloadParams );
             LOG.info( "job scheduled, with id {} and logs stream at {}", jobId.id(), AWSBatchJobLogs.getLogStreamName( jobDefinition, jobId ) );
             // wait until they are done, or fail
             RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()

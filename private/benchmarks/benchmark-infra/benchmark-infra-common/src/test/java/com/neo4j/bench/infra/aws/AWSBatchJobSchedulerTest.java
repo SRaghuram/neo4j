@@ -116,7 +116,7 @@ public class AWSBatchJobSchedulerTest
         expectedParams.putAll( infraParams.asMap() );
 
         URI workerArtifactUri = URI.create( "s3://benchmarking.neohq.net/worker.jar" );
-        expectedParams.put( InfraParams.CMD_WORKER_ARTIFACT_URI, workerArtifactUri.toString() );
+        expectedParams.put( InfraParams.CMD_ARTIFACT_BASE_URI, workerArtifactUri.toString() );
 
         // when
         JobId jobId = jobScheduler.schedule(
