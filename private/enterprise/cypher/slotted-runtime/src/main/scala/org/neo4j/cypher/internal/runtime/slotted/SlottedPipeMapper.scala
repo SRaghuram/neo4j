@@ -31,6 +31,9 @@ import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.{expressions => frontEndAst}
 import org.neo4j.exceptions.InternalException
 
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+
 class SlottedPipeMapper(fallback: PipeMapper,
                         expressionConverters: ExpressionConverters,
                         physicalPlan: PhysicalPlan,
@@ -395,31 +398,10 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val leftNodes: Array[Int] = nodes.map(k => slots.getLongOffsetFor(k))
         val rhsSlots = slotConfigs(joinPlan.right.id)
         val rightNodes: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
-        val copyLongsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-        val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
-        val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
 
         // Verify the assumption that the argument slots are the same on both sides
         ifAssertionsEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
-
-        // When executing the HashJoin, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
-        // part of the join comparison
-        rhsSlots.foreachSlotOrdered({
-          case (key, LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
-            copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-          case (key, RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
-            copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-          case _ => // do nothing, already added by lhs
-        }, { cnp =>
-          val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
-          if (offset >= argumentSize.nReferences) {
-            copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
-          }
-        })
-
-        val longsToCopy = copyLongsFromRHS.result().toArray
-        val refsToCopy = copyRefsFromRHS.result().toArray
-        val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result().toArray
+        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
 
         if (leftNodes.length == 1) {
           NodeHashJoinSlottedSingleNodePipe(leftNodes(0), rightNodes(0), lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
@@ -427,19 +409,16 @@ class SlottedPipeMapper(fallback: PipeMapper,
           NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
         }
 
-      case ValueHashJoin(lhsPlan, _, Equals(lhsAstExp, rhsAstExp)) =>
-        val argumentSize = physicalPlan.argumentSizes(plan.id)
+      case ValueHashJoin(_, rhsPlan, Equals(lhsAstExp, rhsAstExp)) =>
+        val argumentSize: SlotConfiguration.Size = physicalPlan.argumentSizes(plan.id)
         val lhsCmdExp = convertExpressions(lhsAstExp)
         val rhsCmdExp = convertExpressions(rhsAstExp)
-        val lhsSlots = slotConfigs(lhsPlan.id)
-        val longOffset = lhsSlots.numberOfLongs
-        val refOffset = lhsSlots.numberOfReferences
+        val rhsSlots = slotConfigs(rhsPlan.id)
 
-        // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
-        // This assumption enables us to use array copy within ValueHashJoin.
-        ifAssertionsEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
-
-        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longOffset, refOffset, argumentSize)(id)
+        // Verify the assumption that the argument slots are the same on both sides
+        ifAssertionsEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
+        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
+        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
 
       case ConditionalApply(_, _, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
@@ -483,6 +462,30 @@ class SlottedPipeMapper(fallback: PipeMapper,
     pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
     pipe
   }
+
+  private def computeSlotsToCopy(rhsSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, slots: SlotConfiguration): (Array[(Int, Int)], Array[(Int, Int)], Array[(Int, Int)]) = {
+    val copyLongsFromRHS: mutable.Builder[(Int, Int), ArrayBuffer[(Int, Int)]] = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val copyRefsFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+    val copyCachedPropertiesFromRHS = collection.mutable.ArrayBuffer.newBuilder[(Int,Int)]
+
+    // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
+    // part of the join comparison
+    rhsSlots.foreachSlotOrdered({
+      case (key, LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+        copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
+      case (key, RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+        copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
+      case _ => // do nothing, already added by lhs
+    }, { cnp =>
+      val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
+      if (offset >= argumentSize.nReferences) {
+        copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
+      }
+    })
+
+    (copyLongsFromRHS.result().toArray, copyRefsFromRHS.result().toArray, copyCachedPropertiesFromRHS.result().toArray)
+  }
+
 
   private def chooseDistinctPipe(groupingExpressions: Map[String, frontEndAst.Expression],
                                  orderToLeverage: Seq[frontEndAst.Expression],
@@ -574,6 +577,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
   // and the number of shared slots are identical to the argument size.
   private def verifyOnlyArgumentsAreSharedSlots(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
     val argumentSize = physicalPlan.argumentSizes(plan.id)
+    val configuration = physicalPlan.slotConfigurations(plan.id)
+    println(argumentSize)
+    println(configuration)
     val lhsPlan = plan.lhs.get
     val rhsPlan = plan.rhs.get
     val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
