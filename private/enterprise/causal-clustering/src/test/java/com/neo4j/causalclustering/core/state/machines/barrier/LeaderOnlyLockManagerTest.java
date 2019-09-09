@@ -9,7 +9,6 @@ import org.junit.Test;
 
 import org.neo4j.kernel.impl.api.EpochException;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceTypes;
 
@@ -57,7 +56,7 @@ public class LeaderOnlyLockManagerTest
             lockClient.acquireExclusive( LockTracer.NONE, ResourceTypes.NODE, 0L );
             fail( "Should have thrown exception" );
         }
-        catch ( AcquireLockTimeoutException e )
+        catch ( EpochException e )
         {
             // expected
         }

@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionSt
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.impl.api.Epoch;
-import org.neo4j.kernel.impl.api.EpochException;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
@@ -178,15 +177,7 @@ public class LeaderOnlyLockManager implements Locks
 
         void ensureExclusiveLockCanBeAcquired()
         {
-            try
-            {
-                epoch.ensureHoldingToken();
-            }
-            catch ( EpochException e )
-            {
-                throw new AcquireLockTimeoutException( "This instance is no longer able to acquire exclusive locks because of leader re-election",
-                        e, e.status() );
-            }
+            epoch.ensureHoldingToken();
         }
     }
 }
