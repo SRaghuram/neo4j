@@ -153,6 +153,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
             setField(labelField, nodeLabelId(labelName))
           },
           declareAndAssign(typeRefOf[Boolean], hasInnerLoop, notEqual(loadField(labelField), NO_TOKEN)),
+          setField(canContinue, load(hasInnerLoop)),
           condition(load(hasInnerLoop)) {
             block(
               allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
