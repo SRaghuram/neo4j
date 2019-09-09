@@ -19,7 +19,7 @@ import org.neo4j.logging.Log
 case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQuery],
                                         log: Log,
                                         config: CypherRuntimeConfiguration,
-                                        queryExecutor: QueryExecutor,
+                                        runtimeEnvironment: RuntimeEnvironment,
                                         cursors: CursorFactory,
                                         newTracer: () => SchedulerTracer)
   extends RuntimeContextManager[EnterpriseRuntimeContext] {
@@ -38,12 +38,12 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                              clock,
                              debugOptions,
                              config,
-                             new RuntimeEnvironment(config, queryExecutor, newTracer(), cursors),
+                             runtimeEnvironment,
                              compileExpressions,
                              materializedEntitiesMode)
   }
 
   override def assertAllReleased(): Unit = {
-    queryExecutor.assertAllReleased()
+    runtimeEnvironment.getQueryExecutor(parallelExecution = true).assertAllReleased()
   }
 }

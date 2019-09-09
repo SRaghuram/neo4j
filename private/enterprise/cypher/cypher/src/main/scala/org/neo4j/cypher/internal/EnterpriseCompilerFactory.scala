@@ -118,6 +118,7 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                              materializedEntitiesMode)
 
   override def assertAllReleased(): Unit = {
-    runtimeEnvironment.getQueryExecutor(parallelExecution = true, Set.empty).assertAllReleased()
+    // This is for test assertions only, and should run on the parallel executor.
+    runtimeEnvironment.getQueryExecutor(parallelExecution = true).assertAllReleased()
   }
 }

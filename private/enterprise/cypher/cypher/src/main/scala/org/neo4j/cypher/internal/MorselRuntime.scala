@@ -76,7 +76,7 @@ class MorselRuntime(parallelExecution: Boolean,
     DebugLog.logDiff("FuseOperators")
     //=======================================================
 
-    val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution, context.debugOptions)
+    val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
 
     val morselSize = selectMorselSize(query, context)
 
@@ -150,8 +150,7 @@ class MorselRuntime(parallelExecution: Boolean,
           "The parallel runtime is experimental and might suffer from instability and potentially correctness issues."))
       else Set.empty
 
-    override def threadSafeCursorFactory(debugOptions: Set[String]): Option[CursorFactory] =
-      if (MorselOptions.singleThreaded(debugOptions)) None else maybeThreadSafeCursors
+    override def threadSafeCursorFactory(): Option[CursorFactory] = maybeThreadSafeCursors
   }
 
   class MorselRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],

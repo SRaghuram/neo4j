@@ -40,18 +40,6 @@ trait WorkerManagement extends WorkerWaker {
   def assertNoWorkerIsActive(): Unit
 }
 
-object ThrowingWorkerManager extends WorkerManagement {
-  override def queryManager: QueryManager = throw new UnsupportedOperationException()
-
-  override def workers: Seq[Worker] = throw new UnsupportedOperationException()
-
-  override def numberOfWorkers: Int = throw new UnsupportedOperationException()
-
-  override def assertNoWorkerIsActive(): Unit = throw new UnsupportedOperationException()
-
-  override def wakeOne(): Unit = throw new UnsupportedOperationException()
-}
-
 class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) extends WorkerManagement with Lifecycle {
   override val queryManager = new QueryManager
 

@@ -34,8 +34,6 @@ object ContextHelper extends MockitoSugar {
     morselSizeSmall = GraphDatabaseSettings.cypher_morsel_size_small.defaultValue(),
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
-    waitTimeout = Duration(3000, TimeUnit.MILLISECONDS),
-    scheduler = CypherMorselRuntimeSchedulerOption.default,
     lenientCreateRelationship = false,
     fuseOperators = true,
     memoryTrackingController = NO_TRACKING_CONTROLLER

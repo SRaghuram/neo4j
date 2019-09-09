@@ -14,8 +14,8 @@ object CompiledSpecSuite {
   val SIZE_HINT = 200
 }
 
-class CompiledAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.SINGLE_THREADED, CompiledRuntime, SIZE_HINT)
-class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE.SINGLE_THREADED, CompiledRuntime) {
+class CompiledAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.FUSING, CompiledRuntime, SIZE_HINT)
+class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE.FUSING, CompiledRuntime) {
   // Compiled only supports count, thus not extending AggregationTestBase
   test("should count(n.prop)") {
     // given
@@ -36,7 +36,7 @@ class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE.SINGLE_THREADE
     runtimeResult should beColumns("c").withSingleRow(5000)
   }
 }
-class CompiledExpandAllTest extends ExpandAllTestBase(ENTERPRISE.SINGLE_THREADED, CompiledRuntime, SIZE_HINT)
-class CompiledLabelScanTest extends LabelScanTestBase(ENTERPRISE.SINGLE_THREADED, CompiledRuntime, SIZE_HINT)
-class CompiledNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.SINGLE_THREADED, CompiledRuntime, SIZE_HINT)
+class CompiledExpandAllTest extends ExpandAllTestBase(ENTERPRISE.FUSING, CompiledRuntime, SIZE_HINT)
+class CompiledLabelScanTest extends LabelScanTestBase(ENTERPRISE.FUSING, CompiledRuntime, SIZE_HINT)
+class CompiledNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.FUSING, CompiledRuntime, SIZE_HINT)
                                 with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]

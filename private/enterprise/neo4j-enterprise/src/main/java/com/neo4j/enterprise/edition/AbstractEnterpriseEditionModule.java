@@ -10,8 +10,6 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.cypher.internal.runtime.morsel.ThrowingWorkerManager$;
-import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement;
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.scheduler.Group;
@@ -26,20 +24,11 @@ public interface AbstractEnterpriseEditionModule
     {
         // Create Cypher workers
         Config globalConfig = globalModule.getGlobalConfig();
-        if ( globalConfig.get( GraphDatabaseSettings.cypher_morsel_runtime_scheduler ) !=
-             GraphDatabaseSettings.CypherMorselRuntimeScheduler.SINGLE_THREADED )
-        {
-            int configuredWorkers = globalConfig.get( GraphDatabaseSettings.cypher_worker_count );
-            int numberOfThreads = configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() : configuredWorkers;
-            WorkerManager workerManager =
-                    new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
-            globalModule.getGlobalDependencies().satisfyDependency( workerManager );
-            globalModule.getGlobalLife().add( workerManager );
-        }
-        else
-        {
-            WorkerManagement workerManagement = ThrowingWorkerManager$.MODULE$;
-            globalModule.getGlobalDependencies().satisfyDependency( workerManagement );
-        }
+        int configuredWorkers = globalConfig.get( GraphDatabaseSettings.cypher_worker_count );
+        int numberOfThreads = configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() : configuredWorkers;
+        WorkerManager workerManager =
+                new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
+        globalModule.getGlobalDependencies().satisfyDependency( workerManager );
+        globalModule.getGlobalLife().add( workerManager );
     }
 }

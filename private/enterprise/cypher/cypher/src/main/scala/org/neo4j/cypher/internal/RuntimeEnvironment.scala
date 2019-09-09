@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.tracing._
 import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerResourceProvider}
@@ -28,27 +27,27 @@ object RuntimeEnvironment {
          workerManager: WorkerManagement): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
-                           createQueryExecutor(config, cursors, txBridge, lifeSupport, workerManager),
-                           createTracer(config, jobScheduler, lifeSupport),
-                           cursors)
+      createMorselQueryExecutor(cursors),
+      createParallelQueryExecutor(cursors, txBridge, lifeSupport, workerManager),
+      createTracer(config, jobScheduler, lifeSupport),
+      cursors)
   }
 
-  def createQueryExecutor(config: CypherRuntimeConfiguration,
-                          cursors: CursorFactory,
-                          txBridge: ThreadToStatementContextBridge,
-                          lifeSupport: LifeSupport,
-                          workerManager: WorkerManagement): QueryExecutor =
-    config.scheduler match {
-      case SingleThreaded =>
-        new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER, cursors)
-      case Simple | LockFree =>
-        val txBinder = new TxBridgeTransactionBinder(txBridge)
-        val resourceFactory = () => new QueryResources(cursors)
-        val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
-        lifeSupport.add(workerResourceProvider)
-        val queryExecutor = new FixedWorkersQueryExecutor(txBinder, workerResourceProvider, workerManager)
-        queryExecutor
-    }
+  private def createMorselQueryExecutor(cursors: CursorFactory) = {
+    new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER, cursors)
+  }
+
+  private def createParallelQueryExecutor(cursors: CursorFactory,
+                                  txBridge: ThreadToStatementContextBridge,
+                                  lifeSupport: LifeSupport,
+                                  workerManager: WorkerManagement): QueryExecutor = {
+    val txBinder = new TxBridgeTransactionBinder(txBridge)
+    val resourceFactory = () => new QueryResources(cursors)
+    val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
+    lifeSupport.add(workerResourceProvider)
+    val queryExecutor = new FixedWorkersQueryExecutor(txBinder, workerResourceProvider, workerManager)
+    queryExecutor
+  }
 
   def createTracer(config: CypherRuntimeConfiguration,
                    jobScheduler: JobScheduler,
@@ -74,15 +73,12 @@ object RuntimeEnvironment {
 }
 
 class RuntimeEnvironment(config: CypherRuntimeConfiguration,
-                         queryExecutor: QueryExecutor,
+                         morselQueryExecutor: QueryExecutor,
+                         parallelQueryExecutor: QueryExecutor,
                          val tracer: SchedulerTracer,
                          val cursors: CursorFactory) {
 
-  def getQueryExecutor(parallelExecution: Boolean, debugOptions: Set[String]): QueryExecutor =
-    if ((!parallelExecution || MorselOptions.singleThreaded(debugOptions)) && !isAlreadySingleThreaded)
-      new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER, cursors)
-    else
-      queryExecutor
+  def getQueryExecutor(parallelExecution: Boolean): QueryExecutor =
+    if (parallelExecution) parallelQueryExecutor else morselQueryExecutor
 
-  private def isAlreadySingleThreaded = config.scheduler == SingleThreaded
 }
