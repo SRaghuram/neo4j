@@ -214,15 +214,22 @@ object TopOperator {
 
     private val topTable = new DefaultComparatorTopTable(comparator, limit)
     private var totalTopHeapUsage = 0L
+    private var morselCount = 0
+    private var maxMorselHeapUsage = 0L
 
     override def update(morsel: MorselExecutionContext): Unit = {
-      // NOTE: this is pessimistic, it assumes that every incoming row is kept in the top table
-      val morselHeapUsage = morsel.estimatedHeapUsage
-      memoryTracker.allocated(morselHeapUsage)
-      totalTopHeapUsage += morselHeapUsage
-
+      var hasAddedRow = false
       while (morsel.isValidRow) {
-        topTable.add(morsel.shallowCopy())
+        if (topTable.add(morsel.shallowCopy()) && memoryTracker.isEnabled && !hasAddedRow) {
+          // track memory max once per morsel, and only if rows actually go into top table
+          hasAddedRow = true
+          // assume worst case, that every row in top table is from a different morsel
+          morselCount = Math.min(morselCount + 1, limit)
+          maxMorselHeapUsage = Math.max(maxMorselHeapUsage, morsel.estimatedHeapUsage)
+          memoryTracker.deallocated(totalTopHeapUsage)
+          totalTopHeapUsage = maxMorselHeapUsage * morselCount
+          memoryTracker.allocated(totalTopHeapUsage)
+        }
         morsel.moveToNextRow()
       }
     }
