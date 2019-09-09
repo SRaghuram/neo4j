@@ -828,7 +828,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.createNode", mode = WRITE )
         public void createNode()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE n()" );
+            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE (n)" );
 //            tx.createNode();
         }
 

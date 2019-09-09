@@ -1137,7 +1137,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[QueryExecutionException] thrownBy { // the ParameterWrongTypeException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $password TO 'bar'", params = parameter)
+      executeOnSystem("foo", "123", "ALTER CURRENT USER SET PASSWORD FROM $password TO 'bar'", params = parameter)
       // THEN
     } should have message "Only string values are accepted as password, got: Integer"
 

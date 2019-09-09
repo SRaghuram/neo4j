@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.auth.AuthProcedures;
 import org.neo4j.test.DoubleLatch;
@@ -244,7 +243,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldNotCreateExistingUser()
     {
         assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser('readSubject', '1234', true)",
-                "The specified user 'readSubject' already exists" );
+                "Failed to create the specified user 'readSubject': User already exists." );
         assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser('readSubject', '', true)",
                 "A password cannot be empty." );
     }
@@ -276,7 +275,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         }
 
         userManager.addRoleToUser( PUBLISHER, "readSubject" );
-        assertEmpty( adminSubject, "CALL dbms.security.deleteUser('readSubject')" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.deleteUser('readSubject')" );
         try
         {
             userManager.getUser( "readSubject" );
@@ -313,7 +312,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotAllowDeletingYourself()
     {
-        testFailDeleteUser( adminSubject, "adminSubject", "Deleting yourself (user 'adminSubject') is not allowed." );
+        testFailDeleteUser( adminSubject, "adminSubject", "Failed to delete the specified user 'adminSubject': Deleting yourself is not allowed." );
     }
 
     @Test
@@ -358,7 +357,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToSuspendNonExistentUser()
     {
-        assertSystemCommandFail( adminSubject, "CALL dbms.security.suspendUser('Craig')", "User 'Craig' does not exist." );
+        assertSystemCommandFail( adminSubject, "CALL dbms.security.suspendUser('Craig')", "Failed to alter the specified user 'Craig': User does not exist." );
     }
 
     @Test
@@ -440,7 +439,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToActivateNonExistentUser()
     {
-        assertSystemCommandFail( adminSubject, "CALL dbms.security.activateUser('Craig')", "User 'Craig' does not exist." );
+        assertSystemCommandFail( adminSubject, "CALL dbms.security.activateUser('Craig')", "Failed to alter the specified user 'Craig': User does not exist." );
     }
 
     @Test
@@ -480,17 +479,18 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToAddNonExistentUserToRole()
     {
-        testFailAddRoleToUser( adminSubject, PUBLISHER, "Olivia", "User 'Olivia' does not exist." );
-        testFailAddRoleToUser( adminSubject, "thisRoleDoesNotExist", "Olivia", "User 'Olivia' does not exist." );
-        testFailAddRoleToUser( adminSubject, "", "Olivia", "The provided role name is empty." );
+        testFailAddRoleToUser( adminSubject, PUBLISHER, "Olivia", "Failed to grant role 'publisher' to user 'Olivia': User does not exist." );
+        testFailAddRoleToUser( adminSubject, "thisRoleDoesNotExist", "Olivia",
+                "Failed to grant role 'thisRoleDoesNotExist' to user 'Olivia': Role does not exist." );
+        testFailAddRoleToUser( adminSubject, "", "Olivia", "Failed to grant role '' to user 'Olivia': Role does not exist." );
     }
 
     @Test
     void shouldFailToAddUserToNonExistentRole()
     {
         testFailAddRoleToUser( adminSubject, "thisRoleDoesNotExist", "readSubject",
-                "Role 'thisRoleDoesNotExist' does not exist." );
-        testFailAddRoleToUser( adminSubject, "", "readSubject", "The provided role name is empty." );
+                "Failed to grant role 'thisRoleDoesNotExist' to user 'readSubject': Role does not exist." );
+        testFailAddRoleToUser( adminSubject, "", "readSubject", "Failed to grant role '' to user 'readSubject': Role does not exist." );
     }
 
     @Test
@@ -574,19 +574,19 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertSystemCommandFail( adminSubject, "CALL dbms.security.createRole('')", "The provided role name is empty." );
         assertSystemCommandFail( adminSubject, "CALL dbms.security.createRole('&%ss!')",
-                "Role name '&%ss!' contains illegal characters. Use simple ascii characters and numbers." );
+                "Role name '&%ss!' contains illegal characters.\nUse simple ascii characters, numbers and underscores." );
         assertSystemCommandFail( adminSubject, "CALL dbms.security.createRole('åäöø')",
-                "Role name 'åäöø' contains illegal characters. Use simple ascii characters and numbers" );
+                "Role name 'åäöø' contains illegal characters.\nUse simple ascii characters, numbers and underscores." );
     }
 
     @Test
     void shouldNotCreateExistingRole()
     {
         assertSystemCommandFail( adminSubject, format( "CALL dbms.security.createRole('%s')", ARCHITECT ),
-                "The specified role 'architect' already exists" );
+                "Failed to create the specified role 'architect': Role already exists." );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createRole('new_role')" );
         assertSystemCommandFail( adminSubject, "CALL dbms.security.createRole('new_role')",
-                "The specified role 'new_role' already exists" );
+                "Failed to create the specified role 'new_role': Role already exists." );
     }
 
     @Test
