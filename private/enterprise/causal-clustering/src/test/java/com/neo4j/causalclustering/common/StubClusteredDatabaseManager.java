@@ -21,7 +21,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -39,7 +38,7 @@ import static org.mockito.Mockito.when;
 public class StubClusteredDatabaseManager extends LifecycleAdapter implements DatabaseManager<ClusteredDatabaseContext>
 {
     private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
-    private final DatabaseIdRepository.Caching databaseIdRepository = new TestDatabaseIdRepository();
+    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @Override
     public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
@@ -86,7 +85,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
     }
 
     @Override
-    public DatabaseIdRepository.Caching databaseIdRepository()
+    public TestDatabaseIdRepository databaseIdRepository()
     {
         return databaseIdRepository;
     }

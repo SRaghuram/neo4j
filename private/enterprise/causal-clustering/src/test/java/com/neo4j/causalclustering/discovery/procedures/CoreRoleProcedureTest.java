@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.IdentityModule;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -14,11 +15,11 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,13 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
 class CoreRoleProcedureTest
 {
-    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.getRaw( "cars" );
+    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
+    private final DatabaseId databaseId = databaseManager.databaseIdRepository().getRaw( "cars" );
     private final MemberId memberId = new MemberId( UUID.randomUUID() );
     private final IdentityModule identityModule = mock( IdentityModule.class );
     private final TopologyService topologyService = mock( TopologyService.class );
@@ -41,7 +43,7 @@ class CoreRoleProcedureTest
     private final Context procedureContext = mock( Context.class );
     private final ResourceTracker resourceTracker = mock( ResourceTracker.class );
 
-    private final CoreRoleProcedure procedure = new CoreRoleProcedure( identityModule, topologyService, databaseIdRepository );
+    private final CoreRoleProcedure procedure = new CoreRoleProcedure( identityModule, topologyService, databaseManager );
 
     @Test
     void shouldThrowWhenDatabaseNameNotSpecified()
@@ -74,9 +76,15 @@ class CoreRoleProcedureTest
     }
 
     @Test
-    void shouldReturnUnknown() throws Exception
+    void shouldThrowWhenRoleIsUnknown()
     {
-        testProcedureCall( RoleInfo.UNKNOWN );
+        when( identityModule.myself() ).thenReturn( memberId );
+        when( topologyService.coreRole( databaseId, memberId ) ).thenReturn( RoleInfo.UNKNOWN );
+
+        var error = assertThrows( ProcedureException.class,
+                () -> procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker ) );
+
+        assertEquals( DatabaseUnavailable, error.status() );
     }
 
     @Test

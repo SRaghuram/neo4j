@@ -7,19 +7,25 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.RoleInfo;
 
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 
 public class ReadReplicaRoleProcedure extends RoleProcedure
 {
-    public ReadReplicaRoleProcedure( DatabaseIdRepository databaseIdRepository )
+    public ReadReplicaRoleProcedure( DatabaseManager<?> databaseManager )
     {
-        super( databaseIdRepository );
+        super( databaseManager );
     }
 
     @Override
     RoleInfo role( DatabaseId databaseId )
     {
-        return RoleInfo.READ_REPLICA;
+        return databaseManager.getDatabaseContext( databaseId )
+                .map( DatabaseContext::database )
+                .filter( Database::isStarted )
+                .map( ctx -> RoleInfo.READ_REPLICA )
+                .orElse( RoleInfo.UNKNOWN );
     }
 }

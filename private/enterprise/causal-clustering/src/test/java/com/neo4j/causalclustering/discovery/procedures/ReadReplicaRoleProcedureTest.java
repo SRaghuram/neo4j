@@ -5,15 +5,16 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -28,8 +30,8 @@ class ReadReplicaRoleProcedureTest
 {
     private final Context procedureContext = mock( Context.class );
     private final ResourceTracker resourceTracker = mock( ResourceTracker.class );
-
-    private final ReadReplicaRoleProcedure procedure = new ReadReplicaRoleProcedure( new TestDatabaseIdRepository() );
+    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
+    private final ReadReplicaRoleProcedure procedure = new ReadReplicaRoleProcedure( databaseManager );
 
     @Test
     void shouldThrowWhenDatabaseNameNotSpecified()
@@ -52,7 +54,11 @@ class ReadReplicaRoleProcedureTest
     @Test
     void shouldReturnReadReplica() throws Exception
     {
-        var result = procedure.apply( procedureContext, new AnyValue[]{stringValue( "some_db_name" )}, resourceTracker );
+        var databaseId = databaseManager.databaseIdRepository().getRaw( "foo" );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
+
+        var result = procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker );
+
         assertTrue( result.hasNext() );
 
         var row = result.next();
@@ -74,4 +80,21 @@ class ReadReplicaRoleProcedureTest
     {
         assertTrue( procedure.signature().systemProcedure() );
     }
+
+    @Test
+    void shouldThrowForStoppedDatabase()
+    {
+        var databaseId = databaseManager.databaseIdRepository().getRaw( "bar" );
+
+        databaseManager.givenDatabaseWithConfig()
+                .withDatabaseId( databaseId )
+                .withStoppedDatabase()
+                .register();
+
+        var error = assertThrows( ProcedureException.class,
+                () -> procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker ) );
+
+        assertEquals( DatabaseUnavailable, error.status() );
+    }
+
 }

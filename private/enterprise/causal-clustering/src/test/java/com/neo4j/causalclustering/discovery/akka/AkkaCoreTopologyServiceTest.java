@@ -217,6 +217,20 @@ class AkkaCoreTopologyServiceTest
     }
 
     @Test
+    void shouldReturnRoleWhenDatabaseStopped()
+    {
+        var databaseId = randomDatabaseId();
+        var leaderId = new MemberId( UUID.randomUUID() );
+        var leaderInfo = new LeaderInfo( leaderId, 1 );
+
+        service.setLeader( leaderInfo, databaseId );
+        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
+
+        service.onDatabaseStop( databaseId );
+        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId, leaderId ) );
+    }
+
+    @Test
     void shouldNotBootstrapWhenEmpty()
     {
         assertFalse( service.canBootstrapRaftGroup( randomDatabaseId() ) );

@@ -17,15 +17,24 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.neo4j.function.ThrowingSupplier;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseDoesNotExist;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.causalclustering.common.ClusterOverviewHelper.assertEventualOverview;
 import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsRole;
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
@@ -38,8 +47,12 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -64,61 +77,61 @@ class CausalClusteringProceduresIT
     @Test
     void dbmsProceduresShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsProcedures( tx ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsProcedures );
     }
 
     @Test
     void dbmsListQueriesShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsListQueries( tx ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsListQueries );
     }
 
     @Test
     void dbmsClusterOverviewShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( tx ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
     void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeDbmsClusterOverview( tx ) );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
     void routingProcedureShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeRoutingProcedure( tx ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
     }
 
     @Test
     void routingProcedureShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeRoutingProcedure( tx ) );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
     }
 
     @Test
     void legacyRoutingProcedureShouldBeAvailable()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeLegacyRoutingProcedure( tx ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
     }
 
     @Test
     void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), ( db, tx ) -> invokeLegacyRoutingProcedure( tx ) );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
     }
 
     @Test
     void installedProtocolsProcedure()
     {
-        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( tx ) );
+        verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
     }
 
     @Test
     void installedProtocolsProcedureOnSystemDatabase()
     {
-        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), ( db, tx ) -> invokeClusterProtocolsProcedure( tx ) );
+        verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
     }
 
     @Test
@@ -160,15 +173,55 @@ class CausalClusteringProceduresIT
         }
     }
 
+    @Test
+    void clusterRoleProcedureForStoppedDatabase() throws Exception
+    {
+        var databaseName = "stoppedDatabase";
+        createDatabase( databaseName, cluster );
+        assertDatabaseEventuallyStarted( databaseName, cluster );
+        verifyClusterRoleProcedure( databaseName );
+
+        stopDatabase( databaseName, cluster );
+        assertDatabaseEventuallyStopped( databaseName, cluster );
+
+        assertRoleProcedureThrowsOnAllMembers( databaseName, Status.General.DatabaseUnavailable );
+
+        startDatabase( databaseName, cluster );
+        assertDatabaseEventuallyStarted( databaseName, cluster );
+        verifyClusterRoleProcedure( databaseName );
+    }
+
+    @Test
+    void clusterRoleProcedureForDroppedDatabase() throws Exception
+    {
+        var databaseName = "droppedDatabase";
+        createDatabase( databaseName, cluster );
+        assertDatabaseEventuallyStarted( databaseName, cluster );
+        verifyClusterRoleProcedure( databaseName );
+
+        dropDatabase( databaseName, cluster );
+        assertDatabaseDoesNotExist( databaseName, cluster );
+
+        assertRoleProcedureThrowsOnAllMembers( databaseName, Status.Database.DatabaseNotFound );
+    }
+
+    @Test
+    void clusterRoleProcedureForNonExistingDatabase()
+    {
+        var databaseName = "nonExistingDatabase";
+
+        assertRoleProcedureThrowsOnAllMembers( databaseName, Status.Database.DatabaseNotFound );
+    }
+
     private static void verifyProcedureAvailability( String databaseName, Set<? extends ClusterMember> members,
-            BiFunction<GraphDatabaseService,Transaction,Result> procedureExecutor )
+            Function<Transaction,Result> procedureExecutor )
     {
         for ( var member : members )
         {
             var db = member.database( databaseName );
             try ( var transaction = db.beginTx() )
             {
-                try ( var result = procedureExecutor.apply( db, transaction ) )
+                try ( var result = procedureExecutor.apply( transaction ) )
                 {
                     var records = Iterators.asList( result );
                     assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
@@ -194,19 +247,20 @@ class CausalClusteringProceduresIT
         }
     }
 
+    private void assertRoleProcedureThrowsOnAllMembers( String databaseName, Status expectedStatus )
+    {
+        for ( var member : cluster.allMembers() )
+        {
+            var error = assertThrows( QueryExecutionException.class, () -> invokeClusterRoleProcedure( member, databaseName ) );
+            var rootCause = rootCause( error );
+            assertThat( rootCause, instanceOf( ProcedureException.class ) );
+            assertEquals( expectedStatus, ((ProcedureException) rootCause).status() );
+        }
+    }
+
     private ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, String databaseName )
     {
-        return () ->
-        {
-            var db = member.database( databaseName );
-            try ( var transaction = db.beginTx() )
-            {
-                try ( var result = invokeClusterRoleProcedure( transaction, databaseName ) )
-                {
-                    return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
-                }
-            }
-        };
+        return () -> invokeClusterRoleProcedure( member, databaseName );
     }
 
     private Result invokeDbmsProcedures( Transaction tx )
@@ -239,8 +293,16 @@ class CausalClusteringProceduresIT
         return tx.execute( "CALL dbms.cluster.protocols()" );
     }
 
-    private Result invokeClusterRoleProcedure( Transaction tx, String databaseName )
+    private RoleInfo invokeClusterRoleProcedure( ClusterMember member, String databaseName )
     {
-        return tx.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) );
+        // invoke the procedure in a context of the system database which always exists
+        var db = member.systemDatabase();
+        try ( var tx = db.beginTx() )
+        {
+            try ( var result = tx.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) ) )
+            {
+                return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
+            }
+        }
     }
 }
