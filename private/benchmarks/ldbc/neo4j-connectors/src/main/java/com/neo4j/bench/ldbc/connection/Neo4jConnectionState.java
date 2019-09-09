@@ -54,7 +54,7 @@ public class Neo4jConnectionState extends DbConnectionState
     private final Int2ObjectMap<ExecutionPlanDescription> planMap;
     private final Int2ObjectMap<PlanMeta> planMetaMap;
 
-    private Transaction tx;
+    private ThreadLocal<Transaction> threadLocalTx = ThreadLocal.withInitial( () -> null );
 
     public Neo4jConnectionState( DatabaseManagementService managementService, GraphDatabaseService db, URI uri, AuthToken authToken,
             LoggingService loggingService, AnnotatedQueries annotatedQueries, final LdbcDateCodec.Format dateFormat,
@@ -85,16 +85,18 @@ public class Neo4jConnectionState extends DbConnectionState
 
     public Transaction beginTx()
     {
-        if ( null != tx )
+        if ( null != threadLocalTx.get() )
         {
             throw new RuntimeException( "There is already an open transaction!" );
         }
-        tx = db.beginTx();
+        Transaction tx = db.beginTx();
+        threadLocalTx.set( tx );
         return tx;
     }
 
     public Transaction getTx()
     {
+        Transaction tx = threadLocalTx.get();
         if ( null == tx )
         {
             throw new RuntimeException( "There is no open transaction!" );
@@ -104,16 +106,16 @@ public class Neo4jConnectionState extends DbConnectionState
 
     public void freeTx()
     {
-        if ( null == tx )
+        if ( null == threadLocalTx.get() )
         {
             throw new RuntimeException( "There is no open transaction!" );
         }
-        tx = null;
+        threadLocalTx.set( null );
     }
 
     public Result execute( String query, Map<String,Object> parameters )
     {
-        return tx.execute( query, parameters );
+        return threadLocalTx.get().execute( query, parameters );
     }
 
     public TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache()
@@ -144,6 +146,7 @@ public class Neo4jConnectionState extends DbConnectionState
             Function<Result,T> resultMapper ) throws DbException
     {
 
+        Transaction tx = threadLocalTx.get();
         Result defaultResult = tx.execute( withExplain( annotatedQuery.defaultQueryString() ), params );
         // exhaust result
         defaultResult.accept( row -> true );

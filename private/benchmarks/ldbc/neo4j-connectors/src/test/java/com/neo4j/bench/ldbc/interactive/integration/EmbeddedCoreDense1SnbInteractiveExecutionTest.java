@@ -13,7 +13,6 @@ import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.junit.jupiter.api.Disabled;
 
-@Disabled
 public class EmbeddedCoreDense1SnbInteractiveExecutionTest extends SnbInteractiveExecutionTest
 {
     @Override
