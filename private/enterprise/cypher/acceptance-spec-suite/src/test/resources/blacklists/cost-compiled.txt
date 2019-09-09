@@ -75,6 +75,8 @@ Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and ineq
 Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and STARTS WITH predicates"
 Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and regex predicates"
 Feature "IndexAcceptance": Scenario "Should allow OR with index and regex predicates"
+Feature "IndexAcceptance": Scenario "Should allow OR with index and incoming scope"
+Feature "IndexAcceptance": Scenario "Should allow OR with index and incoming scope to OPTIONAL"
 Feature "IndexAcceptance": Scenario "STARTS WITH should handle null prefix"
 Feature "ListComprehensionAcceptance": Scenario "Should find all the variables in list comprehension"
 Feature "ListComprehensionAcceptance": Scenario "Should handle list comprehension with AND and one NOT"
