@@ -72,6 +72,16 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
   }
 
+  test("composite NODE KEY constraint should not block adding nodes with different properties (named constraint)") {
+    // When
+    executeSingle("CREATE CONSTRAINT user_constraint ON (n:User) ASSERT (n.firstname,n.lastname) IS NODE KEY")
+
+    // Then
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
+  }
+
   test("composite NODE KEY constraint should block adding nodes with same properties") {
     // When
     executeSingle("CREATE CONSTRAINT ON (n:User) ASSERT (n.firstname,n.lastname) IS NODE KEY")
@@ -84,9 +94,33 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     }
   }
 
+  test("composite NODE KEY constraint should block adding nodes with same properties (named constraint)") {
+    // When
+    executeSingle("CREATE CONSTRAINT user_constraint ON (n:User) ASSERT (n.firstname,n.lastname) IS NODE KEY")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+
+    // Then
+    a[ConstraintViolationException] should be thrownBy {
+      createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    }
+  }
+
   test("single property NODE KEY constraint should block adding nodes with missing property") {
     // When
     executeSingle("CREATE CONSTRAINT ON (n:User) ASSERT (n.email) IS NODE KEY")
+    createLabeledNode(Map("email" -> "joe@soap.tv"), "User")
+    createLabeledNode(Map("email" -> "jake@soap.tv"), "User")
+
+    // Then
+    a[ConstraintViolationException] should be thrownBy {
+      createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    }
+  }
+
+  test("single property NODE KEY constraint should block adding nodes with missing property (named constraint)") {
+    // When
+    executeSingle("CREATE CONSTRAINT user_constraint ON (n:User) ASSERT (n.email) IS NODE KEY")
     createLabeledNode(Map("email" -> "joe@soap.tv"), "User")
     createLabeledNode(Map("email" -> "jake@soap.tv"), "User")
 
@@ -176,6 +210,18 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     )
   }
 
+  test("trying to add a named node key constraint when duplicates exist") {
+    val a = createLabeledNode(Map("name" -> "A"), "Person").getId
+    val b = createLabeledNode(Map("name" -> "A"), "Person").getId
+
+    failWithError(
+      Configs.All,
+      "CREATE CONSTRAINT person_constraint ON (person:Person) ASSERT (person.name) IS NODE KEY",
+      List(("Unable to create CONSTRAINT ON ( person:Person ) ASSERT (person.name) IS NODE KEY:%s" +
+        "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b))
+    )
+  }
+
   test("drop a non existent node key constraint") {
     failWithError(
       Configs.All,
@@ -206,6 +252,59 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
                   "A constraint cannot be created until the index has been dropped."))
   }
 
+  test("should give appropriate error message when there is already an index (named constraint)") {
+    // Given
+    executeSingle("CREATE INDEX ON :Person(firstname, lastname)".fixNewLines)
+
+    // then
+    failWithError(Configs.All,
+      "CREATE CONSTRAINT my_contraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
+      List("There already exists an index :Person(firstname, lastname). " +
+                  "A constraint cannot be created until the index has been dropped."))
+  }
+
+  test("should give appropriate error message when there is already an named index") {
+    // Given
+    executeSingle("CREATE INDEX my_index ON :Person(firstname, lastname)".fixNewLines)
+
+    // then
+    failWithError(Configs.All,
+      "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
+      List("There already exists an index :Person(firstname, lastname). " +
+        "A constraint cannot be created until the index has been dropped."))
+  }
+
+  test("should give appropriate error message when there is already an named index (named constraint)") {
+    // Given
+    executeSingle("CREATE INDEX my_index ON :Person(firstname, lastname)".fixNewLines)
+
+    // then
+    failWithError(Configs.All,
+      "CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
+      List("There already exists an index :Person(firstname, lastname). " +
+                  "A constraint cannot be created until the index has been dropped."))
+  }
+
+  test("should give appropriate error message when there is already an named index (same name and schema for constraint)") {
+    // Given
+    executeSingle("CREATE INDEX my_person ON :Person(firstname, lastname)".fixNewLines)
+
+    // then
+    failWithError(Configs.All,
+      "CREATE CONSTRAINT my_person ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
+      List("There already exists an index called 'my_person'."))
+  }
+
+  test("should give appropriate error message when there is already an named index (same name for constraint, different schema)") {
+    // Given
+    executeSingle("CREATE INDEX my_person ON :Person(firstname, lastname)".fixNewLines)
+
+    // then
+    failWithError(Configs.All,
+      "CREATE CONSTRAINT my_person ON (n:Person) ASSERT (n.firstname,n.surname) IS NODE KEY",
+      List("There already exists an index called 'my_person'."))
+  }
+
   test("should give appropriate error message when there is already a NODE KEY constraint") {
     // Given
     executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY".fixNewLines)
@@ -216,6 +315,65 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
       "CREATE INDEX ON :Person(firstname, lastname)",
       List("There is a uniqueness constraint on :Person(firstname, lastname), " +
                   "so an index is already created that matches this."))
+  }
+
+  test("should give appropriate error message when there is already a named NODE KEY constraint") {
+    // Given
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY".fixNewLines)
+
+    // then
+    failWithError(
+      Configs.All,
+      "CREATE INDEX ON :Person(firstname, lastname)",
+      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+                  "so an index is already created that matches this."))
+  }
+
+  test("should give appropriate error message when there is already a NODE KEY constraint (named index)") {
+    // Given
+    executeSingle("CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY".fixNewLines)
+
+    // then
+    failWithError(
+      Configs.All,
+      "CREATE INDEX my_index ON :Person(firstname, lastname)",
+      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+                  "so an index is already created that matches this."))
+  }
+
+  test("should give appropriate error message when there is already a named NODE KEY constraint (named index)") {
+    // Given
+    executeSingle("CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY".fixNewLines)
+
+    // then
+    failWithError(
+      Configs.All,
+      "CREATE INDEX my_index ON :Person(firstname, lastname)",
+      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+                  "so an index is already created that matches this."))
+  }
+
+  test("should give appropriate error message when there is already a named NODE KEY constraint (same name and schema for index)") {
+    // Given
+    executeSingle("CREATE CONSTRAINT my_person ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY".fixNewLines)
+
+    // then
+    failWithError(
+      Configs.All,
+      "CREATE INDEX my_person ON :Person(firstname, lastname)",
+      List("There already exists a constraint called 'my_person'."))
+  }
+
+
+  test("should give appropriate error message when there is already a named NODE KEY constraint (same name for index, different schema)") {
+    // Given
+    executeSingle("CREATE CONSTRAINT my_person ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY".fixNewLines)
+
+    // then
+    failWithError(
+      Configs.All,
+      "CREATE INDEX my_person ON :Person(firstname, surname)",
+      List("There already exists a constraint called 'my_person'."))
   }
 
   test("Should give a nice error message when trying to remove property with node key constraint") {

@@ -33,6 +33,24 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal(List(Map("p" -> person)))
   }
 
+  test("should use named index on IS NOT NULL") {
+    // Given
+    val person = createLabeledNode(Map("name" -> "Smith"), "Person")
+    1 to 100 foreach (_ => createLabeledNode("Person"))
+    graph.createIndexWithName("name_index", "Person", "name")
+
+    // When
+    val result = executeWith(Configs.CachedProperty,
+      "MATCH (p:Person) WHERE p.name IS NOT NULL RETURN p",
+      planComparisonStrategy = ComparePlansWithAssertion( plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexScan")
+      }))
+
+    // Then
+    result.toList should equal(List(Map("p" -> person)))
+  }
+
   test("should use index on exists") {
     // Given
     val person = createLabeledNode(Map("name" -> "Smith"), "Person")

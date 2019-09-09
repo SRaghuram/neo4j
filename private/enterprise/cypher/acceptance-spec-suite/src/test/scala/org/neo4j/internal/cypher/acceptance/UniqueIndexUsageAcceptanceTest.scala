@@ -26,6 +26,21 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     assertNoLockingHappened()
   }
 
+  test("should be able to use named indexes") {
+    givenNodes()
+    graph.createUniqueConstraintWithName("name_index", "Crew", "name")
+
+    // When
+    val result = executeWith(Configs.All, "MATCH (n:Crew) WHERE n.name = 'Neo' RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription.toString should include("NodeUniqueIndexSeek")
+      }))
+
+    // Then
+    result should have size 1
+    assertNoLockingHappened()
+  }
+
   test("should not forget predicates") {
     given()
 
@@ -142,7 +157,12 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   }
 
   private def given() {
-    graph.withTx( tx => tx.execute(
+    givenNodes()
+    graph.createUniqueConstraint("Crew", "name")
+  }
+
+  private def givenNodes(): Unit = {
+    graph.withTx(tx => tx.execute(
       """CREATE (architect:Matrix { name:'The Architect' }),
         |       (smith:Matrix { name:'Agent Smith' }),
         |       (cypher:Matrix:Crew { name:'Cypher' }),
@@ -159,8 +179,6 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     for (i <- 1 to 10) createLabeledNode(Map("name" -> ("Joe" + i)), "Crew")
 
     for (i <- 1 to 10) createLabeledNode(Map("name" -> ("Smith" + i)), "Matrix")
-
-    graph.createUniqueConstraint("Crew", "name")
   }
 
   private def assertNoLockingHappened(): Unit = {

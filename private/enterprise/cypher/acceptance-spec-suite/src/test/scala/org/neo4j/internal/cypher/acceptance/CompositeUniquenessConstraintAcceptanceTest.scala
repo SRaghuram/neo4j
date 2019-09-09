@@ -25,6 +25,36 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
     graph should not(haveConstraints("UNIQUENESS:Person(email)"))
   }
 
+  test("should be able to create named and remove single property uniqueness constraint") {
+
+    // When
+    executeWith(Configs.All, "CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.email) IS UNIQUE")
+
+    // Then
+    graph should haveConstraints("UNIQUENESS:Person(email)")
+
+    // When
+    executeWith(Configs.All, "DROP CONSTRAINT ON (n:Person) ASSERT (n.email) IS UNIQUE")
+
+    // Then
+    graph should not(haveConstraints("UNIQUENESS:Person(email)"))
+  }
+
+  test("should be able to create and remove named single property uniqueness constraint") {
+
+    // When
+    executeWith(Configs.All, "CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.email) IS UNIQUE")
+
+    // Then
+    graph should haveConstraints("UNIQUENESS:Person(email)")
+
+    // When
+    executeWith(Configs.All, "DROP CONSTRAINT my_constraint")
+
+    // Then
+    graph should not(haveConstraints("UNIQUENESS:Person(email)"))
+  }
+
   test("should fail to to create composite uniqueness constraints") {
     // When
 

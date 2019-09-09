@@ -36,6 +36,25 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     result.columnAs[Node]("f").toList should equal(List(node))
   }
 
+  test("should use named index on literal value") {
+    val node = createLabeledNode(Map("id" -> 123), "Foo")
+    graph.createIndexWithName("my_index", "Foo", "id")
+    val query =
+      """
+        |PROFILE
+        | MATCH (f:Foo)
+        | USING INDEX f:Foo(id)
+        | WHERE f.id=123
+        | RETURN f
+      """.stripMargin
+
+    val result = executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek")
+        .containingVariables("f").containingArgument(":Foo(id)"))))
+
+    result.columnAs[Node]("f").toList should equal(List(node))
+  }
+
   test("should use index on literal map expression") {
     val nodes = Range(0,125).map(i => createLabeledNode(Map("id" -> i), "Foo"))
     graph.createIndex("Foo", "id")
@@ -90,6 +109,15 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       List("Unknown variable `n`.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
   }
 
+  test("fail if using a variable with label not used in match (named index)") {
+    // GIVEN
+    graph.createIndexWithName("my_index", "Person", "name")
+
+    // WHEN
+    failWithError(Configs.All, "match n-->() using index n:Person(name) where n.name = 'kabam' return n",
+      List("Unknown variable `n`.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
+  }
+
   test("fail if using an hint for a non existing index") {
     // GIVEN: NO INDEX
 
@@ -100,6 +128,14 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("fail if using hints with unusable equality predicate") {
     // GIVEN
     graph.createIndex("Person", "name")
+
+    // WHEN
+    failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n", List("Cannot use index hint in this context"))
+  }
+
+  test("fail if using hints with unusable equality predicate (named index)") {
+    // GIVEN
+    graph.createIndexWithName("my_index", "Person", "name")
 
     // WHEN
     failWithError(Configs.All, "match (n:Person)-->() using index n:Person(name) where n.name <> 'kabam' return n", List("Cannot use index hint in this context"))
@@ -149,6 +185,18 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       db =>
         graph.withTx( tx => tx.execute("CREATE INDEX ON :Person(name)"))
+        graph.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
+        db.withTx( tx => shouldHaveNoWarnings(
+            tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+          )
+        )
+    }
+  }
+
+  test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING INDEX' which can be fulfilled (named index)") {
+    runWithConfig() {
+      db =>
+        graph.withTx( tx => tx.execute("CREATE INDEX my_index ON :Person(name)"))
         graph.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
         db.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
@@ -303,6 +351,24 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
   }
 
+  test("does not accept multiple index hints for the same variable (named indexes)") {
+    // GIVEN
+    graph.createIndexWithName("index1", "Entity", "source")
+    graph.createIndexWithName("index2", "Person", "first_name")
+    createNode("source" -> "form1")
+    createNode("first_name" -> "John")
+
+    // WHEN THEN
+
+    failWithError(Configs.All,
+      "MATCH (n:Entity:Person) " +
+        "USING INDEX n:Person(first_name) " +
+        "USING INDEX n:Entity(source) " +
+        "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
+        "RETURN n;",
+      List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
+  }
+
   test("does not accept multiple scan hints for the same variable") {
     failWithError(Configs.All,
       "MATCH (n:Entity:Person) " +
@@ -361,11 +427,34 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     }
   }
 
+  test("should succeed if executing a query using both 'USING SCAN' and 'USING INDEX' if named index exists") {
+    runWithConfig() {
+      engine =>
+        engine.withTx( tx => tx.execute("CREATE INDEX my_index ON :Person(name)"))
+        engine.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
+        engine.withTx( tx => shouldHaveNoWarnings(
+            tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
+          ))
+    }
+  }
+
   test("should fail outright if executing a query using a 'USING SCAN' and 'USING INDEX' on the same variable, even if index exists") {
     runWithConfig() {
       engine =>
         engine.withTx( tx => {
           tx.execute("CREATE INDEX ON :Person(name)")
+          intercept[QueryExecutionException](
+            tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
+          ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
+        })
+    }
+  }
+
+  test("should fail outright if executing a query using a 'USING SCAN' and 'USING INDEX' on the same variable, even if named index exists") {
+    runWithConfig() {
+      engine =>
+        engine.withTx( tx => {
+          tx.execute("CREATE INDEX my_index ON :Person(name)")
           intercept[QueryExecutionException](
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
           ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
@@ -636,6 +725,44 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         }))
     }
 
+  test("should work when join hint is applied to x in (a)-->(x)<--(b) where using index hints on a and b (named index)") {
+      graph.createIndexWithName("my_index", "Person", "name")
+
+      val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
+      val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
+
+      val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
+
+      relate(tom, harrysally, "ACTS_IN")
+      relate(meg, harrysally, "ACTS_IN")
+
+      1 until 10 foreach { i =>
+        createLabeledNode(Map("name" -> s"Person $i"), "Person")
+      }
+
+      1 until 90 foreach { _ =>
+        createLabeledNode("Person")
+      }
+
+      1 until 20 foreach { _ =>
+        createLabeledNode("Movie")
+      }
+
+      val query =
+        s"""
+            |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
+            |USING INDEX a:Person(name)
+            |USING INDEX b:Person(name)
+            |USING JOIN ON x
+            |RETURN x""".stripMargin
+
+      executeWith(Configs.All, query,
+        planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
+          planDescription.toString should not include "AllNodesScan"
+        }))
+    }
+
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where x can use an index") {
       graph.createIndex("Movie", "title")
 
@@ -730,6 +857,28 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       }))
   }
 
+  test("Using index hints with two named indexes should produce cartesian product"){
+    val startNode = createLabeledNode(Map("name" -> "Neo"), "Person")
+    val endNode = createLabeledNode(Map("name" -> "Trinity"), "Person")
+    relate(startNode, endNode, "knows")
+    graph.createIndexWithName("my_index", "Person","name")
+
+    val query =
+      """MATCH (k:Person {name: 'Neo'}), (t:Person {name: 'Trinity'})
+        |using index k:Person(name)
+        |using index t:Person(name)
+        |MATCH p=(k)-[:knows*0..5]-(t)
+        |RETURN count(p)
+        |""".stripMargin
+
+    executeWith(Configs.VarExpand, query,
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t"))
+        planDescription.toString should not include "AllNodesScan"
+      }))
+  }
+
   test("USING INDEX hint should not clash with used variables") {
     graph.createIndex("PERSON", "id")
 
@@ -796,6 +945,25 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
                              planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)").containingVariables("f"))
+      }))
+
+    result.columnAs[Node]("f").toList should equal(List(node))
+  }
+
+  test("should accept hint on named composite index") {
+    val node = createLabeledNode(Map("bar" -> 5, "baz" -> 3), "Foo")
+    graph.createIndexWithName("my_index", "Foo", "bar", "baz")
+
+    val query =
+      """ MATCH (f:Foo)
+        | USING INDEX f:Foo(bar,baz)
+        | WHERE f.bar=5 and f.baz=3
+        | RETURN f
+      """.stripMargin
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)")
+          .containingVariables("f").containingArgument(":Foo(bar,baz)"))
       }))
 
     result.columnAs[Node]("f").toList should equal(List(node))

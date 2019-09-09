@@ -248,6 +248,22 @@ class ExecutionResultTest
     }
 
     @Test
+    void shouldCreateAndDropConstraintsWithName()
+    {
+        try ( Transaction transaction = db.beginTx() )
+        {
+            Result create = transaction.execute( "CREATE CONSTRAINT my_constraint ON (n:L) ASSERT exists(n.prop)" );
+            Result drop = transaction.execute( "DROP CONSTRAINT my_constraint" );
+
+            assertThat( create.getQueryStatistics().getConstraintsAdded(), equalTo( 1 ) );
+            assertThat( create.getQueryStatistics().getConstraintsRemoved(), equalTo( 0 ) );
+            assertThat( drop.getQueryStatistics().getConstraintsAdded(), equalTo( 0 ) );
+            assertThat( drop.getQueryStatistics().getConstraintsRemoved(), equalTo( 1 ) );
+            transaction.commit();
+        }
+    }
+
+    @Test
     void shouldShowRuntimeInExecutionPlanDescription()
     {
         try ( Transaction transaction = db.beginTx() )
@@ -389,6 +405,24 @@ class ExecutionResultTest
             assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
             assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
             assertThat( arguments.get( "IndexName" ), equalTo( "my_index" ) );
+            transaction.commit();
+        }
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given
+            Result result = transaction.execute( "EXPLAIN CREATE CONSTRAINT my_constraint ON (n:L) ASSERT EXISTS (n.prop)" );
+
+            // When
+            Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
+
+            // Then
+            assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
+            assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "ConstraintName" ), equalTo( "my_constraint" ) );
             transaction.commit();
         }
     }

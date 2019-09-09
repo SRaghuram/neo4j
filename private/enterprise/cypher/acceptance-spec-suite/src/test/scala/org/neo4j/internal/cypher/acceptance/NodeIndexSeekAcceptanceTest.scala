@@ -68,6 +68,29 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
   }
 
+  test("Should allow AND and OR with named index and equality predicates") {
+    graph.createIndexWithName("prop1_index", "User", "prop1")
+    graph.createIndexWithName("prop2_index", "User", "prop2")
+    val nodes = Range(0, 100).map(i => createLabeledNode(Map("prop1" -> i, "prop2" -> i), "User"))
+    createLabeledNode(Map("prop1" -> 1, "prop2" -> 11), "User")
+    createLabeledNode(Map("prop1" -> 11, "prop2" -> 1), "User")
+    resampleIndexes()
+
+    val query =
+      """MATCH (c:User)
+        |WHERE ((c.prop1 = 1 AND c.prop2 = 1)
+        |OR (c.prop1 = 11 AND c.prop2 = 11))
+        |RETURN c""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
+        plan should includeSomewhere.aPlan("Union")
+    }))
+
+    result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
+  }
+
   test("Should allow AND and OR with index and inequality predicates") {
     graph.createIndex("User", "prop1")
     graph.createIndex("User", "prop2")

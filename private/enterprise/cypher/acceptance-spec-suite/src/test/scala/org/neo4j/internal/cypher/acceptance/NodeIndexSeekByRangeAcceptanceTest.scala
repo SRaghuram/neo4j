@@ -234,6 +234,44 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
       Map("prop" -> 5.0)))
   }
 
+  test("should be able to plan index seek for numerical less than (named index)") {
+    // Given matches
+    createLabeledNode(Map("prop" -> Double.NegativeInfinity), "Label")
+    createLabeledNode(Map("prop" -> -5), "Label")
+    createLabeledNode(Map("prop" -> 0), "Label")
+    createLabeledNode(Map("prop" -> 5), "Label")
+    createLabeledNode(Map("prop" -> 5.0), "Label")
+
+    // Non-matches
+    createLabeledNode(Map("prop" -> 10), "Label")
+    createLabeledNode(Map("prop" -> 10.0), "Label")
+    createLabeledNode(Map("prop" -> 100), "Label")
+    createLabeledNode(Map("prop" -> Double.PositiveInfinity), "Label")
+    createLabeledNode(Map("prop" -> Double.NaN), "Label")
+
+    (1 to 400).foreach { _ =>
+      createLabeledNode("Label")
+    }
+    graph.createIndexWithName("prop_index", "Label", "prop")
+
+    val query = "MATCH (n:Label) WHERE n.prop < 10 RETURN n.prop AS prop"
+
+    // When
+    val result = executeWith(Configs.CachedProperty, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
+                               //THEN
+                               plan should includeSomewhere.aPlan(IndexSeekByRange.name)
+                             }))
+
+    // Then
+    result.toList should equal(List(
+      Map("prop" -> Double.NegativeInfinity),
+      Map("prop" -> -5),
+      Map("prop" -> 0),
+      Map("prop" -> 5),
+      Map("prop" -> 5.0)))
+  }
+
   test("should be able to plan index seek for numerical negated greater than or equal") {
     // Given matches
     createLabeledNode(Map("prop" -> Double.NegativeInfinity), "Label")
@@ -785,6 +823,45 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
       createLabeledNode("Label")
     }
     graph.createIndex("Label", "prop")
+
+    val query = "MATCH (n:Label) WHERE n.prop >= 0 AND n.prop >=5 AND n.prop < 10 AND n.prop < 100 RETURN n.prop AS prop"
+
+    // When
+    val result = executeWith(Configs.CachedProperty, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
+                               //THEN
+                               plan should includeSomewhere.aPlan(IndexSeekByRange.name)
+                             }))
+
+    // Then
+    result.toList should equal(List(
+      Map("prop" -> 5),
+      Map("prop" -> 5.0),
+      Map("prop" -> 6.1)
+    ))
+  }
+
+  test("should be able to plan index seek using multiple non-overlapping numerical ranges (named index)") {
+    // Given matches
+    createLabeledNode(Map("prop" -> 5), "Label")
+    createLabeledNode(Map("prop" -> 5.0), "Label")
+    createLabeledNode(Map("prop" -> 6.1), "Label")
+
+    // Non-matches
+    createLabeledNode(Map("prop" -> Double.NegativeInfinity), "Label")
+    createLabeledNode(Map("prop" -> -5), "Label")
+    createLabeledNode(Map("prop" -> 0), "Label")
+    createLabeledNode(Map("prop" -> 10), "Label")
+    createLabeledNode(Map("prop" -> 10.0), "Label")
+    createLabeledNode(Map("prop" -> 12.0), "Label")
+    createLabeledNode(Map("prop" -> 100), "Label")
+    createLabeledNode(Map("prop" -> Double.PositiveInfinity), "Label")
+    createLabeledNode(Map("prop" -> Double.NaN), "Label")
+
+    (1 to 400).foreach { _ =>
+      createLabeledNode("Label")
+    }
+    graph.createIndexWithName("prop_index", "Label", "prop")
 
     val query = "MATCH (n:Label) WHERE n.prop >= 0 AND n.prop >=5 AND n.prop < 10 AND n.prop < 100 RETURN n.prop AS prop"
 

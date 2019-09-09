@@ -24,6 +24,15 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     assertIndexScan(standardResult, "Awesome")
   }
 
+  test("should use index when named existence constraint for property") {
+    // Given
+    createSingleIndexes()
+    graph.createNodeExistenceConstraintWithName("awesome_constraint", "Awesome", "prop1")
+
+    // Then
+    assertIndexScan(standardResult, "Awesome")
+  }
+
   test("should use index when existence constraint for multiple labels") {
     // Given
     createSingleIndexes()
@@ -100,6 +109,14 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   test("should use index when node key constraint for property") {
     // Given
     graph.createNodeKeyConstraint("Awesome", "prop1")
+
+    // Then
+    assertIndexScan(standardResult, "Awesome")
+  }
+
+  test("should use index when named node key constraint for property") {
+    // Given
+    graph.createNodeKeyConstraintWithName("awesome_constraint", "Awesome", "prop1")
 
     // Then
     assertIndexScan(standardResult, "Awesome")

@@ -36,6 +36,27 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
     result.toList should equal(List(Map("l" -> london)))
   }
 
+  test("should be case sensitive for CONTAINS with multiple named indexes and predicates") {
+    val london = createLabeledNode(Map("name" -> "London", "country" -> "UK"), "Location")
+    createLabeledNode(Map("name" -> "LONDON", "country" -> "UK"), "Location")
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString, "country" -> "UK"), "Location")
+    }
+
+    graph.createIndexWithName("name_index", "Location", "name")
+    graph.createIndexWithName("country_index", "Location", "country")
+
+    val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
+
+    result.toList should equal(List(Map("l" -> london)))
+  }
+
   test("should not use contains index with multiple indexes and predicates where other index is more selective") {
     val london = createLabeledNode(Map("name" -> "London", "country" -> "UK"), "Location")
     createLabeledNode(Map("name" -> "LONDON", "country" -> "UK"), "Location")

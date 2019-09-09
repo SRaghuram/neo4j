@@ -34,6 +34,26 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     result.toList should equal(List(Map("l" -> london)))
   }
 
+  test("should be case sensitive for ENDS WITH with named indexes") {
+    val london = createLabeledNode(Map("name" -> "London"), "Location")
+    createLabeledNode(Map("name" -> "LONDON"), "Location")
+    (1 to 100).foreach { _ =>
+      createLabeledNode("Location")
+    }
+    (1 to 300).map { i =>
+      createLabeledNode(Map("name" -> i.toString), "Location")
+    }
+
+    graph.createIndexWithName("name_index", "Location", "name")
+
+    val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
+
+    val result = executeWith(Configs.NodeIndexEndsWithScan, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
+
+    result.toList should equal(List(Map("l" -> london)))
+  }
+
   test("should be case sensitive for ENDS WITH with unique indexes") {
     val london = createLabeledNode(Map("name" -> "London"), "Location")
     createLabeledNode(Map("name" -> "LONDON"), "Location")

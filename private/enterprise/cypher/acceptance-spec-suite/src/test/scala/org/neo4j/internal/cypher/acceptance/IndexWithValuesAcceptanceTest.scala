@@ -68,6 +68,20 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 42)))
   }
 
+  test("should plan index seek with GetValue when the property is projected (named index)") {
+    graph.withTx(tx => createMoreNodes(tx))
+    graph.createIndexWithName("my_index", "Label", "prop")
+
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Label) WHERE n.prop = 42 RETURN n.prop", executeBefore = createMoreNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+        not(includeSomewhere.aPlan("Projection").withDBHits()) and
+          includeSomewhere.aPlan("NodeIndexSeek")
+            .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop\\]".r, ".*:Label\\(prop\\).*".r))
+      )
+    )
+    result.toList should equal(List(Map("n.prop" -> 42), Map("n.prop" -> 42)))
+  }
+
   test("should plan projection and index seek with GetValue when two properties are projected") {
     val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1, n.prop2", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
@@ -167,6 +181,27 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       Map("n.prop2" -> 3), Map("n.prop2" -> 3),
       Map("n.prop2" -> 1), Map("n.prop2" -> 1),
       Map("n.prop2" -> 3), Map("n.prop2" -> 3)))
+  }
+
+  test("should plan projection and index seek with DoNotGetValue when the property is only used in ORDER BY (named index)") {
+    graph.withTx(tx => createMoreNodes(tx))
+    graph.createIndexWithName("my_index", "Label", "prop")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Label) WHERE n.prop > 41 RETURN 1 AS ignore ORDER BY n.prop",
+      executeBefore = createMoreNodes,
+      planComparisonStrategy = ComparePlansWithAssertion(
+        _ should (includeSomewhere.aPlan("Projection")
+          .containingArgumentRegex(".*\\{ignore : .*\\}.*".r)
+          .withDBHits(0) // nothing for prop
+          .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
+                   and not(includeSomewhere.aPlan("Sort")))
+      )
+    )
+
+    result.toList should equal(List(
+      Map("ignore" -> 1), Map("ignore" -> 1),
+      Map("ignore" -> 1), Map("ignore" -> 1),
+      Map("ignore" -> 1), Map("ignore" -> 1)))
   }
 
   test("should correctly project cached node property through ORDER BY") {
@@ -533,6 +568,20 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("n.prop1" -> 42, "trap" -> "Whoops!")))
   }
 
+  test("should not get confused by variable named as index-backed property II (named index)") {
+    graph.withTx(tx => createMoreNodes(tx))
+    graph.createIndexWithName("my_index", "Label", "prop")
+
+    val query =
+      """WITH 'Whoops!' AS `n.prop`
+        |MATCH (n:Label) WHERE n.prop = 42
+        |RETURN n.prop, `n.prop` AS trap""".stripMargin
+
+    val result = executeWith(Configs.CachedProperty + Configs.Compiled, query)
+    assertIndexSeekWithValues(result, "n.prop")
+    result.toList should equal(List(Map("n.prop" -> 42, "trap" -> "Whoops!")))
+  }
+
   test("index-backed property values should be updated on property write") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 SET n.prop1 = 'newValue' RETURN n.prop1"
     val result = executeWith(Configs.InterpretedAndSlotted, query)
@@ -637,5 +686,18 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
   private def registerTestProcedures(): Unit = {
     graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerProcedure(classOf[TestProcedure])
+  }
+
+  // Used for named index tests
+  // Invoked once before the Tx and once in the same Tx
+  def createMoreNodes(tx: InternalTransaction): Unit = {
+    tx.execute(
+      """
+      CREATE (:Label {prop: 40})
+      CREATE (:Label {prop: 41})
+      CREATE (:Label {prop: 42})
+      CREATE (:Label {prop: 43})
+      CREATE (:Label {prop: 44})
+      """)
   }
 }

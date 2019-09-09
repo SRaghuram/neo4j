@@ -103,6 +103,32 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       )))
     }
 
+    test(s"$cypherToken: Order by index backed property renamed in an earlier WITH (named index)") {
+      graph.withTx(tx => createNodesForNamedIndex(tx))
+      graph.createIndexWithName("my_index", "Label", "prop")
+
+      val result = executeWith(Configs.CachedProperty,
+        s"""MATCH (n:Label) WHERE n.prop > 42
+           |WITH n AS nnn
+           |MATCH (m)<-[r]-(nnn)
+           |RETURN nnn.prop ORDER BY nnn.prop $cypherToken""".stripMargin,
+        executeBefore = createNodesForNamedIndex)
+
+      result.executionPlanDescription() should (
+        not(includeSomewhere.aPlan("Sort")) and
+          includeSomewhere.aPlan("Projection")
+            .withOrder(providedOrder(prop("nnn", "prop")))
+            .onTopOf(aPlan("NodeIndexSeekByRange")
+              .withOrder(providedOrder(prop("n", "prop")))
+            )
+        )
+
+      result.toList should be(expectedOrder(List(
+        Map("nnn.prop" -> 43), Map("nnn.prop" -> 43),
+        Map("nnn.prop" -> 44), Map("nnn.prop" -> 44)
+      )))
+    }
+
     test(s"$cypherToken: Order by index backed property in a plan with an Apply") {
       val result = executeWith(Configs.UDF,
         s"MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds $cypherToken",
@@ -868,6 +894,30 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.toList should equal(List(expected))
     }
 
+    test(s"$cypherToken-$functionName: should use provided index order with renamed property (named index)") {
+      graph.withTx(tx => createNodesForNamedIndex(tx))
+      graph.createIndexWithName("my_index", "Label", "prop")
+
+      val result = executeWith(Configs.Optional,
+        s"MATCH (n:Label) WHERE n.prop > 0 WITH n.prop AS prop RETURN $functionName(prop) AS extreme", executeBefore = createNodesForNamedIndex)
+
+      result.executionPlanDescription() should
+        includeSomewhere.aPlan("Optional")
+          .onTopOf(aPlan("Limit")
+            .onTopOf(aPlan("Projection")
+              .onTopOf(aPlan("Projection")
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop\\]".r).withOrder(providedOrder(prop("n", "prop"))))
+              )
+            )
+          )
+
+      val expected = expectedOrder(List(
+        Map("extreme" -> 40), // min
+        Map("extreme" -> 44) // max
+      )).head
+      result.toList should equal(List(expected))
+    }
+
     test(s"$cypherToken-$functionName: should use provided index order with renamed variable") {
       val result = executeWith(Configs.Optional,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n as m RETURN $functionName(m.prop1) AS extreme", executeBefore = createSomeNodes)
@@ -1216,4 +1266,17 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         |CREATE (:Label {prop3: 'h'})
         |CREATE (:Label {prop3: 'g'})
       """.stripMargin))
+
+  // Used for named index tests, independent of already existing indexes
+  // Invoked once before the Tx and once in the same Tx
+  def createNodesForNamedIndex(tx: InternalTransaction): Unit = {
+    tx.execute(
+      """
+      CREATE (:Label {prop: 40})-[:R]->()
+      CREATE (:Label {prop: 41})-[:R]->()
+      CREATE (:Label {prop: 42})-[:R]->()
+      CREATE (:Label {prop: 43})-[:R]->()
+      CREATE (:Label {prop: 44})-[:R]->()
+      """)
+  }
 }
