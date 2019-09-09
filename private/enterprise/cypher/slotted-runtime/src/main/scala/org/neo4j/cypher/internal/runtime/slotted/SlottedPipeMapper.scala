@@ -573,66 +573,46 @@ class SlottedPipeMapper(fallback: PipeMapper,
     }
   }
 
-  // Verifies the assumption that all shared slots are arguments with slot offsets within the first argument size number of slots
-  // and the number of shared slots are identical to the argument size.
-  private def verifyOnlyArgumentsAreSharedSlots(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
-    val argumentSize = physicalPlan.argumentSizes(plan.id)
-    val configuration = physicalPlan.slotConfigurations(plan.id)
-    println(argumentSize)
-    println(configuration)
-    val lhsPlan = plan.lhs.get
-    val rhsPlan = plan.rhs.get
-    val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
-    val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
-    val sharedSlots = rhsSlots.filterSlots(
-      onVariable = {
-        case (k, _) =>  lhsSlots.get(k).isDefined
-      }, onCachedProperty = {
-        case (k, _) => lhsSlots.hasCachedPropertySlot(k)
-      })
-
-    val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_.isLongSlot)
-
-    def checkSharedSlots(slots: Seq[Slot], expectedSlots: Int): Boolean = {
-      val sorted = slots.sortBy(_.offset)
-      var prevOffset = -1
-      for (slot <- sorted) {
-        if (slot.offset == prevOffset ||      // if we have aliases for the same slot, we will get it again
-            slot.offset == prevOffset + 1) {  // otherwise we expect the next shared slot to sit at the next offset
-          prevOffset = slot.offset
-        } else {
-          return false
-        }
-      }
-      prevOffset + 1 == expectedSlots
-    }
-
-    val longSlotsOk = checkSharedSlots(sharedLongSlots.toSeq, argumentSize.nLongs)
-    val refSlotsOk = checkSharedSlots(sharedRefSlots.toSeq, argumentSize.nReferences)
-
-    if (!longSlotsOk || !refSlotsOk) {
-      val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} shared long slots: $sharedLongSlots "
-      val refSlotsMessage = if (refSlotsOk) "" else s"#ref arguments=${argumentSize.nReferences} shared ref slots: $sharedRefSlots "
-      throw new InternalException(s"Unexpected slot configuration. Shared slots not only within argument size: $longSlotsMessage$refSlotsMessage")
-    }
-  }
-
   private def verifyArgumentsAreTheSameOnBothSides(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
     val argumentSize = physicalPlan.argumentSizes(plan.id)
     val lhsPlan = plan.lhs.get
     val rhsPlan = plan.rhs.get
     val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
     val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
-    val (lhsLongSlots, lhsRefSlots) = lhsSlots.partitionSlotsOnly((_, slot) => slot.isLongSlot)
-    val (rhsLongSlots, rhsRefSlots) = rhsSlots.partitionSlotsOnly((_, slot) => slot.isLongSlot)
 
-    val lhsArgLongSlots = lhsLongSlots.filter { case (_, slot) => slot.offset < argumentSize.nLongs } sortBy(_._1)
-    val lhsArgRefSlots = lhsRefSlots.filter { case (_, slot) => slot.offset < argumentSize.nReferences } sortBy(_._1)
-    val rhsArgLongSlots = rhsLongSlots.filter { case (_, slot) => slot.offset < argumentSize.nLongs } sortBy(_._1)
-    val rhsArgRefSlots = rhsRefSlots.filter { case (_, slot) => slot.offset < argumentSize.nReferences } sortBy(_._1)
+    val lhsArgLongSlots = mutable.ArrayBuffer.empty[(String, Slot)]
+    val lhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
+    val rhsArgLongSlots = mutable.ArrayBuffer.empty[(String, Slot)]
+    val rhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
+    lhsSlots.foreachSlot(onVariable = {
+      case (key, slot)  =>
+       if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
+         lhsArgLongSlots += (key -> slot)
+       }  else if (slot.offset < argumentSize.nReferences) {
+         lhsArgRefSlots += (key -> slot)
+       }
+    }, onCachedProperty = {
+      case (key, slot)  =>
+        if (slot.offset < argumentSize.nReferences) {
+          lhsArgRefSlots += (key.asCanonicalStringVal -> slot)
+        }
+    })
+    rhsSlots.foreachSlot(onVariable = {
+      case (key, slot)  =>
+        if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
+          rhsArgLongSlots += (key -> slot)
+        }  else if (slot.offset < argumentSize.nReferences) {
+          rhsArgRefSlots += (key -> slot)
+        }
+    }, onCachedProperty = {
+      case (key, slot) =>
+        if (slot.offset < argumentSize.nReferences) {
+          rhsArgRefSlots += (key.asCanonicalStringVal -> slot)
+        }
+    })
 
     def sameSlotsInOrder(a: Seq[(String, Slot)], b: Seq[(String, Slot)]): Boolean =
-      a.zip(b) forall {
+      a.sortBy(_._1).zip(b.sortBy(_._1)) forall {
         case ((k1, slot1), (k2, slot2)) =>
           k1 == k2 && slot1.offset == slot2.offset && slot1.isTypeCompatibleWith(slot2)
       }
@@ -641,8 +621,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val refSlotsOk = lhsArgRefSlots.size == rhsArgRefSlots.size && sameSlotsInOrder(lhsArgRefSlots, rhsArgRefSlots)
 
     if (!longSlotsOk || !refSlotsOk) {
-      val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} lhs: $lhsLongSlots rhs: $rhsArgLongSlots "
-      val refSlotsMessage = if (refSlotsOk) "" else s"#ref arguments=${argumentSize.nReferences} lhs: $lhsRefSlots rhs: $rhsArgRefSlots "
+      val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} lhs: $lhsArgLongSlots rhs: $rhsArgLongSlots "
+      val refSlotsMessage = if (refSlotsOk) "" else s"#ref arguments=${argumentSize.nReferences} lhs: $lhsArgRefSlots rhs: $rhsArgRefSlots "
       throw new InternalException(s"Unexpected slot configuration. Arguments differ between lhs and rhs: $longSlotsMessage$refSlotsMessage")
     }
   }
