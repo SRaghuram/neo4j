@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
 class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -63,6 +63,30 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     val result = executeWith(Configs.Optional, "OPTIONAL MATCH (n) RETURN n{.foo, .bar}")
 
     result.toList should equal(List(Map("n" -> null)))
+  }
+
+  test("projecting with distinct should not drop results") {
+    // it turns out that if there is a node with Id=8, then the node with Id=14 will not be seen as distinct if there are other keys in the map (bug in MapValue.equals)
+    graph.execute(
+      """
+        |UNWIND [8,14] AS cnt
+        | CREATE (z:TestNode)
+        |SET z.Id=toString(cnt),z.note="testing"
+        |""".stripMargin).close()
+
+    Seq(
+      (Configs.InterpretedAndSlotted + Configs.Compiled, "MATCH (z:TestNode) RETURN DISTINCT {Id:z.Id, note:z.note} AS x"),
+      (Configs.InterpretedAndSlotted - Configs.Version2_3, "MATCH (z:TestNode) RETURN DISTINCT z{.Id, .note} AS x")).foreach {
+      case (configs: TestConfiguration, query: String) =>
+        val result = executeWith(configs, query)
+
+        withClue(query) {
+          result.toList should equal(List(
+            Map("x" -> Map("note" -> "testing", "Id" -> "8")),
+            Map("x" -> Map("note" -> "testing", "Id" -> "14"))
+          ))
+        }
+    }
   }
 
   test("graph projections with aggregation") {
