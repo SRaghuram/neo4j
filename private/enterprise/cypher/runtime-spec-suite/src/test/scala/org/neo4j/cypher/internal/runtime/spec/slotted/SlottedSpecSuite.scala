@@ -37,6 +37,7 @@ class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.SINGLE_T
 class SlottedInputTest extends InputTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedInputWithMaterializedEntitiesTest extends InputWithMaterializedEntitiesTest(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
 class SlottedPartialSortTest extends PartialSortTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
+class SlottedTopTest extends TopTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedSortTest extends SortTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedPartialTopNTest extends PartialTopNTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
 class SlottedPartialTop1Test extends PartialTop1TestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime, SIZE_HINT)
