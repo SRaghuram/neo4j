@@ -8,4 +8,6 @@ package com.neo4j.causalclustering.stresstests;
 public abstract class Validation
 {
     protected abstract void validate() throws Exception;
+
+    protected abstract boolean postStop();
 }

@@ -44,4 +44,10 @@ public class ConsistencyCheck extends Validation
             }
         }
     }
+
+    @Override
+    protected boolean postStop()
+    {
+        return true;
+    }
 }

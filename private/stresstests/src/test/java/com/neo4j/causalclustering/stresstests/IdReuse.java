@@ -15,6 +15,7 @@ import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
@@ -24,9 +25,9 @@ import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isInterrupted;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isTransient;
 
@@ -43,28 +44,32 @@ class IdReuse
     static class UniqueFreeIds extends Validation
     {
         private final Cluster cluster;
-        private final FileSystemAbstraction fs;
         private final Log log;
 
         UniqueFreeIds( Resources resources )
         {
             super();
             this.cluster = resources.cluster();
-            this.fs = resources.fileSystem();
             this.log = resources.logProvider().getLog( getClass() );
         }
 
         @Override
-        protected void validate()
+        protected void validate() throws TimeoutException
         {
-            Iterable<ClusterMember> members = Iterables.concat( cluster.coreMembers(), cluster.readReplicas() );
-            Map<MemberId, Long> usedIdsPerMember = new HashMap<>();
+            var members = cluster.allMembers();
+
+            dataMatchesEventually( cluster.awaitLeader(), members );
+
+            Map<MemberId,Long> usedIdsPerMember = new HashMap<>();
 
             for ( ClusterMember member: members )
             {
-                usedIdsPerMember.put( member.id(),
-                        member.defaultDatabase().getDependencyResolver().resolveDependency(
-                                        IdGeneratorFactory.class ).get( IdType.NODE ).getNumberOfIdsInUse() );
+                usedIdsPerMember.put( member.id(), member
+                        .defaultDatabase()
+                        .getDependencyResolver()
+                        .resolveDependency( IdGeneratorFactory.class )
+                        .get( IdType.NODE )
+                        .getNumberOfIdsInUse() );
             }
 
             if ( usedIdsPerMember.values().stream().distinct().count() != 1 )
@@ -74,6 +79,12 @@ class IdReuse
             }
 
             log.info( "Total of " + usedIdsPerMember.values().iterator().next() + " used ids found" );
+        }
+
+        @Override
+        protected boolean postStop()
+        {
+            return false;
         }
     }
 

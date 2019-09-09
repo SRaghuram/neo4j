@@ -13,6 +13,7 @@ import org.junit.rules.RuleChain;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -116,13 +117,23 @@ public class ClusterStressTesting
         executor.shutdownNow();
         executor.awaitTermination( 5, TimeUnit.MINUTES );
 
+        control.assertNoFailure();
+
+        Set<Validation> preStopValidations = validations.stream().filter( v -> !v.postStop() ).collect( Collectors.toSet() );
+
+        log.info( "Validating results pre-stop" );
+        for ( Validation validation : preStopValidations )
+        {
+            validation.validate();
+        }
+
         log.info( "Stopping resources" );
         resources.stop();
 
-        control.assertNoFailure();
+        Set<Validation> postStopValidations = validations.stream().filter( Validation::postStop ).collect( Collectors.toSet() );
 
-        log.info( "Validating results" );
-        for ( Validation validation : validations )
+        log.info( "Validating results post-stop" );
+        for ( Validation validation : postStopValidations )
         {
             validation.validate();
         }
