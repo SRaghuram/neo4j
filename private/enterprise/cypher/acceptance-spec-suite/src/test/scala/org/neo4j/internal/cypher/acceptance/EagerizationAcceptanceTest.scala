@@ -2104,7 +2104,7 @@ class EagerizationAcceptanceTest
 
   }
 
-  test("setting property in tail should be eager if overlap") {
+  test("setting node property in tail should be eager if overlap") {
     createNode()
     createNode()
     createNode("prop" -> 42)
@@ -2115,6 +2115,47 @@ class EagerizationAcceptanceTest
       planComparisonStrategy = testEagerPlanComparisonStrategy(1, Configs.RulePlanner))
     result.columnAs[Int]("count").next should equal(8)
     assertStats(result, propertiesWritten = 8, nodesCreated = 4)
+  }
+
+  test("setting node property in tail should be eager if overlap with +=") {
+    createNode()
+    createNode()
+    createNode("prop" -> 42)
+    createNode("prop" -> 42)
+    val query = "MATCH (n) CREATE (m) WITH * MATCH (o {prop:42}) SET n += {prop: 42} RETURN count(*) as count"
+
+    val result = executeWith(Configs.UpdateConf, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, Configs.RulePlanner))
+    result.columnAs[Int]("count").next should equal(8)
+    assertStats(result, propertiesWritten = 8, nodesCreated = 4)
+  }
+
+  test("setting rel property in tail should be eager if overlap") {
+    relate(createNode(), createNode())
+    relate(createNode(), createNode())
+    relate(createNode(), createNode(), "prop" -> 42)
+    relate(createNode(), createNode(), "prop" -> 42)
+    val query = "MATCH ()-[r]->() CREATE ()-[:R]->() WITH * MATCH ()-[q {prop:42}]->() SET r.prop = 42 RETURN count(*) as count"
+
+    val result = executeWith(Configs.UpdateConf, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(3, Configs.Rule2_3),
+      expectedDifferentResults = Configs.All - Configs.Version3_5 - Configs.RulePlanner)
+    result.columnAs[Int]("count").next should equal(8)
+    assertStats(result, propertiesWritten = 8, nodesCreated = 8, relationshipsCreated = 4)
+  }
+
+  test("setting rel property in tail should be eager if overlap with +=") {
+    relate(createNode(), createNode())
+    relate(createNode(), createNode())
+    relate(createNode(), createNode(), "prop" -> 42)
+    relate(createNode(), createNode(), "prop" -> 42)
+    val query = "MATCH ()-[r]->() CREATE ()-[:R]->() WITH * MATCH ()-[q {prop:42}]->() SET r += {prop: 42} RETURN count(*) as count"
+
+    val result = executeWith(Configs.UpdateConf, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(3, Configs.Rule2_3),
+      expectedDifferentResults = Configs.All - Configs.Version3_5 - Configs.RulePlanner)
+    result.columnAs[Int]("count").next should equal(8)
+    assertStats(result, propertiesWritten = 8, nodesCreated = 8, relationshipsCreated = 4)
   }
 
   test("setting property in tail should be eager if overlap head") {
@@ -2171,6 +2212,24 @@ class EagerizationAcceptanceTest
       planComparisonStrategy = testEagerPlanComparisonStrategy(1))
     assertStats(result, propertiesWritten = 1)
     result.toList should equal(List(Map("count(*)" -> 1)))
+  }
+
+  test("matching generic property, writing with += should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n {prop : 5})-[r]-(m) UNWIND [n, r] AS e SET e += {prop: 5} RETURN count(*)"
+    val result = executeWith(Configs.Version3_5 /\ Configs.InterpretedAndSlotted + Configs.Rule3_1, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = Configs.Rule3_1))
+    assertStats(result, propertiesWritten = 2)
+    result.toList should equal(List(Map("count(*)" -> 2)))
+  }
+
+  test("matching generic property, writing with = should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n {prop : 5})-[r]-(m) UNWIND [n, r] AS e SET e = {prop: 5} RETURN count(*)"
+    val result = executeWith(Configs.Version3_5 /\ Configs.InterpretedAndSlotted + Configs.Rule3_1, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1, expectPlansToFailPredicate = Configs.Rule3_1))
+    assertStats(result, propertiesWritten = 2)
+    result.toList should equal(List(Map("count(*)" -> 2)))
   }
 
   test("matching node property, writing with += should not be eager when we can avoid it") {
