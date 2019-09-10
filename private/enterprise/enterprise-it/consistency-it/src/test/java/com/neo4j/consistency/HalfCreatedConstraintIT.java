@@ -55,7 +55,7 @@ class HalfCreatedConstraintIT
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try

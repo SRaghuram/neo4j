@@ -67,7 +67,7 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        DatabaseManagementService managementService = new DatabaseManagementServiceBuilder( testDir.storeDir() )
+        DatabaseManagementService managementService = new DatabaseManagementServiceBuilder( testDir.homeDir() )
                 .setConfig( allow_upgrade, true )
                 .setConfig( record_format, HighLimit.NAME )
                 .setConfig( online_backup_enabled, false )
@@ -79,7 +79,7 @@ public class ClusterCommunityToEnterpriseIT
                 .set( online_backup_enabled, false )
                 .set( transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().toPath().toAbsolutePath() )
                 .build();
-        DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );
+        DbRepresentation before = DbRepresentation.of( testDir.homeDir(), config );
 
         // when
         copyStoreToCore( databaseLayout, 0 );

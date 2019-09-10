@@ -116,7 +116,7 @@ class SegmentedRaftLogRotationTruncationPruneTest
 
     private SegmentedRaftLog createRaftLog() throws Exception
     {
-        File directory = testDirectory.directory();
+        File directory = testDirectory.homeDir();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =

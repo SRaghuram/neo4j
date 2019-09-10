@@ -637,8 +637,8 @@ public class Cluster
                 instanceExtraParams,
                 listenAddress,
                 advertisedAddress,
-                ( File file, Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
-                        new CoreGraphDatabase( file, config, dependencies, discoveryServiceFactory, CoreEditionModule::new )
+                ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
+                        new CoreGraphDatabase( config, dependencies, discoveryServiceFactory, CoreEditionModule::new )
         );
     }
 
@@ -671,8 +671,8 @@ public class Cluster
                 monitors,
                 advertisedAddress,
                 listenAddress,
-                ( File file, Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId ) ->
-                        new ReadReplicaGraphDatabase( file, config, dependencies, discoveryServiceFactory, memberId, ReadReplicaEditionModule::new )
+                ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId ) ->
+                        new ReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, memberId, ReadReplicaEditionModule::new )
         );
     }
 

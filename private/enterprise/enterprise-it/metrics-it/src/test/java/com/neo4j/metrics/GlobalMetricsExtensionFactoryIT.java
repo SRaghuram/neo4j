@@ -70,7 +70,7 @@ class GlobalMetricsExtensionFactoryIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.storeDir(), "metrics" );
+        outputPath = new File( directory.homeDir(), "metrics" );
         builder.setConfig( MetricsSettings.metricsEnabled, true );
         builder.setConfig( MetricsSettings.jmxEnabled, true );
         builder.setConfig( MetricsSettings.csvEnabled, true );

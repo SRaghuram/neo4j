@@ -41,7 +41,7 @@ class SegmentedRaftLogDurabilityTest
 
     private final RaftLogFactory logFactory = fileSystem ->
     {
-        File directory = testDirectory.directory();
+        File directory = testDirectory.homeDir();
         fileSystem.mkdir( directory );
 
         long rotateAtSizeBytes = 128;

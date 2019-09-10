@@ -58,10 +58,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
@@ -100,11 +97,11 @@ class RaftBootstrapperIT
     void setup()
     {
         this.temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( pageCache );
-        this.neo4jHome = testDirectory.directory();
-        this.dataDirectory = new File( neo4jHome, DEFAULT_DATA_DIR_NAME );
-        this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
-        this.txLogsDirectory = new File( dataDirectory, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
+        this.neo4jHome = testDirectory.homeDir();
         this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() );
+        this.dataDirectory = defaultConfig.get( GraphDatabaseSettings.data_directory ).toFile();
+        this.storeDirectory = defaultConfig.get( GraphDatabaseSettings.databases_root_path ).toFile();
+        this.txLogsDirectory = defaultConfig.get( transaction_logs_root_path ).toFile();
         this.storageEngineFactory = StorageEngineFactory.selectStorageEngine();
     }
 
@@ -112,7 +109,7 @@ class RaftBootstrapperIT
     void shouldBootstrapWhenNoDirectoryExists() throws Exception
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( neo4jHome, storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
@@ -131,7 +128,7 @@ class RaftBootstrapperIT
     void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( neo4jHome, storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         fileSystem.mkdirs( databaseLayout.databaseDirectory() );
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( databaseLayout );

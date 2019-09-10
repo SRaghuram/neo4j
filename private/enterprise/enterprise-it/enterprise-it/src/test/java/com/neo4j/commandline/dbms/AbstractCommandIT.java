@@ -45,7 +45,7 @@ abstract class AbstractCommandIT
     void setUp() throws IOException
     {
         Config config = databaseAPI.getDependencyResolver().resolveDependency( Config.class );
-        File dataDir = databaseAPI.databaseLayout().getStoreLayout().storeDirectory();
+        File dataDir = databaseAPI.databaseLayout().getNeo4jLayout().storeDirectory();
         neo4jHome = config.get( GraphDatabaseSettings.neo4j_home );
         configDir = testDirectory.directory( "configDir" ).toPath();
         Files.write( configDir.resolve( DEFAULT_CONFIG_FILE_NAME ), singletonList( formatProperty( databases_root_path, dataDir.toPath() ) ) );

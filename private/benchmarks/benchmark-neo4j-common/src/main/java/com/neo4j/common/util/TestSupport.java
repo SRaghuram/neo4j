@@ -14,13 +14,13 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 
 public class TestSupport
 {
-    public static Store createEmptyStore( Path storeDir, Path neo4jConfigFile )
+    public static Store createEmptyStore( Path homeDir, Path neo4jConfigFile )
     {
         DatabaseManagementService managementService =
-                new EnterpriseDatabaseManagementServiceBuilder( storeDir.toFile() )
+                new EnterpriseDatabaseManagementServiceBuilder( homeDir.toFile() )
                         .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
                         .build();
         managementService.shutdown();
-        return Store.createFrom( storeDir );
+        return Store.createFrom( homeDir );
     }
 }

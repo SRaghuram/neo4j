@@ -67,7 +67,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
         Monitors coreDatabaseMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
 
-        DatabaseLayout databaseLayout = globalModule.getStoreLayout().databaseLayout( databaseId.name() );
+        DatabaseLayout databaseLayout = globalModule.getNeo4jLayout().databaseLayout( databaseId.name() );
 
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 

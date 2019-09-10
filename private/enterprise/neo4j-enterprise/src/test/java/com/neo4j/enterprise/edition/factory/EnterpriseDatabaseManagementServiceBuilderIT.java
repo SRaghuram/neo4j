@@ -34,7 +34,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void configuredDatabasesRootPath()
     {
-        File factoryDir = testDirectory.storeDir();
+        File factoryDir = testDirectory.homeDir();
         File databasesDir = testDirectory.directory( "my_databases" );
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( factoryDir )
@@ -58,13 +58,14 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void notConfiguredDatabasesRootPath()
     {
-        File factoryDir = testDirectory.storeDir();
+        File factoryDir = testDirectory.homeDir();
+        File storeDir = testDirectory.storeDir();
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( factoryDir ).build();
         try
         {
-            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( factoryDir, DEFAULT_DATABASE_NAME ) ) );
-            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( factoryDir, SYSTEM_DATABASE_NAME ) ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( storeDir, DEFAULT_DATABASE_NAME ) ) );
+            assertFalse( isEmptyOrNonExistingDirectory( fs, new File( storeDir, SYSTEM_DATABASE_NAME ) ) );
         }
         finally
         {

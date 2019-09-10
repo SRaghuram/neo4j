@@ -29,7 +29,7 @@ class SimpleStorageTest
     void shouldWriteAndReadState() throws Exception
     {
         // given
-        File dir = testDirectory.directory();
+        File dir = testDirectory.homeDir();
         FileSystemAbstraction fs = testDirectory.getFileSystem();
         SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), NullLogProvider.getInstance() );
 

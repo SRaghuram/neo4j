@@ -88,7 +88,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseAPI getCommunityDatabase()
     {
-        managementService = new TestDatabaseManagementServiceBuilder( dir.storeDir() ).build();
+        managementService = new TestDatabaseManagementServiceBuilder( dir.homeDir() ).build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
@@ -131,7 +131,7 @@ class StartupConstraintSemanticsTest
 
     private GraphDatabaseAPI getEnterpriseDatabase()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.storeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.homeDir() ).build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

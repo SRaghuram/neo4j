@@ -64,7 +64,7 @@ class BackupServiceStressTesting
 
         String databaseName = "testDatabase";
 
-        File storeDir = testDirectory.storeDir( databaseName );
+        File storeDir = testDirectory.homeDir( databaseName );
         File backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =

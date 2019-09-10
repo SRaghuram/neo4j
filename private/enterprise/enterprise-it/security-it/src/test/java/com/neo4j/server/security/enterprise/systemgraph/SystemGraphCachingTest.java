@@ -52,7 +52,7 @@ class SystemGraphCachingTest
     @BeforeEach
     void setUp() throws Throwable
     {
-        final DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() );
+        final DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
         builder.setConfig( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
         builder.setConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME ) );
         managementService = builder.build();

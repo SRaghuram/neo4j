@@ -47,7 +47,7 @@ class MultiDatabaseProcedureIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
         database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

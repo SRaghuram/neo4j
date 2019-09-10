@@ -54,7 +54,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
-        logDirectory = testDirectory.directory();
+        logDirectory = testDirectory.homeDir();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =

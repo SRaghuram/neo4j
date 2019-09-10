@@ -59,6 +59,6 @@ class DefaultDatabaseDropIT
 
     private DatabaseManagementService createManagementService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
     }
 }

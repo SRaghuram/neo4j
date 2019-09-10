@@ -48,6 +48,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 
 public class Neo4jDb extends Db
 {
@@ -413,7 +414,7 @@ public class Neo4jDb extends Db
     public static DatabaseLayout layoutWithTxLogLocation( File storeDir )
     {
         File txLogsDir = new File( storeDir, "data/tx-logs/" );
-        return DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
+        return DatabaseLayout.of( storeDir, storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
     }
 
     public static BatchInserter newInserter( File storeDir, File importerPropertiesFile )
@@ -422,7 +423,7 @@ public class Neo4jDb extends Db
         {
             Config importerConfig = Config.newBuilder().fromFile( importerPropertiesFile ).build();
             File txLogsDir = new File( storeDir, "data/tx-logs/" );
-            DatabaseLayout layout = DatabaseLayout.of( storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
+            DatabaseLayout layout = DatabaseLayout.of( storeDir, storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
             return BatchInserters.inserter( layout, importerConfig );
         }
         catch ( IOException e )
@@ -441,6 +442,7 @@ public class Neo4jDb extends Db
     {
         File storeDir = dbDir.getParentFile();
         DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( storeDir );
+        builder.setConfig( databases_root_path, storeDir.toPath().toAbsolutePath() );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );

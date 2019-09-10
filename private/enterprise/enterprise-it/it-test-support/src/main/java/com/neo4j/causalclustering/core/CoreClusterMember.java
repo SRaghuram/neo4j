@@ -52,7 +52,7 @@ public class CoreClusterMember implements ClusterMember
 {
     public interface CoreGraphDatabaseFactory
     {
-        CoreGraphDatabase create( File databaseDirectory, Config memberConfig, GraphDatabaseDependencies databaseDependencies,
+        CoreGraphDatabase create( Config memberConfig, GraphDatabaseDependencies databaseDependencies,
                 DiscoveryServiceFactory discoveryServiceFactory );
     }
 
@@ -100,7 +100,7 @@ public class CoreClusterMember implements ClusterMember
         boltSocketAddress = format( advertisedAddress, boltPort );
         raftListenAddress = format( listenAddress, raftPort );
 
-        config.set( GraphDatabaseSettings.default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        config.set( default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         config.set( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.CORE );
         config.set( GraphDatabaseSettings.default_advertised_address, new SocketAddress( advertisedAddress ) );
         config.set( CausalClusteringSettings.initial_discovery_members, addresses );
@@ -146,7 +146,7 @@ public class CoreClusterMember implements ClusterMember
 
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), memberConfig.get( GraphDatabaseSettings.default_database ) );
+        this.defaultDatabaseLayout = DatabaseLayout.of( neo4jHome, databasesDirectory, of( memberConfig ), memberConfig.get( default_database ) );
     }
 
     @Override
@@ -179,7 +179,7 @@ public class CoreClusterMember implements ClusterMember
     @Override
     public void start()
     {
-        coreGraphDatabase = dbFactory.create( databasesDirectory, memberConfig,
+        coreGraphDatabase = dbFactory.create( memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
         defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( config().get( default_database ) );
         systemDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );

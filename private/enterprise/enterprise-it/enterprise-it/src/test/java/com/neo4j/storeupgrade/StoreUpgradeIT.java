@@ -162,7 +162,7 @@ public class StoreUpgradeIT
         {
             store.prepareDirectory( testDir.databaseDir() );
 
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
@@ -185,8 +185,8 @@ public class StoreUpgradeIT
         @Test
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            File rootDir = testDir.directory();
-            DatabaseLayout databaseLayout = DatabaseLayout.of( rootDir, DEFAULT_DATABASE_NAME );
+            File rootDir = testDir.homeDir();
+            DatabaseLayout databaseLayout = DatabaseLayout.of( rootDir, rootDir, DEFAULT_DATABASE_NAME );
 
             store.prepareDirectory( databaseLayout.databaseDirectory() );
 
@@ -233,7 +233,7 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
@@ -259,7 +259,7 @@ public class StoreUpgradeIT
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
-            TestDatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseDirectory.getParentFile() );
+            TestDatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
             builder.setConfig( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation.toPath().toAbsolutePath() );
@@ -328,7 +328,7 @@ public class StoreUpgradeIT
             // migrate the store using a single instance
             File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.build();
@@ -376,7 +376,7 @@ public class StoreUpgradeIT
                 }
             }
 
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.storeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             DatabaseManagementService managementService = builder.build();

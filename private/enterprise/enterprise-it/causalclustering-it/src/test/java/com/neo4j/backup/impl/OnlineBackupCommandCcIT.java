@@ -443,7 +443,7 @@ class OnlineBackupCommandCcIT
     private static DbRepresentation getBackupDbRepresentation( File backupDir, String databaseName )
     {
         Config config = Config.defaults( OnlineBackupSettings.online_backup_enabled, false );
-        return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ), config );
+        return DbRepresentation.of( DatabaseLayout.of( backupDir, backupDir, databaseName ), config );
     }
 
     private int runBackupToolAndGetExitCode( String address, String databaseName )

@@ -32,7 +32,7 @@ public abstract class EnterpriseServerIT extends ExclusiveServerTestBase
     {
         server = EnterpriseServerBuilder.serverOnRandomPorts()
                                         .persistent()
-                                        .usingDataDir( staticFolder.storeDir().getAbsolutePath() )
+                                        .usingDataDir( staticFolder.homeDir().getAbsolutePath() )
                                         .build();
 
         suppressAll().call((Callable<Void>) () ->

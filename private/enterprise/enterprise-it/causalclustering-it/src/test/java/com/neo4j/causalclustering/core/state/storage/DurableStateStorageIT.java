@@ -47,7 +47,7 @@ class DurableStateStorageIT
     @BeforeEach
     void setUp()
     {
-        dir = testDirectory.directory();
+        dir = testDirectory.homeDir();
     }
 
     @Test

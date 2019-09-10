@@ -264,7 +264,7 @@ class StoreCopyClientIT
                     new SingleAddressProvider( new SocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
 
             StoreId storeId = halfWayFailingServerHandler.getStoreId();
-            File databaseDir = testDirectory.storeDir();
+            File databaseDir = testDirectory.homeDir();
             StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( databaseDir, fs, new Monitors() );
 
             // and

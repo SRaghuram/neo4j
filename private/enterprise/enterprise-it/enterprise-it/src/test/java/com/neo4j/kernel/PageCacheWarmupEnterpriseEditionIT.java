@@ -171,6 +171,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         db.withSetting( MetricsSettings.metricsEnabled, false )
           .withSetting( OnlineBackupSettings.online_backup_enabled, false )
+          .withSetting( GraphDatabaseSettings.databases_root_path, testDirectory.homeDir().toPath().toAbsolutePath() )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, Duration.ofMillis( 100 ) );
         db.ensureStarted();
         createData();

@@ -23,6 +23,7 @@ import org.neo4j.kernel.internal.locker.FileLockException;
 import static java.lang.String.format;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 public class RestoreDatabaseCommand
 {
@@ -131,9 +132,10 @@ public class RestoreDatabaseCommand
 
     private static DatabaseLayout buildTargetDatabaseLayout( String databaseName, Config config )
     {
-        var rootFile = config.get( databases_root_path ).toFile().getAbsoluteFile();
+        var homedir = config.get( neo4j_home ).toFile();
+        var rootFile = config.get( databases_root_path ).toFile();
         var layoutConfig = LayoutConfig.of( config );
         var normalizedDatabaseName = new NormalizedDatabaseName( databaseName );
-        return DatabaseLayout.of( rootFile, layoutConfig, normalizedDatabaseName.name() );
+        return DatabaseLayout.of( homedir, rootFile, layoutConfig, normalizedDatabaseName.name() );
     }
 }

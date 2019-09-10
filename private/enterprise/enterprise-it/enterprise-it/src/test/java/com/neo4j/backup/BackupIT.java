@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -122,6 +123,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
@@ -153,24 +155,28 @@ class BackupIT
     @Inject
     private RandomRule random;
 
-    private File serverStorePath;
+    private File serverHomeDir;
     private File otherServerPath;
     private File backupDatabasePath;
     private File backupsDir;
     private List<GraphDatabaseService> databases;
     private DatabaseLayout backupDatabaseLayout;
-    private DatabaseLayout serverStoreLayout;
+    private DatabaseLayout serverDatabaseLayout;
     private DatabaseManagementService managementService;
 
     @BeforeEach
     void beforeEach()
     {
         databases = new ArrayList<>();
-        serverStorePath = testDirectory.storeDir( "server" );
-        serverStoreLayout = DatabaseLayout.of( serverStorePath, DEFAULT_DATABASE_NAME );
-        otherServerPath = DatabaseLayout.of( testDirectory.storeDir( "otherServer" ), DEFAULT_DATABASE_NAME ).databaseDirectory();
-        backupsDir = testDirectory.storeDir( "backups" );
-        backupDatabaseLayout = DatabaseLayout.of( backupsDir, DEFAULT_DATABASE_NAME );
+        serverHomeDir = testDirectory.homeDir( "server" );
+        serverDatabaseLayout =  DatabaseLayout.of( serverHomeDir, serverHomeDir, () -> Optional.of( serverHomeDir ), DEFAULT_DATABASE_NAME );
+
+        File otherServer = testDirectory.homeDir( "otherServer" );
+        otherServerPath = DatabaseLayout.of( otherServer, otherServer, () -> Optional.of( otherServer ), DEFAULT_DATABASE_NAME ).databaseDirectory();
+
+        backupsDir = testDirectory.homeDir( "backups" );
+
+        backupDatabaseLayout = DatabaseLayout.of( backupsDir, backupsDir, () -> Optional.of( backupsDir ), DEFAULT_DATABASE_NAME );
         backupDatabasePath = backupDatabaseLayout.databaseDirectory();
     }
 
@@ -187,9 +193,9 @@ class BackupIT
     @TestWithRecordFormats
     void makeSureFullFailsWhenDifferentDbExists( String recordFormatName )
     {
-        createInitialDataSet( serverStorePath, recordFormatName );
+        createInitialDataSet( serverHomeDir, recordFormatName );
         createInitialDataSet( backupsDir, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
 
@@ -199,8 +205,8 @@ class BackupIT
     @TestWithRecordFormats
     void makeSureFullWorksWhenNoDb( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        DbRepresentation initialDataSet = createInitialDataSet( serverStorePath, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
+        DbRepresentation initialDataSet = createInitialDataSet( serverHomeDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir );
 
         executeBackupWithoutFallbackToFull( db );
 
@@ -210,23 +216,23 @@ class BackupIT
     @TestWithRecordFormats
     void backedUpDatabaseContainsChecksumOfLastTx( String recordFormatName ) throws Exception
     {
-        createInitialDataSet( serverStorePath, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
+        createInitialDataSet( serverHomeDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir );
 
         executeBackup( db );
         managementService.shutdown();
 
-        long firstChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
+        long firstChecksum = lastTxChecksumOf( serverDatabaseLayout, pageCache );
         assertNotEquals( 0, firstChecksum );
         assertEquals( firstChecksum, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
 
-        addMoreData( serverStorePath, recordFormatName );
-        db = startDb( serverStorePath );
+        addMoreData( serverHomeDir, recordFormatName );
+        db = startDb( serverHomeDir );
 
         executeBackupWithoutFallbackToFull( db );
         managementService.shutdown();
 
-        long secondChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
+        long secondChecksum = lastTxChecksumOf( serverDatabaseLayout, pageCache );
         assertNotEquals( 0, secondChecksum );
         assertEquals( secondChecksum, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
         assertNotEquals( firstChecksum, secondChecksum );
@@ -235,7 +241,7 @@ class BackupIT
     @TestWithRecordFormats
     void shouldFindTransactionLogContainingLastNeoStoreTransactionInAnEmptyStore( String recordFormatName ) throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
 
         executeBackup( db );
 
@@ -247,7 +253,7 @@ class BackupIT
     void shouldFindTransactionLogContainingLastNeoStoreTransaction( String recordFormatName ) throws Exception
     {
 
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
         createInitialDataSet( db );
         createIndex( db );
         createNode( db );
@@ -261,16 +267,16 @@ class BackupIT
     @TestWithRecordFormats
     void fullThenIncremental( String recordFormatName ) throws Exception
     {
-        DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverStorePath, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
+        DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir );
 
         executeBackup( db );
 
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
         managementService.shutdown();
 
-        DbRepresentation furtherRepresentation = addMoreData( serverStorePath, recordFormatName );
-        db = startDb( serverStorePath );
+        DbRepresentation furtherRepresentation = addMoreData( serverHomeDir, recordFormatName );
+        db = startDb( serverHomeDir );
 
         executeBackupWithoutFallbackToFull( db );
 
@@ -280,8 +286,8 @@ class BackupIT
     @TestWithRecordFormats
     void makeSureNoLogFileRemains( String recordFormatName ) throws Exception
     {
-        createInitialDataSet( serverStorePath, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
+        createInitialDataSet( serverHomeDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir );
 
         // First check full
         executeBackup( db );
@@ -293,8 +299,8 @@ class BackupIT
 
         // Then check real incremental
         managementService.shutdown();
-        addMoreData( serverStorePath, recordFormatName );
-        db = startDb( serverStorePath );
+        addMoreData( serverHomeDir, recordFormatName );
+        db = startDb( serverHomeDir );
 
         executeBackupWithoutFallbackToFull( db );
         assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
@@ -304,8 +310,8 @@ class BackupIT
     void makeSureStoreIdIsEnforced( String recordFormatName ) throws Exception
     {
         // Create data set X on server A
-        DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverStorePath, recordFormatName );
-        GraphDatabaseService db = startDb( serverStorePath );
+        DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverHomeDir, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir );
 
         // Grab initial backup from server A
         executeBackup( db );
@@ -326,8 +332,8 @@ class BackupIT
 
         // Just make sure incremental backup can be received properly from
         // server A, even after a failed attempt from server B
-        DbRepresentation furtherRepresentation = addMoreData( serverStorePath, recordFormatName );
-        db = startDb( serverStorePath );
+        DbRepresentation furtherRepresentation = addMoreData( serverHomeDir, recordFormatName );
+        db = startDb( serverHomeDir );
         executeBackupWithoutFallbackToFull( db );
         assertEquals( furtherRepresentation, getBackupDbRepresentation() );
     }
@@ -335,7 +341,7 @@ class BackupIT
     @TestWithRecordFormats
     void multipleIncrementals( String recordFormatName ) throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -368,7 +374,7 @@ class BackupIT
         // given
         ExecutorService executor = newSingleThreadedExecutor();
         AtomicBoolean end = new AtomicBoolean();
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
         int numberOfIndexedLabels = 10;
         List<Label> indexedLabels = createIndexes( db, numberOfIndexedLabels );
 
@@ -396,7 +402,7 @@ class BackupIT
     @TestWithRecordFormats
     void shouldBackupEmptyStore( String recordFormatName ) throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
 
         executeBackup( db );
 
@@ -406,19 +412,19 @@ class BackupIT
     @TestWithRecordFormats
     void shouldRetainFileLocksAfterFullBackupOnLiveDatabase( String recordFormatName ) throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
-        assertStoreIsLocked( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
+        assertStoreIsLocked( serverHomeDir );
 
         executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
-        assertStoreIsLocked( serverStorePath );
+        assertStoreIsLocked( serverHomeDir );
     }
 
     @TestWithRecordFormats
     void shouldIncrementallyBackupDenseNodes( String recordFormatName ) throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
         createInitialDataSet( db );
 
         executeBackup( db );
@@ -431,7 +437,7 @@ class BackupIT
     @TestWithRecordFormats
     void shouldLeaveIdFilesAfterBackup( String recordFormatName ) throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        GraphDatabaseService db = startDb( serverHomeDir, recordFormatName );
         createInitialDataSet( db );
 
         executeBackup( db );
@@ -449,7 +455,7 @@ class BackupIT
     {
         Path customTxLogsLocation = testDirectory.directory( "customLogLocation" ).toPath().toAbsolutePath();
         Map<Setting<?>,Object> settings = Maps.mutable.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
-        GraphDatabaseService db = startDb( serverStorePath, settings );
+        GraphDatabaseService db = startDb( serverHomeDir, settings );
         createInitialDataSet( db );
 
         LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs ).build();
@@ -496,7 +502,7 @@ class BackupIT
     @Test
     void shouldCopyInvalidFileFromBackupDirectoryToErrorDirectoryAndDoFullBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
         assertTrue( backupDatabaseLayout.databaseDirectory().mkdirs() );
@@ -520,7 +526,7 @@ class BackupIT
     @Test
     void shouldCopyInvalidDirectoryFromBackupDirectoryToErrorDirectoryAndDoFullBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
         File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" );
@@ -547,7 +553,7 @@ class BackupIT
     @Test
     void shouldCopyStoreFiles() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
         addLotsOfData( db );
         createIndexes( db, 42 );
@@ -585,7 +591,7 @@ class BackupIT
     @Test
     void incrementallyBackupDatabaseShouldNotKeepGeneratedIdFiles() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         Label markerLabel = Label.label( "marker" );
 
         try ( Transaction transaction = db.beginTx() )
@@ -677,7 +683,7 @@ class BackupIT
          */
 
         // given
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createIndex( db );
 
         for ( int i = 0; i < 100; i++ )
@@ -698,7 +704,7 @@ class BackupIT
 
         managementService.shutdown();
         FileUtils.deleteFile( oldLog );
-        GraphDatabaseService dbAfterRestart = startDb( serverStorePath );
+        GraphDatabaseService dbAfterRestart = startDb( serverHomeDir );
 
         long lastCommittedTxAfter = getLastCommittedTx( dbAfterRestart );
 
@@ -714,7 +720,7 @@ class BackupIT
     void shouldFindValidPreviousCommittedTxIdInFirstNeoStoreLog() throws Exception
     {
         // given
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
         flushAndForce( db );
 
@@ -745,7 +751,7 @@ class BackupIT
     @Test
     void shouldPerformConsistencyCheckAfterBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
         corruptStore( db );
 
@@ -759,7 +765,7 @@ class BackupIT
     @Test
     void shouldNotPerformConsistencyCheckAfterBackupWhenDisabled() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
         corruptStore( db );
 
@@ -821,12 +827,12 @@ class BackupIT
     @Test
     void shouldWorkWithReadOnlyDatabases() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
         addLotsOfData( db );
         managementService.shutdown();
 
-        db = startDb( serverStorePath, Maps.mutable.of( read_only, true ) );
+        db = startDb( serverHomeDir, Maps.mutable.of( read_only, true ) );
 
         executeBackup( db );
 
@@ -836,7 +842,7 @@ class BackupIT
     @Test
     void shouldThrowWhenExistingBackupIsFromSeparatelyUpgradedStore() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         addLotsOfData( db );
 
         executeBackup( db );
@@ -864,7 +870,7 @@ class BackupIT
          * The situation is resolved by a check added in TransactionRecordState which skips the creation of such
          * commands.
          */
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
         executeBackup( db );
@@ -881,7 +887,7 @@ class BackupIT
     {
         var unknownDbName = "unknown_db";
 
-        var db = startDb( serverStorePath );
+        var db = startDb( serverHomeDir );
         createInitialDataSet( db );
 
         var context = defaultBackupContextBuilder( backupAddress( db ) )
@@ -922,7 +928,7 @@ class BackupIT
 
     private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, SettingValueParsers.FALSE ) );
+        GraphDatabaseService db = startDb( serverHomeDir, Maps.mutable.of( keep_logical_logs, SettingValueParsers.FALSE ) );
 
         createInitialDataSet( db );
         createIndex( db );
@@ -991,13 +997,13 @@ class BackupIT
     {
         int transactionsDuringBackup = 10;//random.nextInt( 10, 1000 );
 
-        GraphDatabaseService db = startDb( serverStorePath );
+        GraphDatabaseService db = startDb( serverHomeDir );
         createIndexAndNodes( db, nodesInDbBeforeBackup );
         long lastCommittedTxIdBeforeBackup = getLastCommittedTx( db );
 
         Barrier.Control barrier = new Barrier.Control();
         Monitors monitors = dependencyResolver( db ).resolveDependency( Monitors.class );
-        monitors.addMonitorListener( new BackupClientPausingMonitor( barrier, serverStoreLayout ) );
+        monitors.addMonitorListener( new BackupClientPausingMonitor( barrier, serverDatabaseLayout ) );
 
         ExecutorService executor = newSingleThreadedExecutor();
         Future<Void> midBackupTransactionsFuture = executor.submit( () ->
@@ -1108,6 +1114,7 @@ class BackupIT
     {
         DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( path );
 
+        settings.putIfAbsent( databases_root_path, path.toPath().toAbsolutePath() );
         settings.putIfAbsent( online_backup_enabled, true );
         builder.setConfig( settings );
 
@@ -1122,6 +1129,7 @@ class BackupIT
         Config config = Config.newBuilder()
                 .set( online_backup_enabled, false )
                 .set( transaction_logs_root_path, backupsDir.toPath().toAbsolutePath() )
+                .set( databases_root_path, backupsDir.toPath().toAbsolutePath() )
                 .build();
         return DbRepresentation.of( backupDatabaseLayout, config );
     }

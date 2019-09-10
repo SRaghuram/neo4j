@@ -77,7 +77,7 @@ class ReadOnlyDbmsIT
 
     private DatabaseManagementService createDbms( boolean readOnly )
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( read_only, readOnly ).build();
     }
 }

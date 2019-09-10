@@ -95,7 +95,7 @@ class CatchupServerIT
     void startDb()
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setFileSystem( fs )
                 .setConfig( auth_enabled, true )
                 .build();

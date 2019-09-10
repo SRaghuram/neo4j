@@ -72,7 +72,7 @@ class DatabaseMetricsExtensionIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.storeDir(), "metrics" );
+        outputPath = new File( directory.homeDir(), "metrics" );
         builder.setConfig( MetricsSettings.metricsEnabled, true );
         builder.setConfig( MetricsSettings.csvEnabled, true );
         builder.setConfig( cypher_min_replan_interval, Duration.ofMinutes( 0 ) );

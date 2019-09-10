@@ -100,10 +100,10 @@ class QueryLoggerIT
     @BeforeEach
     void setUp()
     {
-        logsDirectory = new File( testDirectory.storeDir(), "logs" );
+        logsDirectory = new File( testDirectory.homeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
-        databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
                 .setInternalLogProvider( inMemoryLog )
                 .impermanent();
@@ -358,7 +358,7 @@ class QueryLoggerIT
     @Test
     void disabledQueryLogRotation() throws Exception
     {
-        final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
+        final File logsDirectory = new File( testDirectory.homeDir(), "logs" );
         final File logFilename = new File( logsDirectory, "query.log" );
         final File shiftedLogFilename1 = new File( logsDirectory, "query.log.1" );
         databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
@@ -387,7 +387,7 @@ class QueryLoggerIT
     @Test
     void queryLogRotation()
     {
-        final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
+        final File logsDirectory = new File( testDirectory.homeDir(), "logs" );
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )

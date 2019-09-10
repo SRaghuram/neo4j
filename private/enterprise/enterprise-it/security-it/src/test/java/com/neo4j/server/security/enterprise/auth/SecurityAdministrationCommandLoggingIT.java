@@ -58,10 +58,10 @@ class SecurityAdministrationCommandLoggingIT
     @BeforeEach
     void setUp()
     {
-        File logsDirectory = new File( testDirectory.storeDir(), "logs" );
+        File logsDirectory = new File( testDirectory.homeDir(), "logs" );
         logFilename = new File( logsDirectory, "security.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setInternalLogProvider( inMemoryLog )
                 .setFileSystem( testDirectory.getFileSystem() )
                 .impermanent()

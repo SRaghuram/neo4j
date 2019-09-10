@@ -110,8 +110,8 @@ class ConnectionTrackingIT
     @BeforeAll
     void beforeAll()
     {
-        neo4j = new EnterpriseInProcessNeo4jBuilder( dir.directory() )
-                .withConfig( neo4j_home, dir.directory().toPath().toAbsolutePath() )
+        neo4j = new EnterpriseInProcessNeo4jBuilder( dir.homeDir() )
+                .withConfig( neo4j_home, dir.homeDir().toPath().toAbsolutePath() )
                 .withConfig( auth_enabled, true )
                 .withConfig( HttpConnector.enabled, true )
                 .withConfig( HttpsConnector.enabled, true )

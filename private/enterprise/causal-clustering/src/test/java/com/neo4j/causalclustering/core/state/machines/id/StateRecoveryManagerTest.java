@@ -49,7 +49,7 @@ public class StateRecoveryManagerTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
         fsa.write( fileA );
@@ -77,7 +77,7 @@ public class StateRecoveryManagerTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
         StoreChannel channel = fsa.write( fileA );
@@ -101,7 +101,7 @@ public class StateRecoveryManagerTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
         StoreChannel channel = fsa.write( fileA );
@@ -130,7 +130,7 @@ public class StateRecoveryManagerTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
         StoreChannel channel = fsa.write( fileA );
@@ -162,7 +162,7 @@ public class StateRecoveryManagerTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
 
@@ -181,12 +181,12 @@ public class StateRecoveryManagerTest
 
     private File fileA()
     {
-        return new File( testDir.directory(), "file.A" );
+        return new File( testDir.homeDir(), "file.A" );
     }
 
     private File fileB()
     {
-        return new File( testDir.directory(), "file.B" );
+        return new File( testDir.homeDir(), "file.B" );
     }
 
     private void writeSomeGarbage( EphemeralFileSystemAbstraction fsa, File file ) throws IOException

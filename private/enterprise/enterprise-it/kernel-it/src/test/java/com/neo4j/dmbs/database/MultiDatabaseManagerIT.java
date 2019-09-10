@@ -53,7 +53,7 @@ class MultiDatabaseManagerIT
     void setUp()
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setInternalLogProvider( logProvider )
                 .setConfig( default_database, CUSTOM_DATABASE_NAME )
                 .setConfig( maxNumberOfDatabases, 5L )

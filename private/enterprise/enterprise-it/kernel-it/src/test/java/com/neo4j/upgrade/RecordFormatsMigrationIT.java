@@ -155,7 +155,7 @@ class RecordFormatsMigrationIT
 
     private DatabaseManagementServiceBuilder getGraphDatabaseBuilder()
     {
-        return new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, true )
+        return new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, true )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

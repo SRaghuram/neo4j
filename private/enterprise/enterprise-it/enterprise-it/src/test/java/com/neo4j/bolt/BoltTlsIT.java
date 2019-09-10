@@ -61,7 +61,7 @@ public class BoltTlsIT
     @Before
     public void setup() throws IOException
     {
-        File sslObjectsDir = new File( testDirectory.storeDir(), "certificates" );
+        File sslObjectsDir = new File( testDirectory.homeDir(), "certificates" );
         assertTrue( sslObjectsDir.mkdirs() );
 
         sslResource = selfSignedKeyId( 0 ).trustKeyId( 0 ).install( sslObjectsDir );
@@ -115,7 +115,7 @@ public class BoltTlsIT
 
     private void createAndStartDb()
     {
-        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
+        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() ).impermanent()
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) )

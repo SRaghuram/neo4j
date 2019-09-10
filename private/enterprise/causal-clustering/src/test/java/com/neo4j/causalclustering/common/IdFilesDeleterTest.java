@@ -33,7 +33,7 @@ public class IdFilesDeleterTest
     public void shouldReturnFalseWhenNoIdFilesDeleted()
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.directory() );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.homeDir() );
 
         // when
         boolean anyIdFilesDeleted = IdFilesDeleter.deleteIdFiles( databaseLayout, fs );
@@ -46,7 +46,7 @@ public class IdFilesDeleterTest
     public void shouldDeleteIdFiles()
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.directory() );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.homeDir() );
 
         for ( File idFile : databaseLayout.idFiles() )
         {
@@ -64,7 +64,7 @@ public class IdFilesDeleterTest
     public void shouldNotDeleteUnknownFiles()
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.directory() );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.homeDir() );
 
         File unknownA = testDirectory.createFile( "unknown" );
         File unknownB = testDirectory.createFile( "unknown.id" );

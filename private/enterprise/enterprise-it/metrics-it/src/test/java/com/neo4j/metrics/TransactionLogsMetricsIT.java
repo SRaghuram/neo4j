@@ -56,7 +56,7 @@ class TransactionLogsMetricsIT
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        outputPath = new File( directory.storeDir(), "metrics" );
+        outputPath = new File( directory.homeDir(), "metrics" );
         builder.setConfig( MetricsSettings.metricsEnabled, true );
         builder.setConfig( MetricsSettings.csvEnabled, true );
         builder.setConfig( preallocate_logical_logs, false );

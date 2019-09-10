@@ -51,7 +51,7 @@ class SegmentedRaftLogRotationTest
         log.append( new RaftLogEntry( 0, replicatedStringOfBytes( ROTATE_AT_SIZE_IN_BYTES ) ) );
 
         // Then
-        File[] files = fileSystem.listFiles( testDirectory.directory(), ( dir, name ) -> name.startsWith( "raft" ) );
+        File[] files = fileSystem.listFiles( testDirectory.homeDir(), ( dir, name ) -> name.startsWith( "raft" ) );
         assertEquals( 2, files.length );
     }
 
@@ -87,7 +87,7 @@ class SegmentedRaftLogRotationTest
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.defaultValue(), logProvider )
                         .newInstance();
-        return new SegmentedRaftLog( fileSystem, testDirectory.directory(), rotateAtSize,
+        return new SegmentedRaftLog( fileSystem, testDirectory.homeDir(), rotateAtSize,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 0, Clocks.fakeClock(), new OnDemandJobScheduler(),
                 pruningStrategy );
     }

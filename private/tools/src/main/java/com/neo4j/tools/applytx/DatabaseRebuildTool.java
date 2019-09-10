@@ -139,13 +139,15 @@ public class DatabaseRebuildTool
         // try to get custom tx log root directory if specified
         String txRootDirectoryPath = args.get( "fromTx" );
         File txRootDirectory = txRootDirectoryPath != null ? new File( txRootDirectoryPath ).getParentFile() : sourceDirectory.getParentFile();
-        return DatabaseLayout.of( sourceDirectory, () -> Optional.of( txRootDirectory ) );
+        return DatabaseLayout.of( sourceDirectory, sourceDirectory, () -> Optional.of( txRootDirectory ) );
     }
 
     private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )
     {
-        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir );
-        builder.setConfig( GraphDatabaseSettings.default_database, databaseName );
+        DatabaseManagementServiceBuilder builder = new DatabaseManagementServiceBuilder( storeDir )
+                .setConfig( GraphDatabaseSettings.databases_root_path, storeDir.toPath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.toPath() )
+                .setConfig( GraphDatabaseSettings.default_database, databaseName );
         Map<String, String> rawCfgValues = new HashMap<>();
         for ( Map.Entry<String, String> entry : args.asMap().entrySet() )
         {

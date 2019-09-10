@@ -21,7 +21,7 @@ public class NeoServerRestartTestEnterpriseIT extends NeoServerRestartTestIT
     {
         CommunityServerBuilder builder = EnterpriseServerBuilder.serverOnRandomPorts()
                                                                 .persistent()
-                                                                .usingDataDir( folder.storeDir().getAbsolutePath() )
+                                                                .usingDataDir( folder.homeDir().getAbsolutePath() )
                                                                 .withProperty( GraphDatabaseSettings.pagecache_swapper.name(), customPageSwapperName );
         return builder.build();
     }

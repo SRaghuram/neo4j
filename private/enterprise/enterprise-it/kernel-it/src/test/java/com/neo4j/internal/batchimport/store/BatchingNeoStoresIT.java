@@ -80,7 +80,7 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( GraphDatabaseSettings.fail_on_missing_files, false )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );

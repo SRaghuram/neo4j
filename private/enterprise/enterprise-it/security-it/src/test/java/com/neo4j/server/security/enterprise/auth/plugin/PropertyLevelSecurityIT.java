@@ -69,7 +69,7 @@ class PropertyLevelSecurityIT
     @BeforeEach
     void setUp() throws Throwable
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).impermanent()
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).impermanent()
                 .setConfig( SecuritySettings.property_level_authorization_enabled, true )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )
                 .setConfig( GraphDatabaseSettings.procedure_roles, "test.*:procRole" ).setConfig( GraphDatabaseSettings.auth_enabled, true ).build();

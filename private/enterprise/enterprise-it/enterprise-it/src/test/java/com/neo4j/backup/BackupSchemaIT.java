@@ -48,6 +48,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.function.Predicates.instanceOf;
 import static org.neo4j.graphdb.Label.label;
@@ -134,7 +135,7 @@ class BackupSchemaIT
 
     private void testBackup( SchemaElement schemaElement ) throws Exception
     {
-        db = startDb( testDirectory.storeDir(), true );
+        db = startDb( testDirectory.homeDir(), true );
 
         schemaElement.create( db );
         awaitIndexesOnline();
@@ -177,8 +178,11 @@ class BackupSchemaIT
 
     private static GraphDatabaseAPI startDb( File dir, boolean backupEnabled )
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir ).setConfig( online_backup_enabled, backupEnabled )
-                .setConfig( transaction_logs_root_path, dir.toPath().toAbsolutePath() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir )
+                .setConfig( online_backup_enabled, backupEnabled )
+                .setConfig( transaction_logs_root_path, dir.toPath().toAbsolutePath() )
+                .setConfig( databases_root_path, dir.toPath().toAbsolutePath() )
+                .build();
         return (GraphDatabaseAPI) managementService.database( DB_NAME );
     }
 

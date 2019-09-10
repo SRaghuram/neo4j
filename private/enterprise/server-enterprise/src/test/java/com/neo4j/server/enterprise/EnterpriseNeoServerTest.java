@@ -40,7 +40,7 @@ class EnterpriseNeoServerTest
         Config config = Config.newBuilder()
                 .setDefaults( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, Mode.SINGLE )
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath().toAbsolutePath() )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpsConnector.listen_address, new SocketAddress( "localhost", 0 ) )
@@ -51,7 +51,7 @@ class EnterpriseNeoServerTest
         server.start();
         try
         {
-            Path expectedPath = Paths.get( testDirectory.storeDir().getPath(), "data", "databases", DEFAULT_DATABASE_NAME );
+            Path expectedPath = Paths.get( testDirectory.homeDir().getPath(), "data", "databases", DEFAULT_DATABASE_NAME );
             GraphDatabaseFacade graph = server.getDatabaseService().getDatabase();
             assertEquals( expectedPath, graph.databaseLayout().databaseDirectory().toPath() );
         }

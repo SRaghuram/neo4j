@@ -43,6 +43,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
@@ -79,7 +80,7 @@ class FulltextIndexBackupIT
     @BeforeEach
     void setUp()
     {
-        dbManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.storeDir() )
+        dbManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.homeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, true )
                 .build();
         db = (GraphDatabaseAPI) dbManagementService.database( DEFAULT_DATABASE_NAME );
@@ -198,6 +199,7 @@ class FulltextIndexBackupIT
     {
         backupManagementService = new TestEnterpriseDatabaseManagementServiceBuilder( backupDatabaseDir )
                 .setConfig( transaction_logs_root_path, backupDatabaseDir.toPath().toAbsolutePath() )
+                .setConfig( databases_root_path, backupDatabaseDir.toPath().toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) backupManagementService.database( DEFAULT_DATABASE_NAME );
     }

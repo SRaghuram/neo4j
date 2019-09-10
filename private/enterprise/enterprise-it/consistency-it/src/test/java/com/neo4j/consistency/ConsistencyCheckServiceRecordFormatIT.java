@@ -45,7 +45,7 @@ class ConsistencyCheckServiceRecordFormatIT
     void checkTinyConsistentStore( String recordFormat ) throws Exception
     {
         testDirectory.databaseLayout();
-        var managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        var managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( record_format, recordFormat ).build();
         try
         {

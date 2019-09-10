@@ -34,6 +34,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.graphdb.Label.label;
 
@@ -63,7 +64,7 @@ class EnterpriseGraphDatabaseBackupIT
     void shouldDoBackup() throws Exception
     {
         var nodeCount = 999;
-        db = newEnterpriseDb( testDirectory.storeDir(), true );
+        db = newEnterpriseDb( testDirectory.homeDir(), true );
         createNodes( db, nodeCount );
 
         var backupDir = performBackup();
@@ -79,7 +80,7 @@ class EnterpriseGraphDatabaseBackupIT
     void shouldFailWithErrorMessageForUnknownDatabase() throws Exception
     {
         var unknownDbName = "unknown_db";
-        db = newEnterpriseDb( testDirectory.storeDir(), true );
+        db = newEnterpriseDb( testDirectory.homeDir(), true );
 
         var exitCode = runBackupToolFromSameJvm( testDirectory.databaseDir(),
                 "--from=" + backupAddress( db ),
@@ -93,7 +94,7 @@ class EnterpriseGraphDatabaseBackupIT
 
     private File performBackup() throws Exception
     {
-        var storeDir = testDirectory.databaseDir();
+        var storeDir = testDirectory.storeDir();
         var backupsDir = testDirectory.directory( "backups" );
 
         var exitCode = runBackupToolFromOtherJvmToGetExitCode( storeDir,
@@ -116,7 +117,9 @@ class EnterpriseGraphDatabaseBackupIT
     {
         var storeDir = databaseDirectory.getParentFile();
         managementService = defaultEnterpriseBuilder( storeDir, backupEnabled )
-                .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() ).build();
+                .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() )
+                .setConfig( databases_root_path, storeDir.toPath().toAbsolutePath() )
+                .build();
         return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 

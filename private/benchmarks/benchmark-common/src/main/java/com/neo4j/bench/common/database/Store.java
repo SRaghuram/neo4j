@@ -92,7 +92,7 @@ public class Store implements AutoCloseable
     {
         try
         {
-            return Files.list( topLevelDir )
+            return Files.walk( topLevelDir )
                         .filter( Files::isDirectory )
                         .filter( Store::isGraphDb )
                         .filter( path -> !path.endsWith( SYSTEM_DATABASE_NAME ) )

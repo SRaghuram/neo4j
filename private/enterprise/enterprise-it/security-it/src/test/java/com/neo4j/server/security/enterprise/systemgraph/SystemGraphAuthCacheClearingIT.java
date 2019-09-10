@@ -69,7 +69,7 @@ class SystemGraphAuthCacheClearingIT
         {
             dbms.shutdown();
             dbms = null;
-            directory.cleanDirectory( directory.storeDir().getAbsolutePath() );
+            directory.cleanDirectory( directory.homeDir().getAbsolutePath() );
         }
         if ( cluster != null )
         {
@@ -82,7 +82,7 @@ class SystemGraphAuthCacheClearingIT
     void systemDbUpdatesShouldClearAuthCacheInStandalone() throws Exception
     {
         // Given a standalone db
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.storeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfigRaw( getConfig() )
                 .build();
@@ -115,7 +115,7 @@ class SystemGraphAuthCacheClearingIT
     void systemDbUpdatesShouldClearPrivilegeCacheInStandalone() throws Exception
     {
         // Given a standalone db
-        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.storeDir() )
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfigRaw( getConfig() )
                 .build();

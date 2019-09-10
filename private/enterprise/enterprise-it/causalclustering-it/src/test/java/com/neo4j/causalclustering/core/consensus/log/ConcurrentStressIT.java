@@ -47,7 +47,7 @@ public abstract class ConcurrentStressIT<T extends RaftLog & Lifecycle>
         try ( DefaultFileSystemAbstraction fsa = new DefaultFileSystemAbstraction() )
         {
             LifeSupport lifeSupport = new LifeSupport();
-            T raftLog = createRaftLog( fsa, dir.directory() );
+            T raftLog = createRaftLog( fsa, dir.homeDir() );
             lifeSupport.add( raftLog );
             lifeSupport.start();
 

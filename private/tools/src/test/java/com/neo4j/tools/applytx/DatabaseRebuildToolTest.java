@@ -5,6 +5,7 @@
  */
 package com.neo4j.tools.applytx;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -14,6 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -25,6 +27,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.scheduler.JobScheduler;
@@ -55,6 +58,16 @@ class DatabaseRebuildToolTest
     @Inject
     private TestDirectory directory;
 
+    private DatabaseLayout fromLayout;
+    private DatabaseLayout toLayout;
+
+    @BeforeEach
+    void setup()
+    {
+        fromLayout = DatabaseLayout.of( directory.homeDir(), directory.homeDir(), () -> Optional.of( directory.homeDir() ), "old" );
+        toLayout = DatabaseLayout.of( directory.homeDir(), directory.homeDir(), () -> Optional.of( directory.homeDir() ), "new" );
+    }
+
     @Test
     void shouldRebuildDbFromTransactions() throws Exception
     {
@@ -62,16 +75,16 @@ class DatabaseRebuildToolTest
         // to test as the functionality of applying transactions.
 
         // GIVEN
-        var fromLayout = directory.databaseLayout( "old" );
-        var toLayout = directory.databaseLayout( "new" );
         databaseWithSomeTransactions( fromLayout );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( System.in, NULL_PRINT_STREAM, NULL_PRINT_STREAM );
 
+        var toNeoLayout = toLayout.getNeo4jLayout();
         // WHEN
         tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(),
                 "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
                 "--to", toLayout.databaseDirectory().getAbsolutePath(),
-                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath(),
+                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.transactionLogsRootDirectory().getAbsolutePath(),
+                "-D" + GraphDatabaseSettings.databases_root_path.name(), toNeoLayout.storeDirectory().getAbsolutePath(),
                 "apply last" );
 
         // THEN
@@ -85,8 +98,6 @@ class DatabaseRebuildToolTest
         // to test as the functionality of applying transactions.
 
         // GIVEN
-        var fromLayout = directory.databaseLayout( "old" );
-        var toLayout = directory.databaseLayout( "new" );
         databaseWithSomeTransactions( fromLayout );
         DatabaseRebuildTool tool = new DatabaseRebuildTool( input( "apply next", "apply next", "cc", "exit" ),
                 NULL_PRINT_STREAM, NULL_PRINT_STREAM );
@@ -150,8 +161,6 @@ class DatabaseRebuildToolTest
     private void shouldPrint( String command, String... expectedResultContaining ) throws Exception
     {
         // GIVEN
-        var fromLayout = directory.databaseLayout( "old" );
-        var toLayout = directory.databaseLayout( "new" );
         databaseWithSomeTransactions( toLayout );
         ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( byteArrayOut );
@@ -197,7 +206,10 @@ class DatabaseRebuildToolTest
 
     private static void databaseWithSomeTransactions( DatabaseLayout databaseLayout )
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+        Neo4jLayout layout = databaseLayout.getNeo4jLayout();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( layout.homeDirectory() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, layout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.databases_root_path, layout.storeDirectory().toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .build();
         GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );

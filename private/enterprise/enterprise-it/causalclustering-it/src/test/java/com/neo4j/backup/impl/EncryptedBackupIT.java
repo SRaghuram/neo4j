@@ -337,7 +337,7 @@ class EncryptedBackupIT
 
             // and data matches
             assertEquals( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ),
-                    DbRepresentation.of( DatabaseLayout.of( backupHome, DEFAULT_DATABASE_NAME ) ) );
+                    DbRepresentation.of( DatabaseLayout.of( backupHome, backupHome, DEFAULT_DATABASE_NAME ) ) );
         }
 
         private static void shouldNotBeSuccessful( IntSupplier backupClient )

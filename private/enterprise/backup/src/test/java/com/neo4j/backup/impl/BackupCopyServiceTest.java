@@ -43,6 +43,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.graphdb.Label.label;
 
 @PageCacheExtension
@@ -95,13 +96,13 @@ class BackupCopyServiceTest
     @Test
     void shouldDeletePreExistingBrokenBackupWhenItHasSameStoreIdAsNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.storeDir( "old" );
-        File newDir = testDirectory.storeDir( "new" );
+        File oldDir = testDirectory.homeDir( "old" );
+        File newDir = testDirectory.homeDir( "new" );
 
         startAndStopDb( oldDir );
 
-        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout oldLayout = DatabaseLayout.of( testDirectory.homeDir(), oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( testDirectory.homeDir(), newDir, DEFAULT_DATABASE_NAME );
 
         fs.copyRecursively( oldLayout.databaseDirectory(), newLayout.databaseDirectory() );
 
@@ -135,14 +136,14 @@ class BackupCopyServiceTest
     @Test
     void shouldNotDeletePreExistingBrokenBackupWhenItsStoreIdIsUnreadable() throws Exception
     {
-        File oldDir = testDirectory.storeDir( "old" );
-        File newDir = testDirectory.storeDir( "new" );
+        File oldDir = testDirectory.homeDir( "old" );
+        File newDir = testDirectory.homeDir( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout oldLayout = DatabaseLayout.of( testDirectory.homeDir(), oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( testDirectory.homeDir(), newDir, DEFAULT_DATABASE_NAME );
 
         assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
         assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
@@ -158,14 +159,14 @@ class BackupCopyServiceTest
     @Test
     void shouldThrowWhenUnableToReadStoreIdFromNewSuccessfulBackup() throws Exception
     {
-        File oldDir = testDirectory.storeDir( "old" );
-        File newDir = testDirectory.storeDir( "new" );
+        File oldDir = testDirectory.homeDir( "old" );
+        File newDir = testDirectory.homeDir( "new" );
 
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        DatabaseLayout oldLayout = DatabaseLayout.of( oldDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout newLayout = DatabaseLayout.of( newDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout oldLayout = DatabaseLayout.of( testDirectory.homeDir(), oldDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = DatabaseLayout.of( testDirectory.homeDir(), newDir, DEFAULT_DATABASE_NAME );
 
         assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
         assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
@@ -181,7 +182,9 @@ class BackupCopyServiceTest
 
     private static void startAndStopDb( File databaseDir )
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDir ).build();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDir )
+                .setConfig( databases_root_path, databaseDir.toPath().toAbsolutePath() )
+                .build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {

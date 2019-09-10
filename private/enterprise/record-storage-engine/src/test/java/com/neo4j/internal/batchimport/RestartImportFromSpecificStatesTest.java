@@ -108,7 +108,7 @@ class RestartImportFromSpecificStatesTest
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.storeDir() ).build();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.homeDir() ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

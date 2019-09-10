@@ -106,7 +106,7 @@ class EnterpriseNeo4JExtensionRegisterIT
     @Test
     void customExtensionWorkingDirectory( Neo4j neo4j )
     {
-        assertThat( neo4j.config().get( GraphDatabaseSettings.data_directory ).toFile().getParentFile().getName(), startsWith( REGISTERED_TEMP_PREFIX ) );
+        assertThat( neo4j.config().get( GraphDatabaseSettings.neo4j_home ).toFile().getParentFile().getName(), startsWith( REGISTERED_TEMP_PREFIX ) );
     }
 
     @Test
@@ -129,8 +129,8 @@ class EnterpriseNeo4JExtensionRegisterIT
     {
         GraphDatabaseAPI api = (GraphDatabaseAPI) databaseService;
         Config config = api.getDependencyResolver().resolveDependency( Config.class );
-        File dataDirectory = config.get( GraphDatabaseSettings.data_directory ).toFile();
-        return new String( Files.readAllBytes( new File( dataDirectory, file ).toPath() ), UTF_8 );
+        File homeDir = config.get( GraphDatabaseSettings.neo4j_home ).toFile();
+        return new String( Files.readAllBytes( new File( homeDir, file ).toPath() ), UTF_8 );
     }
 
     private static File createTempDirectory()

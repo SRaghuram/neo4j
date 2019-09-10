@@ -102,7 +102,7 @@ class SegmentedRaftLogCursorIT
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize, String pruneStrategy )
     {
-        File directory = testDirectory.directory();
+        File directory = testDirectory.homeDir();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =

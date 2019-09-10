@@ -43,10 +43,10 @@ class CommitStateHelperTest
     @BeforeEach
     void setUp()
     {
-        File txLogLocation = new File( testDirectory.directory(), "txLogLocation" );
+        File txLogLocation = new File( testDirectory.homeDir(), "txLogLocation" );
         config = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, txLogLocation.toPath().toAbsolutePath() );
-        File storeDir = testDirectory.storeDir();
-        databaseLayout = DatabaseLayout.of( storeDir, LayoutConfig.of( config ), config.get( GraphDatabaseSettings.default_database ) );
+        databaseLayout = DatabaseLayout.of( testDirectory.homeDir(), testDirectory.homeDir(), LayoutConfig.of( config ),
+                config.get( GraphDatabaseSettings.default_database ) );
         commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine() );
     }
 

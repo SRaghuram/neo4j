@@ -34,7 +34,7 @@ class MultiDatabaseGuardIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
         database = managementService.database( DEFAULT_DATABASE_NAME );
     }
 

@@ -70,7 +70,7 @@ public class BoltFailuresIT
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new DatabaseManagementServiceBuilder( dir.storeDir() ).setMonitors( monitors ) );
+        db = startDbWithBolt( new DatabaseManagementServiceBuilder( dir.homeDir() ).setMonitors( monitors ) );
         try
         {
             // attempt to create a driver when server is unavailable
@@ -182,7 +182,7 @@ public class BoltFailuresIT
 
     private GraphDatabaseService startTestDb( Monitors monitors )
     {
-        return startDbWithBolt( newDbFactory( dir.storeDir() ).setMonitors( monitors ) );
+        return startDbWithBolt( newDbFactory( dir.homeDir() ).setMonitors( monitors ) );
     }
 
     private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )

@@ -49,7 +49,7 @@ class GlobalMetricsBuilderTest
     private void testBuildingWithServerMetrics( boolean serverMetricsEnabled )
     {
         Config config = configWithServerMetrics( serverMetricsEnabled );
-        ExtensionContext extensionContext = new GlobalExtensionContext( testDir.storeLayout(), COMMUNITY, mock( DependencySatisfier.class ) );
+        ExtensionContext extensionContext = new GlobalExtensionContext( testDir.neo4jLayout(), COMMUNITY, mock( DependencySatisfier.class ) );
         LifeSupport life = new LifeSupport();
 
         GlobalMetricsExporter exporter = new GlobalMetricsExporter( new MetricRegistry(), config, NullLogService.getInstance(),

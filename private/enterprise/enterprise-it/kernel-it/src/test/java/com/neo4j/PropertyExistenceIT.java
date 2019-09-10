@@ -27,7 +27,7 @@ class PropertyExistenceIT
     void deletedNodesNotCheckedByExistenceConstraints()
     {
         DatabaseManagementService managementService =
-                new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.directory() ).build();
+                new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {

@@ -126,11 +126,12 @@ public class ClassicNeo4jDatabase
         public ClassicNeo4jDatabase build() throws IOException
         {
             File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
-            managementService = new TestDatabaseManagementServiceBuilder( databasesRootDirectoryAbsolute )
+            managementService = new TestDatabaseManagementServiceBuilder( baseDirectoryAbsolute )
                     .setFileSystem( fileSystem )
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
+                    .setConfig( GraphDatabaseSettings.databases_root_path, databasesRootDirectoryAbsolute.toPath() )
                     .build();
             GraphDatabaseService db = managementService.database( databaseId.name() );
 
@@ -154,7 +155,8 @@ public class ClassicNeo4jDatabase
                 managementService.shutdown();
             }
 
-            return new ClassicNeo4jDatabase( DatabaseLayout.of( databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
+            return new ClassicNeo4jDatabase(
+                    DatabaseLayout.of( databasesRootDirectoryAbsolute, databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
         }
 
         private Path getTransactionLogsRoot()

@@ -35,6 +35,7 @@ import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
@@ -281,10 +282,13 @@ class RebuildFromLogs
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        managementService = new EnterpriseDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+        Neo4jLayout storeLayout = databaseLayout.getNeo4jLayout();
+        managementService = new EnterpriseDatabaseManagementServiceBuilder( storeLayout.storeDirectory() )
                 .setExternalDependencies( dependencies )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
+                .setConfig( GraphDatabaseSettings.databases_root_path, storeLayout.storeDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeLayout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }

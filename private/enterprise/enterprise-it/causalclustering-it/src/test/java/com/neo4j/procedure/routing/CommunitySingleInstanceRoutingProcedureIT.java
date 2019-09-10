@@ -94,9 +94,9 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, db );
     }
 
-    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( File databaseRootDir )
+    protected DatabaseManagementServiceBuilder newGraphDatabaseFactory( File homeDir )
     {
-        return new TestDatabaseManagementServiceBuilder( databaseRootDir );
+        return new TestDatabaseManagementServiceBuilder( homeDir );
     }
 
     private String boltAddress()
@@ -115,7 +115,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     private GraphDatabaseAPI startDb( SocketAddress advertisedBoltAddress )
     {
 
-        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.homeDir() );
         builder.setConfig( auth_enabled, false );
         builder.setConfig( BoltConnector.enabled, true );
         builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );

@@ -49,7 +49,7 @@ class MultiDatabaseFileWatchIT
     void setUp() throws DatabaseExistsException
     {
         logProvider = new AssertableLogProvider( true );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setInternalLogProvider( logProvider )
                 .build();
         database = managementService.database( DEFAULT_DATABASE_NAME );

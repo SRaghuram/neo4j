@@ -32,7 +32,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
     @Override
     protected RaftLog createRaftLog( TestDirectory testDirectory )
     {
-        File directory = testDirectory.directory();
+        File directory = testDirectory.homeDir();
 
         long rotateAtSizeBytes = 128;
         int readerPoolSize = 8;

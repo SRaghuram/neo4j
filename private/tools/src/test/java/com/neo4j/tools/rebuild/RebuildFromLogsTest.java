@@ -77,8 +77,8 @@ class RebuildFromLogsTest
     void shouldRebuildFromLog( WorkLog workLog ) throws Exception, InconsistentStoreException
     {
         // given
-        var prototypeLayout = testDirectory.databaseLayout( testDirectory.storeDir( "prototype" ) );
-        var rebuildLayout = testDirectory.databaseLayout( testDirectory.storeDir( "rebuild" ) );
+        var prototypeLayout = testDirectory.databaseLayout( "prototype" );
+        var rebuildLayout = testDirectory.databaseLayout( "rebuild" );
         populatePrototype( prototypeLayout, workLog );
 
         // when
@@ -155,7 +155,7 @@ class RebuildFromLogsTest
 
     private GraphDatabaseAPI db( DatabaseLayout databaseLayout )
     {
-        managementService = new TestDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+        managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );

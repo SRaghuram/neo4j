@@ -43,7 +43,7 @@ public class ReadReplica implements ClusterMember
 {
     public interface ReadReplicaGraphDatabaseFactory
     {
-        ReadReplicaGraphDatabase create( File databaseDirectory, Config memberConfig, GraphDatabaseDependencies databaseDependencies,
+        ReadReplicaGraphDatabase create( Config memberConfig, GraphDatabaseDependencies databaseDependencies,
                 DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
     }
 
@@ -111,7 +111,7 @@ public class ReadReplica implements ClusterMember
         this.monitors = monitors;
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), DEFAULT_DATABASE_NAME );
+        this.defaultDatabaseLayout = DatabaseLayout.of( neo4jHome, databasesDirectory, of( memberConfig ), DEFAULT_DATABASE_NAME );
     }
 
     @Override
@@ -129,7 +129,7 @@ public class ReadReplica implements ClusterMember
     @Override
     public void start()
     {
-        readReplicaGraphDatabase = dbFactory.create( databasesDirectory, memberConfig, newDependencies().monitors( monitors ), discoveryServiceFactory,
+        readReplicaGraphDatabase = dbFactory.create( memberConfig, newDependencies().monitors( monitors ), discoveryServiceFactory,
                 memberId );
     }
 

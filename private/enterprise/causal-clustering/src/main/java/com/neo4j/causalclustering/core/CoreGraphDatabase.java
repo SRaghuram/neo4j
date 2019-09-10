@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 
-import java.io.File;
-
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
@@ -26,14 +24,12 @@ public class CoreGraphDatabase
         ClusteringEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory );
     }
 
-    public CoreGraphDatabase( File storeDir, Config config,
-            ExternalDependencies dependencies,
-            DiscoveryServiceFactory discoveryServiceFactory,
+    public CoreGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
             CoreEditionModuleFactory editionModuleFactory )
     {
         managementService = new DatabaseManagementServiceFactory( DatabaseInfo.CORE,
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
-                .build( storeDir, config, dependencies );
+                .build( config, dependencies );
     }
 
     public DatabaseManagementService getManagementService()

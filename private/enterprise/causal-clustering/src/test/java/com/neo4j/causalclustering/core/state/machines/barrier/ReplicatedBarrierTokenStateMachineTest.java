@@ -177,7 +177,7 @@ public class ReplicatedBarrierTokenStateMachineTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         SafeStateMarshal<ReplicatedBarrierTokenState> marshal = new ReplicatedBarrierTokenState.Marshal();
 
@@ -185,7 +185,7 @@ public class ReplicatedBarrierTokenStateMachineTest
         MemberId memberB = member( 1 );
         int candidateId;
 
-        DurableStateStorage<ReplicatedBarrierTokenState> storage = new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<ReplicatedBarrierTokenState> storage = new DurableStateStorage<>( fsa, testDir.homeDir(),
                 CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance() );
         try ( Lifespan ignored = new Lifespan( storage ) )
         {
@@ -202,7 +202,7 @@ public class ReplicatedBarrierTokenStateMachineTest
         }
 
         // then
-        DurableStateStorage<ReplicatedBarrierTokenState> storage2 = new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<ReplicatedBarrierTokenState> storage2 = new DurableStateStorage<>( fsa, testDir.homeDir(),
                 CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance() );
         try ( Lifespan ignored = new Lifespan( storage2 ) )
         {
@@ -218,11 +218,11 @@ public class ReplicatedBarrierTokenStateMachineTest
     {
         // given
         EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
+        fsa.mkdir( testDir.homeDir() );
 
         SafeStateMarshal<ReplicatedBarrierTokenState> marshal = new ReplicatedBarrierTokenState.Marshal();
 
-        DurableStateStorage<ReplicatedBarrierTokenState> storage = new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<ReplicatedBarrierTokenState> storage = new DurableStateStorage<>( fsa, testDir.homeDir(),
                 CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance() );
 
         try ( Lifespan ignored = new Lifespan( storage ) )

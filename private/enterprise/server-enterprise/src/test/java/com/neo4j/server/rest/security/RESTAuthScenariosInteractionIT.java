@@ -34,7 +34,7 @@ public class RESTAuthScenariosInteractionIT extends AuthScenariosInteractionTest
     @Override
     protected NeoInteractionLevel<RESTSubject> setUpNeoServer( Map<Setting<?>,String> config ) throws Throwable
     {
-        return new RESTInteraction( config, testDirectory.storeDir() );
+        return new RESTInteraction( config, testDirectory.homeDir() );
     }
 
     @Override

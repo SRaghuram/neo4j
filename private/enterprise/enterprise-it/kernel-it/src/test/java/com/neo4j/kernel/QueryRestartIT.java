@@ -43,7 +43,7 @@ class QueryRestartIT
         testContextSupplier = new TestTransactionVersionContextSupplier();
         var dependencies = new Dependencies();
         dependencies.satisfyDependencies( testContextSupplier );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setExternalDependencies( dependencies )
                 .setConfig( GraphDatabaseSettings.snapshot_query, true )
                 //  The global metrics extension and page cache warmer issue queries that can make our version contexts dirty.

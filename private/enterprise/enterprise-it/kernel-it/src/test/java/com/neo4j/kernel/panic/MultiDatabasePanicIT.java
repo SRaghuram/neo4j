@@ -35,7 +35,7 @@ class MultiDatabasePanicIT
     @BeforeEach
     void setUp()
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
     }
 
     @AfterEach

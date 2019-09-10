@@ -41,7 +41,9 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
 
 public class Stores
 {
@@ -375,7 +377,7 @@ public class Stores
 
     public static boolean isTopLevelDir( Path topStoreLevelDir )
     {
-        Path dbDir = topStoreLevelDir.resolve( DEFAULT_DATABASE_NAME );
+        Path dbDir = topStoreLevelDir.resolve( Path.of( DEFAULT_DATA_DIR_NAME, DEFAULT_DATABASES_ROOT_DIR_NAME, DEFAULT_DATABASE_NAME ) );
         return
                 (
                         // contains a graph.db directory

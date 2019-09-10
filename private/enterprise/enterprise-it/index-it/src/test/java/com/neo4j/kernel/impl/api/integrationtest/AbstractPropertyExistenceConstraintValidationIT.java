@@ -49,7 +49,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
     @Override
     protected DatabaseManagementService createDatabaseService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.storeDir() ).setFileSystem( testDir.getFileSystem() )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homeDir() ).setFileSystem( testDir.getFileSystem() )
                                                                                        .build();
     }
 

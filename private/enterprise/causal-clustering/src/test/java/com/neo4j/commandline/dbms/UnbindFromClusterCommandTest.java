@@ -178,7 +178,7 @@ class UnbindFromClusterCommandTest
     private void createUnlockedFakeDbDir( Path homeDir ) throws IOException
     {
         Path fakeDbDir = createFakeDbDir( homeDir );
-        Files.createFile( DatabaseLayout.of( fakeDbDir.toFile() ).getStoreLayout().storeLockFile().toPath() );
+        Files.createFile( DatabaseLayout.of( fakeDbDir.toFile() ).getNeo4jLayout().storeLockFile().toPath() );
     }
 
     private FileLock createLockedFakeDbDir( Path homeDir ) throws IOException

@@ -60,7 +60,7 @@ class BoltSnapshotQueryExecutionIT
         testContextSupplier = new TestTransactionVersionContextSupplier();
         var dependencies = new Dependencies();
         dependencies.satisfyDependencies( testContextSupplier );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setExternalDependencies( dependencies )
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0  ) )

@@ -47,7 +47,7 @@ public class EnterpriseDbmsSupportExtension extends DbmsSupportExtension impleme
 
         // Create service
         TestDatabaseManagementServiceBuilder builder =
-                new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).setFileSystem( fileSystem );
+                new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setFileSystem( fileSystem );
         maybeInvokeCallback( testInstance, builder, enterpriseDbmsExtension.configurationCallback );
         DatabaseManagementService dbms = builder.build();
 

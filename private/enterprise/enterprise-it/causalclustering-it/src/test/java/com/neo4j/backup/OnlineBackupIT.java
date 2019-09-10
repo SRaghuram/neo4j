@@ -76,7 +76,7 @@ class OnlineBackupIT
         backupsDir = testDirectory.directory( "backups" ).toPath();
         defaultDbBackupDir = backupsDir.resolve( DB_NAME );
 
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( online_backup_enabled, true )
                 .build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );

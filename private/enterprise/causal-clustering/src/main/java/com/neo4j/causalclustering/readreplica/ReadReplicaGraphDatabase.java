@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.io.File;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -30,18 +29,18 @@ public class ReadReplicaGraphDatabase
         ClusteringEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
     }
 
-    public ReadReplicaGraphDatabase( File storeDir, Config config, ExternalDependencies dependencies,
-            DiscoveryServiceFactory discoveryServiceFactory, ReadReplicaEditionModuleFactory editionModuleFactory )
+    public ReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
+            ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        this( storeDir, config, dependencies, discoveryServiceFactory, new MemberId( UUID.randomUUID() ), editionModuleFactory );
+        this( config, dependencies, discoveryServiceFactory, new MemberId( UUID.randomUUID() ), editionModuleFactory );
     }
 
-    public ReadReplicaGraphDatabase( File storeDir, Config config, ExternalDependencies dependencies,
-            DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
+    public ReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId,
+            ReadReplicaEditionModuleFactory editionModuleFactory )
     {
         Function<GlobalModule,AbstractEditionModule> factory =
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId );
-        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA, factory ).build( storeDir, config, dependencies );
+        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA, factory ).build( config, dependencies );
     }
 
     public DatabaseManagementService getManagementService()

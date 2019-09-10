@@ -59,7 +59,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     {
         tempDirectory = createTempDirectory( group, benchmark, stores );
         managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new )
-                .build( tempDirectory.toFile(), Config.defaults(),GraphDatabaseDependencies.newDependencies().dependencies( noOpSystemGraphInitializer() ) );
+                .build( Config.defaults(),GraphDatabaseDependencies.newDependencies().dependencies( noOpSystemGraphInitializer() ) );
         graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();
     }

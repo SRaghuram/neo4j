@@ -13,10 +13,7 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
-import java.io.File;
-
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
@@ -29,18 +26,16 @@ public class EnterpriseGraphFactory implements GraphFactory
     public DatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
     {
         EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
-        File storeDir = config.get( GraphDatabaseSettings.databases_root_path ).toFile();
-
         switch ( mode )
         {
         case CORE:
-            return new CoreGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(), CoreEditionModule::new ).getManagementService();
+            return new CoreGraphDatabase( config, dependencies, newDiscoveryServiceFactory(), CoreEditionModule::new ).getManagementService();
         case READ_REPLICA:
-            return new ReadReplicaGraphDatabase( storeDir, config, dependencies, newDiscoveryServiceFactory(),
+            return new ReadReplicaGraphDatabase( config, dependencies, newDiscoveryServiceFactory(),
                     ReadReplicaEditionModule::new ).getManagementService();
         default:
             return new DatabaseManagementServiceFactory( DatabaseInfo.ENTERPRISE, EnterpriseEditionModule::new )
-                    .build( storeDir, config, dependencies );
+                    .build( config, dependencies );
         }
     }
 

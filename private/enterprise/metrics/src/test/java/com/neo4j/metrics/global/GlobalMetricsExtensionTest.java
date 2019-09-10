@@ -42,7 +42,7 @@ class GlobalMetricsExtensionTest
     @BeforeEach
     void setUp()
     {
-        context = new GlobalExtensionContext( testDirectory.storeLayout(), DatabaseInfo.TOOL, new Dependencies() );
+        context = new GlobalExtensionContext( testDirectory.neo4jLayout(), DatabaseInfo.TOOL, new Dependencies() );
     }
 
     @Test

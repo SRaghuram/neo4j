@@ -25,6 +25,7 @@ import org.neo4j.kernel.internal.locker.FileLockException;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Option;
 
@@ -59,7 +60,8 @@ class UnbindFromClusterCommand extends AbstractCommand
             Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
             File dataDirectory = config.get( GraphDatabaseSettings.data_directory ).toFile();
             File databasesRoot = config.get( databases_root_path ).toFile();
-            DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, database );
+            File homeDir = config.get( neo4j_home ).toFile();
+            DatabaseLayout databaseLayout = DatabaseLayout.of( homeDir, databasesRoot, database );
 
             try ( Closeable ignored = validateDatabase( databaseLayout ) )
             {

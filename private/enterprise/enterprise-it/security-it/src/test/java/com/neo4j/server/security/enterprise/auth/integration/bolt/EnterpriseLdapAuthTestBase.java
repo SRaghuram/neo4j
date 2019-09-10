@@ -108,7 +108,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     void assertSecurityLogContains( String message ) throws IOException
     {
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
-        File workingDirectory = testDirectory.directory();
+        File workingDirectory = testDirectory.homeDir();
         File logFile = new File( workingDirectory, "logs/security.log" );
 
         Reader reader = fileSystem.openAsReader( logFile, UTF_8 );
@@ -132,7 +132,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     void assertSecurityLogDoesNotContain( String message ) throws IOException
     {
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
-        File workingDirectory = testDirectory.directory();
+        File workingDirectory = testDirectory.homeDir();
         File logFile = new File( workingDirectory, "logs/security.log" );
 
         Reader reader = fileSystem.openAsReader( logFile, UTF_8 );

@@ -92,7 +92,7 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( directory.storeDir() ).build();
+        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         try ( Transaction tx = db.beginTx() )
@@ -115,7 +115,7 @@ public class BatchInsertEnterpriseIT
     @Test
     public void insertIntoExistingDatabase() throws IOException
     {
-        File storeDir = directory.storeDir();
+        File storeDir = directory.homeDir();
 
         GraphDatabaseService db = newDb( storeDir, recordFormat );
         try

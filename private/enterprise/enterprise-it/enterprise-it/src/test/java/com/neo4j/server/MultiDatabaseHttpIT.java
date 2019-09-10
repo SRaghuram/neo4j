@@ -88,7 +88,7 @@ class MultiDatabaseHttpIT
         Config config = Config.newBuilder()
                 .setDefaults( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, EnterpriseEditionSettings.Mode.SINGLE )
-                .set( GraphDatabaseSettings.neo4j_home, testDirectory.storeDir().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.auth_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )

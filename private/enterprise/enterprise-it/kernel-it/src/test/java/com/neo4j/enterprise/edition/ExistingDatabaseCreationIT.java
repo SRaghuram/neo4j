@@ -92,7 +92,7 @@ class ExistingDatabaseCreationIT
         DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
         copyDatabaseData( databaseLayout, cloneLayout );
 
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( fail_on_missing_files, false ).build();
         managementService.createDatabase( cloneDatabase );
         GraphDatabaseService cloneDatabaseService = managementService.database( cloneDatabase );
@@ -118,7 +118,7 @@ class ExistingDatabaseCreationIT
         copyDatabaseData( databaseLayout, cloneLayout );
 
         var logProvider = new AssertableLogProvider();
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setInternalLogProvider( logProvider )
                 .build();
 
@@ -138,7 +138,7 @@ class ExistingDatabaseCreationIT
 
     private DatabaseManagementService startManagementService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() ).build();
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
     }
 
     private void copyDatabase( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException

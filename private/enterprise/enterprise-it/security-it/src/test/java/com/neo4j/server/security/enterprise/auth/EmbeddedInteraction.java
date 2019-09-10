@@ -45,7 +45,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
 
     EmbeddedInteraction( Map<Setting<?>, String> config, TestDirectory testDirectory ) throws Throwable
     {
-        DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() );
+        DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
         init( builder, config );
     }
 

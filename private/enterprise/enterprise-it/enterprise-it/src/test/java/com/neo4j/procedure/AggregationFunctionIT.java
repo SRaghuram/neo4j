@@ -344,7 +344,7 @@ class AggregationFunctionIT
     {
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestDatabaseManagementServiceBuilder().impermanent()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.homeDir().toPath().toAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false ).build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
 

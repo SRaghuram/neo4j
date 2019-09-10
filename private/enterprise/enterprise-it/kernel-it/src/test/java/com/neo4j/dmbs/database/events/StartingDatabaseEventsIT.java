@@ -32,7 +32,7 @@ class StartingDatabaseEventsIT
     void receiveStartingDatabaseEvents()
     {
         AllDatabasesEventListener eventListener = new AllDatabasesEventListener();
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                                                         .addDatabaseListener( eventListener ).build();
         managementService.shutdown();
 

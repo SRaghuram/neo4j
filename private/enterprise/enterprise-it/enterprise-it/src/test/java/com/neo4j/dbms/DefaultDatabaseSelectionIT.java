@@ -196,7 +196,7 @@ class DefaultDatabaseSelectionIT
 
     private TestEnterpriseDatabaseManagementServiceBuilder getDatabaseBuilder()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

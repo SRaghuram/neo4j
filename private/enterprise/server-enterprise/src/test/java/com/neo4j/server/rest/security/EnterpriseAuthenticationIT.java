@@ -32,7 +32,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     public void startServer( boolean authEnabled ) throws IOException
     {
         server = EnterpriseServerBuilder.serverOnRandomPorts()
-                                        .usingDataDir( testDirectory.storeDir().getAbsolutePath() )
+                                        .usingDataDir( testDirectory.homeDir().getAbsolutePath() )
                                         .persistent()
                                         .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( authEnabled ) )
                                         .build();
@@ -90,7 +90,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     {
         server = EnterpriseServerBuilder.serverOnRandomPorts()
                                         .persistent()
-                                        .usingDataDir( testDirectory.storeDir().getAbsolutePath() )
+                                        .usingDataDir( testDirectory.homeDir().getAbsolutePath() )
                                         .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( false ) )
                                         .build();
         server.start();

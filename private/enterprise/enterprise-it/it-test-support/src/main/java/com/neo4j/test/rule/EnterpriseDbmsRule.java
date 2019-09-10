@@ -26,7 +26,7 @@ public class EnterpriseDbmsRule extends EmbeddedDbmsRule
     @Override
     protected DatabaseManagementServiceBuilder newFactory()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() );
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
     }
 
     @Override

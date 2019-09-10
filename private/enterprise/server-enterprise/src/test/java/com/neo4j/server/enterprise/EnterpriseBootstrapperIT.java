@@ -63,8 +63,8 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
-                "-c", configOption( data_directory, getRelativePath( folder.storeDir(), data_directory ).toString() ),
-                "-c", configOption( logs_directory, testDirectory.storeDir().getAbsolutePath() ) ) );
+                "-c", configOption( data_directory, getRelativePath( folder.homeDir(), data_directory ).toString() ),
+                "-c", configOption( logs_directory, testDirectory.homeDir().getAbsolutePath() ) ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
@@ -78,7 +78,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap();
-        properties.putAll( getDefaultRelativeProperties( testDirectory.storeDir() ) );
+        properties.putAll( getDefaultRelativeProperties( testDirectory.homeDir() ) );
         properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
@@ -102,7 +102,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         File configFile = testDirectory.file( Config.DEFAULT_CONFIG_FILE_NAME );
 
         Map<String, String> properties = stringMap( store_internal_log_level.name(), "DEBUG");
-        properties.putAll( getDefaultRelativeProperties( testDirectory.storeDir() ) );
+        properties.putAll( getDefaultRelativeProperties( testDirectory.homeDir() ) );
         properties.putAll( connectorsOnRandomPortsConfig() );
         store( properties, configFile );
 
