@@ -139,30 +139,10 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertSystemCommandFail( schemaSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '' )", PERMISSION_DENIED );
     }
 
-    // Should change own password for non-admin or admin subject
-    @Test
-    void shouldChangeUserPasswordIfSameUser()
-    {
-        assertSystemCommandSuccess( readSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '321', false )" );
-        // Because RESTSubject caches an auth token that is sent with every request
-        neo.updateAuthToken( readSubject, "readSubject", "321" );
-        neo.assertAuthenticated( readSubject );
-        testSuccessfulRead( readSubject, 3 );
-
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.changeUserPassword( 'adminSubject', 'cba', false )" );
-        // Because RESTSubject caches an auth token that is sent with every request
-        neo.updateAuthToken( adminSubject, "adminSubject", "cba" );
-        neo.assertAuthenticated( adminSubject );
-        testSuccessfulRead( adminSubject, 3 );
-    }
-
     // Should fail nicely to change own password for non-admin or admin subject if password invalid
     @Test
     void shouldFailToChangeUserPasswordIfSameUserButInvalidPassword()
     {
-        assertSystemCommandFail( readSubject, "CALL dbms.security.changeUserPassword( 'readSubject', '123' )",
-                "Old password and new password cannot be the same." );
-
         assertSystemCommandFail( adminSubject, "CALL dbms.security.changeUserPassword( 'adminSubject', 'abc' )",
                 "Old password and new password cannot be the same." );
     }
@@ -479,14 +459,6 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    void shouldFailToRemoveUserFromNonExistentRole()
-    {
-        testFailRemoveRoleFromUser( adminSubject, "thisRoleDoesNotExist", "readSubject",
-                "Role 'thisRoleDoesNotExist' does not exist." );
-        testFailRemoveRoleFromUser( adminSubject, "", "readSubject", "The provided role name is empty." );
-    }
-
-    @Test
     void shouldFailToRemoveRoleFromUserIfNotAdmin()
     {
         testFailRemoveRoleFromUser( pwdSubject, PUBLISHER, "readSubject", CHANGE_PWD_ERR_MSG );
@@ -763,17 +735,6 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
                 "User 'Petra' does not exist." );
         assertSystemCommandFail( adminSubject, "CALL dbms.security.listRolesForUser('') YIELD value as roles RETURN roles",
                 "User '' does not exist." );
-    }
-
-    @Test
-    void shouldListOwnRolesRoles()
-    {
-        assertSystemCommandSuccess( adminSubject,
-                "CALL dbms.security.listRolesForUser('adminSubject') YIELD value as roles RETURN roles",
-                r -> assertKeyIs( r, "roles", ADMIN ) );
-        assertSystemCommandSuccess( readSubject,
-                "CALL dbms.security.listRolesForUser('readSubject') YIELD value as roles RETURN roles",
-                r -> assertKeyIs( r, "roles", READER ) );
     }
 
     @Test
