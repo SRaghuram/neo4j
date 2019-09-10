@@ -305,24 +305,6 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException("not implemented")
         }
 
-      case _: Expand |
-           _: PruningVarExpand |
-           _: VarExpand |
-           _: OptionalExpand |
-           _: FindShortestPaths |
-           _: UnwindCollection =>
-        if (canFuseOverPipeline) {
-          source.fusedPlans += plan
-          source
-        } else if (breakingPolicy.breakOn(plan)) {
-          val pipeline = newPipeline(plan)
-          pipeline.inputBuffer = outputToBuffer(source, plan)
-          pipeline
-        } else {
-          source.middlePlans += plan
-          source
-        }
-
       case _: Limit =>
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
         markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
@@ -340,9 +322,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         source.middlePlans += plan
         source
 
-        //TODO shouldn't we ask the breaking policy here?
       case _ =>
-        if (canFuse) {
+        if (canFuseOverPipeline) {
+          source.fusedPlans += plan
+          source
+        } else if (breakingPolicy.breakOn(plan)) {
+          val pipeline = newPipeline(plan)
+          pipeline.inputBuffer = outputToBuffer(source, plan)
+          pipeline
+        } else if (canFuse) {
           source.fusedPlans += plan
           source
         } else {

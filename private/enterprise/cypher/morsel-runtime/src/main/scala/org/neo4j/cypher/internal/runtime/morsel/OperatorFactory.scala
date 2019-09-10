@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LazyLogicalPlan, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
@@ -20,8 +20,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 
 /**
@@ -31,7 +33,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
                       val indexRegistrator: QueryIndexRegistrator,
-                      semanticTable: SemanticTable) {
+                      semanticTable: SemanticTable,
+                      val slottedPipeBuilder: Option[SlottedPipeMapper]) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -325,6 +328,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),
                              physicalPlan.argumentSizes(id))
+
+      case _ if plan.isInstanceOf[LazyLogicalPlan] && slottedPipeBuilder.isDefined =>
+        createSlottedPipeOperator(plan)
+
+      case _ =>
+        throw new CantCompileQueryException(s"Morsel does not yet support the plans including `$plan`, use another runtime.")
     }
   }
 
@@ -356,7 +365,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case _: plans.Argument => None
 
-      case _ => throw new CantCompileQueryException(s"$plan cannot be used as a middle plan")
+      case _ =>
+        // TODO: SlottedPipeMiddleOperator
+        throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a middle plan, use another runtime.")
     }
   }
 
@@ -427,4 +438,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         }
     }
   }
+
+  def createSlottedPipeOperator(plan: LogicalPlan): Operator = {
+    val workIdentity = WorkIdentity.fromPlan(plan)
+    val inputMorselPipe = InputMorselPipe()(Id.INVALID_ID)
+    val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, inputMorselPipe)
+    new SlottedPipeOperator(workIdentity, pipe)
+  }
+
 }

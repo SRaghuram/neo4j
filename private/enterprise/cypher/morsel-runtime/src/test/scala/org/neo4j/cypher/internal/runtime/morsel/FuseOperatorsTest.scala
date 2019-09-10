@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.operators._
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.{ParameterMapping, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
@@ -310,7 +311,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                             converters,
                             readOnly = true,
                             indexRegistrator = mock[QueryIndexRegistrator],
-                            semanticTable = mock[SemanticTable]) {
+                            semanticTable = mock[SemanticTable],
+                            slottedPipeBuilder = None) {
 
     override def create(plan: LogicalPlan,
                         inputBuffer: BufferDefinition): Operator =

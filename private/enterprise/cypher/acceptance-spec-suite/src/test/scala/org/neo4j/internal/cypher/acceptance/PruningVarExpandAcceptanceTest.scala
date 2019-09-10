@@ -16,7 +16,7 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
                     |CREATE (:Scaffold)-[:REL]->()-[:REL]->(:Molecule)""".stripMargin)
 
     // When
-    val result = executeWith( Configs.InterpretedAndSlotted,
+    val result = executeWith( Configs.InterpretedAndSlottedAndMorsel,
        """MATCH (:Scaffold)-[:REL*3]->(m:Molecule)
          |RETURN DISTINCT m""".stripMargin)
 
@@ -30,7 +30,7 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
                     |CREATE (:Scaffold)-[:REL {prop:index}]->()-[:REL {prop: index}]->(:Molecule)""".stripMargin)
 
     // When
-    val result = executeWith( Configs.InterpretedAndSlotted,
+    val result = executeWith( Configs.InterpretedAndSlottedAndMorsel,
                               """MATCH ()-[:REL*2 {prop:42}]->(m) RETURN DISTINCT m""")
 
     // Then

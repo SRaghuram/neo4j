@@ -10,17 +10,20 @@ import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.CypherOperatorEngineOption
+import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes.DISABLED
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
+import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{ProfiledQuerySubscription, QueryExecutor}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselBlacklist
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
@@ -45,7 +48,7 @@ class MorselRuntime(parallelExecution: Boolean,
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
-    compilePlan(context.operatorEngine ==  CypherOperatorEngineOption.compiled,
+    compilePlan(shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled,
                 query,
                 context,
                 new QueryIndexRegistrator(context.schemaRead))
@@ -67,7 +70,7 @@ class MorselRuntime(parallelExecution: Boolean,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
     val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
-    val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
+    val breakingPolicy = MorselPipelineBreakingPolicy(context.config, operatorFusionPolicy)
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
@@ -88,13 +91,26 @@ class MorselRuntime(parallelExecution: Boolean,
     }
 
     MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
+
+    //=======================================================
+    val slottedPipeBuilder =
+      if (context.config.useInterpretedPipes != DISABLED) {
+        val slottedPipeBuilderFallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
+        Some(new SlottedPipeMapper(slottedPipeBuilderFallback, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable))
+      }
+      else
+        None
+    //=======================================================
+
     DebugLog.logDiff("PhysicalPlanner.plan")
     val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
     val operatorFactory = new OperatorFactory(executionGraphDefinition,
                                               converters,
                                               readOnly = true,
                                               queryIndexRegistrator,
-                                              query.semanticTable)
+                                              query.semanticTable,
+                                              slottedPipeBuilder)
+
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
     val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution,

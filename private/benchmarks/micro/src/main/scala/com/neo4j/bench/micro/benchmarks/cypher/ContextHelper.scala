@@ -31,6 +31,7 @@ object ContextHelper extends MockitoSugar {
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
+    useInterpretedPipes = GraphDatabaseSettings.cypher_morsel_use_interpreted_pipes.defaultValue(),
     memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults())
   )
 

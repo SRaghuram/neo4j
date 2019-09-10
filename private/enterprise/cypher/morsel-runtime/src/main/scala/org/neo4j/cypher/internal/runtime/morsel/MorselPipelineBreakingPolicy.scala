@@ -5,11 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes
+import org.neo4j.cypher.internal.CypherRuntimeConfiguration
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
 
-case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) extends PipelineBreakingPolicy {
+// TODO: Replace config with interpretedPipesPolicy
+case class MorselPipelineBreakingPolicy(config: CypherRuntimeConfiguration, fusionPolicy: OperatorFusionPolicy) extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 
@@ -36,13 +39,16 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
         if (e.mode == ExpandAll) !canFuseOneChildOperator(e)
         else
           throw unsupported("ExpandInto")
+
       case _: UnwindCollection |
            _: Sort |
            _: Top |
            _: Aggregation |
            _: Optional |
-           _: VarExpand
-    => !canFuseOneChildOperator(lp)
+           _: VarExpand |
+           _: PruningVarExpand |
+           _: ProcedureCall
+      => !canFuseOneChildOperator(lp)
 
       case _: ProduceResult |
            _: Limit |
@@ -50,7 +56,7 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
            _: Projection |
            _: CacheProperties |
            _: Selection
-        => false
+      => false
 
       // 2 child operators
       case _: Apply |
@@ -58,7 +64,10 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
       => true
 
       case plan =>
-        throw unsupported(plan.getClass.getSimpleName)
+        if (config.useInterpretedPipes == CypherMorselUseInterpretedPipes.ALL_POSSIBLE_PLANS)
+          true
+        else
+          throw unsupported(plan.getClass.getSimpleName)
     }
   }
 
