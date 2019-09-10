@@ -26,10 +26,13 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.logging.Log;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isInterrupted;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isTransient;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 /**
  * Resources for stress testing ID-reuse scenarios.
@@ -54,11 +57,14 @@ class IdReuse
         }
 
         @Override
-        protected void validate() throws TimeoutException
+        protected void validate() throws TimeoutException, InterruptedException
         {
             var members = cluster.allMembers();
 
-            dataMatchesEventually( cluster.awaitLeader(), members );
+            for ( ClusterMember member : members )
+            {
+                assertEventually( () -> getLastTxId( member ), equalTo( getLastTxId( cluster.awaitLeader() ) ), 1, TimeUnit.MINUTES );
+            }
 
             Map<MemberId,Long> usedIdsPerMember = new HashMap<>();
 
@@ -79,6 +85,12 @@ class IdReuse
             }
 
             log.info( "Total of " + usedIdsPerMember.values().iterator().next() + " used ids found" );
+        }
+
+        private long getLastTxId( ClusterMember member )
+        {
+            TransactionIdStore txIdStore = member.resolveDependency( DEFAULT_DATABASE_NAME, TransactionIdStore.class );
+            return txIdStore.getLastClosedTransactionId();
         }
 
         @Override
