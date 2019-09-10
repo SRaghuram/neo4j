@@ -322,6 +322,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
            _: SetRelationshipProperty |
            _: SetRelationshipPropertiesFromMap |
            _: SetProperty |
+           _: SetPropertiesFromMap |
            _: RemoveLabels =>
         fallback.onOneChildPlan(plan, source)
 

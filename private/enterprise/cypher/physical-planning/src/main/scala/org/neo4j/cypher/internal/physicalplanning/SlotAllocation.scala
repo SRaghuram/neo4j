@@ -430,6 +430,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: SetRelationshipProperty |
            _: SetRelationshipPropertiesFromMap |
            _: SetProperty |
+           _: SetPropertiesFromMap |
            _: RemoveLabels =>
 
       case _: LockNodes =>

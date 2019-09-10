@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
 class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -80,6 +80,40 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     failWithError(Configs.InterpretedAndSlotted, "MATCH (n) SET n.property = [null,null] RETURN n.property",
       List("Collections containing null values can not be stored in properties."))
 
+  }
+
+  test("should add properties on a mixed list of nodes and properties") {
+    relate(createNode(Map("data" -> 1)), createNode(), "data" -> 2)
+
+    val q =
+      """
+        |MATCH (n)-[r]->()
+        |UNWIND [n, r] AS entity
+        |SET entity += {
+        |  prop: entity.data
+        |}
+        |RETURN entity.prop, entity.data
+        |""".stripMargin
+
+    val r = executeWith(Configs.InterpretedAndSlotted, q)
+    r.toList should equal(List(Map("entity.prop" -> 1, "entity.data" -> 1), Map("entity.prop" -> 2, "entity.data" -> 2)))
+  }
+
+  test("should set properties on a mixed list of nodes and properties") {
+    relate(createNode(Map("data" -> 1)), createNode(), "data" -> 2)
+
+    val q =
+      """
+        |MATCH (n)-[r]->()
+        |UNWIND [n, r] AS entity
+        |SET entity = {
+        |  prop: entity.data
+        |}
+        |RETURN entity.prop, entity.data
+        |""".stripMargin
+
+    val r = executeWith(Configs.InterpretedAndSlotted, q)
+    r.toList should equal(List(Map("entity.prop" -> 1, "entity.data" -> null), Map("entity.prop" -> 2, "entity.data" -> null)))
   }
 
   //Not suitable for the TCK

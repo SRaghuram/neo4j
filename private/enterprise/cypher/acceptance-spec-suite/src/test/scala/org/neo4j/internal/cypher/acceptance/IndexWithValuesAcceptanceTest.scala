@@ -540,6 +540,13 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
 
+  test("index-backed property values should be updated on property write with generic set +=") {
+    val query = "MATCH (n:Awesome)-[r]->() WHERE n.prop1 = 42 UNWIND [n, r] AS e SET e += {prop1: 'newValue'} RETURN n.prop1"
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    assertIndexSeekWithValues(result)
+    result.toList should equal(List(Map("n.prop1" -> "newValue"), Map("n.prop1" -> "newValue")))
+  }
+
   test("index-backed property values should be removed on property remove") {
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 REMOVE n.prop1 RETURN n.prop1"
     val result = executeWith(Configs.InterpretedAndSlotted, query)
