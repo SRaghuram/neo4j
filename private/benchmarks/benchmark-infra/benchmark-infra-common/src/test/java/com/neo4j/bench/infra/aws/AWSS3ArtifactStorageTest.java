@@ -100,7 +100,7 @@ class AWSS3ArtifactStorageTest
                                 .resolve( "benchmarking.neo4j.com/artifacts/buildID" )
                                 .resolve( artifact0.getFileName() ) ) );
         // when
-        Path downloadDir = Paths.get( "download" );
+        Path downloadDir = Files.createTempDirectory( "download" );
         artifactStorage.downloadBuildArtifacts( downloadDir, uri );
         // then
         assertTrue(workspace.isValid(downloadDir));
