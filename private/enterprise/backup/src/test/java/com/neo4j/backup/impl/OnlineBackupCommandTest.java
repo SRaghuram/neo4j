@@ -108,6 +108,7 @@ class OnlineBackupCommandTest
     void logRespectsTimeZone( int timezoneOffset ) throws IOException
     {
         // given
+        TimeZone defaultZone = TimeZone.getDefault();
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( timezoneOffset ) ) );
 
         File cfg = dir.file( "neo4j.conf" );
@@ -130,7 +131,10 @@ class OnlineBackupCommandTest
             firstLogLine = os.toString().split( "\n", 1 )[0];
         }
 
-        //then
+        // then
         assertThat( firstLogLine, containsString( format( "+0%d00", timezoneOffset )) );
+
+        // cleanup
+        TimeZone.setDefault( defaultZone );
     }
 }

@@ -22,6 +22,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.consistency.ConsistencyCheckOptions;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_HOST;
@@ -104,8 +105,8 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
                 .build();
 
-        final var userLogProvider = Util.logProviderRespectingConfig( config, ctx.out() );
-        final var internalLogProvider = verbose ? Util.logProviderRespectingConfig( config, ctx.out() ) : NullLogProvider.getInstance();
+        final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );
+        final var internalLogProvider = verbose ? userLogProvider : NullLogProvider.getInstance();
         final var backupExecutor = OnlineBackupExecutor.builder()
                 .withFileSystem( ctx.fs() )
                 .withInternalLogProvider( internalLogProvider )
@@ -153,6 +154,11 @@ public class OnlineBackupCommand extends AbstractCommand
                 .set( OnlineBackupSettings.online_backup_enabled, false )
                 .build();
         ConfigUtils.disableAllConnectors( cfg );
+
+        if ( verbose )
+        {
+            cfg.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
+        }
 
         return cfg;
     }
