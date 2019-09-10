@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
@@ -40,9 +40,9 @@ public class ReadReplicaDatabaseContext
         this.internalOperator = internalOperator;
     }
 
-    public DatabaseId databaseId()
+    public NamedDatabaseId databaseId()
     {
-        return kernelDatabase.getDatabaseId();
+        return kernelDatabase.getNamedDatabaseId();
     }
 
     public StoreId storeId()
@@ -65,7 +65,7 @@ public class ReadReplicaDatabaseContext
 
     ClusterInternalDbmsOperator.StoreCopyHandle stopForStoreCopy()
     {
-        return internalOperator.stopForStoreCopy( kernelDatabase.getDatabaseId() );
+        return internalOperator.stopForStoreCopy( kernelDatabase.getNamedDatabaseId() );
     }
 
     public Database database()

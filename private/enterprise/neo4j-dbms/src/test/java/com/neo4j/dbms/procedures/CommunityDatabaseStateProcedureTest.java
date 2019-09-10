@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
@@ -17,7 +16,7 @@ import org.neo4j.dbms.procedures.StandaloneDatabaseStateProcedure;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 
@@ -53,8 +52,8 @@ class CommunityDatabaseStateProcedureTest
     void shouldThrowWhenDatabaseNotFound() throws ProcedureException
     {
         // given
-        when( stateService.stateOfDatabase( any( DatabaseId.class ) ) ).thenReturn( STARTED );
-        when( stateService.causeOfFailure( any( DatabaseId.class ) ) ).thenReturn( Optional.empty() );
+        when( stateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( STARTED );
+        when( stateService.causeOfFailure( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.empty() );
         var existing = idRepository.getRaw( "existing" );
         var nonExisting = idRepository.getRaw( "nonExisting" );
         idRepository.filter( nonExisting );
@@ -72,8 +71,8 @@ class CommunityDatabaseStateProcedureTest
     void shouldReturnEmptyErrorForNoError() throws ProcedureException
     {
         // given
-        when( stateService.stateOfDatabase( any( DatabaseId.class ) ) ).thenReturn( STARTED );
-        when( stateService.causeOfFailure( any( DatabaseId.class ) ) ).thenReturn( Optional.empty() );
+        when( stateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( STARTED );
+        when( stateService.causeOfFailure( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.empty() );
         var existing = idRepository.getRaw( "existing" );
 
         // when

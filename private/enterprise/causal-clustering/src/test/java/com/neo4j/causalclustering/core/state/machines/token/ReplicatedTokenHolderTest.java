@@ -17,7 +17,7 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.Command;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.lock.ResourceLocker;
@@ -45,14 +45,14 @@ public class ReplicatedTokenHolderTest
 {
     private StorageEngine storageEngine;
     private Supplier<StorageEngine> storageEngineSupplier = () -> storageEngine;
-    private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     public void shouldStoreInitialTokens()
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseId, registry, null, null, storageEngineSupplier );
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier );
 
         // when
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
@@ -66,7 +66,7 @@ public class ReplicatedTokenHolderTest
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseId, registry, null,
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null,
                 null, storageEngineSupplier );
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
 
@@ -91,7 +91,7 @@ public class ReplicatedTokenHolderTest
 
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseId, registry,
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry,
                 content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ), idGeneratorFactory, storageEngineSupplier );
 
         // when

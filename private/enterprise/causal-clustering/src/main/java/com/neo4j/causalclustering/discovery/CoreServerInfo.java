@@ -34,7 +34,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
         this.refuseToBeLeader = refuseToBeLeader;
     }
 
-    public static CoreServerInfo from( Config config, Set<DatabaseId> databaseIds )
+    public static CoreServerInfo fromRaw( Config config, Set<DatabaseId> databaseIds )
     {
         var raftAddress = config.get( CausalClusteringSettings.raft_advertised_address );
         var catchupAddress = config.get( CausalClusteringSettings.transaction_advertised_address );
@@ -42,6 +42,11 @@ public class CoreServerInfo implements DiscoveryServerInfo
         var groups = Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
         var refuseToBeLeader = config.get( CausalClusteringSettings.refuse_to_be_leader );
         return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
+    }
+
+    public static CoreServerInfo from( Config config, Set<DatabaseId> databaseIds )
+    {
+        return fromRaw( config, databaseIds );
     }
 
     @Override

@@ -33,7 +33,7 @@ public class RaftProtocolClientInstallerV2 implements ProtocolInstaller<Protocol
     {
         public Factory( NettyPipelineBuilderFactory clientPipelineBuilderFactory, LogProvider logProvider )
         {
-            super( APPLICATION_PROTOCOL, modifiers -> new RaftProtocolClientInstallerV2( clientPipelineBuilderFactory, modifiers, logProvider ) );
+            super( APPLICATION_PROTOCOL, mods -> new RaftProtocolClientInstallerV2( clientPipelineBuilderFactory, mods, logProvider ) );
         }
     }
 

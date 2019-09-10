@@ -14,7 +14,7 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import java.io.IOException;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class CoreSnapshotService
 {
@@ -24,16 +24,16 @@ public class CoreSnapshotService
     private final CoreState coreState;
     private final RaftLog raftLog;
     private final RaftMachine raftMachine;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
 
     public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState,
-            RaftMachine raftMachine, DatabaseId databaseId )
+            RaftMachine raftMachine, NamedDatabaseId namedDatabaseId )
     {
         this.applicationProcess = applicationProcess;
         this.coreState = coreState;
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
     }
 
     public synchronized CoreSnapshot snapshot() throws Exception
@@ -74,9 +74,9 @@ public class CoreSnapshotService
     {
         while ( raftMachine.state().appendIndex() < 0 )
         {
-            if ( startAborter.shouldAbort( databaseId ) )
+            if ( startAborter.shouldAbort( namedDatabaseId ) )
             {
-                throw new DatabaseStartAbortedException( databaseId );
+                throw new DatabaseStartAbortedException( namedDatabaseId );
             }
             wait();
         }

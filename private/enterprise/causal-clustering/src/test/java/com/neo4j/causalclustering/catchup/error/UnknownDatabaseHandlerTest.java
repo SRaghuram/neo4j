@@ -20,15 +20,15 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 
+import static com.neo4j.causalclustering.catchup.error.UnavailableDatabaseHandlerTest.matchesAllOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class UnknownDatabaseHandlerTest
 {
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomNamedDatabaseId().databaseId();
     private final CatchupProtocolMessage.WithDatabaseId message = new CoreSnapshotRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();
@@ -53,7 +53,7 @@ class UnknownDatabaseHandlerTest
     {
         channel.writeInbound( message );
         logProvider.assertAtLeastOnce( inLog( UnknownDatabaseHandler.class )
-                .warn( containsString( "database " + databaseId.name() + " does not exist" ) ) );
+                .warn( matchesAllOf( "database", databaseId.uuid().toString(), "does not exist" ) ) );
     }
 
     @Test
@@ -64,7 +64,7 @@ class UnknownDatabaseHandlerTest
         assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
         CatchupErrorResponse response = channel.readOutbound();
         assertEquals( CatchupResult.E_DATABASE_UNKNOWN, response.status() );
-        assertThat( response.message(), containsString( "database " + databaseId.name() + " does not exist" ) );
+        assertThat( response.message(), matchesAllOf( "database", databaseId.uuid().toString(), "does not exist" ) );
     }
 
     @Test

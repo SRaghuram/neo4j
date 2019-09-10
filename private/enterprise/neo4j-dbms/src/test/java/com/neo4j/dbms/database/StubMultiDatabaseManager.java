@@ -11,7 +11,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.internal.NullLogService;
@@ -37,9 +37,9 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     }
 
     @Override
-    protected DatabaseContext createDatabaseContext( DatabaseId databaseId )
+    protected DatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
-        return mockDatabaseContext( databaseId );
+        return mockDatabaseContext( namedDatabaseId );
     }
 
     public GlobalModule globalModule()
@@ -47,14 +47,14 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         return globalModule;
     }
 
-    private static DatabaseContext mockDatabaseContext( DatabaseId databaseId )
+    private static DatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         var facade = mock( GraphDatabaseFacade.class );
         Dependencies deps = new Dependencies();
         deps.satisfyDependencies( mock( TransactionIdStore.class ) );
         when( facade.getDependencyResolver() ).thenReturn( deps );
         Database db = mock( Database.class );
-        when( db.getDatabaseId() ).thenReturn( databaseId );
+        when( db.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( db.getDatabaseFacade() ).thenReturn( facade );
         return spy( new StandaloneDatabaseContext( db ) );
     }

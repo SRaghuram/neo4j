@@ -26,7 +26,6 @@ import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.IOException;
 import java.util.function.Function;
 
 import org.neo4j.dbms.database.DatabaseContext;
@@ -34,7 +33,8 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -48,12 +48,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 @ExtendWith( DefaultFileSystemExtension.class )
 abstract class EnterpriseCatchupTest
 {
-    private static final DatabaseId DEFAULT_DB_ID = randomDatabaseId();
+    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private static final NamedDatabaseId DEFAULT_NAMED_DB_ID = DATABASE_ID_REPOSITORY.defaultDatabase();
     private final ApplicationProtocols applicationProtocols;
     private StubClusteredDatabaseManager databaseManager;
 
@@ -78,9 +79,9 @@ abstract class EnterpriseCatchupTest
         doReturn( true ).when( availabilityGuard ).isAvailable();
 
         pipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
-        databaseManager = new StubClusteredDatabaseManager();
+        databaseManager = new StubClusteredDatabaseManager( DATABASE_ID_REPOSITORY );
         databaseManager.givenDatabaseWithConfig()
-                .withDatabaseId( DEFAULT_DB_ID )
+                .withDatabaseId( DEFAULT_NAMED_DB_ID )
                 .withStoreId( StoreId.UNKNOWN )
                 .withDatabaseAvailabilityGuard( availabilityGuard )
                 .register();
@@ -115,13 +116,13 @@ abstract class EnterpriseCatchupTest
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB_ID ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( DEFAULT_NAMED_DB_ID.databaseId() ), new ResponseAdaptor()
                 {
                     @Override
                     public void onGetStoreIdResponse( GetStoreIdResponse response )
                     {
                         responseHandled = true;
-                        assertEquals( databaseManager.getDatabaseContext( DEFAULT_DB_ID )
+                        assertEquals( databaseManager.getDatabaseContext( DEFAULT_NAMED_DB_ID )
                                 .map( DatabaseContext::database )
                                 .map( Database::getStoreId )
                                 .orElseThrow( IllegalStateException::new ), response.storeId() );
@@ -145,7 +146,7 @@ abstract class EnterpriseCatchupTest
             @Override
             public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
-                return new RequestResponse( new GetStoreIdRequest( randomDatabaseId() ), new ResponseAdaptor()
+                return new RequestResponse( new GetStoreIdRequest( randomNamedDatabaseId().databaseId() ), new ResponseAdaptor()
                 {
                     @Override
                     public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )
@@ -179,12 +180,12 @@ abstract class EnterpriseCatchupTest
     }
 
     private void installChannels( NettyPipelineBuilderFactory pipelineBuilderFactory, CatchupResponseHandler catchupResponseHandler,
-            MultiDatabaseCatchupServerHandler responseHandler ) throws Exception
+            MultiDatabaseCatchupServerHandler serverResponseHandler ) throws Exception
     {
         if ( applicationProtocols == ApplicationProtocols.CATCHUP_3_0 )
         {
             new CatchupProtocolClientInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );
+            new CatchupProtocolServerInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
         }
         else
         {

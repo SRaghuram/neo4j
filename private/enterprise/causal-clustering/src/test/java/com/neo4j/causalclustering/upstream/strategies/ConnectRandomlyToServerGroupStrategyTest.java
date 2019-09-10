@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectRandomlyToServerGroupStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final NamedDatabaseId DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     @Test
     void shouldConnectToGroupDefinedInStrategySpecificConfig()

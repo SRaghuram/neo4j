@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.util.concurrent.BinaryLatch;
@@ -102,9 +102,9 @@ class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
         monitors.addMonitorListener( new PageCacheWarmerMonitorAdapter()
         {
             @Override
-            public void warmupCompleted( DatabaseId databaseId, long pagesLoaded )
+            public void warmupCompleted( NamedDatabaseId namedDatabaseId, long pagesLoaded )
             {
-                if ( DEFAULT_DATABASE_NAME.equals( databaseId.name() ) )
+                if ( DEFAULT_DATABASE_NAME.equals( namedDatabaseId.name() ) )
                 {
                     pagesLoadedInWarmup.set( pagesLoaded );
                     warmupLatch.release();

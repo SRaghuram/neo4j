@@ -14,8 +14,8 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.akka.database.state.AllReplicatedDatabaseStates;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.AllReplicatedDatabaseStates;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick;
 
@@ -181,9 +181,9 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
 
     private void buildTopology( DatabaseId databaseId )
     {
-        log().debug( "Building read replica topology for database {} with read replicas: {}", databaseId.name(), readReplicaViewMessage );
+        log().debug( "Building read replica topology for database {} with read replicas: {}", databaseId, readReplicaViewMessage );
         DatabaseReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
-        log().debug( "Built read replica topology for database {}: {}", databaseId.name(), readReplicaTopology );
+        log().debug( "Built read replica topology for database {}: {}", databaseId, readReplicaTopology );
 
         topologySink.offer( readReplicaTopology );
         if ( readReplicaTopology.members().isEmpty() )

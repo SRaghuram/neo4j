@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
 
 class ReplicatedTransactionStateMachineTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
 
@@ -182,7 +182,7 @@ class ReplicatedTransactionStateMachineTest
 
     private static ReplicatedLeaseStateMachine leaseState( int leaseId )
     {
-        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( null, leaseId, DATABASE_ID );
+        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( null, leaseId, DATABASE_ID.databaseId() );
         ReplicatedLeaseStateMachine leaseState = mock( ReplicatedLeaseStateMachine.class );
         when( leaseState.snapshot() ).thenReturn( new ReplicatedLeaseState( -1, leaseRequest ) );
         return leaseState;

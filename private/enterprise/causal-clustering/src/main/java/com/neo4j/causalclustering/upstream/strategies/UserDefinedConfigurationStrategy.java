@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
 public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionStrategy
@@ -61,20 +61,20 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
+    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return filters.flatMap( filters ->
         {
-            Set<ServerInfo> possibleServers = possibleServers( databaseId );
+            Set<ServerInfo> possibleServers = possibleServers( namedDatabaseId );
 
             return filters.apply( possibleServers ).stream().map( ServerInfo::memberId ).filter( memberId -> !Objects.equals( myself, memberId ) ).findFirst();
         } );
     }
 
-    private Set<ServerInfo> possibleServers( DatabaseId databaseId )
+    private Set<ServerInfo> possibleServers( NamedDatabaseId namedDatabaseId )
     {
-        DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
-        DatabaseReadReplicaTopology readReplicaTopology = topologyService.readReplicaTopologyForDatabase( databaseId );
+        DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
+        DatabaseReadReplicaTopology readReplicaTopology = topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
 
         var infoMap = Stream.of( coreTopology, readReplicaTopology )
                 .map( Topology::members )

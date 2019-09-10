@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class CoreRoleProcedure extends RoleProcedure
 {
@@ -25,9 +25,9 @@ public class CoreRoleProcedure extends RoleProcedure
     }
 
     @Override
-    RoleInfo role( DatabaseId databaseId )
+    RoleInfo role( NamedDatabaseId namedDatabaseId )
     {
         var myId = identityModule.myself();
-        return topologyService.lookupRole( databaseId, myId );
+        return topologyService.lookupRole( namedDatabaseId, myId );
     }
 }

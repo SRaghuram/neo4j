@@ -32,7 +32,7 @@ import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
@@ -75,7 +75,7 @@ class RaftBootstrapperIT
     @Inject
     private DatabaseLayout databaseLayout;
 
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
     private final DatabaseInitializer databaseInitializer = DatabaseInitializer.NO_INITIALIZATION;
@@ -299,7 +299,7 @@ class RaftBootstrapperIT
         /* The session state is initially empty. */
         assertEquals( new GlobalSessionTrackerState(), snapshot.get( CoreStateFiles.SESSION_TRACKER ) );
 
-        for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
+        for ( Map.Entry<NamedDatabaseId,ClusteredDatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
         {
             verifyDatabaseSpecificState( snapshot::get );
             if ( databaseEntry.getKey().isSystemDatabase() )

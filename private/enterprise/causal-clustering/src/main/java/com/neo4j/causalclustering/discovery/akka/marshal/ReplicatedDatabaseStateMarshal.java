@@ -7,16 +7,15 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 
@@ -31,15 +30,15 @@ public class ReplicatedDatabaseStateMarshal extends SafeChannelMarshal<Replicate
     @Override
     protected ReplicatedDatabaseState unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        var databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         var containsCoreMembers = BooleanMarshal.unmarshal( channel );
         var memberCount = channel.getInt();
 
-        HashMap<MemberId,DatabaseState> memberStates = new HashMap<>();
+        HashMap<MemberId,DiscoveryDatabaseState> memberStates = new HashMap<>();
         for ( int i = 0; i < memberCount; i++ )
         {
             var memberId = MemberId.Marshal.INSTANCE.unmarshal( channel );
-            var databaseState = DatabaseStateMarshal.INSTANCE.unmarshal( channel );
+            var databaseState = DiscoveryDatabaseStateMarshal.INSTANCE.unmarshal( channel );
             memberStates.put( memberId, databaseState );
         }
 
@@ -53,17 +52,17 @@ public class ReplicatedDatabaseStateMarshal extends SafeChannelMarshal<Replicate
     @Override
     public void marshal( ReplicatedDatabaseState clusteredDatabaseState, WritableChannel channel ) throws IOException
     {
-        DatabaseIdMarshal.INSTANCE.marshal( clusteredDatabaseState.databaseId(), channel );
+        DatabaseIdWithoutNameMarshal.INSTANCE.marshal( clusteredDatabaseState.databaseId(), channel );
         BooleanMarshal.marshal( channel, clusteredDatabaseState.containsCoreStates() );
         var memberStates = Map.copyOf( clusteredDatabaseState.memberStates() );
         channel.putInt( memberStates.size() );
 
-        for ( Map.Entry<MemberId,DatabaseState> entry : memberStates.entrySet() )
+        for ( Map.Entry<MemberId,DiscoveryDatabaseState> entry : memberStates.entrySet() )
         {
             var memberId = entry.getKey();
             var databaseState = entry.getValue();
             MemberId.Marshal.INSTANCE.marshal( memberId, channel );
-            DatabaseStateMarshal.INSTANCE.marshal( databaseState, channel );
+            DiscoveryDatabaseStateMarshal.INSTANCE.marshal( databaseState, channel );
         }
     }
 }

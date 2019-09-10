@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
 import akka.actor.ActorRef;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
@@ -14,7 +15,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaViewRecord
@@ -23,10 +23,10 @@ public class ReadReplicaViewRecord
     private final Instant timestamp;
     private final ActorRef topologyClientActorRef;
     private final MemberId memberId;
-    private final Map<DatabaseId,DatabaseState> databaseStates;
+    private final Map<DatabaseId,DiscoveryDatabaseState> databaseStates;
 
     ReadReplicaViewRecord( ReadReplicaInfo readReplicaInfo, ActorRef topologyClientActorRef, MemberId memberId, Instant timestamp,
-            Map<DatabaseId,DatabaseState> databaseStates )
+            Map<DatabaseId,DiscoveryDatabaseState> databaseStates )
     {
         this.readReplicaInfo = readReplicaInfo;
         this.timestamp = timestamp;
@@ -60,7 +60,7 @@ public class ReadReplicaViewRecord
         return memberId;
     }
 
-    Map<DatabaseId,DatabaseState> databaseStates()
+    Map<DatabaseId,DiscoveryDatabaseState> databaseStates()
     {
         return databaseStates;
     }

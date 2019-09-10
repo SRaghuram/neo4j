@@ -30,7 +30,7 @@ class PrepareStoreCopyRequestEncoderDecoderTest
     {
         // given store id requests transmit store id
         StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
-        PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId, new TestDatabaseIdRepository().defaultDatabase() );
+        PrepareStoreCopyRequest prepareStoreCopyRequest = new PrepareStoreCopyRequest( storeId, new TestDatabaseIdRepository().defaultDatabase().databaseId() );
 
         // when transmitted
         sendToChannel( prepareStoreCopyRequest, embeddedChannel );

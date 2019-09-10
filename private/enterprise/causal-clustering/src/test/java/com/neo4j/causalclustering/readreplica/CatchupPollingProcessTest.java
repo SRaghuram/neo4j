@@ -31,7 +31,7 @@ import java.util.concurrent.Future;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
@@ -73,7 +73,7 @@ class CatchupPollingProcessTest
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final ClusterInternalDbmsOperator.StoreCopyHandle storeCopyHandle = mock( ClusterInternalDbmsOperator.StoreCopyHandle.class );
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.defaultDatabase();
+    private final NamedDatabaseId namedDatabaseId = databaseIdRepository.defaultDatabase();
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final SocketAddress coreMemberAddress = new SocketAddress( "hostname", 1234 );
 
@@ -90,7 +90,7 @@ class CatchupPollingProcessTest
     void before() throws Throwable
     {
         Database kernelDatabase = mock( Database.class );
-        when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
+        when( kernelDatabase.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( kernelDatabase.getStoreId() ).thenReturn( storeId );
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
@@ -102,8 +102,8 @@ class CatchupPollingProcessTest
 
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
-        when( catchupAddressProvider.primary( databaseId ) ).thenReturn( coreMemberAddress );
-        when( catchupAddressProvider.secondary( databaseId ) ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.primary( namedDatabaseId ) ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.secondary( namedDatabaseId ) ).thenReturn( coreMemberAddress );
         doReturn( storeCopyHandle ).when( databaseContext ).stopForStoreCopy();
         clearInvocations( databaseContext );
 
@@ -126,8 +126,8 @@ class CatchupPollingProcessTest
         txPuller.tick().get();
 
         // then
-        verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, databaseId );
-        verify( catchupAddressProvider, times( 2 ) ).primary( databaseId );
+        verify( v3Client, times( 2 ) ).pullTransactions( storeId, lastAppliedTxId, namedDatabaseId );
+        verify( catchupAddressProvider, times( 2 ) ).primary( namedDatabaseId );
     }
 
     @Test

@@ -26,7 +26,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy.Timeout;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -36,7 +36,7 @@ import org.neo4j.monitoring.Monitors;
  */
 public class RaftReplicator implements Replicator, LeaderListener
 {
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final MemberId me;
     private final Outbound<MemberId,RaftMessage> outbound;
     private final ProgressTracker progressTracker;
@@ -49,11 +49,11 @@ public class RaftReplicator implements Replicator, LeaderListener
     private final LeaderProvider leaderProvider;
 
     // TODO: Get rid of dependency on database manager!
-    public RaftReplicator( DatabaseId databaseId, LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessage> outbound,
+    public RaftReplicator( NamedDatabaseId namedDatabaseId, LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessage> outbound,
             LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy, long availabilityTimeoutMillis,
             LogProvider logProvider, DatabaseManager<ClusteredDatabaseContext> databaseManager, Monitors monitors, Duration leaderAwaitDuration )
     {
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.me = me;
         this.outbound = outbound;
         this.progressTracker = progressTracker;
@@ -181,7 +181,7 @@ public class RaftReplicator implements Replicator, LeaderListener
 
     private void assertDatabaseAvailable() throws UnavailableException
     {
-        var database = databaseManager.getDatabaseContext( databaseId )
+        var database = databaseManager.getDatabaseContext( namedDatabaseId )
                 .map( DatabaseContext::database )
                 .orElseThrow( IllegalStateException::new );
 

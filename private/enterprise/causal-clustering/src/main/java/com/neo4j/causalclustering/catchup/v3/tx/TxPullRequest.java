@@ -73,6 +73,6 @@ public class TxPullRequest extends CatchupProtocolMessage.WithDatabaseId
     @Override
     public String toString()
     {
-        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseId().name() + "'}";
+        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseId='" + databaseId() + "'}";
     }
 }

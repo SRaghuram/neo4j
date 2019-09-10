@@ -41,7 +41,7 @@ import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.DuplicatingLogProvider;
@@ -67,7 +67,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.io.ByteUnit.kibiBytes;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @TestDirectoryExtension
@@ -125,7 +125,7 @@ class StoreCopyClientIT
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        storeCopyClient = new StoreCopyClient( catchupClient, randomDatabaseId(), Monitors::new, logProvider, storeCopyBackoffStrategy );
+        storeCopyClient = new StoreCopyClient( catchupClient, randomNamedDatabaseId(), Monitors::new, logProvider, storeCopyBackoffStrategy );
     }
 
     @Test
@@ -287,13 +287,13 @@ class StoreCopyClientIT
         CatchupAddressProvider addressProvider = new CatchupAddressProvider()
         {
             @Override
-            public SocketAddress primary( DatabaseId databaseId )
+            public SocketAddress primary( NamedDatabaseId databaseId )
             {
                 return from( catchupServer.address().getPort() );
             }
 
             @Override
-            public SocketAddress secondary( DatabaseId databaseId )
+            public SocketAddress secondary( NamedDatabaseId databaseId )
             {
 
                 return new SocketAddress( "localhost", port );
@@ -316,13 +316,13 @@ class StoreCopyClientIT
         CatchupAddressProvider addressProvider = new CatchupAddressProvider()
         {
             @Override
-            public SocketAddress primary( DatabaseId databaseId )
+            public SocketAddress primary( NamedDatabaseId databaseId )
             {
                 return from( catchupServer.address().getPort() );
             }
 
             @Override
-            public SocketAddress secondary( DatabaseId databaseId ) throws CatchupAddressResolutionException
+            public SocketAddress secondary( NamedDatabaseId databaseId ) throws CatchupAddressResolutionException
             {
                 throw catchupAddressResolutionException;
             }

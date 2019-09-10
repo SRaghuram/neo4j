@@ -96,7 +96,7 @@ class ReadReplicaStatusTest
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
 
         var internalDatabase = mock( org.neo4j.kernel.database.Database.class );
-        when( internalDatabase.getDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
+        when( internalDatabase.getNamedDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
         dependencyResolver.satisfyDependency( internalDatabase );
 
         status = CausalClusteringStatusFactory.build( output, dbService, DEFAULT_DATABASE_NAME, mock( ClusterService.class ) );

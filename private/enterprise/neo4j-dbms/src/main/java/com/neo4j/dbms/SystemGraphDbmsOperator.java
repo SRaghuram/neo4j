@@ -10,13 +10,13 @@ import java.util.Map;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.emptySet;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
  * Operator driving database management operations in response to changes in the system database
@@ -32,7 +32,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
     {
         this.dbmsModel = dbmsModel;
         this.reconciledTxTracker = reconciledTxTracker;
-        this.desired.put( SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( SYSTEM_DATABASE_ID, STARTED ) );
+        this.desired.put( NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) );
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -70,7 +70,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
         systemStates.forEach( desired::put );
     }
 
-    private Collection<DatabaseId> extractUpdatedDatabases( TransactionData transactionData )
+    private Collection<NamedDatabaseId> extractUpdatedDatabases( TransactionData transactionData )
     {
         if ( transactionData == null )
         {

@@ -8,11 +8,10 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -31,7 +30,7 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
     @Override
     protected DatabaseCoreTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         RaftId raftId = raftIdMarshal.unmarshal( channel );
 
         int memberCount = channel.getInt();
@@ -49,7 +48,7 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
     @Override
     public void marshal( DatabaseCoreTopology coreTopology, WritableChannel channel ) throws IOException
     {
-        DatabaseIdMarshal.INSTANCE.marshal( coreTopology.databaseId(), channel );
+        DatabaseIdWithoutNameMarshal.INSTANCE.marshal( coreTopology.databaseId(), channel );
         raftIdMarshal.marshal( coreTopology.raftId(), channel );
 
         channel.putInt( coreTopology.members().size() );

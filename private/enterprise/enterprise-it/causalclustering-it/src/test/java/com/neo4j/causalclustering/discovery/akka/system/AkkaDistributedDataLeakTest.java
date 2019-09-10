@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.NullLogProvider;
@@ -76,7 +76,7 @@ class AkkaDistributedDataLeakTest
     private CoreTopologyService repairer;
 
     private int metadataCount = 2;
-    private DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     @BeforeAll
     void setUp() throws Throwable
@@ -146,7 +146,7 @@ class AkkaDistributedDataLeakTest
         var monitors = new Monitors();
         var retryStrategy = new RetryStrategy( 100, 3 );
         var sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
-        DiscoveryMemberFactory discoveryMemberFactory = ( MemberId mbr ) -> new TestDiscoveryMember( mbr, asSet( databaseId ) );
+        DiscoveryMemberFactory discoveryMemberFactory = ( MemberId mbr ) -> new TestDiscoveryMember( mbr, asSet( namedDatabaseId ) );
 
         return discoveryServiceFactory.coreTopologyService( config, memberId, createInitialisedScheduler(), logProvider,
                 logProvider, membersResolver, retryStrategy, sslPolicyLoader, discoveryMemberFactory, monitors, Clocks.systemClock() );

@@ -8,7 +8,7 @@ package com.neo4j.dbms;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
  * Describes a request to perform a single reconciliation attempt.
@@ -19,13 +19,13 @@ public class ReconcilerRequest
     private static final ReconcilerRequest FORCE = new ReconcilerRequest( true, null, null );
 
     private final boolean forceReconciliation;
-    private final DatabaseId panickedDatabaseId;
+    private final NamedDatabaseId panickedNamedDatabaseId;
     private final Throwable causeOfPanic;
 
-    private ReconcilerRequest( boolean forceReconciliation, DatabaseId panickedDatabaseId, Throwable causeOfPanic )
+    private ReconcilerRequest( boolean forceReconciliation, NamedDatabaseId panickedNamedDatabaseId, Throwable causeOfPanic )
     {
         this.forceReconciliation = forceReconciliation;
-        this.panickedDatabaseId = panickedDatabaseId;
+        this.panickedNamedDatabaseId = panickedNamedDatabaseId;
         this.causeOfPanic = causeOfPanic;
     }
 
@@ -54,9 +54,9 @@ public class ReconcilerRequest
      *
      * @return a reconciler request.
      */
-    public static ReconcilerRequest forPanickedDatabase( DatabaseId databaseId, Throwable causeOfPanic )
+    public static ReconcilerRequest forPanickedDatabase( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
     {
-        return new ReconcilerRequest( false, databaseId, causeOfPanic );
+        return new ReconcilerRequest( false, namedDatabaseId, causeOfPanic );
     }
 
     /**
@@ -75,9 +75,9 @@ public class ReconcilerRequest
      *
      * @return {@code Optional.of( cause )} if the state should be failed, {@code Optional.empty()} otherwise.
      */
-    Optional<Throwable> causeOfPanic( DatabaseId databaseId )
+    Optional<Throwable> causeOfPanic( NamedDatabaseId namedDatabaseId )
     {
-        boolean thisDatabaseHasPanicked = panickedDatabaseId != null && panickedDatabaseId.equals( databaseId );
+        boolean thisDatabaseHasPanicked = panickedNamedDatabaseId != null && panickedNamedDatabaseId.equals( namedDatabaseId );
         return thisDatabaseHasPanicked ? Optional.of( causeOfPanic ) : Optional.empty();
     }
 
@@ -101,20 +101,20 @@ public class ReconcilerRequest
             return false;
         }
         ReconcilerRequest that = (ReconcilerRequest) o;
-        return forceReconciliation == that.forceReconciliation && Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) &&
+        return forceReconciliation == that.forceReconciliation && Objects.equals( panickedNamedDatabaseId, that.panickedNamedDatabaseId ) &&
                 Objects.equals( causeOfPanic, that.causeOfPanic );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( forceReconciliation, panickedDatabaseId, causeOfPanic );
+        return Objects.hash( forceReconciliation, panickedNamedDatabaseId, causeOfPanic );
     }
 
     @Override
     public String toString()
     {
-        return "ReconcilerRequest{" + "forceReconciliation=" + forceReconciliation + ", panickedDatabaseId=" + panickedDatabaseId + ", causeOfPanic=" +
+        return "ReconcilerRequest{" + "forceReconciliation=" + forceReconciliation + ", panickedDatabaseId=" + panickedNamedDatabaseId + ", causeOfPanic=" +
                 causeOfPanic + '}';
     }
 }

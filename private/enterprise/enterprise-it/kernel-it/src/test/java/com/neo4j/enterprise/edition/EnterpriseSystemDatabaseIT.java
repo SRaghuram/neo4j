@@ -25,7 +25,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -47,7 +47,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 @TestDirectoryExtension
 class EnterpriseSystemDatabaseIT
@@ -67,7 +67,7 @@ class EnterpriseSystemDatabaseIT
         database = managementService.database( DEFAULT_DATABASE_NAME );
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
-        systemDb = getDatabaseByName( databaseManager, SYSTEM_DATABASE_ID );
+        systemDb = getDatabaseByName( databaseManager, NAMED_SYSTEM_DATABASE_ID );
     }
 
     @AfterEach
@@ -195,7 +195,7 @@ class EnterpriseSystemDatabaseIT
             managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledSystemDbDirectory ).build();
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
-            assertTrue( databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID ).isPresent() );
+            assertTrue( databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).isPresent() );
         }
         finally
         {
@@ -228,9 +228,9 @@ class EnterpriseSystemDatabaseIT
         }
     }
 
-    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, DatabaseId databaseId )
+    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, NamedDatabaseId namedDatabaseId )
     {
-        return databaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new ).databaseFacade();
+        return databaseManager.getDatabaseContext( namedDatabaseId ).orElseThrow( IllegalStateException::new ).databaseFacade();
     }
 
     private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, String databaseName )

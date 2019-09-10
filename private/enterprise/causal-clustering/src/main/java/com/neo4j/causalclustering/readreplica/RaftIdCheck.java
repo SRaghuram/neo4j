@@ -10,19 +10,19 @@ import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Objects;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.lang.String.format;
 
 class RaftIdCheck
 {
     private final SimpleStorage<RaftId> raftIdStorage;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
 
-    RaftIdCheck( SimpleStorage<RaftId> raftIdStorage, DatabaseId databaseId )
+    RaftIdCheck( SimpleStorage<RaftId> raftIdStorage, NamedDatabaseId namedDatabaseId )
     {
         this.raftIdStorage = raftIdStorage;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
     }
 
     public void perform() throws Exception
@@ -31,16 +31,17 @@ class RaftIdCheck
         {
             // If raft id state exists, read it and verify that it corresponds to the database being started
             var raftId = raftIdStorage.readState();
-            if ( !Objects.equals( raftId.uuid(), databaseId.uuid() ) )
+            if ( !Objects.equals( raftId.uuid(), namedDatabaseId.databaseId().uuid() ) )
             {
                 throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
-                        "This may indicate a previous DROP operation for %s did not complete.", raftId.uuid(), databaseId.uuid(), databaseId.name() ) );
+                        "This may indicate a previous DROP operation for %s did not complete.",
+                        raftId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId.name() ) );
             }
         }
         else
         {
             // If the raft id state doesn't exist, create it. RaftId must correspond to the database id
-            var raftId = RaftId.from( databaseId );
+            var raftId = RaftId.from( namedDatabaseId.databaseId() );
             raftIdStorage.writeState( raftId );
         }
     }

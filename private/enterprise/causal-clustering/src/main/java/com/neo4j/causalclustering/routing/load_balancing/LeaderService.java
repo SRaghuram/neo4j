@@ -10,11 +10,11 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public interface LeaderService
 {
-    Optional<MemberId> getLeaderId( DatabaseId databaseId );
+    Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId );
 
-    Optional<SocketAddress> getLeaderBoltAddress( DatabaseId databaseId );
+    Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId );
 }

@@ -19,7 +19,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.values.AnyValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +35,7 @@ import static org.neo4j.values.storable.Values.stringValue;
 class CoreRoleProcedureTest
 {
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
-    private final DatabaseId databaseId = databaseManager.databaseIdRepository().getRaw( "cars" );
+    private final NamedDatabaseId namedDatabaseId = databaseManager.databaseIdRepository().getRaw( "cars" );
     private final MemberId memberId = new MemberId( UUID.randomUUID() );
     private final IdentityModule identityModule = mock( IdentityModule.class );
     private final TopologyService topologyService = mock( TopologyService.class );
@@ -79,10 +79,10 @@ class CoreRoleProcedureTest
     void shouldThrowWhenRoleIsUnknown()
     {
         when( identityModule.myself() ).thenReturn( memberId );
-        when( topologyService.lookupRole( databaseId, memberId ) ).thenReturn( RoleInfo.UNKNOWN );
+        when( topologyService.lookupRole( namedDatabaseId, memberId ) ).thenReturn( RoleInfo.UNKNOWN );
 
         var error = assertThrows( ProcedureException.class,
-                () -> procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker ) );
+                () -> procedure.apply( procedureContext, new AnyValue[]{stringValue( namedDatabaseId.name() )}, resourceTracker ) );
 
         assertEquals( DatabaseUnavailable, error.status() );
     }
@@ -102,9 +102,9 @@ class CoreRoleProcedureTest
     private void testProcedureCall( RoleInfo role ) throws Exception
     {
         when( identityModule.myself() ).thenReturn( memberId );
-        when( topologyService.lookupRole( databaseId, memberId ) ).thenReturn( role );
+        when( topologyService.lookupRole( namedDatabaseId, memberId ) ).thenReturn( role );
 
-        var result = procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker );
+        var result = procedure.apply( procedureContext, new AnyValue[]{stringValue( namedDatabaseId.name() )}, resourceTracker );
         assertTrue( result.hasNext() );
 
         var row = result.next();

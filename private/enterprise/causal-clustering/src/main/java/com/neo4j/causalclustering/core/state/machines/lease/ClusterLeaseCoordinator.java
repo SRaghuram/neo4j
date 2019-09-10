@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
 import org.neo4j.kernel.impl.api.LeaseService;
@@ -40,16 +40,16 @@ public class ClusterLeaseCoordinator implements LeaseService
     private final Replicator replicator;
     private final LeaderLocator leaderLocator;
     private final ReplicatedLeaseStateMachine leaseStateMachine;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
 
     public ClusterLeaseCoordinator( MemberId myself, Replicator replicator, LeaderLocator leaderLocator, ReplicatedLeaseStateMachine leaseStateMachine,
-            DatabaseId databaseId )
+            NamedDatabaseId namedDatabaseId )
     {
         this.myself = myself;
         this.replicator = replicator;
         this.leaderLocator = leaderLocator;
         this.leaseStateMachine = leaseStateMachine;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
     }
 
     @Override
@@ -82,7 +82,7 @@ public class ClusterLeaseCoordinator implements LeaseService
     private Lease currentLease()
     {
         ReplicatedLeaseState state = leaseStateMachine.snapshot();
-        return new ReplicatedLeaseRequest( state, databaseId );
+        return new ReplicatedLeaseRequest( state, namedDatabaseId );
     }
 
     /**
@@ -99,7 +99,7 @@ public class ClusterLeaseCoordinator implements LeaseService
         /* If we are not the leader then we will not even attempt to acquire the lease. */
         ensureLeader();
 
-        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( myself, nextCandidateId( currentLease.id() ), databaseId );
+        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( myself, nextCandidateId( currentLease.id() ), namedDatabaseId.databaseId() );
         ReplicationResult replicationResult = replicator.replicate( leaseRequest );
 
         if ( replicationResult.outcome() != ReplicationResult.Outcome.APPLIED )

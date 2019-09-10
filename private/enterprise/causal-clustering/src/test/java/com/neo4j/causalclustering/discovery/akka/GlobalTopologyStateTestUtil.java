@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
@@ -28,8 +28,9 @@ final class GlobalTopologyStateTestUtil
     {
     }
 
-    static void setupCoreTopologyState( GlobalTopologyState topologyState, DatabaseId databaseId, MemberId leaderId, MemberId... followerIds )
+    static void setupCoreTopologyState( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, MemberId leaderId, MemberId... followerIds )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var coreMembers = new HashMap<MemberId,CoreServerInfo>();
 
         if ( leaderId != null )
@@ -50,8 +51,9 @@ final class GlobalTopologyStateTestUtil
         topologyState.onTopologyUpdate( coreTopology );
     }
 
-    static void setupReadReplicaTopologyState( GlobalTopologyState topologyState, DatabaseId databaseId, MemberId... readReplicaIds )
+    static void setupReadReplicaTopologyState( GlobalTopologyState topologyState, NamedDatabaseId namedDatabaseId, MemberId... readReplicaIds )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var readReplicas = new HashMap<MemberId,ReadReplicaInfo>();
 
         if ( readReplicaIds != null )

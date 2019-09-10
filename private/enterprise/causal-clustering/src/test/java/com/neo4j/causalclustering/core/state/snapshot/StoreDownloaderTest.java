@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
@@ -47,7 +47,7 @@ class StoreDownloaderTest
     private final SocketAddress secondaryAddress = new SocketAddress( "secondary", 2 );
 
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.getRaw( "target" );
+    private final NamedDatabaseId namedDatabaseId = databaseIdRepository.getRaw( "target" );
     private final StoreId storeId = randomStoreId();
 
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
@@ -58,9 +58,9 @@ class StoreDownloaderTest
     void shouldReplaceMismatchedStoreIfEmpty() throws Exception
     {
         // given
-        StoreDownloadContext databaseContext = mockLocalDatabase( databaseId, true, storeId );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, true, storeId );
 
-        RemoteStore remoteStore = getRemoteStore( databaseId );
+        RemoteStore remoteStore = getRemoteStore( namedDatabaseId );
         StoreId mismatchedStoreId = randomStoreId();
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
@@ -78,9 +78,9 @@ class StoreDownloaderTest
     void shouldNotReplaceMismatchedNonEmptyStore() throws Exception
     {
         // given
-        StoreDownloadContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, storeId );
 
-        RemoteStore remoteStore = getRemoteStore( databaseId );
+        RemoteStore remoteStore = getRemoteStore( namedDatabaseId );
         StoreId mismatchedStoreId = randomStoreId();
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
@@ -98,8 +98,8 @@ class StoreDownloaderTest
     void shouldOnlyCatchupIfPossible() throws Exception
     {
         // given
-        StoreDownloadContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
-        RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseId );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, storeId );
+        RemoteStore remoteStore = mockRemoteSuccessfulStore( namedDatabaseId );
 
         // when
         boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
@@ -115,9 +115,9 @@ class StoreDownloaderTest
     void shouldDownloadWholeStoreIfCannotCatchup() throws Exception
     {
         // given
-        StoreDownloadContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
-        RemoteStore remoteStore = mockRemoteStoreCopyFailure( databaseId );
-        StoreCopyProcess storeCopyProcess = getStoreCopyProcess( databaseId );
+        StoreDownloadContext databaseContext = mockLocalDatabase( namedDatabaseId, false, storeId );
+        RemoteStore remoteStore = mockRemoteStoreCopyFailure( namedDatabaseId );
+        StoreCopyProcess storeCopyProcess = getStoreCopyProcess( namedDatabaseId );
 
         // when
         boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
@@ -129,9 +129,9 @@ class StoreDownloaderTest
         assertTrue( downloadOk );
     }
 
-    private StoreCopyProcess getStoreCopyProcess( DatabaseId databaseId )
+    private StoreCopyProcess getStoreCopyProcess( NamedDatabaseId namedDatabaseId )
     {
-        return components.componentsFor( databaseId ).map( CatchupComponents::storeCopyProcess ).orElseThrow();
+        return components.componentsFor( namedDatabaseId ).map( CatchupComponents::storeCopyProcess ).orElseThrow();
     }
 
     @Test
@@ -145,15 +145,15 @@ class StoreDownloaderTest
         assertThrows( IllegalStateException.class, () -> downloader.bringUpToDate( wrongDb, primaryAddress, new SingleAddressProvider( secondaryAddress ) ) );
     }
 
-    private StoreDownloadContext mockLocalDatabase( DatabaseId databaseId, boolean isEmpty, StoreId storeId ) throws IOException
+    private StoreDownloadContext mockLocalDatabase( NamedDatabaseId namedDatabaseId, boolean isEmpty, StoreId storeId ) throws IOException
     {
-        StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withCatchupComponentsFactory(
+        StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withCatchupComponentsFactory(
                 ignored -> new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) ).withStoreId( storeId ).register();
 
         db.setEmpty( isEmpty );
 
         Database database = mock( Database.class );
-        when( database.getDatabaseId() ).thenReturn( databaseId );
+        when( database.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         StoreFiles storeFiles = mock( StoreFiles.class );
@@ -165,24 +165,25 @@ class StoreDownloaderTest
         return new StoreDownloadContext( database, storeFiles, transactionLogs, new ClusterInternalDbmsOperator() );
     }
 
-    private RemoteStore mockRemoteSuccessfulStore( DatabaseId databaseId ) throws StoreIdDownloadFailedException
+    private RemoteStore mockRemoteSuccessfulStore( NamedDatabaseId namedDatabaseId ) throws StoreIdDownloadFailedException
     {
-        RemoteStore remoteStore = getRemoteStore( databaseId );
+        RemoteStore remoteStore = getRemoteStore( namedDatabaseId );
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
         return remoteStore;
     }
 
-    private RemoteStore mockRemoteStoreCopyFailure( DatabaseId databaseId ) throws StoreIdDownloadFailedException, StoreCopyFailedException, IOException
+    private RemoteStore mockRemoteStoreCopyFailure( NamedDatabaseId namedDatabaseId )
+            throws StoreIdDownloadFailedException, StoreCopyFailedException, IOException
     {
-        RemoteStore remoteStore = getRemoteStore( databaseId );
+        RemoteStore remoteStore = getRemoteStore( namedDatabaseId );
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
         doThrow( StoreCopyFailedException.class ).when( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
         return remoteStore;
     }
 
-    private RemoteStore getRemoteStore( DatabaseId databaseId )
+    private RemoteStore getRemoteStore( NamedDatabaseId namedDatabaseId )
     {
-        return components.componentsFor( databaseId ).map( CatchupComponents::remoteStore ).orElseThrow();
+        return components.componentsFor( namedDatabaseId ).map( CatchupComponents::remoteStore ).orElseThrow();
     }
 
     private static StoreId randomStoreId()

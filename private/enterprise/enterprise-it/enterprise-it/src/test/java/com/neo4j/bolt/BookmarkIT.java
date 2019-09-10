@@ -234,7 +234,7 @@ class BookmarkIT
     private Bookmark systemDatabaseBookmark( long txId )
     {
         var db = (GraphDatabaseAPI) managementService.database( SYSTEM_DATABASE_NAME );
-        var databaseId = db.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
+        var databaseId = db.getDependencyResolver().resolveDependency( Database.class ).getNamedDatabaseId();
         return InternalBookmark.parse( new BookmarkWithDatabaseId( txId, databaseId ).toString() );
     }
 

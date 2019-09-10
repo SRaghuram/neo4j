@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.Group;
@@ -21,7 +21,7 @@ import static org.neo4j.util.Preconditions.checkState;
 
 public class PanicService
 {
-    private final Map<DatabaseId,DatabasePanicEventHandlers> handlersByDatabase = new ConcurrentHashMap<>();
+    private final Map<NamedDatabaseId,DatabasePanicEventHandlers> handlersByDatabase = new ConcurrentHashMap<>();
     private final Executor executor;
     private final Log log;
 
@@ -31,33 +31,33 @@ public class PanicService
         log = logService.getUserLog( getClass() );
     }
 
-    public void addPanicEventHandlers( DatabaseId databaseId, List<? extends DatabasePanicEventHandler> handlers )
+    public void addPanicEventHandlers( NamedDatabaseId namedDatabaseId, List<? extends DatabasePanicEventHandler> handlers )
     {
         var newHandlers = new DatabasePanicEventHandlers( handlers );
-        var oldHandlers = handlersByDatabase.putIfAbsent( databaseId, newHandlers );
-        checkState( oldHandlers == null, "Panic handlers for database %s are already installed", databaseId.name() );
+        var oldHandlers = handlersByDatabase.putIfAbsent( namedDatabaseId, newHandlers );
+        checkState( oldHandlers == null, "Panic handlers for database %s are already installed", namedDatabaseId.name() );
     }
 
-    public void removePanicEventHandlers( DatabaseId databaseId )
+    public void removePanicEventHandlers( NamedDatabaseId namedDatabaseId )
     {
-        handlersByDatabase.remove( databaseId );
+        handlersByDatabase.remove( namedDatabaseId );
     }
 
-    public DatabasePanicker panickerFor( DatabaseId databaseId )
+    public DatabasePanicker panickerFor( NamedDatabaseId namedDatabaseId )
     {
-        return error -> panicAsync( databaseId, error );
+        return error -> panicAsync( namedDatabaseId, error );
     }
 
-    private void panicAsync( DatabaseId databaseId, Throwable error )
+    private void panicAsync( NamedDatabaseId namedDatabaseId, Throwable error )
     {
-        executor.execute( () -> panic( databaseId, error ) );
+        executor.execute( () -> panic( namedDatabaseId, error ) );
     }
 
-    private void panic( DatabaseId databaseId, Throwable error )
+    private void panic( NamedDatabaseId namedDatabaseId, Throwable error )
     {
-        log.error( "Clustering components for database '" + databaseId.name() + "' have encountered a critical error", error );
+        log.error( "Clustering components for database '" + namedDatabaseId.name() + "' have encountered a critical error", error );
 
-        var handlers = handlersByDatabase.get( databaseId );
+        var handlers = handlersByDatabase.get( namedDatabaseId );
         if ( handlers != null )
         {
             handlers.handlePanic( error );

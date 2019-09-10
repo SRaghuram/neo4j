@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class ClusterInternalDbmsOperatorTest
 {
@@ -50,7 +50,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldTriggerOnStartAndStop()
     {
         // given
-        var someDb = randomDatabaseId();
+        var someDb = randomNamedDatabaseId();
 
         // when
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
@@ -69,8 +69,8 @@ class ClusterInternalDbmsOperatorTest
     void shouldReturnIndependentContexts()
     {
         // given
-        var databaseA = randomDatabaseId();
-        var databaseB = randomDatabaseId();
+        var databaseA = randomNamedDatabaseId();
+        var databaseB = randomNamedDatabaseId();
 
         // when
         var stopA1 = operator.stopForStoreCopy( databaseA );
@@ -132,7 +132,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldComplainWhenStartingTwice()
     {
         // given
-        var someDb = randomDatabaseId();
+        var someDb = randomNamedDatabaseId();
         var stoppedDatabase = operator.stopForStoreCopy( someDb );
         stoppedDatabase.release();
 
@@ -144,7 +144,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldNotDesireStoreCopyingWhileBootstrapping()
     {
         // given
-        var someDb = randomDatabaseId();
+        var someDb = randomNamedDatabaseId();
         var bootstrapping = operator.bootstrap( someDb );
 
         // when
@@ -166,9 +166,9 @@ class ClusterInternalDbmsOperatorTest
         assertNull( operator.desired().get( someDb.name() ) );
     }
 
-    private EnterpriseOperatorState operatorState( DatabaseId databaseId )
+    private EnterpriseOperatorState operatorState( NamedDatabaseId namedDatabaseId )
     {
-        return Optional.ofNullable( operator.desired().get( databaseId.name() ) )
+        return Optional.ofNullable( operator.desired().get( namedDatabaseId.name() ) )
                 .map( EnterpriseDatabaseState::operatorState )
                 .orElse( null );
     }
@@ -177,7 +177,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldDesireStopForPanickedDatabase()
     {
         // given
-        var someDb = randomDatabaseId();
+        var someDb = randomNamedDatabaseId();
         var desiredStateOnTrigger = new AtomicReference<EnterpriseOperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
         var e = new IllegalStateException();
@@ -194,7 +194,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldDesireStopForPanickedDatabaseWhileStoreCoping()
     {
         // given
-        var someDb = randomDatabaseId();
+        var someDb = randomNamedDatabaseId();
         var desiredStateOnTrigger = new AtomicReference<EnterpriseOperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
 
@@ -210,7 +210,7 @@ class ClusterInternalDbmsOperatorTest
     void shouldNotTriggerRestartAfterStoreCopyWhenPanicked()
     {
         // given
-        var someDb = randomDatabaseId();
+        var someDb = randomNamedDatabaseId();
         var e = new IllegalStateException();
 
         // when
@@ -222,11 +222,11 @@ class ClusterInternalDbmsOperatorTest
         verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb, e ) );
     }
 
-    private void captureDesiredStateWhenOperatorTriggered( DatabaseId databaseId, AtomicReference<EnterpriseOperatorState> stateRef )
+    private void captureDesiredStateWhenOperatorTriggered( NamedDatabaseId namedDatabaseId, AtomicReference<EnterpriseOperatorState> stateRef )
     {
         when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenAnswer( invocation ->
         {
-            var desiredState = operator.desired().get( databaseId.name() );
+            var desiredState = operator.desired().get( namedDatabaseId.name() );
             stateRef.set( desiredState.operatorState() );
             return ReconcilerResult.EMPTY;
         } );

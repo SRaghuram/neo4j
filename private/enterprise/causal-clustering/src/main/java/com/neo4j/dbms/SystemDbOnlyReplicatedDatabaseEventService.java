@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -23,21 +23,21 @@ public class SystemDbOnlyReplicatedDatabaseEventService implements ReplicatedDat
         this.log = logProvider.getLog( getClass() );
     }
 
-    public void registerListener( DatabaseId databaseId, ReplicatedDatabaseEventListener listener )
+    public void registerListener( NamedDatabaseId namedDatabaseId, ReplicatedDatabaseEventListener listener )
     {
-        assertIsSystemDatabase( databaseId );
+        assertIsSystemDatabase( namedDatabaseId );
         listeners.add( listener );
     }
 
-    public void unregisterListener( DatabaseId databaseId, ReplicatedDatabaseEventListener listener )
+    public void unregisterListener( NamedDatabaseId namedDatabaseId, ReplicatedDatabaseEventListener listener )
     {
-        assertIsSystemDatabase( databaseId );
+        assertIsSystemDatabase( namedDatabaseId );
         listeners.remove( listener );
     }
 
-    public ReplicatedDatabaseEventDispatch getDatabaseEventDispatch( DatabaseId databaseId )
+    public ReplicatedDatabaseEventDispatch getDatabaseEventDispatch( NamedDatabaseId namedDatabaseId )
     {
-        if ( !databaseId.isSystemDatabase() )
+        if ( !namedDatabaseId.isSystemDatabase() )
         {
             return NO_EVENT_DISPATCH;
         }
@@ -73,11 +73,11 @@ public class SystemDbOnlyReplicatedDatabaseEventService implements ReplicatedDat
         } );
     }
 
-    private void assertIsSystemDatabase( DatabaseId databaseId )
+    private void assertIsSystemDatabase( NamedDatabaseId namedDatabaseId )
     {
-        if ( !databaseId.isSystemDatabase() )
+        if ( !namedDatabaseId.isSystemDatabase() )
         {
-            throw new IllegalArgumentException( "Not supported " + databaseId );
+            throw new IllegalArgumentException( "Not supported " + namedDatabaseId );
         }
     }
 }

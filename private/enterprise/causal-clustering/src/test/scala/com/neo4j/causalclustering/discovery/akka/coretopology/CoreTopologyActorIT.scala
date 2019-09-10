@@ -24,7 +24,7 @@ import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
 import scala.collection.JavaConverters._
 
@@ -104,7 +104,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           Given("metadata updated with default database")
           makeTopologyActorKnowAboutCoreMember()
 
-          val otherDatabaseId = randomDatabaseId()
+          val otherDatabaseId = randomNamedDatabaseId().databaseId()
           val otherTopology = new DatabaseCoreTopology(otherDatabaseId, raftId, Map(new MemberId(UUID.randomUUID()) -> coreServerInfo(42)).asJava)
           val emptyTopology = new DatabaseCoreTopology(databaseId, raftId, Map.empty[MemberId, CoreServerInfo].asJava)
 
@@ -152,7 +152,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
         "cluster view updated" in new Fixture {
           Given("metadata and cluster view messages")
-          val metadataMessage = newMetadataMessage(databaseId)
+          val metadataMessage = newMetadataMessage()
           val members = new util.TreeSet[Member](Member.ordering)
           members.add(ClusterViewMessageTest.createMember(1, MemberStatus.Up))
           val clusterViewMessage = new ClusterViewMessage(false, members, Collections.emptySet())
@@ -192,7 +192,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       conf
     }
 
-    val databaseId = randomDatabaseId()
+    val databaseId = randomNamedDatabaseId().databaseId()
     val raftId = RaftId.from(databaseId)
 
     val replicatorProbe = TestProbe("replicator")
@@ -235,7 +235,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     def makeTopologyActorKnowAboutCoreMember(newCoreTopology: DatabaseCoreTopology = expectedCoreTopology): Unit = {
-      val metadataEvent = newMetadataMessage(databaseId)
+      val metadataEvent = newMetadataMessage()
       topologyActorRef ! metadataEvent
       awaitExpectedCoreTopology(newCoreTopology)
     }
@@ -247,6 +247,6 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     }
 
     def coreServerInfo(serverId: Int, databaseId: DatabaseId = databaseId): CoreServerInfo =
-      TestTopology.addressesForCore(serverId, false, Set(databaseId).asJava)
+      TestTopology.addressesForCore(serverId, false, Set[DatabaseId](databaseId).asJava)
   }
 }

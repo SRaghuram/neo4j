@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -57,7 +58,7 @@ public class ByteArrayTransactionChunker implements ChunkedInput<ByteBuf>
             ByteBuf buffer = allocator.buffer();
             try
             {
-                DatabaseIdMarshal.INSTANCE.marshal( databaseId, new NetworkWritableChannel( buffer ) );
+                DatabaseIdWithoutNameMarshal.INSTANCE.marshal( databaseId, new NetworkWritableChannel( buffer ) );
                 dbNameWritten = true;
                 return buffer;
             }

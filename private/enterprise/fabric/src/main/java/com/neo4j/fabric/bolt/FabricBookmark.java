@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.Bookmark;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -39,9 +39,9 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
     }
 
     @Override
-    public DatabaseId databaseId()
+    public NamedDatabaseId databaseId()
     {
-        return getDatabaseId();
+        return getNamedDatabaseId();
     }
 
     @Override
@@ -55,7 +55,7 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
         return graphStates;
     }
 
-    public Bookmark toBookmark( BiFunction<Long, DatabaseId, Bookmark> defaultBookmarkFormat )
+    public Bookmark toBookmark( BiFunction<Long,NamedDatabaseId, Bookmark> defaultBookmarkFormat )
     {
         return this;
     }

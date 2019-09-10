@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
@@ -25,13 +25,13 @@ import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
 public class ReplicatedTransactionCommitProcess implements TransactionCommitProcess
 {
     private final Replicator replicator;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final ClusterLeaseCoordinator leaseCoordinator;
 
-    public ReplicatedTransactionCommitProcess( Replicator replicator, DatabaseId databaseId, ClusterLeaseCoordinator leaseCoordinator )
+    public ReplicatedTransactionCommitProcess( Replicator replicator, NamedDatabaseId namedDatabaseId, ClusterLeaseCoordinator leaseCoordinator )
     {
         this.replicator = replicator;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.leaseCoordinator = leaseCoordinator;
     }
 
@@ -46,7 +46,7 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
             throw new TransactionFailureException( LeaseExpired, "The lease has been invalidated" );
         }
 
-        TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( txRepresentation, databaseId );
+        TransactionRepresentationReplicatedTransaction transaction = ReplicatedTransaction.from( txRepresentation, namedDatabaseId );
 
         ReplicationResult replicationResult;
         try

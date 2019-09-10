@@ -9,22 +9,20 @@ import akka.actor.ActorSystem;
 import akka.actor.ExtendedActorSystem;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.discovery.TestTopology;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 public class ReadReplicaRefreshMessageMarshalTest extends BaseMarshalTest<ReadReplicaRefreshMessage>
 {
@@ -55,13 +53,13 @@ public class ReadReplicaRefreshMessageMarshalTest extends BaseMarshalTest<ReadRe
         system = null;
     }
 
-    private static Map<DatabaseId,DatabaseState> defaultDatabaseStates()
+    private static Map<DatabaseId,DiscoveryDatabaseState> defaultDatabaseStates()
     {
         var idRepository = new TestDatabaseIdRepository();
-        var defaultDb = idRepository.defaultDatabase();
-        var systemDb = SYSTEM_DATABASE_ID;
+        var defaultDb = idRepository.defaultDatabase().databaseId();
+        var systemDb = DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID.databaseId();
 
-        return Map.of( systemDb, new EnterpriseDatabaseState( systemDb, STARTED ),
-                defaultDb, new EnterpriseDatabaseState( defaultDb, STARTED ) );
+        return Map.of( systemDb, new DiscoveryDatabaseState( systemDb, STARTED ),
+                defaultDb, new DiscoveryDatabaseState( defaultDb, STARTED ) );
     }
 }

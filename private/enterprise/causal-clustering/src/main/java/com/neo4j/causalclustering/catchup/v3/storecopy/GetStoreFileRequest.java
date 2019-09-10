@@ -61,7 +61,7 @@ public class GetStoreFileRequest extends StoreCopyRequest
                "expectedStoreId=" + expectedStoreId() +
                ", file=" + file.getName() +
                ", requiredTransactionId=" + requiredTransactionId() +
-               ", databaseName=" + databaseId().name() +
+               ", databaseId=" + databaseId() +
                "}";
     }
 }

@@ -11,12 +11,12 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
-import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.dbms.EnterpriseDatabaseState;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,12 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
@@ -42,7 +41,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     private final Consumer<DatabaseCoreTopology> callback;
     private volatile Map<MemberId,CoreServerInfo> coresByMemberId;
     private volatile Map<MemberId,ReadReplicaInfo> readReplicasByMemberId;
-    private volatile Map<DatabaseId, LeaderInfo> remoteDbLeaderMap;
+    private volatile Map<DatabaseId,LeaderInfo> remoteDbLeaderMap;
     private volatile BootstrapState bootstrapState = BootstrapState.EMPTY;
     private final Map<DatabaseId,DatabaseCoreTopology> coreTopologiesByDatabase = new ConcurrentHashMap<>();
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologiesByDatabase = new ConcurrentHashMap<>();
@@ -61,7 +60,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     @Override
     public void onTopologyUpdate( DatabaseCoreTopology newCoreTopology )
     {
-        DatabaseId databaseId = newCoreTopology.databaseId();
+        var databaseId = newCoreTopology.databaseId();
         DatabaseCoreTopology currentCoreTopology = coreTopologiesByDatabase.put( databaseId, newCoreTopology );
 
         if ( !Objects.equals( currentCoreTopology, newCoreTopology ) )
@@ -81,7 +80,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     @Override
     public void onTopologyUpdate( DatabaseReadReplicaTopology newReadReplicaTopology )
     {
-        DatabaseId databaseId = newReadReplicaTopology.databaseId();
+        var databaseId = newReadReplicaTopology.databaseId();
         DatabaseReadReplicaTopology currentReadReplicaTopology = readReplicaTopologiesByDatabase.put( databaseId, newReadReplicaTopology );
 
         if ( !Objects.equals( currentReadReplicaTopology, newReadReplicaTopology ) )
@@ -98,7 +97,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     }
 
     @Override
-    public void onDbLeaderUpdate( Map<DatabaseId, LeaderInfo> leaderInfoMap )
+    public void onDbLeaderUpdate( Map<DatabaseId,LeaderInfo> leaderInfoMap )
     {
         if ( !leaderInfoMap.equals( remoteDbLeaderMap ) )
         {
@@ -133,8 +132,9 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         bootstrapState = requireNonNull( newBootstrapState );
     }
 
-    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo role( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var rrTopology = readReplicaTopologiesByDatabase.get( databaseId );
         var coreTopology = coreTopologiesByDatabase.get( databaseId );
 
@@ -164,14 +164,16 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return readReplicasByMemberId;
     }
 
-    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var topology = coreTopologiesByDatabase.get( databaseId );
         return topology != null ? topology : DatabaseCoreTopology.empty( databaseId );
     }
 
-    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var topology = readReplicaTopologiesByDatabase.get( databaseId );
         return topology != null ? topology : DatabaseReadReplicaTopology.empty( databaseId );
     }
@@ -196,24 +198,28 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return null;
     }
 
-    DatabaseState stateFor( MemberId memberId, DatabaseId databaseId )
+    DiscoveryDatabaseState stateFor( MemberId memberId, NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         return lookupState( memberId, databaseId, coreStatesByDatabase )
                 .or( () -> lookupState( memberId, databaseId, readReplicaStatesByDatabase ) )
-                .orElse( EnterpriseDatabaseState.unknown( databaseId ) );
+                .orElse( DiscoveryDatabaseState.unknown( namedDatabaseId.databaseId() ) );
     }
 
-    ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    ReplicatedDatabaseState coreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         return coreStatesByDatabase.getOrDefault( databaseId, ReplicatedDatabaseState.ofCores( databaseId, Map.of() ) );
     }
 
-    ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    ReplicatedDatabaseState readReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         return readReplicaStatesByDatabase.getOrDefault( databaseId, ReplicatedDatabaseState.ofReadReplicas( databaseId, Map.of() ) );
     }
 
-    private Optional<DatabaseState> lookupState( MemberId memberId, DatabaseId databaseId, Map<DatabaseId,ReplicatedDatabaseState> states )
+    private Optional<DiscoveryDatabaseState> lookupState( MemberId memberId, DatabaseId databaseId,
+            Map<DatabaseId,ReplicatedDatabaseState> states )
     {
         return Optional.ofNullable( states.get( databaseId ) )
                 .flatMap( replicated -> replicated.stateFor( memberId ) );

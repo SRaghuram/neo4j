@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.messaging.ChunkingNetworkChannel;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
@@ -69,7 +69,7 @@ public class ChunkedTransaction implements ChunkedInput<ByteBuf>
         {
             // Ensure that the written buffers does not overflow the allocators chunk size.
             channel = new ChunkingNetworkChannel( allocator, CHUNK_SIZE, chunks );
-            DatabaseIdMarshal.INSTANCE.marshal( databaseId, channel );
+            DatabaseIdWithoutNameMarshal.INSTANCE.marshal( databaseId, channel );
         }
 
         // write to chunks if empty and there is more to write

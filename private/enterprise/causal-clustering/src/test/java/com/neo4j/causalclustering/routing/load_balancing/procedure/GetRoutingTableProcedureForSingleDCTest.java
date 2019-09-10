@@ -48,7 +48,7 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.procedure.builtin.routing.Role;
@@ -91,7 +91,7 @@ import static org.neo4j.values.storable.Values.stringValue;
 class GetRoutingTableProcedureForSingleDCTest
 {
     private DatabaseManager<?> databaseManager;
-    private DatabaseId databaseId;
+    private NamedDatabaseId namedDatabaseId;
     private RaftId raftId;
     private DatabaseAvailabilityGuard availabilityGuard;
 
@@ -115,11 +115,11 @@ class GetRoutingTableProcedureForSingleDCTest
     private void setUp()
     {
         var databaseManager = new StubClusteredDatabaseManager();
-        this.databaseId = databaseManager.databaseIdRepository().getByName( "my_test_database" ).get();
-        this.raftId = RaftId.from( databaseId );
+        this.namedDatabaseId = databaseManager.databaseIdRepository().getByName( "my_test_database" ).get();
+        this.raftId = RaftId.from( namedDatabaseId.databaseId() );
         this.availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         when( availabilityGuard.isAvailable() ).thenReturn( true );
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
         this.databaseManager = databaseManager;
     }
 
@@ -414,7 +414,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var topologyService = mock( CoreTopologyService.class );
         var leaderLocator = mock( LeaderLocator.class );
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
-        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
+        when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
         var leaderService = newLeaderService( leaderLocatorForDatabase, topologyService );
         var config = Config.defaults();
 
@@ -431,7 +431,7 @@ class GetRoutingTableProcedureForSingleDCTest
     void shouldThrowWhenDatabaseDoesNotExist() throws Exception
     {
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = TestDatabaseIdRepository.randomDatabaseId();
+        var databaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
         var topologyService = mock( CoreTopologyService.class );
         var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
 
@@ -459,17 +459,19 @@ class GetRoutingTableProcedureForSingleDCTest
     @Test
     void shouldThrowWhenTopologyServiceContainsNoInfoAboutTheDatabase() throws Exception
     {
-        var unknownDatabaseId = databaseManager.databaseIdRepository().getByName( "unknown" ).get();
+        var unknownNamedDatabaseId = databaseManager.databaseIdRepository().getByName( "unknown" ).get();
         var topologyService = mock( CoreTopologyService.class );
-        when( topologyService.coreTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseCoreTopology.empty( unknownDatabaseId ) );
-        when( topologyService.readReplicaTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseReadReplicaTopology.empty( unknownDatabaseId ) );
+        when( topologyService.coreTopologyForDatabase( unknownNamedDatabaseId ) )
+                .thenReturn( DatabaseCoreTopology.empty( unknownNamedDatabaseId.databaseId() ) );
+        when( topologyService.readReplicaTopologyForDatabase( unknownNamedDatabaseId ) )
+                .thenReturn( DatabaseReadReplicaTopology.empty( unknownNamedDatabaseId.databaseId() ) );
 
         var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
         var config = Config.defaults();
 
         var proc = newProcedure( topologyService, leaderService, config );
 
-        var error = assertThrows( ProcedureException.class, () -> run( proc, unknownDatabaseId, config ) );
+        var error = assertThrows( ProcedureException.class, () -> run( proc, unknownNamedDatabaseId, config ) );
         assertEquals( Status.Database.DatabaseNotFound, error.status() );
     }
 
@@ -479,7 +481,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
 
         when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
-        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
+        when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
         return leaderLocatorForDatabase;
     }
 
@@ -489,7 +491,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
 
         when( leaderLocator.getLeader() ).thenReturn( member( memberId ) );
-        when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
+        when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
         return leaderLocatorForDatabase;
     }
 
@@ -505,12 +507,12 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private ClusterView run( CallableProcedure proc, Config config ) throws ProcedureException
     {
-        return run( proc, databaseId, config );
+        return run( proc, namedDatabaseId, config );
     }
 
-    private ClusterView run( CallableProcedure proc, DatabaseId databaseId, Config config ) throws ProcedureException
+    private ClusterView run( CallableProcedure proc, NamedDatabaseId namedDatabaseId, Config config ) throws ProcedureException
     {
-        var rows = asList( proc.apply( null, inputParameters( databaseId ), null ) ).get( 0 );
+        var rows = asList( proc.apply( null, inputParameters( namedDatabaseId ), null ) ).get( 0 );
         assertEquals( longValue( config.get( routing_ttl ).getSeconds() ), /* ttl */rows[0] );
         return ClusterView.parse( (ListValue) rows[1] );
     }
@@ -539,20 +541,22 @@ class GetRoutingTableProcedureForSingleDCTest
 
     private AnyValue[] inputParameters()
     {
-        return inputParameters( databaseId );
+        return inputParameters( namedDatabaseId );
     }
 
-    private static AnyValue[] inputParameters( DatabaseId databaseId )
+    private static AnyValue[] inputParameters( NamedDatabaseId namedDatabaseId )
     {
-        return new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )};
+        return new AnyValue[]{MapValue.EMPTY, stringValue( namedDatabaseId.name() )};
     }
 
     private void setupCoreTopologyService( CoreTopologyService topologyService, Map<MemberId,CoreServerInfo> cores, Map<MemberId,ReadReplicaInfo> readReplicas )
     {
         when( topologyService.allCoreServers() ).thenReturn( cores );
         when( topologyService.allReadReplicas() ).thenReturn( readReplicas );
-        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, raftId, cores ) );
-        when( topologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, readReplicas ) );
+        when( topologyService.coreTopologyForDatabase( namedDatabaseId ) )
+                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftId, cores ) );
+        when( topologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
+                .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), readReplicas ) );
     }
 
     private LeaderService newLeaderService( LeaderLocatorForDatabase leaderLocator, CoreTopologyService coreTopologyService )

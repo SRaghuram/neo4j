@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -35,32 +35,32 @@ public class DefaultLeaderService implements LeaderService
     }
 
     @Override
-    public Optional<MemberId> getLeaderId( DatabaseId databaseId )
+    public Optional<MemberId> getLeaderId( NamedDatabaseId namedDatabaseId )
     {
-        var leaderLocator = leaderLocatorForDatabase.getLeader( databaseId );
+        var leaderLocator = leaderLocatorForDatabase.getLeader( namedDatabaseId );
         if ( leaderLocator.isPresent() )
         {
             // this cluster member is part of the Raft group for the specified database
             // leader can be located from the Raft state machine
             var leaderId = getLeaderIdFromLeaderLocator( leaderLocator.get() );
-            log.debug( "Leader locator %s for database %s returned leader ID %s", leaderLocator, databaseId, leaderId );
+            log.debug( "Leader locator %s for database %s returned leader ID %s", leaderLocator, namedDatabaseId, leaderId );
             return leaderId;
         }
         else
         {
             // this cluster member does not participate in the Raft group for the specified database
             // lookup the leader ID using the discovery service
-            var leaderId = getLeaderIdFromTopologyService( databaseId );
-            log.debug( "Topology service for database %s returned leader ID %s", databaseId, leaderId );
+            var leaderId = getLeaderIdFromTopologyService( namedDatabaseId );
+            log.debug( "Topology service for database %s returned leader ID %s", namedDatabaseId, leaderId );
             return leaderId;
         }
     }
 
     @Override
-    public Optional<SocketAddress> getLeaderBoltAddress( DatabaseId databaseId )
+    public Optional<SocketAddress> getLeaderBoltAddress( NamedDatabaseId namedDatabaseId )
     {
-        var leaderBoltAddress = getLeaderId( databaseId ).flatMap( this::resolveBoltAddress );
-        log.debug( "Leader for database %s has Bolt address %s", databaseId, leaderBoltAddress );
+        var leaderBoltAddress = getLeaderId( namedDatabaseId ).flatMap( this::resolveBoltAddress );
+        log.debug( "Leader for database %s has Bolt address %s", namedDatabaseId, leaderBoltAddress );
         return leaderBoltAddress;
     }
 
@@ -76,13 +76,13 @@ public class DefaultLeaderService implements LeaderService
         }
     }
 
-    private Optional<MemberId> getLeaderIdFromTopologyService( DatabaseId databaseId )
+    private Optional<MemberId> getLeaderIdFromTopologyService( NamedDatabaseId namedDatabaseId )
     {
-        return topologyService.coreTopologyForDatabase( databaseId )
+        return topologyService.coreTopologyForDatabase( namedDatabaseId )
                 .members()
                 .keySet()
                 .stream()
-                .filter( memberId -> topologyService.lookupRole( databaseId, memberId ) == RoleInfo.LEADER )
+                .filter( memberId -> topologyService.lookupRole( namedDatabaseId, memberId ) == RoleInfo.LEADER )
                 .findFirst();
     }
 

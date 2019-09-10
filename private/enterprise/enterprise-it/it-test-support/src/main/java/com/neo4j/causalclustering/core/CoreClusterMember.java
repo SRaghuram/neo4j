@@ -17,7 +17,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +37,8 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
@@ -256,9 +255,9 @@ public class CoreClusterMember implements ClusterMember
         return serverId;
     }
 
-    public DatabaseId databaseId()
+    public NamedDatabaseId databaseId()
     {
-        return defaultDatabase.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
+        return defaultDatabase.getDependencyResolver().resolveDependency( Database.class ).getNamedDatabaseId();
     }
 
     @Override
@@ -311,7 +310,7 @@ public class CoreClusterMember implements ClusterMember
         return discoveryPort;
     }
 
-    public DatabaseId databaseId( String databaseName )
+    public NamedDatabaseId databaseId( String databaseName )
     {
         if ( defaultDatabase == null )
         {

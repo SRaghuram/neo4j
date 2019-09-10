@@ -15,15 +15,14 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
+import com.neo4j.causalclustering.discovery._
 import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink, DirectoryUpdateSink, TopologyUpdateSink}
-import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, ReplicatedDatabaseState, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.neo4j.configuration.Config
-import org.neo4j.dbms.DatabaseState
-import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.neo4j.kernel.database.{DatabaseId, NamedDatabaseId}
 import org.neo4j.logging.NullLogProvider
 import org.neo4j.time.Clocks
 
@@ -34,7 +33,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   "ClientTopologyActor" when {
     "starting" should {
       "send read replica info to cluster client" in new Fixture {
-        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Map.empty[DatabaseId,DatabaseState].asJava)
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Collections.emptyMap())
 
         expectMsg(msg)
       }
@@ -52,7 +51,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     "running" should {
       "forward incoming core topologies" in new Fixture {
         Given("new topology")
-        val dbId = randomDatabaseId()
+        val dbId = randomNamedDatabaseId().databaseId()
         val raftId = RaftId.from(dbId)
         val newCoreTopology = new DatabaseCoreTopology(dbId, raftId, Map(
                                             new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
@@ -71,7 +70,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
-        val newRRTopology = new DatabaseReadReplicaTopology(randomDatabaseId(), Map(
+        val newRRTopology = new DatabaseReadReplicaTopology(randomNamedDatabaseId().databaseId(), Map(
                           new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
                           new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
                         ).asJava )
@@ -88,9 +87,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "forward incoming leaders" in new Fixture {
         Given("new leaders")
-        val newLeaders = new LeaderInfoDirectoryMessage(Map(
-                    randomDatabaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
-                    randomDatabaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
+        val newLeaders = new LeaderInfoDirectoryMessage(Map[DatabaseId,LeaderInfo](
+                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 1),
+                    randomNamedDatabaseId().databaseId() -> new LeaderInfo(new MemberId(UUID.randomUUID()), 2)
                   ).asJava)
 
         When("incoming topology")
@@ -105,7 +104,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "periodically send read replica info" in new Fixture {
         Given("Info to send")
-        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Map.empty[DatabaseId,DatabaseState].asJava)
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Collections.emptyMap())
         val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
 
         And("all databases are stated")
@@ -121,34 +120,32 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "handle database started messages" in new Fixture {
         Given("database IDs to start")
-        val databaseId1 = randomDatabaseId()
-        val databaseId2 = randomDatabaseId()
+        val namedDatabaseId1, namedDatabaseId2 = randomNamedDatabaseId()
 
         When("receive both start messages")
-        topologyActorRef ! new DatabaseStartedMessage(databaseId1)
-        topologyActorRef ! new DatabaseStartedMessage(databaseId2)
+        topologyActorRef ! new DatabaseStartedMessage(namedDatabaseId1)
+        topologyActorRef ! new DatabaseStartedMessage(namedDatabaseId2)
 
         Then("read replica database changes received")
-        expectRefreshMsgWithDatabases(databaseIds + databaseId1)
-        expectRefreshMsgWithDatabases(databaseIds + databaseId1 + databaseId2)
+        expectRefreshMsgWithDatabases(databaseIds + namedDatabaseId1)
+        expectRefreshMsgWithDatabases(databaseIds + namedDatabaseId1 + namedDatabaseId2)
       }
       "handle database stopped messages" in new Fixture {
         Given("database IDs to start and stop")
-        val databaseId1 = randomDatabaseId()
-        val databaseId2 = randomDatabaseId()
+        val namedDatabaseId1, namedDatabaseId2 = randomNamedDatabaseId()
 
         And("both databases started")
-        topologyActorRef ! new DatabaseStartedMessage(databaseId1)
-        topologyActorRef ! new DatabaseStartedMessage(databaseId2)
-        expectRefreshMsgWithDatabases(databaseIds + databaseId1)
-        expectRefreshMsgWithDatabases(databaseIds + databaseId1 + databaseId2)
+        topologyActorRef ! new DatabaseStartedMessage(namedDatabaseId1)
+        topologyActorRef ! new DatabaseStartedMessage(namedDatabaseId2)
+        expectRefreshMsgWithDatabases(databaseIds + namedDatabaseId1)
+        expectRefreshMsgWithDatabases(databaseIds + namedDatabaseId1 + namedDatabaseId2)
 
         When("receive both stop messages")
-        topologyActorRef ! new DatabaseStoppedMessage(databaseId2)
-        topologyActorRef ! new DatabaseStoppedMessage(databaseId1)
+        topologyActorRef ! new DatabaseStoppedMessage(namedDatabaseId2)
+        topologyActorRef ! new DatabaseStoppedMessage(namedDatabaseId1)
 
         Then("read replica database changes received")
-        expectRefreshMsgWithDatabases(databaseIds + databaseId1)
+        expectRefreshMsgWithDatabases(databaseIds + namedDatabaseId1)
         expectRefreshMsgWithDatabases(databaseIds)
       }
     }
@@ -186,9 +183,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     val memberId = new MemberId(UUID.randomUUID())
 
-    val databaseIds = Set(randomDatabaseId(), randomDatabaseId(), randomDatabaseId())
+    val databaseIds = Set(randomNamedDatabaseId(), randomNamedDatabaseId(), randomNamedDatabaseId())
 
-    val readReplicaInfo = TestTopology.addressesForReadReplica(0, databaseIds.asJava)
+    val readReplicaInfo = TestTopology.addressesForReadReplica(0, (Set.empty[DatabaseId] ++ databaseIds.map(_.databaseId())).asJava)
 
     val refresh = Duration(1, TimeUnit.SECONDS)
 
@@ -212,7 +209,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       clusterClientProbe.fishForSpecificMessage(){ case `send` => }
     }
 
-    def expectRefreshMsgWithDatabases(databaseIds: Set[DatabaseId]): Unit = {
+    def expectRefreshMsgWithDatabases(namedDatabaseIds: Set[NamedDatabaseId]): Unit = {
+      val databaseIds = namedDatabaseIds.map(_.databaseId())
       clusterClientProbe.fishForSpecificMessage(defaultWaitTime) {
         case publish: ClusterClient.Publish if isRefreshMsgWithDatabases(publish.msg, databaseIds) => ()
       }

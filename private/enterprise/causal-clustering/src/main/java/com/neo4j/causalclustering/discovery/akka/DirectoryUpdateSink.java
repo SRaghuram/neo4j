@@ -13,5 +13,5 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public interface DirectoryUpdateSink
 {
-    void onDbLeaderUpdate( Map<DatabaseId, LeaderInfo> leaderPerDb );
+    void onDbLeaderUpdate( Map<DatabaseId,LeaderInfo> leaderPerDb );
 }

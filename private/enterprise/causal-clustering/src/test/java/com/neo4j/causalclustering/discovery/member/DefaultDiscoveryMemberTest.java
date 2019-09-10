@@ -20,8 +20,8 @@ class DefaultDiscoveryMemberTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
-    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "one" );
-    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "two" );
+    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "one" ).databaseId();
+    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "two" ).databaseId();
 
     @Test
     void shouldReturnMemberId()

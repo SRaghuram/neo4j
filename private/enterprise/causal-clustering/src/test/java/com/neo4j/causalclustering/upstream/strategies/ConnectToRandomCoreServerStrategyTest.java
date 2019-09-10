@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 
 class ConnectToRandomCoreServerStrategyTest
 {
-    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final NamedDatabaseId NAMED_DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     @Test
     void shouldConnectToRandomCoreServer() throws Exception
@@ -48,13 +48,13 @@ class ConnectToRandomCoreServerStrategyTest
         MemberId memberId3 = new MemberId( UUID.randomUUID() );
 
         TopologyService topologyService = mock( TopologyService.class );
-        when( topologyService.coreTopologyForDatabase( DATABASE_ID ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
+        when( topologyService.coreTopologyForDatabase( NAMED_DATABASE_ID ) ).thenReturn( fakeCoreTopology( memberId1, memberId2, memberId3 ) );
 
         ConnectToRandomCoreServerStrategy connectionStrategy = new ConnectToRandomCoreServerStrategy();
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), null );
 
         // when
-        Optional<MemberId> memberId = connectionStrategy.upstreamMemberForDatabase( DATABASE_ID );
+        Optional<MemberId> memberId = connectionStrategy.upstreamMemberForDatabase( NAMED_DATABASE_ID );
 
         // then
         assertTrue( memberId.isPresent() );
@@ -75,7 +75,7 @@ class ConnectToRandomCoreServerStrategyTest
                 myself );
 
         // when
-        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamMemberForDatabase( DATABASE_ID );
+        Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamMemberForDatabase( NAMED_DATABASE_ID );
 
         // then
         assertTrue( found.isPresent() );
@@ -97,6 +97,6 @@ class ConnectToRandomCoreServerStrategyTest
             offset++;
         }
 
-        return new DatabaseCoreTopology( DATABASE_ID, raftId, coreMembers );
+        return new DatabaseCoreTopology( NAMED_DATABASE_ID.databaseId(), raftId, coreMembers );
     }
 }

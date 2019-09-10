@@ -65,7 +65,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         Log log = logProvider().getLog( getClass() );
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
                   diffPercent( expectedSize, clusterTx.size() ) );
-        var replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), DATABASE_ID );
+        var replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), NAMED_DATABASE_ID );
         return RaftMessages.RaftIdAwareMessage.of( RaftId.from( DATABASE_ID ), new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
     }
 

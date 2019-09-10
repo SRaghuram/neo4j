@@ -14,14 +14,13 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState
 import com.neo4j.causalclustering.discovery.{DatabaseReadReplicaTopology, ReadReplicaInfo, ReplicatedDatabaseState, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState.STARTED
-import com.neo4j.dbms.EnterpriseDatabaseState
 import org.neo4j.configuration.Config
-import org.neo4j.dbms.DatabaseState
-import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.neo4j.kernel.database.{DatabaseId, NamedDatabaseId}
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters._
@@ -34,8 +33,8 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
 
       "build topology" in new Fixture {
         Given("read replica view message with 3 entries")
-        val databaseIds = Set(randomDatabaseId(), randomDatabaseId())
-        val message = newReadReplicaViewMessage(3, databaseIds)
+        val namedDatabaseIds = Set(randomNamedDatabaseId(), randomNamedDatabaseId())
+        val message = newReadReplicaViewMessage(3, namedDatabaseIds)
 
         When("send message")
         readReplicaTopologyActor ! message
@@ -44,13 +43,13 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         val receivedTopology1 = topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
         val receivedTopology2 = topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
 
-        Set(receivedTopology1.databaseId(), receivedTopology2.databaseId()) should equal(databaseIds)
+        Set(receivedTopology1.databaseId(), receivedTopology2.databaseId()) should equal(namedDatabaseIds.map(_.databaseId()))
       }
 
       "build empty topologies for removed databases" in new Fixture {
         Given("actor with a cached view containing a read replica topology")
-        val initialDatabaseId = randomDatabaseId()
-        val newDatabaseId = randomDatabaseId()
+        val initialDatabaseId = randomNamedDatabaseId()
+        val newDatabaseId = randomNamedDatabaseId()
         readReplicaTopologyActor ! newReadReplicaViewMessage(1, Set(initialDatabaseId))
         topologyReceiver.expectMsgType[DatabaseReadReplicaTopology]
 
@@ -59,11 +58,11 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         readReplicaTopologyActor ! message
 
         Then("empty topology is built for the previous database")
-        val expectedEmptyTopology = new DatabaseReadReplicaTopology(initialDatabaseId, Map.empty[MemberId, ReadReplicaInfo].asJava )
+        val expectedEmptyTopology = new DatabaseReadReplicaTopology(initialDatabaseId.databaseId(), Map.empty[MemberId, ReadReplicaInfo].asJava )
         awaitAssert(topologyReceiver.expectMsg(expectedEmptyTopology), defaultWaitTime)
 
         And("non-empty topology is built for the new database")
-        val expectedNewTopology = message.toReadReplicaTopology(newDatabaseId)
+        val expectedNewTopology = message.toReadReplicaTopology(newDatabaseId.databaseId())
         awaitAssert(topologyReceiver.expectMsg(expectedNewTopology), defaultWaitTime)
       }
     }
@@ -89,7 +88,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
 
     val readReplicaTopologyActor = system.actorOf(props)
 
-    def newReadReplicaViewMessage(entriesCount: Int, databaseIds: Set[DatabaseId]): ReadReplicaViewMessage = {
+    def newReadReplicaViewMessage(entriesCount: Int, databaseIds: Set[NamedDatabaseId]): ReadReplicaViewMessage = {
       val clusterClientReadReplicas = (1 to entriesCount).map(id => newReadReplicaViewRecord(id, databaseIds))
         .map(record => (record.topologyClientActorRef(), record))
         .toMap
@@ -97,10 +96,13 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
       new ReadReplicaViewMessage(clusterClientReadReplicas.asJava)
     }
 
-    def newReadReplicaViewRecord(id: Int, databaseIds: Set[DatabaseId]): ReadReplicaViewRecord = {
+    def newReadReplicaViewRecord(id: Int, databaseIds: Set[NamedDatabaseId]): ReadReplicaViewRecord = {
       val topologyClient = TestProbe("TopologyClient-" + id).ref
-      val readReplicaInfo = TestTopology.addressesForReadReplica(id, databaseIds.asJava)
-      val states: Map[DatabaseId, DatabaseState] = databaseIds.map(id => (id, new EnterpriseDatabaseState(id, STARTED)) ).toMap
+      val readReplicaInfo = TestTopology.addressesForReadReplica(id, (Set.empty[DatabaseId] ++ databaseIds.map(_.databaseId())).asJava)
+      val states: Map[DatabaseId, DiscoveryDatabaseState] = databaseIds
+        .map(_.databaseId)
+        .map(id => (id, new DiscoveryDatabaseState(id, STARTED)) )
+        .toMap
       new ReadReplicaViewRecord(readReplicaInfo, topologyClient, new MemberId(UUID.randomUUID()), Instant.now(), states.asJava )
     }
   }

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.marshal;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
@@ -48,7 +47,7 @@ abstract class DiscoveryServerInfoMarshal<T extends DiscoveryServerInfo> extends
         var databaseIds = new HashSet<DatabaseId>( size );
         for ( int i = 0; i < size; i++ )
         {
-            databaseIds.add( DatabaseIdMarshal.INSTANCE.unmarshal( channel ) );
+            databaseIds.add( DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel ) );
         }
         return databaseIds;
     }
@@ -59,7 +58,7 @@ abstract class DiscoveryServerInfoMarshal<T extends DiscoveryServerInfo> extends
         channel.putInt( databaseIds.size() );
         for ( var databaseId : databaseIds )
         {
-            DatabaseIdMarshal.INSTANCE.marshal( databaseId, channel );
+            DatabaseIdWithoutNameMarshal.INSTANCE.marshal( databaseId, channel );
         }
     }
 }

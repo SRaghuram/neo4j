@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 import java.util.Collections;
 
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
@@ -30,9 +30,9 @@ public class ServerShufflingProcessor implements LoadBalancingProcessor
     }
 
     @Override
-    public RoutingResult run( DatabaseId databaseId, MapValue context ) throws ProcedureException
+    public RoutingResult run( NamedDatabaseId namedDatabaseId, MapValue context ) throws ProcedureException
     {
-        RoutingResult result = delegate.run( databaseId, context );
+        RoutingResult result = delegate.run( namedDatabaseId, context );
 
         Collections.shuffle( result.routeEndpoints() );
         Collections.shuffle( result.writeEndpoints() );

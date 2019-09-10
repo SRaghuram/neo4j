@@ -15,7 +15,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
 
@@ -69,9 +69,9 @@ public class PageCacheWarmupTestSupport
         }
 
         @Override
-        public void profileCompleted( DatabaseId databaseId, long pagesInMemory )
+        public void profileCompleted( NamedDatabaseId namedDatabaseId, long pagesInMemory )
         {
-            if ( DEFAULT_DATABASE_NAME.equals( databaseId.name() ) )
+            if ( DEFAULT_DATABASE_NAME.equals( namedDatabaseId.name() ) )
             {
                 pageCount.set( pagesInMemory );
                 profileLatch.release();
@@ -90,19 +90,19 @@ public class PageCacheWarmupTestSupport
         }
 
         @Override
-        public void warmupStarted( DatabaseId databaseId )
+        public void warmupStarted( NamedDatabaseId namedDatabaseId )
         {
             //nothing
         }
 
         @Override
-        public void warmupCompleted( DatabaseId databaseId, long pagesLoaded )
+        public void warmupCompleted( NamedDatabaseId namedDatabaseId, long pagesLoaded )
         {
             //nothing
         }
 
         @Override
-        public void profileCompleted( DatabaseId databaseId, long pagesInMemory )
+        public void profileCompleted( NamedDatabaseId namedDatabaseId, long pagesInMemory )
         {
             await();
             monitors.removeMonitorListener( this );

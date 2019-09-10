@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
@@ -60,7 +62,7 @@ class ClusterOverviewProcedureTest
     void shouldHaveCorrectSignature()
     {
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService );
+        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService, DATABASE_ID_REPOSITORY );
 
         ProcedureSignature signature = procedure.signature();
 
@@ -86,38 +88,38 @@ class ClusterOverviewProcedureTest
         MemberId follower1 = new MemberId( new UUID( 2, 0 ) );
         MemberId follower2 = new MemberId( new UUID( 3, 0 ) );
 
-        Set<DatabaseId> leaderDatabases = databaseIds( "customers", "orders", "system" );
-        Set<DatabaseId> follower1Databases = databaseIds( "system", "orders" );
-        Set<DatabaseId> follower2Databases = databaseIds( "system" );
-        coreMembers.put( theLeader, addressesForCore( 0, false, leaderDatabases ) );
-        coreMembers.put( follower1, addressesForCore( 1, false, follower1Databases ) );
-        coreMembers.put( follower2, addressesForCore( 2, false, follower2Databases ) );
+        Set<NamedDatabaseId> leaderDatabases = databaseIds( "customers", "orders", "system" );
+        Set<NamedDatabaseId> follower1Databases = databaseIds( "system", "orders" );
+        Set<NamedDatabaseId> follower2Databases = databaseIds( "system" );
+        coreMembers.put( theLeader, addressesForCore( 0, false, toRaw( leaderDatabases ) ) );
+        coreMembers.put( follower1, addressesForCore( 1, false, toRaw( follower1Databases ) ) );
+        coreMembers.put( follower2, addressesForCore( 2, false, toRaw( follower2Databases ) ) );
 
         Map<MemberId,ReadReplicaInfo> replicaMembers = new HashMap<>();
         MemberId replica4 = new MemberId( new UUID( 4, 0 ) );
         MemberId replica5 = new MemberId( new UUID( 5, 0 ) );
 
-        Set<DatabaseId> replica1Databases = databaseIds( "system", "orders" );
-        Set<DatabaseId> replica2Databases = databaseIds( "system", "customers" );
-        replicaMembers.put( replica4, addressesForReadReplica( 4, replica1Databases ) );
-        replicaMembers.put( replica5, addressesForReadReplica( 5, replica2Databases ) );
+        Set<NamedDatabaseId> replica1Databases = databaseIds( "system", "orders" );
+        Set<NamedDatabaseId> replica2Databases = databaseIds( "system", "customers" );
+        replicaMembers.put( replica4, addressesForReadReplica( 4, toRaw( replica1Databases ) ) );
+        replicaMembers.put( replica5, addressesForReadReplica( 5, toRaw( replica2Databases ) ) );
 
         when( topologyService.allCoreServers() ).thenReturn( coreMembers );
         when( topologyService.allReadReplicas() ).thenReturn( replicaMembers );
-        for ( DatabaseId databaseId : leaderDatabases )
+        for ( NamedDatabaseId namedDatabaseId : leaderDatabases )
         {
-            when( topologyService.lookupRole( databaseId, theLeader ) ).thenReturn( LEADER );
+            when( topologyService.lookupRole( namedDatabaseId, theLeader ) ).thenReturn( LEADER );
         }
-        for ( DatabaseId databaseId : follower1Databases )
+        for ( NamedDatabaseId namedDatabaseId : follower1Databases )
         {
-            when( topologyService.lookupRole( databaseId, follower1 ) ).thenReturn( FOLLOWER );
+            when( topologyService.lookupRole( namedDatabaseId, follower1 ) ).thenReturn( FOLLOWER );
         }
-        for ( DatabaseId databaseId : follower2Databases )
+        for ( NamedDatabaseId namedDatabaseId : follower2Databases )
         {
-            when( topologyService.lookupRole( databaseId, follower2 ) ).thenReturn( FOLLOWER );
+            when( topologyService.lookupRole( namedDatabaseId, follower2 ) ).thenReturn( FOLLOWER );
         }
 
-        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService );
+        ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService, DATABASE_ID_REPOSITORY );
 
         // when
         final RawIterator<AnyValue[],ProcedureException> members = procedure.apply( null, new AnyValue[0], null );
@@ -132,16 +134,21 @@ class ClusterOverviewProcedureTest
         assertFalse( members.hasNext() );
     }
 
-    private static Set<DatabaseId> databaseIds( String... names )
+    private static Set<NamedDatabaseId> databaseIds( String... names )
     {
         return Arrays.stream( names )
                 .map( DATABASE_ID_REPOSITORY::getRaw )
                 .collect( toSet() );
     }
 
-    private static Map<DatabaseId,RoleInfo> databasesWithRole( Set<DatabaseId> databaseIds, RoleInfo role )
+    private static Set<DatabaseId> toRaw( Set<NamedDatabaseId> namedDatabaseIds )
     {
-        return databaseIds.stream()
+        return namedDatabaseIds.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
+    }
+
+    private static Map<NamedDatabaseId,RoleInfo> databasesWithRole( Set<NamedDatabaseId> namedDatabaseIds, RoleInfo role )
+    {
+        return namedDatabaseIds.stream()
                 .collect( toMap( identity(), ignore -> role ) );
     }
 
@@ -149,10 +156,10 @@ class ClusterOverviewProcedureTest
     {
         private final UUID memberId;
         private final int boltPort;
-        private final Map<DatabaseId,RoleInfo> databases;
+        private final Map<NamedDatabaseId,RoleInfo> databases;
         private final Set<String> groups;
 
-        private IsRecord( MemberId memberId, int boltPort, Map<DatabaseId,RoleInfo> databases, Set<String> groups )
+        private IsRecord( MemberId memberId, int boltPort, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
         {
             this.memberId = memberId.getUuid();
             this.boltPort = boltPort;
@@ -180,7 +187,7 @@ class ClusterOverviewProcedureTest
                 return false;
             }
 
-            Map<DatabaseId,RoleInfo> recordDatabases = new HashMap<>();
+            Map<NamedDatabaseId,RoleInfo> recordDatabases = new HashMap<>();
             MapValue mapValue = (MapValue) record[2];
             for ( String key : mapValue.keySet() )
             {

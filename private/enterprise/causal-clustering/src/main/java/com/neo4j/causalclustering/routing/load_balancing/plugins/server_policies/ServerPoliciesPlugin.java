@@ -25,7 +25,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -84,15 +84,15 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public RoutingResult run( DatabaseId databaseId, MapValue context ) throws ProcedureException
+    public RoutingResult run( NamedDatabaseId namedDatabaseId, MapValue context ) throws ProcedureException
     {
         var policy = policies.selectFor( context );
 
-        var coreTopology = coreTopologyFor( databaseId );
-        var rrTopology = readReplicaTopology( databaseId );
+        var coreTopology = coreTopologyFor( namedDatabaseId );
+        var rrTopology = readReplicaTopology( namedDatabaseId );
 
-        return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( databaseId ),
-                readEndpoints( coreTopology, rrTopology, policy, databaseId ), timeToLive );
+        return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( namedDatabaseId ),
+                readEndpoints( coreTopology, rrTopology, policy, namedDatabaseId ), timeToLive );
     }
 
     private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )
@@ -114,13 +114,13 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                 .map( ServerInfo::boltAddress ).collect( toList() );
     }
 
-    private List<SocketAddress> writeEndpoints( DatabaseId databaseId )
+    private List<SocketAddress> writeEndpoints( NamedDatabaseId namedDatabaseId )
     {
-        return leaderService.getLeaderBoltAddress( databaseId ).map( List::of ).orElse( emptyList() );
+        return leaderService.getLeaderBoltAddress( namedDatabaseId ).map( List::of ).orElse( emptyList() );
     }
 
     private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology, Policy policy,
-            DatabaseId databaseId )
+            NamedDatabaseId namedDatabaseId )
     {
         var possibleReaders = rrTopology.members().entrySet().stream()
                 .map( ServerPoliciesPlugin::newServerInfo )
@@ -131,7 +131,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
             var coreMembers = coreTopology.members();
             var validCores = coreMembers.keySet();
 
-            var optionalLeaderId = leaderService.getLeaderId( databaseId );
+            var optionalLeaderId = leaderService.getLeaderId( namedDatabaseId );
             if ( optionalLeaderId.isPresent() )
             {
                 var leaderId = optionalLeaderId.get();
@@ -158,14 +158,14 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
     }
 
-    private DatabaseCoreTopology coreTopologyFor( DatabaseId databaseId )
+    private DatabaseCoreTopology coreTopologyFor( NamedDatabaseId namedDatabaseId )
     {
-        return topologyService.coreTopologyForDatabase( databaseId );
+        return topologyService.coreTopologyForDatabase( namedDatabaseId );
     }
 
-    private DatabaseReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
+    private DatabaseReadReplicaTopology readReplicaTopology( NamedDatabaseId namedDatabaseId )
     {
-        return topologyService.readReplicaTopologyForDatabase( databaseId );
+        return topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
     }
 
     private static ServerInfo newServerInfo( Map.Entry<MemberId,? extends DiscoveryServerInfo> entry )

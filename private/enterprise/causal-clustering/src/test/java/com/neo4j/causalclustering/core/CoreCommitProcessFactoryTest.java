@@ -13,7 +13,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 
 class CoreCommitProcessFactoryTest
 {
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final Replicator replicator = mock( Replicator.class );
     private final CoreStateMachines coreStateMachines = mock( CoreStateMachines.class );
     private final ClusterLeaseCoordinator leaseCoordinator = mock( ClusterLeaseCoordinator.class );
@@ -35,7 +35,8 @@ class CoreCommitProcessFactoryTest
     private final StorageEngine storageEngine = mock( StorageEngine.class );
     private final Config config = Config.defaults();
 
-    private final CoreCommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, coreStateMachines, leaseCoordinator );
+    private final CoreCommitProcessFactory commitProcessFactory =
+            new CoreCommitProcessFactory( namedDatabaseId, replicator, coreStateMachines, leaseCoordinator );
 
     @Test
     void shouldCreateReplicatedCommitProcess()

@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.messaging.marshalling.v2.decoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.Test;
 
@@ -15,7 +14,6 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -50,7 +48,8 @@ public class RaftIdAwareMessageComposerTest
         try
         {
             RaftMessageComposer raftMessageComposer = new RaftMessageComposer( Clock.systemUTC() );
-            ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( new byte[0], new TestDatabaseIdRepository().defaultDatabase() );
+            ReplicatedTransaction replicatedTransaction =
+                    ReplicatedTransaction.from( new byte[0], new TestDatabaseIdRepository().defaultDatabase().databaseId() );
             raftMessageComposer.decode( null, replicatedTransaction, null );
             List<Object> out = new ArrayList<>();
             raftMessageComposer.decode( null, messageCreator( ( a, b ) -> Optional.of( dummyRequest() ) ), out );

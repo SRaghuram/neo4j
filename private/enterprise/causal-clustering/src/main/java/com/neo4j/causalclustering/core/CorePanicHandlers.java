@@ -24,7 +24,7 @@ class CorePanicHandlers extends DatabasePanicHandlers
     CorePanicHandlers( RaftMachine raftMachine, Database kernelDatabase, CommandApplicationProcess applicationProcess,
             ClusterInternalDbmsOperator clusterInternalOperator, PanicService panicService  )
     {
-        super( panicService, kernelDatabase.getDatabaseId(), List.of(
+        super( panicService, kernelDatabase.getNamedDatabaseId(), List.of(
                 raiseAvailabilityGuard( kernelDatabase ),
                 markUnhealthy( kernelDatabase ),
                 applicationProcess,

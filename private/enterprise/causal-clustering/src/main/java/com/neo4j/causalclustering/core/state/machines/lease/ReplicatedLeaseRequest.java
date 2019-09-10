@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.lang.String.format;
 import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
@@ -28,9 +29,9 @@ public class ReplicatedLeaseRequest implements CoreReplicatedContent, Lease
 
     static final ReplicatedLeaseRequest INVALID_LEASE_REQUEST = new ReplicatedLeaseRequest( null, NO_LEASE, null );
 
-    public ReplicatedLeaseRequest( ReplicatedLeaseState state, DatabaseId databaseId )
+    public ReplicatedLeaseRequest( ReplicatedLeaseState state, NamedDatabaseId namedDatabaseId )
     {
-        this( state.owner(), state.leaseId(), databaseId );
+        this( state.owner(), state.leaseId(), namedDatabaseId.databaseId() );
     }
 
     public ReplicatedLeaseRequest( MemberId owner, int leaseId, DatabaseId databaseId )

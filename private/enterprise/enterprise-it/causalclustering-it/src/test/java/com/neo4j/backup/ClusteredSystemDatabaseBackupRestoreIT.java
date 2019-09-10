@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 @TestDirectoryExtension
 @ClusterExtension
@@ -189,7 +189,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
                 .getDependencyResolver()
                 .resolveDependency( CoreDatabaseManager.class );
 
-        return databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
+        return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID )
                 .map( DatabaseContext::databaseFacade ).orElseThrow( IllegalStateException::new );
     }
 

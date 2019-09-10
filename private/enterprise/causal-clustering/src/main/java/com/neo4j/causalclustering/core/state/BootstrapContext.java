@@ -11,27 +11,27 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 
 public class BootstrapContext
 {
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final LogFiles transactionLogs;
 
-    public BootstrapContext( DatabaseId databaseId, DatabaseLayout databaseLayout, StoreFiles storeFiles, LogFiles transactionLogs )
+    public BootstrapContext( NamedDatabaseId namedDatabaseId, DatabaseLayout databaseLayout, StoreFiles storeFiles, LogFiles transactionLogs )
     {
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.databaseLayout = databaseLayout;
         this.storeFiles = storeFiles;
         this.transactionLogs = transactionLogs;
     }
 
-    DatabaseId databaseId()
+    NamedDatabaseId databaseId()
     {
-        return databaseId;
+        return namedDatabaseId;
     }
 
     DatabaseLayout databaseLayout()

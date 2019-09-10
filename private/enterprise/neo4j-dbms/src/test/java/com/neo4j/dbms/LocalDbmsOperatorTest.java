@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
@@ -67,7 +67,7 @@ class LocalDbmsOperatorTest
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
-    private EnterpriseOperatorState operatorState( Optional<DatabaseId> databaseId )
+    private EnterpriseOperatorState operatorState( Optional<NamedDatabaseId> databaseId )
     {
         return databaseId.flatMap( id -> Optional.ofNullable( operator.desired().get( id.name() ) ) )
                 .map( EnterpriseDatabaseState::operatorState )

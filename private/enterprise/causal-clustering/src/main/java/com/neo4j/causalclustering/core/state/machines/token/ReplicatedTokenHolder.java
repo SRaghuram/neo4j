@@ -18,6 +18,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -39,7 +40,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final ReplicatedTokenCreator tokenCreator;
     private final DatabaseId databaseId;
 
-    ReplicatedTokenHolder( DatabaseId databaseId, TokenRegistry tokenRegistry, Replicator replicator,
+    ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
                            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
                            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
                            ReplicatedTokenCreator tokenCreator )
@@ -51,7 +52,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.type = type;
         this.storageEngineSupplier = storageEngineSupplier;
         this.tokenCreator = tokenCreator;
-        this.databaseId = databaseId;
+        this.databaseId = namedDatabaseId.databaseId();
     }
 
     @Override

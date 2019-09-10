@@ -9,11 +9,11 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.storageengine.api.StoreId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 class TxPullRequestEncodeDecodeTest
 {
@@ -21,7 +21,7 @@ class TxPullRequestEncodeDecodeTest
     void shouldEncodeAndDecodePullRequestMessage()
     {
         // given
-        DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+        DatabaseId databaseId = randomDatabaseId();
         EmbeddedChannel channel = new EmbeddedChannel( new TxPullRequestEncoder(), new TxPullRequestDecoder() );
         final long arbitraryId = 23;
         TxPullRequest sent = new TxPullRequest( arbitraryId, new StoreId( 1, 2, 3, 4, 5 ), databaseId );

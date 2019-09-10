@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -31,7 +30,7 @@ public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<LeaderI
         HashMap<DatabaseId,LeaderInfo> leaders = new HashMap<>( size );
         for ( int i = 0; i < size; i++ )
         {
-            DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+            DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
             LeaderInfo leaderInfo = leaderInfoMarshal.unmarshal( channel );
             leaders.put( databaseId, leaderInfo );
         }
@@ -46,7 +45,7 @@ public class DatabaseLeaderInfoMessageMarshal extends SafeChannelMarshal<LeaderI
         {
             DatabaseId databaseId = entry.getKey();
             LeaderInfo leaderInfo = entry.getValue();
-            DatabaseIdMarshal.INSTANCE.marshal( databaseId, channel );
+            DatabaseIdWithoutNameMarshal.INSTANCE.marshal( databaseId, channel );
             leaderInfoMarshal.marshal( leaderInfo, channel );
         }
     }

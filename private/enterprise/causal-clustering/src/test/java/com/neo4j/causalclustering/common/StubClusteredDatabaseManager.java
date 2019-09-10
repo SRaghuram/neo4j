@@ -21,7 +21,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -38,24 +38,34 @@ import static org.mockito.Mockito.when;
 
 public class StubClusteredDatabaseManager extends LifecycleAdapter implements DatabaseManager<ClusteredDatabaseContext>
 {
-    private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
-    private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private SortedMap<NamedDatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>();
+    private final TestDatabaseIdRepository databaseIdRepository;
 
-    @Override
-    public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
+    public StubClusteredDatabaseManager( TestDatabaseIdRepository databaseIdRepository )
     {
-        return Optional.ofNullable( databases.get( databaseId ) );
+        this.databaseIdRepository = databaseIdRepository;
+    }
+
+    public StubClusteredDatabaseManager()
+    {
+        this.databaseIdRepository = new TestDatabaseIdRepository();
     }
 
     @Override
-    public StubClusteredDatabaseContext createDatabase( DatabaseId databaseId )
+    public Optional<ClusteredDatabaseContext> getDatabaseContext( NamedDatabaseId namedDatabaseId )
+    {
+        return Optional.ofNullable( databases.get( namedDatabaseId ) );
+    }
+
+    @Override
+    public StubClusteredDatabaseContext createDatabase( NamedDatabaseId namedDatabaseId )
     {
         throw new UnsupportedOperationException( "Can't register databases directly with the StubClusteredDatabaseManager" );
     }
 
-    public void registerDatabase( DatabaseId databaseId, ClusteredDatabaseContext db )
+    public void registerDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext db )
     {
-        databases.put( databaseId, db );
+        databases.put( namedDatabaseId, db );
     }
 
     public DatabaseContextConfig givenDatabaseWithConfig()
@@ -64,24 +74,24 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
     }
 
     @Override
-    public SortedMap<DatabaseId,ClusteredDatabaseContext> registeredDatabases()
+    public SortedMap<NamedDatabaseId,ClusteredDatabaseContext> registeredDatabases()
     {
         return Collections.unmodifiableSortedMap( databases );
     }
 
     //TODO: change lifecycle management to be per database
     @Override
-    public void dropDatabase( DatabaseId databaseId )
+    public void dropDatabase( NamedDatabaseId namedDatabaseId )
     {
     }
 
     @Override
-    public void stopDatabase( DatabaseId databaseId )
+    public void stopDatabase( NamedDatabaseId namedDatabaseId )
     {
     }
 
     @Override
-    public void startDatabase( DatabaseId databaseId )
+    public void startDatabase( NamedDatabaseId namedDatabaseId )
     {
     }
 
@@ -94,7 +104,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
     private StubClusteredDatabaseContext stubDatabaseFromConfig( DatabaseContextConfig config )
     {
         Database db = mock( Database.class );
-        when( db.getDatabaseId() ).thenReturn( config.databaseId );
+        when( db.getNamedDatabaseId() ).thenReturn( config.namedDatabaseId );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( config.availabilityGuard );
         when( db.getDatabaseHealth() ).thenReturn( config.health );
@@ -117,7 +127,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
 
     public class DatabaseContextConfig
     {
-        private DatabaseId databaseId;
+        private NamedDatabaseId namedDatabaseId;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
         private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.CatchupComponents.class );
@@ -134,9 +144,9 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         {
         }
 
-        public DatabaseContextConfig withDatabaseId( DatabaseId databaseId )
+        public DatabaseContextConfig withDatabaseId( NamedDatabaseId namedDatabaseId )
         {
-            this.databaseId = databaseId;
+            this.namedDatabaseId = namedDatabaseId;
             return this;
         }
 
@@ -209,10 +219,10 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         public StubClusteredDatabaseContext register()
         {
             StubClusteredDatabaseContext dbContext = stubDatabaseFromConfig( this );
-            ClusteredDatabaseContext previous = databases.putIfAbsent( databaseId, dbContext );
+            ClusteredDatabaseContext previous = databases.putIfAbsent( namedDatabaseId, dbContext );
             if ( previous != null )
             {
-                throw new DatabaseExistsException( "Already had database with name " + databaseId.name() );
+                throw new DatabaseExistsException( "Already had database with name " + namedDatabaseId.name() );
             }
             return dbContext;
         }

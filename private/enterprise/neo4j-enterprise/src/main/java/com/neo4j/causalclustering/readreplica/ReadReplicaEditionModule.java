@@ -58,8 +58,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -67,7 +67,7 @@ import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -149,7 +149,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure( databaseManager ) );
-        globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
+        globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
                 reconcilerModule.reconciler() ) );
     }
@@ -164,9 +164,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     }
 
     @Override
-    public EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId )
+    public EditionDatabaseComponents createDatabaseComponents( NamedDatabaseId namedDatabaseId )
     {
-        return new ReadReplicaDatabaseComponents( globalModule, this, databaseId );
+        return new ReadReplicaDatabaseComponents( globalModule, this, namedDatabaseId );
     }
 
     @Override
@@ -193,7 +193,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         dependencies.satisfyDependency( reconciledTxTracker );
         dependencies.satisfyDependencies( databaseEventService );
 
-        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID )
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );

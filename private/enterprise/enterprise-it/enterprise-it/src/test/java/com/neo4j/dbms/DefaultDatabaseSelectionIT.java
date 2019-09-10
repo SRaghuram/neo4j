@@ -24,7 +24,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -160,7 +160,7 @@ class DefaultDatabaseSelectionIT
     private static void checkDatabaseNames( GraphDatabaseService database, String databaseName )
     {
         DatabaseManager<?> databaseManager = getDatabaseManager( database );
-        Set<String> databases = databaseManager.registeredDatabases().keySet().stream().map( DatabaseId::name ).collect( Collectors.toSet() );
+        Set<String> databases = databaseManager.registeredDatabases().keySet().stream().map( NamedDatabaseId::name ).collect( Collectors.toSet() );
         assertThat( databases, hasItem( new NormalizedDatabaseName( databaseName ).name() ) );
         assertThat( databases, hasItem( SYSTEM_DATABASE_NAME ) );
     }

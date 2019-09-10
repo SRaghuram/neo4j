@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.TimeoutStrategy;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -38,16 +38,16 @@ public class StoreCopyClient
 {
     private final CatchupClientFactory catchUpClientFactory;
     private final Supplier<Monitors> monitors;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final Log log;
     private final TimeoutStrategy backOffStrategy;
 
-    public StoreCopyClient( CatchupClientFactory catchUpClientFactory, DatabaseId databaseId, Supplier<Monitors> monitors, LogProvider logProvider,
+    public StoreCopyClient( CatchupClientFactory catchUpClientFactory, NamedDatabaseId namedDatabaseId, Supplier<Monitors> monitors, LogProvider logProvider,
             TimeoutStrategy backOffStrategy )
     {
         this.catchUpClientFactory = catchUpClientFactory;
         this.monitors = monitors;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.backOffStrategy = backOffStrategy;
         this.log = logProvider.getLog( getClass() );
     }
@@ -58,7 +58,7 @@ public class StoreCopyClient
     {
         try
         {
-            SocketAddress fromAddress = catchupAddressProvider.primary( databaseId );
+            SocketAddress fromAddress = catchupAddressProvider.primary( namedDatabaseId );
             PrepareStoreCopyResponse prepareStoreCopyResponse = prepareStoreCopy( fromAddress, expectedStoreId, storeFileStreamProvider );
             TransactionIdHandler txIdHandler = new TransactionIdHandler( prepareStoreCopyResponse );
             copyFilesIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider, requestWiseTerminationCondition,
@@ -89,7 +89,7 @@ public class StoreCopyClient
             storeCopyClientMonitor.startReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
 
             persistentCallToSecondary( addressProvider,
-                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseId ),
+                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, namedDatabaseId ),
                     storeFileStream, terminationConditions.get(), txIdHandler );
 
             storeCopyClientMonitor.finishReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
@@ -107,7 +107,7 @@ public class StoreCopyClient
         {
             try
             {
-                SocketAddress address = addressProvider.secondary( databaseId );
+                SocketAddress address = addressProvider.secondary( namedDatabaseId );
                 log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
 
                 StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address, log )
@@ -161,7 +161,7 @@ public class StoreCopyClient
         {
             log.info( "Requesting store listing from: " + from );
             prepareStoreCopyResponse = catchUpClientFactory.getClient( from, log )
-                    .v3( c -> c.prepareStoreCopy( expectedStoreId, databaseId ) )
+                    .v3( c -> c.prepareStoreCopy( expectedStoreId, namedDatabaseId ) )
                     .withResponseHandler( StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( storeFileStream, log ) )
                     .request();
         }
@@ -190,7 +190,7 @@ public class StoreCopyClient
                 }
             };
             return catchUpClientFactory.getClient( fromAddress, log )
-                    .v3( c -> c.getStoreId( databaseId ) )
+                    .v3( c -> c.getStoreId( namedDatabaseId ) )
                     .withResponseHandler( responseHandler )
                     .request();
         }

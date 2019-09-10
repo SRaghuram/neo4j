@@ -33,7 +33,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.monitoring.Monitors;
@@ -53,8 +53,8 @@ import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProv
 
 class ReadReplicaBootstrapTest
 {
-    private final DatabaseId databaseA = TestDatabaseIdRepository.randomDatabaseId();
-    private final RaftId raftId = RaftId.from( databaseA );
+    private final NamedDatabaseId namedDatabaseA = TestDatabaseIdRepository.randomNamedDatabaseId();
+    private final RaftId raftId = RaftId.from( namedDatabaseA.databaseId() );
     private final MemberId memberA = new MemberId( UUID.randomUUID() );
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
@@ -71,7 +71,7 @@ class ReadReplicaBootstrapTest
     void shouldFailToStartWhenStartAborted() throws Throwable
     {
         // given
-        var topologyService = topologyService( databaseA, memberA, addressA );
+        var topologyService = topologyService( namedDatabaseA, memberA, addressA );
 
         // Catchup components should throw an expected exception to cause a retry
         var catchupComponents = catchupComponents( addressA, storeA );
@@ -79,25 +79,25 @@ class ReadReplicaBootstrapTest
                 .thenThrow( StoreIdDownloadFailedException.class )
                 .thenReturn( storeA );
 
-        var databaseContext = normalDatabase( databaseA, storeA, false );
+        var databaseContext = normalDatabase( namedDatabaseA, storeA, false );
 
         var aborter = mock( DatabaseStartAborter.class );
-        when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false, true );
+        when( aborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false, true );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, aborter );
 
         // when / then
         assertThrows( DatabaseStartAbortedException.class, bootstrap::perform );
-        verify( aborter, times( 2 ) ).shouldAbort( databaseA );
+        verify( aborter, times( 2 ) ).shouldAbort( namedDatabaseA );
     }
 
     @Test
     void shouldClearAborterCacheOnStart() throws Throwable
     {
         // given
-        var topologyService = topologyService( databaseA, memberA, addressA );
+        var topologyService = topologyService( namedDatabaseA, memberA, addressA );
         var catchupComponents = catchupComponents( addressA, storeA );
-        var databaseContext = normalDatabase( databaseA, storeA, false );
+        var databaseContext = normalDatabase( namedDatabaseA, storeA, false );
         var aborter = neverAbort();
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, aborter );
@@ -106,32 +106,32 @@ class ReadReplicaBootstrapTest
         bootstrap.perform();
 
         // then
-        verify( aborter ).started( databaseA );
+        verify( aborter ).started( namedDatabaseA );
     }
 
     @Test
     void shouldClearAborterCacheOnFailedStart() throws Throwable
     {
         // given
-        var topologyService = topologyService( databaseA, memberA, addressA );
+        var topologyService = topologyService( namedDatabaseA, memberA, addressA );
         var catchupComponents = catchupComponents( addressA, storeA );
 
         var exception = RuntimeException.class;
-        var databaseContext = failToReadLocalStoreId( databaseA, exception );
+        var databaseContext = failToReadLocalStoreId( namedDatabaseA, exception );
         var aborter = neverAbort();
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, aborter );
 
         // when / then
         assertThrows( exception, bootstrap::perform );
-        verify( aborter ).started( databaseA );
+        verify( aborter ).started( namedDatabaseA );
     }
 
     @Test
     void shouldRetryOnExpectedException() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( databaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
 
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
@@ -139,7 +139,7 @@ class ReadReplicaBootstrapTest
                 .thenThrow( StoreIdDownloadFailedException.class )
                 .thenReturn( storeA );
 
-        ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, false );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
 
@@ -154,10 +154,10 @@ class ReadReplicaBootstrapTest
     void shouldReplaceEmptyMismatchingStoreWithRemote() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( databaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeB );
 
-        ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, true );
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, true );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
 
@@ -172,10 +172,10 @@ class ReadReplicaBootstrapTest
     void shouldNotStartWithMismatchedNonEmptyStore() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( databaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeB );
 
-        ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, false );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
 
@@ -190,10 +190,10 @@ class ReadReplicaBootstrapTest
     void shouldStartWithMatchingDatabase() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( databaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
-        ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, false );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
 
@@ -208,10 +208,10 @@ class ReadReplicaBootstrapTest
     void shouldReplaceEmptyMatchingStoreWithRemote() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( databaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
-        ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, true );
+        ReadReplicaDatabaseContext databaseContext = normalDatabase( namedDatabaseA, storeA, true );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
 
@@ -226,11 +226,11 @@ class ReadReplicaBootstrapTest
     void shouldFailToStartOnUnexpectedIssue() throws Throwable
     {
         // given
-        TopologyService topologyService = topologyService( databaseA, memberA, addressA );
+        TopologyService topologyService = topologyService( namedDatabaseA, memberA, addressA );
         CatchupComponentsRepository.CatchupComponents catchupComponents = catchupComponents( addressA, storeA );
 
         Class<RuntimeException> exception = RuntimeException.class;
-        ReadReplicaDatabaseContext databaseContext = failToReadLocalStoreId( databaseA, exception );
+        ReadReplicaDatabaseContext databaseContext = failToReadLocalStoreId( namedDatabaseA, exception );
 
         ReadReplicaBootstrap bootstrap = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort() );
 
@@ -238,13 +238,16 @@ class ReadReplicaBootstrapTest
         assertThrows( exception, bootstrap::perform );
     }
 
-    TopologyService topologyService( DatabaseId databaseId, MemberId upstreamMember, SocketAddress address ) throws CatchupAddressResolutionException
+    TopologyService topologyService( NamedDatabaseId namedDatabaseId, MemberId upstreamMember, SocketAddress address ) throws CatchupAddressResolutionException
     {
         TopologyService topologyService = mock( TopologyService.class );
         Map<MemberId,CoreServerInfo> members = Map.of( upstreamMember, mock( CoreServerInfo.class ) );
-        when( topologyService.allCoreServers() ).thenReturn( members );
-        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, raftId, members ) );
-        when( topologyService.lookupCatchupAddress( upstreamMember ) ).thenReturn( address );
+        when( topologyService.allCoreServers() )
+                .thenReturn( members );
+        when( topologyService.coreTopologyForDatabase( namedDatabaseId ) )
+                .thenReturn( new DatabaseCoreTopology( namedDatabaseId.databaseId(), raftId, members ) );
+        when( topologyService.lookupCatchupAddress( upstreamMember ) )
+                .thenReturn( address );
         return topologyService;
     }
 
@@ -260,31 +263,31 @@ class ReadReplicaBootstrapTest
     private DatabaseStartAborter neverAbort()
     {
         var aborter = mock( DatabaseStartAborter.class );
-        when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+        when( aborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
         return aborter;
     }
 
-    private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException
+    private ReadReplicaDatabaseContext normalDatabase( NamedDatabaseId namedDatabaseId, StoreId storeId, Boolean isEmpty ) throws IOException
     {
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.readStoreId( any() ) ).thenReturn( storeId );
         when( storeFiles.isEmpty( any() ) ).thenReturn( isEmpty );
 
         Database kernelDatabase = mock( Database.class );
-        when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
+        when( kernelDatabase.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
         return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator() );
     }
 
-    private ReadReplicaDatabaseContext failToReadLocalStoreId( DatabaseId databaseId, Class<? extends Throwable> throwableClass ) throws IOException
+    private ReadReplicaDatabaseContext failToReadLocalStoreId( NamedDatabaseId namedDatabaseId, Class<? extends Throwable> throwableClass ) throws IOException
     {
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.readStoreId( any() ) ).thenThrow( throwableClass );
 
         Database kernelDatabase = mock( Database.class );
-        when( kernelDatabase.getDatabaseId() ).thenReturn( databaseId );
+        when( kernelDatabase.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
@@ -307,9 +310,9 @@ class ReadReplicaBootstrapTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
+        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
         {
-            DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( databaseId );
+            DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             return Optional.ofNullable( coreTopology.members().keySet().iterator().next() );
         }
     }

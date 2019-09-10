@@ -5,16 +5,16 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule
 {
@@ -40,7 +40,7 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
     @Override
     protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
     {
-        databaseEventService.registerListener( SYSTEM_DATABASE_ID, new SystemOperatingDatabaseEventListener( systemOperator ) );
+        databaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, new SystemOperatingDatabaseEventListener( systemOperator ) );
     }
 
     private static ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,

@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -162,39 +162,39 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<DatabaseId> getDatabaseId( String databaseName )
+        public PreparedRequest<NamedDatabaseId> getDatabaseId( String databaseName )
         {
             return handler -> makeBlockingRequest( new GetDatabaseIdRequest( databaseName ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId )
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( NamedDatabaseId namedDatabaseId )
         {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest( databaseId ), handler, channel );
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest( namedDatabaseId.databaseId() ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<StoreId> getStoreId( DatabaseId databaseId )
+        public PreparedRequest<StoreId> getStoreId( NamedDatabaseId namedDatabaseId )
         {
-            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseId ), handler, channel );
+            return handler -> makeBlockingRequest( new GetStoreIdRequest( namedDatabaseId.databaseId() ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, NamedDatabaseId namedDatabaseId )
         {
-            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseId ), handler, channel );
+            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, namedDatabaseId.databaseId() ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId )
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId )
         {
-            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseId ), handler, channel );
+            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, namedDatabaseId.databaseId() ), handler, channel );
         }
 
         @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId )
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, NamedDatabaseId namedDatabaseId )
         {
-            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseId ), handler, channel );
+            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, namedDatabaseId.databaseId() ), handler, channel );
         }
 
     }

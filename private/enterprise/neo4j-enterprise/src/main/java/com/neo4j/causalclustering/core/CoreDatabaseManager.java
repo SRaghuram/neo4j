@@ -31,8 +31,8 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -53,35 +53,35 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
+    protected ClusteredDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         LifeSupport clusterComponents = new LifeSupport();
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
-        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
+        DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
         Monitors coreDatabaseMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
 
-        DatabaseLayout databaseLayout = globalModule.getNeo4jLayout().databaseLayout( databaseId.name() );
+        DatabaseLayout databaseLayout = globalModule.getNeo4jLayout().databaseLayout( namedDatabaseId.name() );
 
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 
-        BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
-        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, clusterComponents,
+        BootstrapContext bootstrapContext = new BootstrapContext( namedDatabaseId, databaseLayout, storeFiles, transactionLogs );
+        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( namedDatabaseId, clusterComponents,
                 coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel() );
 
-        var databaseConfig = new DatabaseConfig( config, databaseId );
+        var databaseConfig = new DatabaseConfig( config, namedDatabaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();
         var kernelContext = edition.coreDatabaseFactory()
-                .createKernelComponents( databaseId, clusterComponents, raftContext, kernelResolvers,
+                .createKernelComponents( namedDatabaseId, clusterComponents, raftContext, kernelResolvers,
                         coreDatabaseLogService, versionContextSupplier );
 
-        var databaseCreationContext = newDatabaseCreationContext( databaseId, coreDatabaseDependencies,
+        var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, coreDatabaseDependencies,
                 coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig, coreDatabaseLogService );
         var kernelDatabase = new Database( databaseCreationContext );
 
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator() );
 
-        var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
+        var coreDatabase = edition.coreDatabaseFactory().createDatabase( namedDatabaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
                 downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator(), getDatabaseStartAborter() );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
@@ -91,22 +91,22 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         return ctx;
     }
 
-    private DatabaseCreationContext newDatabaseCreationContext( DatabaseId databaseId, Dependencies parentDependencies, Monitors parentMonitors,
+    private DatabaseCreationContext newDatabaseCreationContext( NamedDatabaseId namedDatabaseId, Dependencies parentDependencies, Monitors parentMonitors,
             CoreEditionKernelComponents kernelComponents, VersionContextSupplier versionContextSupplier,
             DatabaseConfig databaseConfig, DatabaseLogService databaseLogService )
     {
         Config config = globalModule.getGlobalConfig();
         var coreDatabaseComponents = new CoreDatabaseComponents( config, edition, kernelComponents, databaseLogService );
         var globalProcedures = edition.getGlobalProcedures();
-        return new ModularDatabaseCreationContext( databaseId, globalModule, parentDependencies, parentMonitors,
+        return new ModularDatabaseCreationContext( namedDatabaseId, globalModule, parentDependencies, parentMonitors,
                 coreDatabaseComponents, globalProcedures, versionContextSupplier, databaseConfig, kernelComponents.leaseService() );
     }
 
     @Override
-    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected void dropDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
     {
-        super.dropDatabase( databaseId, context );
-        cleanupClusterState( databaseId.name() );
+        super.dropDatabase( namedDatabaseId, context );
+        cleanupClusterState( namedDatabaseId.name() );
     }
 
     @Override

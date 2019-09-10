@@ -54,8 +54,8 @@ import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
-import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -91,8 +91,8 @@ import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
@@ -101,7 +101,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
@@ -125,7 +125,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
     private final InstalledProtocolHandler serverInstalledProtocolHandler;
 
-    private final Map<DatabaseId,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
+    private final Map<NamedDatabaseId,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     private final LogProvider logProvider;
     private final Config globalConfig;
     private final GlobalModule globalModule;
@@ -224,7 +224,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     }
 
     @Override
-    public EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId )
+    public EditionDatabaseComponents createDatabaseComponents( NamedDatabaseId namedDatabaseId )
     {
         throw new UnsupportedOperationException( "TODO" );
     }
@@ -234,7 +234,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
+        globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
         globalProcedures.register( new CoreRoleProcedure( identityModule, topologyService, databaseManager ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
                 reconcilerModule.reconciler() ) );
@@ -339,7 +339,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         SystemGraphInitializer initializer =
                 CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
                         () -> new ClusterSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
-        databaseInitializerMap.put( SYSTEM_DATABASE_ID, db ->
+        databaseInitializerMap.put( NAMED_SYSTEM_DATABASE_ID, db ->
         {
             try
             {
@@ -369,7 +369,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                     globalModule.getTransactionEventListeners()
             );
             securityModule.setup();
-            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( SYSTEM_DATABASE_ID, dbInit ) );
+            securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( NAMED_SYSTEM_DATABASE_ID, dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }

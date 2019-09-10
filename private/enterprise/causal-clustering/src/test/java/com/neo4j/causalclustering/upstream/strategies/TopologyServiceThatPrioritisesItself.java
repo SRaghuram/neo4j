@@ -12,10 +12,9 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.dbms.EnterpriseDatabaseState;
 
 import java.util.Collections;
 import java.util.Map;
@@ -25,12 +24,13 @@ import java.util.UUID;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements TopologyService
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
     private final MemberId memberId;
     private final String matchingGroupName;
@@ -45,12 +45,12 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public void onDatabaseStart( DatabaseId databaseId )
+    public void onDatabaseStart( NamedDatabaseId namedDatabaseId )
     {
     }
 
     @Override
-    public void onDatabaseStop( DatabaseId databaseId )
+    public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
     }
 
@@ -67,8 +67,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), allCoreServers() );
     }
 
@@ -80,9 +81,9 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return new DatabaseReadReplicaTopology( databaseId, allReadReplicas() );
+        return new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), allReadReplicas() );
     }
 
     @Override
@@ -92,7 +93,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         return RoleInfo.UNKNOWN;
     }
@@ -104,19 +105,19 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
-        return EnterpriseDatabaseState.unknown( databaseId );
+        return DiscoveryDatabaseState.unknown( namedDatabaseId.databaseId() );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.of();
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.of();
     }

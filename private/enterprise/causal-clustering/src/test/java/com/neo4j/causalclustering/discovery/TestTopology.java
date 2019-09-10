@@ -29,7 +29,7 @@ import static java.util.Collections.singletonList;
 
 public class TestTopology
 {
-    private static final Set<DatabaseId> DEFAULT_DATABASE_IDS = Set.of( new TestDatabaseIdRepository().defaultDatabase() );
+    private static final Set<DatabaseId> DEFAULT_DATABASE_IDS = Set.of( TestDatabaseIdRepository.randomDatabaseId() );
 
     private TestTopology()
     {

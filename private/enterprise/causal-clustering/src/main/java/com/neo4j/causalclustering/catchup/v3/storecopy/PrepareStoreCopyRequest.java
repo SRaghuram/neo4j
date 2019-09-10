@@ -56,6 +56,6 @@ public class PrepareStoreCopyRequest extends CatchupProtocolMessage.WithDatabase
     @Override
     public String toString()
     {
-        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseId().name() + "}";
+        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseId='" + databaseId() + "}";
     }
 }

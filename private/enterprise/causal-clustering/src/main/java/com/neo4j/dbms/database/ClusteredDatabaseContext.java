@@ -16,7 +16,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -67,7 +67,7 @@ public interface ClusteredDatabaseContext extends DatabaseContext
     /**
      * @return the identifier for this database
      */
-    DatabaseId databaseId();
+    NamedDatabaseId databaseId();
 
     /**
      * @return the {@link CatchupComponents} for this clustered database

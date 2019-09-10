@@ -16,10 +16,9 @@ import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink}
 import com.neo4j.causalclustering.identity.MemberId
-import com.neo4j.dbms.{EnterpriseDatabaseState, EnterpriseOperatorState}
-import org.neo4j.dbms.DatabaseState
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
+import com.neo4j.dbms.EnterpriseOperatorState
 import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.{randomDatabaseId, randomNamedDatabaseId}
 
 import scala.collection.JavaConverters._
 
@@ -30,8 +29,8 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
 
     "should put to replicator when sending a database state" in new Fixture {
       Given("new database state message")
-      val dbId = randomDatabaseId
-      val dbState = new EnterpriseDatabaseState(dbId, EnterpriseOperatorState.STARTED)
+      val dbId = randomNamedDatabaseId.databaseId
+      val dbState = new DiscoveryDatabaseState(dbId, EnterpriseOperatorState.STARTED)
 
       When("database state update received")
       replicatedDataActorRef ! dbState
@@ -47,8 +46,8 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
 
     "should remove from replicator when sending a dropped database state" in new Fixture {
       Given("new removed database state message")
-      val dbId = randomDatabaseId
-      val dbState = new EnterpriseDatabaseState(dbId, EnterpriseOperatorState.DROPPED)
+      val dbId = randomNamedDatabaseId.databaseId
+      val dbState = new DiscoveryDatabaseState(dbId, EnterpriseOperatorState.DROPPED)
 
       When("database state update received")
       replicatedDataActorRef ! dbState
@@ -64,7 +63,7 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
     "should send to update sink and rrTopologyActor for each database state update" in new Fixture {
       Given("new database state message")
       val dbId = randomDatabaseId
-      val dbState: DatabaseState = new EnterpriseDatabaseState(dbId, EnterpriseOperatorState.STARTED)
+      val dbState = new DiscoveryDatabaseState(dbId, EnterpriseOperatorState.STARTED)
       val dbToMember = new DatabaseToMember(dbId, myself)
       val update = LWWMap.empty.put(cluster, dbToMember, dbState)
       val replicatedDbState = ReplicatedDatabaseState.ofCores(dbId, Map(myself -> dbState).asJava)
@@ -79,7 +78,7 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
 
   }
 
-  class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseToMember,DatabaseState]] {
+  class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseToMember,DiscoveryDatabaseState]] {
     val rrTopologyProbe = TestProbe("rrTopology")
     val myself = new MemberId(UUID.randomUUID)
     var actualDatabaseStates = Map.empty[DatabaseId,ReplicatedDatabaseState]
@@ -99,7 +98,7 @@ class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
 
     val replicatedDataActorRef = system.actorOf(DatabaseStateActor.props(
       cluster, replicator.ref, discoverySink, rrTopologyProbe.ref, monitor, myself))
-    val dataKey = LWWMapKey.create[DatabaseToMember,DatabaseState](ReplicatedDataIdentifier.DATABASE_STATE.keyName())
-    val data: LWWMap[DatabaseToMember, DatabaseState] = LWWMap.empty[DatabaseToMember,DatabaseState]
+    val dataKey = LWWMapKey.create[DatabaseToMember,DiscoveryDatabaseState](ReplicatedDataIdentifier.DATABASE_STATE.keyName())
+    val data: LWWMap[DatabaseToMember, DiscoveryDatabaseState] = LWWMap.empty[DatabaseToMember,DiscoveryDatabaseState]
   }
 }

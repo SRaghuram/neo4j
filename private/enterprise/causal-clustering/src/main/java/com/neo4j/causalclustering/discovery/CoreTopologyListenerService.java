@@ -31,7 +31,7 @@ public class CoreTopologyListenerService
     {
         for ( CoreTopologyService.Listener listener : listeners )
         {
-            if ( listener.databaseId().equals( coreTopology.databaseId() ) )
+            if ( listener.namedDatabaseId().databaseId().equals( coreTopology.databaseId() ) )
             {
                 listener.onCoreTopologyChange( coreTopology );
             }

@@ -23,7 +23,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -274,15 +274,15 @@ class TransactionIdTrackerIT
         return db.getDependencyResolver().resolveDependency( TransactionIdStore.class ).getLastCommittedTransactionId();
     }
 
-    private DatabaseId databaseId( String databaseName )
+    private NamedDatabaseId databaseId( String databaseName )
     {
         var db = (GraphDatabaseAPI) dbService.database( databaseName );
         return databaseId( db );
     }
 
-    private static DatabaseId databaseId( GraphDatabaseAPI db )
+    private static NamedDatabaseId databaseId( GraphDatabaseAPI db )
     {
-        return db.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
+        return db.getDependencyResolver().resolveDependency( Database.class ).getNamedDatabaseId();
     }
 
     private static ExecutorService newExecutor( TestInfo testInfo )

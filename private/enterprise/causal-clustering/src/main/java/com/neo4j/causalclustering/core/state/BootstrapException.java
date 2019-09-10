@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 class BootstrapException extends RuntimeException
 {
-    BootstrapException( DatabaseId databaseId, Exception cause )
+    BootstrapException( NamedDatabaseId namedDatabaseId, Exception cause )
     {
-        super( "Failed to bootstrap database " + databaseId.name(), cause );
+        super( "Failed to bootstrap database " + namedDatabaseId.name(), cause );
     }
 }

@@ -5,34 +5,34 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReplicatedDatabaseState
 {
     private final DatabaseId databaseId;
-    private final Map<MemberId,DatabaseState> memberStates;
+    private final Map<MemberId,DiscoveryDatabaseState> memberStates;
     private final boolean coreStates;
 
-    private ReplicatedDatabaseState( DatabaseId databaseId, Map<MemberId,DatabaseState> memberStates, boolean isCoreStates )
+    private ReplicatedDatabaseState( DatabaseId databaseId, Map<MemberId,DiscoveryDatabaseState> memberStates, boolean isCoreStates )
     {
         this.databaseId = databaseId;
         this.memberStates = memberStates;
         this.coreStates = isCoreStates;
     }
 
-    public static ReplicatedDatabaseState ofCores( DatabaseId databaseId, Map<MemberId,DatabaseState> memberStates )
+    public static ReplicatedDatabaseState ofCores( DatabaseId databaseId, Map<MemberId,DiscoveryDatabaseState> memberStates )
     {
         return new ReplicatedDatabaseState( databaseId, memberStates, true );
     }
 
-    public static ReplicatedDatabaseState ofReadReplicas( DatabaseId databaseId, Map<MemberId,DatabaseState> memberStates )
+    public static ReplicatedDatabaseState ofReadReplicas( DatabaseId databaseId, Map<MemberId,DiscoveryDatabaseState> memberStates )
     {
         return new ReplicatedDatabaseState( databaseId, memberStates, false );
     }
@@ -42,12 +42,12 @@ public class ReplicatedDatabaseState
         return databaseId;
     }
 
-    public Map<MemberId,DatabaseState> memberStates()
+    public Map<MemberId,DiscoveryDatabaseState> memberStates()
     {
         return memberStates;
     }
 
-    public Optional<DatabaseState> stateFor( MemberId memberId )
+    public Optional<DiscoveryDatabaseState> stateFor( MemberId memberId )
     {
         return Optional.ofNullable( memberStates.get( memberId ) );
     }

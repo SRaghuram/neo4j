@@ -30,6 +30,7 @@ import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
@@ -74,14 +75,15 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 @ExtendWith( LifeExtension.class )
 class TxPullRequestHandlerTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId NAMED_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final DatabaseId DATABASE_ID = NAMED_DATABASE_ID.databaseId();
     private final ChannelHandlerContext context = mock( ChannelHandlerContext.class );
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private final Database database = mock( Database.class );
     private final DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard(
-            DATABASE_ID,
+            NAMED_DATABASE_ID,
             new FakeClock(),
             NullLog.getInstance(), 0,
             mock( CompositeDatabaseAvailabilityGuard.class ) );
@@ -104,7 +106,7 @@ class TxPullRequestHandlerTest
         when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( database.getMonitors() ).thenReturn( new Monitors() );
         when( database.getStoreId() ).thenReturn( storeId );
-        var databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( DATABASE_ID ), new SimpleLogService( logProvider ) );
+        var databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( NAMED_DATABASE_ID ), new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         final var protocol = new CatchupServerProtocol();
         txPullRequestHandler = new TxPullRequestHandler( protocol, database );

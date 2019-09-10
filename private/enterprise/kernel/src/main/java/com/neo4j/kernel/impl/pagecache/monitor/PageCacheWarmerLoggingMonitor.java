@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.pagecache.monitor;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.time.Stopwatch;
 
@@ -23,14 +23,14 @@ public class PageCacheWarmerLoggingMonitor extends PageCacheWarmerMonitorAdapter
     }
 
     @Override
-    public void warmupStarted( DatabaseId databaseId )
+    public void warmupStarted( NamedDatabaseId namedDatabaseId )
     {
         warmupStart = Stopwatch.start();
         log.info( "Page cache warmup started." );
     }
 
     @Override
-    public void warmupCompleted( DatabaseId databaseId, long pagesLoaded )
+    public void warmupCompleted( NamedDatabaseId namedDatabaseId, long pagesLoaded )
     {
         log.info( "Page cache warmup completed. %d pages loaded. Duration: %s.", pagesLoaded, duration( warmupStart.elapsed( MILLISECONDS ) ) );
     }

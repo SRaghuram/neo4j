@@ -21,7 +21,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
 @TestDirectoryExtension
 class MultiDatabaseGuardIT

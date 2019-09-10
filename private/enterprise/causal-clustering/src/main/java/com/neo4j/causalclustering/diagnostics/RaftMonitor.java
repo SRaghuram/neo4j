@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.CappedLogger;
 import org.neo4j.logging.internal.LogService;
@@ -55,39 +55,39 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     }
 
     @Override
-    public void waitingForCoreMembers( DatabaseId databaseId, int minimumCount )
+    public void waitingForCoreMembers( NamedDatabaseId namedDatabaseId, int minimumCount )
     {
-        coreMemberWaitLog.info( "Database '%s' is waiting for a total of %d core members...", databaseId.name(), minimumCount );
+        coreMemberWaitLog.info( "Database '%s' is waiting for a total of %d core members...", namedDatabaseId.name(), minimumCount );
     }
 
     @Override
-    public void waitingForBootstrap( DatabaseId databaseId )
+    public void waitingForBootstrap( NamedDatabaseId namedDatabaseId )
     {
-        bootstrapWaitLog.info( "Database '%s' is waiting for bootstrap by other instance...", databaseId.name() );
+        bootstrapWaitLog.info( "Database '%s' is waiting for bootstrap by other instance...", namedDatabaseId.name() );
     }
 
     @Override
-    public void bootstrapped( CoreSnapshot snapshot, DatabaseId databaseId, RaftId raftId )
+    public void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftId raftId )
     {
-        user.info( format( "This instance bootstrapped a raft for database '%s'.", databaseId.name() ) );
-        debug.info( format( "Bootstrapped %s with %s using %s", databaseId, raftId, snapshot ) );
+        user.info( format( "This instance bootstrapped a raft for database '%s'.", namedDatabaseId.name() ) );
+        debug.info( format( "Bootstrapped %s with %s using %s", namedDatabaseId, raftId, snapshot ) );
     }
 
     @Override
-    public void boundToRaft( DatabaseId databaseId, RaftId raftId )
+    public void boundToRaft( NamedDatabaseId namedDatabaseId, RaftId raftId )
     {
-        user.info( format( "Bound database '%s' to raft with id '%s'.", databaseId.name(), raftId.uuid() ) );
+        user.info( format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() ) );
     }
 
     @Override
-    public void startedDownloadingSnapshot( DatabaseId databaseId )
+    public void startedDownloadingSnapshot( NamedDatabaseId namedDatabaseId )
     {
-        user.info( "Started downloading snapshot for database '%s'...", databaseId.name() );
+        user.info( "Started downloading snapshot for database '%s'...", namedDatabaseId.name() );
     }
 
     @Override
-    public void downloadSnapshotComplete( DatabaseId databaseId )
+    public void downloadSnapshotComplete( NamedDatabaseId namedDatabaseId )
     {
-        user.info( "Download of snapshot for database '%s' complete.", databaseId.name() );
+        user.info( "Download of snapshot for database '%s' complete.", namedDatabaseId.name() );
     }
 }

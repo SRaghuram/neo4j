@@ -26,7 +26,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
@@ -85,14 +85,14 @@ public class BackupSupportingClassesFactory
         Config config = onlineBackupContext.getConfig();
         CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext, jobScheduler );
 
-        Function<DatabaseId,TxPullClient> txPullClient = databaseId -> new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
+        Function<NamedDatabaseId,TxPullClient> txPullClient = databaseId -> new TxPullClient( catchUpClient, databaseId, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
                 new ExponentialBackoffStrategy( 1, config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
 
-        Function<DatabaseId,StoreCopyClient> storeCopyClient = databaseId ->
+        Function<NamedDatabaseId,StoreCopyClient> storeCopyClient = databaseId ->
                 new StoreCopyClient( catchUpClient, databaseId, () -> monitors, logProvider, backOffStrategy );
 
-        Function<DatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
+        Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
                 storeCopyClient.apply( databaseId ), txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
                 databaseId );
 
@@ -132,8 +132,8 @@ public class BackupSupportingClassesFactory
         return sslPolicyLoader.hasPolicyForSource( BACKUP ) ? sslPolicyLoader.getPolicy( BACKUP ) : null;
     }
 
-    private static BackupDelegator backupDelegator( Function<DatabaseId,RemoteStore> remoteStore, Function<DatabaseId,StoreCopyClient> storeCopyClient,
-            CatchupClientFactory catchUpClient, LogProvider logProvider )
+    private static BackupDelegator backupDelegator( Function<NamedDatabaseId,RemoteStore> remoteStore,
+            Function<NamedDatabaseId,StoreCopyClient> storeCopyClient, CatchupClientFactory catchUpClient, LogProvider logProvider )
     {
         return new BackupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }

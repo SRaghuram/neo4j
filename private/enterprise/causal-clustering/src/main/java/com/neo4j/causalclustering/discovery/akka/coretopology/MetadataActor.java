@@ -58,7 +58,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
     {
-        if ( startedDatabases.add( message.databaseId() ) )
+        if ( startedDatabases.add( message.namedDatabaseId().databaseId() ) )
         {
             sendCoreServerInfo();
         }
@@ -66,7 +66,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
 
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
-        if ( startedDatabases.remove( message.databaseId() ) )
+        if ( startedDatabases.remove( message.namedDatabaseId().databaseId() ) )
         {
             sendCoreServerInfo();
         }

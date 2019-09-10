@@ -50,7 +50,7 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private TestDirectory testDirectory;
 
     private File logDirectory;
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {

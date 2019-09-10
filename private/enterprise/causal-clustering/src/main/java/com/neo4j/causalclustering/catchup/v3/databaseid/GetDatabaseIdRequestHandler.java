@@ -34,7 +34,7 @@ public class GetDatabaseIdRequestHandler extends SimpleChannelInboundHandler<Get
         if ( databaseIdOptional.isPresent() )
         {
             ctx.write( ResponseMessageType.DATABASE_ID_RESPONSE );
-            ctx.writeAndFlush( databaseIdOptional.get() );
+            ctx.writeAndFlush( databaseIdOptional.get().databaseId() );
         }
         else
         {

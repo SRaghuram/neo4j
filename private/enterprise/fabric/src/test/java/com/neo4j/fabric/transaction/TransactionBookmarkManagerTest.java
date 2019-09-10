@@ -10,7 +10,6 @@ import com.neo4j.fabric.config.FabricConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +19,7 @@ import java.util.stream.Collectors;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -28,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 class TransactionBookmarkManagerTest
 {
@@ -105,7 +104,7 @@ class TransactionBookmarkManagerTest
         var b2 = new SystemDbBookmark( 1234 );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
-        verify( transactionIdTracker ).awaitUpToDate( SYSTEM_DATABASE_ID, 1234, Duration.ofSeconds( 123 ) );
+        verify( transactionIdTracker ).awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, 1234, Duration.ofSeconds( 123 ) );
 
         assertThat( bookmarkManager.getBookmarksForGraph( graph1 ), containsInAnyOrder( "BB-1" ) );
     }
@@ -150,9 +149,9 @@ class TransactionBookmarkManagerTest
         }
 
         @Override
-        public DatabaseId databaseId()
+        public NamedDatabaseId databaseId()
         {
-            return SYSTEM_DATABASE_ID;
+            return NAMED_SYSTEM_DATABASE_ID;
         }
 
         @Override

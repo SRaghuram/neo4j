@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -23,13 +22,18 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadReplicaTopology>
 {
-    private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
+    private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal;
     private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
+
+    public ReadReplicaTopologyMarshal()
+    {
+        this.readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
+    }
 
     @Override
     protected DatabaseReadReplicaTopology unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         int size = channel.getInt();
         HashMap<MemberId,ReadReplicaInfo> replicas = new HashMap<>( size );
         for ( int i = 0; i < size; i++ )
@@ -45,7 +49,7 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadR
     @Override
     public void marshal( DatabaseReadReplicaTopology readReplicaTopology, WritableChannel channel ) throws IOException
     {
-        DatabaseIdMarshal.INSTANCE.marshal( readReplicaTopology.databaseId(), channel );
+        DatabaseIdWithoutNameMarshal.INSTANCE.marshal( readReplicaTopology.databaseId(), channel );
         channel.putInt( readReplicaTopology.members().size() );
         for ( Map.Entry<MemberId,ReadReplicaInfo> entry : readReplicaTopology.members().entrySet() )
         {

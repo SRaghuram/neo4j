@@ -6,14 +6,9 @@
 package com.neo4j.dbms.procedures;
 
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
-import com.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.dbms.EnterpriseDatabaseState;
-import com.neo4j.dbms.EnterpriseOperatorState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -25,17 +20,16 @@ import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.procs.FieldSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.StringValue;
 
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -52,16 +46,15 @@ class ClusteredDatabaseStateProcedureTest
     {
         // given
         var idRepository = new TestDatabaseIdRepository();
-        var databaseId = idRepository.defaultDatabase();
+        var namedDatabaseId = idRepository.defaultDatabase();
         var cores = FakeTopologyService.memberIds( 0, 3 );
         var replicas = FakeTopologyService.memberIds( 3, 5 );
 
-        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( databaseId ) );
+        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( namedDatabaseId ) );
 
-        var successfulState = new EnterpriseDatabaseState( databaseId, STARTED );
+        var successfulState = new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED );
         var failureMessage = "Too many databases";
-        var failedState = new EnterpriseDatabaseState( databaseId, EnterpriseOperatorState.INITIAL )
-                .failed( new DatabaseManagementException( failureMessage ) );
+        var failedState = new DiscoveryDatabaseState( namedDatabaseId.databaseId(), INITIAL, new DatabaseManagementException( failureMessage ) );
 
         topologyService.setState( cores, successfulState );
         topologyService.setState( replicas, successfulState );
@@ -71,7 +64,7 @@ class ClusteredDatabaseStateProcedureTest
 
         var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
         // when
-        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( databaseId.name() )}, mock( ResourceTracker.class ) );
+        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( namedDatabaseId.name() )}, mock( ResourceTracker.class ) );
 
         // then
         var resultRows = Iterators.asList( result );
@@ -90,12 +83,12 @@ class ClusteredDatabaseStateProcedureTest
     {
         // given
         var idRepository = new TestDatabaseIdRepository();
-        var databaseId = idRepository.defaultDatabase();
+        var namedDatabaseId = idRepository.defaultDatabase();
         var cores = FakeTopologyService.memberIds( 0, 3 );
         var replicas = FakeTopologyService.memberIds( 3, 5 );
 
-        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( databaseId ) );
-        var successfulState = new EnterpriseDatabaseState( databaseId, STARTED );
+        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( namedDatabaseId ) );
+        var successfulState = new DiscoveryDatabaseState( namedDatabaseId.databaseId(), STARTED );
 
         topologyService.setState( cores, successfulState );
         topologyService.setState( replicas, successfulState );
@@ -105,7 +98,7 @@ class ClusteredDatabaseStateProcedureTest
         var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
 
         // when
-        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( databaseId.name() )}, mock( ResourceTracker.class ) );
+        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( namedDatabaseId.name() )}, mock( ResourceTracker.class ) );
 
         // then
         var resultRows = Iterators.asList( result );
@@ -120,17 +113,17 @@ class ClusteredDatabaseStateProcedureTest
     {
         // given
         var idRepository = new TestDatabaseIdRepository();
-        var defaultDatabaseId = idRepository.defaultDatabase();
+        var defaultNamedDatabaseId = idRepository.defaultDatabase();
         var cores = FakeTopologyService.memberIds( 0, 3 );
         var replicas = FakeTopologyService.memberIds( 3, 5 );
 
-        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( defaultDatabaseId ) );
+        var topologyService = new FakeTopologyService( cores, replicas, memberId( 0 ), Set.of( defaultNamedDatabaseId ) );
 
-        var coreOnlyDatabaseId = idRepository.getRaw( "coreOnly" );
-        topologyService.setDatabases( cores, Set.of( defaultDatabaseId, coreOnlyDatabaseId ) );
+        var coreOnlyNamedDatabaseId = idRepository.getRaw( "coreOnly" );
+        topologyService.setDatabases( cores, Set.of( defaultNamedDatabaseId.databaseId(), coreOnlyNamedDatabaseId.databaseId() ) );
 
-        var defaultDatabaseState = new EnterpriseDatabaseState( defaultDatabaseId, STARTED );
-        var coreOnlyDatabaseState = new EnterpriseDatabaseState( coreOnlyDatabaseId, STARTED );
+        var defaultDatabaseState = new DiscoveryDatabaseState( defaultNamedDatabaseId.databaseId(), STARTED );
+        var coreOnlyDatabaseState = new DiscoveryDatabaseState( coreOnlyNamedDatabaseId.databaseId(), STARTED );
 
         topologyService.setState( cores, defaultDatabaseState );
         topologyService.setState( replicas, defaultDatabaseState );
@@ -143,9 +136,9 @@ class ClusteredDatabaseStateProcedureTest
 
         // when
         var defaultResult = procedure.apply( mock( Context.class ),
-                new AnyValue[]{stringValue( defaultDatabaseId.name() )}, mock( ResourceTracker.class ) );
+                new AnyValue[]{stringValue( defaultNamedDatabaseId.name() )}, mock( ResourceTracker.class ) );
         var coreOnlyResult = procedure.apply( mock( Context.class ),
-                new AnyValue[]{stringValue( coreOnlyDatabaseId.name() )}, mock( ResourceTracker.class ) );
+                new AnyValue[]{stringValue( coreOnlyNamedDatabaseId.name() )}, mock( ResourceTracker.class ) );
 
         // then
         assertEquals( 2, countReadReplicas( defaultResult ), "Default Database should be hosted on read replicas" );
@@ -164,8 +157,8 @@ class ClusteredDatabaseStateProcedureTest
     private DatabaseStateService alwaysHealthyLocalStateService()
     {
         var localStateService = mock( DatabaseStateService.class );
-        when( localStateService.stateOfDatabase( any( DatabaseId.class ) ) ).thenReturn( STARTED );
-        when( localStateService.causeOfFailure( any( DatabaseId.class ) ) ).thenReturn( Optional.empty() );
+        when( localStateService.stateOfDatabase( any( NamedDatabaseId.class ) ) ).thenReturn( STARTED );
+        when( localStateService.causeOfFailure( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.empty() );
         return localStateService;
     }
 }

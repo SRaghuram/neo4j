@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
@@ -35,7 +35,7 @@ class LeaderOnlyStrategyTest
         TopologyServiceThatPrioritisesItself topologyServiceNoRetriesStrategy = new TopologyServiceThatPrioritisesItself( myself, groupName )
         {
             @Override
-            public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
+            public RoleInfo lookupRole( NamedDatabaseId databaseId, MemberId memberId )
             {
                 return RoleInfo.LEADER;
             }

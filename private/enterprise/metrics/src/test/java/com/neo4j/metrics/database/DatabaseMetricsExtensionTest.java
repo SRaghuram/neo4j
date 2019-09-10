@@ -25,7 +25,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.api.tracer.DefaultTracer;
@@ -53,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.function.Suppliers.singleton;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 @Neo4jLayoutExtension
 class DatabaseMetricsExtensionTest
@@ -64,7 +64,7 @@ class DatabaseMetricsExtensionTest
     private DatabaseLayout databaseLayout;
     private ExtensionContext context;
 
-    private static final DatabaseId DATABASE_ID = randomDatabaseId();
+    private static final NamedDatabaseId DATABASE_ID = randomNamedDatabaseId();
 
     @BeforeEach
     void setUp()
@@ -227,7 +227,7 @@ class DatabaseMetricsExtensionTest
         public Database database()
         {
             Database database = mock( Database.class );
-            when( database.getDatabaseId() ).thenReturn( DATABASE_ID );
+            when( database.getNamedDatabaseId() ).thenReturn( DATABASE_ID );
             return database;
         }
 

@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,9 +36,9 @@ class DefaultDiscoveryMemberFactoryTest
 
     private final MemberId id = new MemberId( UUID.randomUUID() );
 
-    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "one" );
-    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "two" );
-    private final DatabaseId databaseId3 = databaseIdRepository.getRaw( "three" );
+    private final NamedDatabaseId namedDatabaseId1 = databaseIdRepository.getRaw( "one" );
+    private final NamedDatabaseId namedDatabaseId2 = databaseIdRepository.getRaw( "two" );
+    private final NamedDatabaseId namedDatabaseId3 = databaseIdRepository.getRaw( "three" );
 
     @Test
     void shouldCreateDiscoveryMemberWithId()
@@ -51,26 +51,26 @@ class DefaultDiscoveryMemberFactoryTest
     @Test
     void shouldCreateDiscoveryMemberWithStartedDatabases()
     {
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).withStoppedDatabase().register();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId1 ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId2 ).withStoppedDatabase().register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId3 ).register();
 
         var discoveryMember = discoveryMemberFactory.create( id );
 
-        assertEquals( Set.of( databaseId1, databaseId3 ), discoveryMember.startedDatabases() );
+        assertEquals( Set.of( namedDatabaseId1.databaseId(), namedDatabaseId3.databaseId() ), discoveryMember.startedDatabases() );
     }
 
     @Test
     void shouldCreateDiscoveryMemberWithNonFailedDatabases()
     {
-        when( databaseStateService.causeOfFailure( databaseId1 ) ).thenReturn( Optional.of( new IOException() ) );
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).register();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
+        when( databaseStateService.causeOfFailure( namedDatabaseId1 ) ).thenReturn( Optional.of( new IOException() ) );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId1 ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId2 ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( namedDatabaseId3 ).register();
 
         var discoveryMember = discoveryMemberFactory.create( id );
 
-        assertEquals( Set.of( databaseId2, databaseId3 ), discoveryMember.startedDatabases() );
+        assertEquals( Set.of( namedDatabaseId2.databaseId(), namedDatabaseId3.databaseId() ), discoveryMember.startedDatabases() );
     }
 
     @Test
@@ -80,6 +80,6 @@ class DefaultDiscoveryMemberFactoryTest
 
         assertSame( discoveryMember.startedDatabases(), discoveryMember.startedDatabases() );
         assertThat( discoveryMember.startedDatabases(), is( empty() ) );
-        assertThrows( UnsupportedOperationException.class, () -> discoveryMember.startedDatabases().add( databaseId1 ) );
+        assertThrows( UnsupportedOperationException.class, () -> discoveryMember.startedDatabases().add( namedDatabaseId1.databaseId() ) );
     }
 }

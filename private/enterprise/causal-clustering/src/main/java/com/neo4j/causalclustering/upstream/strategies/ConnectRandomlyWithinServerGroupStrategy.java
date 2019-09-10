@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
 public class ConnectRandomlyWithinServerGroupStrategy extends UpstreamDatabaseSelectionStrategy
@@ -36,8 +36,8 @@ public class ConnectRandomlyWithinServerGroupStrategy extends UpstreamDatabaseSe
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
+    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return strategyImpl.upstreamMemberForDatabase( databaseId );
+        return strategyImpl.upstreamMemberForDatabase( namedDatabaseId );
     }
 }

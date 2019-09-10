@@ -23,6 +23,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
@@ -44,7 +45,8 @@ class PrepareStoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 6000, 7000, 8000, 9000, 10000 );
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId NAMED_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
     private final ChannelHandlerContext channelHandlerContext = mock( ChannelHandlerContext.class );
     private final CheckPointer checkPointer = mock( CheckPointer.class );
@@ -66,8 +68,8 @@ class PrepareStoreCopyRequestHandlerTest
         when( db.getDependencyResolver() ).thenReturn( dependencies );
         when( availabilityGuard.isAvailable() ).thenReturn( true );
         when( db.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
-        when( db.getDatabaseId() ).thenReturn( DATABASE_ID );
-        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( DATABASE_ID ), new SimpleLogService( logProvider ) );
+        when( db.getNamedDatabaseId() ).thenReturn( NAMED_DATABASE_ID );
+        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( NAMED_DATABASE_ID ), new SimpleLogService( logProvider ) );
         when( db.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
         embeddedChannel = new EmbeddedChannel( createHandler() );
     }

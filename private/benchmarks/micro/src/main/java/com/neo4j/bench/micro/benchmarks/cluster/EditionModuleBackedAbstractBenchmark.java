@@ -30,6 +30,7 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -43,7 +44,8 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     private GraphDatabaseFacade graphDatabaseFacade;
     private Path tempDirectory;
     private DatabaseManagementService managementService;
-    public static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    protected static final NamedDatabaseId NAMED_DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
+    protected static final DatabaseId DATABASE_ID = NAMED_DATABASE_ID.databaseId();
 
     protected GraphDatabaseService db()
     {
@@ -100,7 +102,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 try
                 {
                     TransactionRepresentationReplicatedTransaction txRepresentation =
-                            ReplicatedTransaction.from( batch.transactionRepresentation(), DATABASE_ID );
+                            ReplicatedTransaction.from( batch.transactionRepresentation(), NAMED_DATABASE_ID );
 
                     ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation );
 

@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 @ServiceProvider
 public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
@@ -28,9 +28,9 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
     }
 
     @Override
-    public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
+    public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
-        Set<MemberId> coreMemberIds = topologyService.coreTopologyForDatabase( databaseId ).members().keySet();
+        Set<MemberId> coreMemberIds = topologyService.coreTopologyForDatabase( namedDatabaseId ).members().keySet();
 
         if ( coreMemberIds.isEmpty() )
         {
@@ -39,7 +39,7 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
 
         for ( MemberId memberId : coreMemberIds )
         {
-            RoleInfo role = topologyService.lookupRole( databaseId, memberId );
+            RoleInfo role = topologyService.lookupRole( namedDatabaseId, memberId );
 
             if ( role == RoleInfo.LEADER && !Objects.equals( myself, memberId ) )
             {

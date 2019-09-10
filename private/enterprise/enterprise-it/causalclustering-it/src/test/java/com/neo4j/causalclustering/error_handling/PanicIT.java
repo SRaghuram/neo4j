@@ -23,7 +23,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.driver.AuthTokens;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
@@ -241,7 +241,7 @@ class PanicIT
             return member().defaultDatabase().getDependencyResolver().resolveDependency( PanicService.class );
         }
 
-        final DatabaseId defaultDbId()
+        final NamedDatabaseId defaultDbId()
         {
             return member().defaultDatabase().databaseId();
         }

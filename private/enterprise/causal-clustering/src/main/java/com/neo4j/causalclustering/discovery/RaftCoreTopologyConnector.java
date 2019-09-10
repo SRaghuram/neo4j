@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 /**
@@ -22,13 +22,13 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
 {
     private final CoreTopologyService coreTopologyService;
     private final RaftMachine raftMachine;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
 
-    public RaftCoreTopologyConnector( CoreTopologyService coreTopologyService, RaftMachine raftMachine, DatabaseId databaseId )
+    public RaftCoreTopologyConnector( CoreTopologyService coreTopologyService, RaftMachine raftMachine, NamedDatabaseId namedDatabaseId )
     {
         this.coreTopologyService = coreTopologyService;
         this.raftMachine = raftMachine;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
     }
 
     @Override
@@ -55,18 +55,18 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
     @Override
     public void onLeaderSwitch( LeaderInfo leaderInfo )
     {
-        coreTopologyService.setLeader( leaderInfo, databaseId );
+        coreTopologyService.setLeader( leaderInfo, namedDatabaseId );
     }
 
     @Override
     public void onLeaderStepDown( long stepDownTerm )
     {
-        coreTopologyService.handleStepDown( stepDownTerm, databaseId );
+        coreTopologyService.handleStepDown( stepDownTerm, namedDatabaseId );
     }
 
     @Override
-    public DatabaseId databaseId()
+    public NamedDatabaseId namedDatabaseId()
     {
-        return this.databaseId;
+        return this.namedDatabaseId;
     }
 }

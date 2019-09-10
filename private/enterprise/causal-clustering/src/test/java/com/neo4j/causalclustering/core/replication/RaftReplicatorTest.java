@@ -31,7 +31,7 @@ import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
@@ -63,7 +63,7 @@ class RaftReplicatorTest
 {
     private static final int DEFAULT_TIMEOUT_MS = 15_000;
 
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final LeaderInfo leaderInfo = new LeaderInfo( new MemberId( UUID.randomUUID() ), 1 );
@@ -81,12 +81,12 @@ class RaftReplicatorTest
     @BeforeEach
     void setUp()
     {
-        availabilityGuard = new DatabaseAvailabilityGuard( databaseId, Clocks.systemClock(), NullLog.getInstance(), 0,
+        availabilityGuard = new DatabaseAvailabilityGuard( namedDatabaseId, Clocks.systemClock(), NullLog.getInstance(), 0,
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
 
         databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig()
-                       .withDatabaseId( databaseId )
+                       .withDatabaseId( namedDatabaseId )
                        .withDatabaseAvailabilityGuard( availabilityGuard )
                        .withDatabaseHealth( health )
                        .register();
@@ -322,7 +322,7 @@ class RaftReplicatorTest
 
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
-        return new RaftReplicator( databaseId, leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10,
+        return new RaftReplicator( namedDatabaseId, leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10,
                 NullLogProvider.getInstance(), databaseManager, monitors, leaderAwaitDuration );
     }
 

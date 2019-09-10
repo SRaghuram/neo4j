@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.token.TokenRegistry;
 
@@ -19,11 +19,11 @@ import static org.neo4j.internal.id.IdType.RELATIONSHIP_TYPE_TOKEN;
 
 public class ReplicatedRelationshipTypeTokenHolder extends ReplicatedTokenHolder
 {
-    public ReplicatedRelationshipTypeTokenHolder( DatabaseId databaseId, TokenRegistry registry,
+    public ReplicatedRelationshipTypeTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry,
             Replicator replicator, IdGeneratorFactory idGeneratorFactory,
             Supplier<StorageEngine> storageEngineSupplier )
     {
-        super( databaseId, registry, replicator, idGeneratorFactory, RELATIONSHIP_TYPE_TOKEN, storageEngineSupplier, TokenType.RELATIONSHIP,
+        super( namedDatabaseId, registry, replicator, idGeneratorFactory, RELATIONSHIP_TYPE_TOKEN, storageEngineSupplier, TokenType.RELATIONSHIP,
                 TransactionState::relationshipTypeDoCreateForName );
     }
 }

@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -123,9 +123,9 @@ public class StoreDownloader
         return true;
     }
 
-    private CatchupComponents getCatchupComponents( DatabaseId databaseId )
+    private CatchupComponents getCatchupComponents( NamedDatabaseId namedDatabaseId )
     {
-        return componentsRepo.componentsFor( databaseId ).orElseThrow(
-                () -> new IllegalStateException( String.format( "There are no catchup components for the database %s.", databaseId ) ) );
+        return componentsRepo.componentsFor( namedDatabaseId ).orElseThrow(
+                () -> new IllegalStateException( String.format( "There are no catchup components for the database %s.", namedDatabaseId ) ) );
     }
 }

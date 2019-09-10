@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.identity.RaftId;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
  * Extends upon the topology service with a few extra services, connected to
@@ -38,31 +38,31 @@ public interface CoreTopologyService extends TopologyService
      * The leadership information should otherwise be communicated via raft as before.
      *
      * @param leaderInfo Information about the new leader
-     * @param databaseId The database identifier for which memberId is the new leader
+     * @param namedDatabaseId The database identifier for which memberId is the new leader
      */
-    void setLeader( LeaderInfo leaderInfo, DatabaseId databaseId );
+    void setLeader( LeaderInfo leaderInfo, NamedDatabaseId namedDatabaseId );
 
     /**
      * Set the leader memberId to null for a given database (i.e. Raft consensus group).
      * This is intended to trigger state cleanup for informational procedures like {@link ClusterOverviewProcedure}
      *
      * @param term The term for which this topology member should handle a step-down.
-     * @param databaseId The database for which this topology member should handle a step-down.
+     * @param namedDatabaseId The database for which this topology member should handle a step-down.
      */
-    void handleStepDown( long term, DatabaseId databaseId );
+    void handleStepDown( long term, NamedDatabaseId namedDatabaseId );
 
     /**
      * Check if this cluster member can bootstrap the Raft group for the specified database.
      *
-     * @param databaseId the database to bootstrap.
+     * @param namedDatabaseId the database to bootstrap.
      * @return {@code true} if this cluster member can bootstrap, {@code false} otherwise.
      */
-    boolean canBootstrapRaftGroup( DatabaseId databaseId );
+    boolean canBootstrapRaftGroup( NamedDatabaseId namedDatabaseId );
 
     interface Listener
     {
         void onCoreTopologyChange( DatabaseCoreTopology coreTopology );
 
-        DatabaseId databaseId();
+        NamedDatabaseId namedDatabaseId();
     }
 }

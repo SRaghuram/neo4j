@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import io.netty.buffer.ByteBuf;
 
@@ -15,6 +15,7 @@ import java.io.IOException;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class ReplicatedTokenRequestMarshalV2
 {
@@ -25,7 +26,7 @@ public class ReplicatedTokenRequestMarshalV2
 
     public static void marshal( ReplicatedTokenRequest tokenRequest, WritableChannel channel ) throws IOException
     {
-        DatabaseIdMarshal.INSTANCE.marshal( tokenRequest.databaseId(), channel );
+        DatabaseIdWithoutNameMarshal.INSTANCE.marshal( tokenRequest.databaseId(), channel );
         channel.putInt( tokenRequest.type().ordinal() );
         StringMarshal.marshal( channel, tokenRequest.tokenName() );
 
@@ -35,7 +36,7 @@ public class ReplicatedTokenRequestMarshalV2
 
     public static ReplicatedTokenRequest unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         TokenType type = TokenType.values()[channel.getInt()];
         String tokenName = StringMarshal.unmarshal( channel );
 
@@ -55,7 +56,7 @@ public class ReplicatedTokenRequestMarshalV2
         buffer.writeBytes( content.commandBytes() );
     }
 
-    public static ReplicatedTokenRequest unmarshal( ByteBuf buffer, DatabaseId databaseId )
+    public static ReplicatedTokenRequest unmarshal( ByteBuf buffer, NamedDatabaseId namedDatabaseId )
     {
         TokenType type = TokenType.values()[buffer.readInt()];
         String tokenName = StringMarshal.unmarshal( buffer );
@@ -64,6 +65,6 @@ public class ReplicatedTokenRequestMarshalV2
         byte[] commandBytes = new byte[commandBytesLength];
         buffer.readBytes( commandBytes );
 
-        return new ReplicatedTokenRequest( databaseId, type, tokenName, commandBytes );
+        return new ReplicatedTokenRequest( namedDatabaseId.databaseId(), type, tokenName, commandBytes );
     }
 }

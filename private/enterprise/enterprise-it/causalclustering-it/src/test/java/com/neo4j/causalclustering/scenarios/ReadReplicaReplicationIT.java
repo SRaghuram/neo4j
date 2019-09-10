@@ -52,7 +52,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -391,10 +391,10 @@ class ReadReplicaReplicationIT
         return new TransactionIdTracker( member.managementService(), reconciledTxTracker, new Monitors(), Clocks.nanoClock() );
     }
 
-    private static DatabaseId defaultDatabaseId( ClusterMember member )
+    private static NamedDatabaseId defaultDatabaseId( ClusterMember member )
     {
         var dbApi = (GraphDatabaseAPI) member.managementService().database( DEFAULT_DATABASE_NAME );
-        return dbApi.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
+        return dbApi.getDependencyResolver().resolveDependency( Database.class ).getNamedDatabaseId();
     }
 
     private static LogFiles physicalLogFiles( ClusterMember clusterMember )

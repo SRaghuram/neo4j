@@ -65,7 +65,7 @@ import org.neo4j.time.Clocks;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class EnterpriseSecurityModule extends SecurityModule
 {
@@ -127,7 +127,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         if ( isClustered )
         {
             var replicatedDatabaseEventService = platformDependencies.resolveDependency( ReplicatedDatabaseEventService.class );
-            replicatedDatabaseEventService.registerListener( SYSTEM_DATABASE_ID, databaseEventListener );
+            replicatedDatabaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, databaseEventListener );
         }
         else
         {

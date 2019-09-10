@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
@@ -26,7 +26,7 @@ public class GetStoreFileRequestDecoder extends ByteToMessageDecoder
     protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out ) throws Exception
     {
         NetworkReadableChannel channel = new NetworkReadableChannel( in );
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         StoreId storeId = StoreIdMarshal.INSTANCE.unmarshal( channel );
         long requiredTransactionId = in.readLong();
         String fileName = StringMarshal.unmarshal( in );

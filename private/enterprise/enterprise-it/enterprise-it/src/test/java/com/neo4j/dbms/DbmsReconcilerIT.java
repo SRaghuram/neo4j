@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletionException;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -30,6 +29,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @EnterpriseDbmsExtension
@@ -46,7 +46,7 @@ class DbmsReconcilerIT
     void setup()
     {
         idRepository = new TestDatabaseIdRepository();
-        var databaseId = idRepository.getByUuid( UUID.randomUUID() ).orElseThrow();
+        var databaseId = idRepository.getById( randomDatabaseId() ).orElseThrow();
         var databaseName = databaseId.name();
         managementService.createDatabase( databaseName );
         db = (GraphDatabaseAPI) managementService.database( databaseName );

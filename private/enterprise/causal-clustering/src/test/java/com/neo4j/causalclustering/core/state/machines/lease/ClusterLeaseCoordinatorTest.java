@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
@@ -28,7 +28,7 @@ import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
 
 class ClusterLeaseCoordinatorTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     private final MemberId myself = member( 0 );
     private final MemberId other = member( 1 );
@@ -38,7 +38,7 @@ class ClusterLeaseCoordinatorTest
 
     private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
 
-    private final ClusterLeaseCoordinator coordinator = new ClusterLeaseCoordinator( myself, replicator, leaderLocator, stateMachine, databaseId );
+    private final ClusterLeaseCoordinator coordinator = new ClusterLeaseCoordinator( myself, replicator, leaderLocator, stateMachine, namedDatabaseId );
 
     @Test
     void shouldHaveNoLeaseInitially()

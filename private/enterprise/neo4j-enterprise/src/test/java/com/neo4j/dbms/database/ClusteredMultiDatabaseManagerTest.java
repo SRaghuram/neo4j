@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.scheduler.CallingThreadJobScheduler;
@@ -31,7 +31,7 @@ class ClusteredMultiDatabaseManagerTest
     void shouldRecreateDatabaseContextOnRestart()
     {
         // given
-        DatabaseId dbId = TestDatabaseIdRepository.randomDatabaseId();
+        NamedDatabaseId dbId = TestDatabaseIdRepository.randomNamedDatabaseId();
         StubClusteredMultiDatabaseManager manager = new StubClusteredMultiDatabaseManager();
         ClusteredDatabaseContext ctx = manager.createDatabaseContext( dbId );
 
@@ -59,9 +59,9 @@ class ClusteredMultiDatabaseManagerTest
                     NullLogProvider.getInstance(), Config.defaults(), null );
         }
 
-        void testStartDatabase( DatabaseId databaseId, ClusteredDatabaseContext databaseContext )
+        void testStartDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext databaseContext )
         {
-            super.startDatabase( databaseId, databaseContext );
+            super.startDatabase( namedDatabaseId, databaseContext );
         }
 
         ClusteredDatabaseContext mostRecentContext()
@@ -70,10 +70,10 @@ class ClusteredMultiDatabaseManagerTest
         }
 
         @Override
-        protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
+        protected ClusteredDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
         {
             var dbCtx = mock( ClusteredDatabaseContext.class );
-            when( dbCtx.databaseId() ).thenReturn( databaseId );
+            when( dbCtx.databaseId() ).thenReturn( namedDatabaseId );
             StartStop startStopTracker = mock( StartStop.class );
             ClusteredDatabase dbLife = new StubClusteredDatabase( startStopTracker );
             when( dbCtx.clusteredDatabase() ).thenReturn( dbLife );

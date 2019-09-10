@@ -15,8 +15,8 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.query.ExecutingQuery;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.QueryExecutionMonitor;
 import org.neo4j.kernel.impl.util.MonotonicCounter;
 import org.neo4j.memory.OptionalMemoryTracker;
@@ -83,7 +83,7 @@ public class FabricQueryMonitoring
         MonotonicCounter lastQueryId = MonotonicCounter.newAtomicMonotonicCounter();
         long queryId = lastQueryId.incrementAndGet();
         ClientConnectionInfo connectionInfo = transactionInfo.getClientConnectionInfo();
-        DatabaseId databaseId = getDatabaseIdRepository().getByName( transactionInfo.getDatabaseName() ).get();
+        NamedDatabaseId namedDatabaseId = getDatabaseIdRepository().getByName( transactionInfo.getDatabaseName() ).get();
         String username = transactionInfo.getLoginContext().subject().username();
         Map<String,Object> annotationData = Map.of();
         LongSupplier lockCount = () -> 0L;
@@ -93,7 +93,7 @@ public class FabricQueryMonitoring
         SystemNanoClock systemClock = Clocks.nanoClock();
         CpuClock cpuClock = CpuClock.NOT_AVAILABLE;
 
-        return new ExecutingQuery( queryId, connectionInfo, databaseId, username, statement, params, annotationData, lockCount, cursorCounters,
+        return new ExecutingQuery( queryId, connectionInfo, namedDatabaseId, username, statement, params, annotationData, lockCount, cursorCounters,
                 threadId, threadName, systemClock, cpuClock );
     }
 

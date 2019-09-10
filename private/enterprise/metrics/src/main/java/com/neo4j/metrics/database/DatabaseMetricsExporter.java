@@ -110,6 +110,6 @@ public class DatabaseMetricsExporter
 
     private String databaseMetricsPrefix()
     {
-        return config.get( MetricsSettings.metricsPrefix ) + "." + dependencies.database().getDatabaseId().name();
+        return config.get( MetricsSettings.metricsPrefix ) + "." + dependencies.database().getNamedDatabaseId().name();
     }
 }

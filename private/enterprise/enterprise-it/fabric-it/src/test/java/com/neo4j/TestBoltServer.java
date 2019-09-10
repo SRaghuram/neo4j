@@ -31,7 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.kernel.api.security.AuthenticationResult.SUCCESS;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class TestBoltServer
 {
@@ -82,7 +82,7 @@ public class TestBoltServer
         when( monitors.newMonitor( any() ) ).thenReturn( metricsMonitor );
 
         var dbIdRepository = mock( DatabaseIdRepository.class );
-        when( dbIdRepository.getByUuid( any() ) ).thenReturn( Optional.of( SYSTEM_DATABASE_ID ) );
+        when( dbIdRepository.getById( any() ) ).thenReturn( Optional.of( NAMED_SYSTEM_DATABASE_ID ) );
 
         boltServer = new BoltServer( boltGraphDatabaseManagementService,
                 jobScheduler,

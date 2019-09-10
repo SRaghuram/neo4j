@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -29,7 +29,7 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 class CommitProcessStateMachineCollaborationTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final NamedDatabaseId nameDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     void shouldFailTransactionIfLeaseChanges()
@@ -45,7 +45,7 @@ class CommitProcessStateMachineCollaborationTest
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId,
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, nameDatabaseId,
                 mock( ClusterLeaseCoordinator.class ) );
 
         // when
@@ -61,7 +61,7 @@ class CommitProcessStateMachineCollaborationTest
 
     private ReplicatedLeaseStateMachine leaseState( int leaseId )
     {
-        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( null, leaseId, databaseId );
+        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( null, leaseId, nameDatabaseId.databaseId() );
         ReplicatedLeaseStateMachine leaseState = mock( ReplicatedLeaseStateMachine.class );
         when( leaseState.snapshot() ).thenReturn( new ReplicatedLeaseState( -1, leaseRequest ) );
         return leaseState;

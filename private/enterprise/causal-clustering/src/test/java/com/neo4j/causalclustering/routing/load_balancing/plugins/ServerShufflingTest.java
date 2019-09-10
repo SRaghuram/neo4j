@@ -104,7 +104,7 @@ class ServerShufflingTest
     @Test
     void serverPoliciesPluginShouldShuffleServers() throws Exception
     {
-        var databaseId = new TestDatabaseIdRepository().defaultDatabase();
+        var namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
         var coreTopologyService = mock( CoreTopologyService.class );
 
         var leaderId = member( 0 );
@@ -117,12 +117,13 @@ class ServerShufflingTest
         );
 
         var leaderService = mock( LeaderService.class );
-        when( leaderService.getLeaderId( databaseId ) ).thenReturn( Optional.of( leaderId ) );
-        when( leaderService.getLeaderBoltAddress( databaseId ) ).thenReturn( Optional.of( coreMembers.get( leaderId ).boltAddress() ) );
+        when( leaderService.getLeaderId( namedDatabaseId ) ).thenReturn( Optional.of( leaderId ) );
+        when( leaderService.getLeaderBoltAddress( namedDatabaseId ) ).thenReturn( Optional.of( coreMembers.get( leaderId ).boltAddress() ) );
 
-        var coreTopology = new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coreMembers );
-        when( coreTopologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( coreTopology );
-        when( coreTopologyService.readReplicaTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseReadReplicaTopology( databaseId, emptyMap() ) );
+        var coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), RaftId.from( namedDatabaseId.databaseId() ), coreMembers );
+        when( coreTopologyService.coreTopologyForDatabase( namedDatabaseId ) ).thenReturn( coreTopology );
+        when( coreTopologyService.readReplicaTopologyForDatabase( namedDatabaseId ) )
+                .thenReturn( new DatabaseReadReplicaTopology( namedDatabaseId.databaseId(), emptyMap() ) );
 
         var serverPoliciesPlugin = new ServerPoliciesPlugin();
         assertTrue( serverPoliciesPlugin.isShufflingPlugin() );
@@ -140,7 +141,7 @@ class ServerShufflingTest
         for ( var i = 0; i < 1000; i++ ) // we try many times to make false negatives extremely unlikely
         {
             // when
-            var shuffledResult = serverPoliciesPlugin.run( databaseId, MapValue.EMPTY );
+            var shuffledResult = serverPoliciesPlugin.run( namedDatabaseId, MapValue.EMPTY );
 
             // then: should still contain the same endpoints
             assertThat( shuffledResult.routeEndpoints(), containsInAnyOrder( routers.toArray() ) );

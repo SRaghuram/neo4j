@@ -40,7 +40,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 class BookmarkEndToEndTest
 {
@@ -212,13 +212,13 @@ class BookmarkEndToEndTest
             when(remote.boltGraphDatabaseManagementService.database( any() )).thenReturn( database );
             var tx = mock( BoltTransaction.class );
             when(database.beginTransaction( any(), any(), any(), receivedBookmarks.capture(), any(), any(), any() )).thenReturn( tx );
-            when( database.getDatabaseId() ).thenReturn( SYSTEM_DATABASE_ID );
+            when( database.getNamedDatabaseId() ).thenReturn( NAMED_SYSTEM_DATABASE_ID );
 
             var bookmarkMetadata = IntStream.range( 1, txIds.size() )
                     .mapToObj( txIds::get )
-                    .map( id -> new BookmarkMetadata( id, SYSTEM_DATABASE_ID ) )
+                    .map( id -> new BookmarkMetadata( id, NAMED_SYSTEM_DATABASE_ID ) )
                     .toArray(BookmarkMetadata[]::new);
-            when( tx.getBookmarkMetadata() ).thenReturn( new BookmarkMetadata( txIds.get( 0 ), SYSTEM_DATABASE_ID ), bookmarkMetadata );
+            when( tx.getBookmarkMetadata() ).thenReturn( new BookmarkMetadata( txIds.get( 0 ), NAMED_SYSTEM_DATABASE_ID ), bookmarkMetadata );
 
             when( tx.executeQuery( any(), any(), anyBoolean(), any() ) ).thenAnswer( invocationOnMock ->
             {

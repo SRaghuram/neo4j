@@ -8,10 +8,10 @@ package com.neo4j.dbms;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
  * Operator responsible for transitioning all non-DROPPED databases to a STOPPED state.
@@ -30,16 +30,16 @@ class ShutdownOperator extends DbmsOperator
     {
         desired.clear();
         var desireAllStopped = databaseManager.registeredDatabases().keySet().stream()
-                .filter( e -> !e.equals( SYSTEM_DATABASE_ID ) )
-                .collect( Collectors.toMap( DatabaseId::name, this::stoppedState ) );
+                .filter( e -> !e.equals( NAMED_SYSTEM_DATABASE_ID ) )
+                .collect( Collectors.toMap( NamedDatabaseId::name, this::stoppedState ) );
         desired.putAll( desireAllStopped );
         trigger( ReconcilerRequest.force() ).awaitAll();
 
-        desired.put( SYSTEM_DATABASE_ID.name(), stoppedState( SYSTEM_DATABASE_ID ) );
-        trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID );
+        desired.put( NAMED_SYSTEM_DATABASE_ID.name(), stoppedState( NAMED_SYSTEM_DATABASE_ID ) );
+        trigger( ReconcilerRequest.force() ).await( NAMED_SYSTEM_DATABASE_ID );
     }
 
-    private EnterpriseDatabaseState stoppedState( DatabaseId id )
+    private EnterpriseDatabaseState stoppedState( NamedDatabaseId id )
     {
         return new EnterpriseDatabaseState( id, STOPPED );
     }

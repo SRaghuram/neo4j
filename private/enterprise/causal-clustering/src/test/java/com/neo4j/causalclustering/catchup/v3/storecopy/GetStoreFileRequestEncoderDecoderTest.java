@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GetStoreFileRequestEncoderDecoderTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId NAMED_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private static final StoreId expectedStore = new StoreId( 1, 2, 3, 4, 5 );
     private static final File expectedFile = new File( "abc.123" );
     private static final Long expectedLastTransaction = 1234L;
@@ -37,7 +37,8 @@ class GetStoreFileRequestEncoderDecoderTest
     void getsTransmitted()
     {
         // given
-        GetStoreFileRequest expectedStoreRequest = new GetStoreFileRequest( expectedStore, expectedFile, expectedLastTransaction, DATABASE_ID );
+        GetStoreFileRequest expectedStoreRequest =
+                new GetStoreFileRequest( expectedStore, expectedFile, expectedLastTransaction, NAMED_DATABASE_ID.databaseId() );
 
         // when
         sendToChannel( expectedStoreRequest, embeddedChannel );

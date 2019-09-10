@@ -5,15 +5,15 @@
  */
 package com.neo4j.dbms;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public interface ReplicatedDatabaseEventService
 {
-    void registerListener( DatabaseId databaseId, ReplicatedDatabaseEventListener listener );
+    void registerListener( NamedDatabaseId namedDatabaseId, ReplicatedDatabaseEventListener listener );
 
-    void unregisterListener( DatabaseId databaseId, ReplicatedDatabaseEventListener listener );
+    void unregisterListener( NamedDatabaseId namedDatabaseId, ReplicatedDatabaseEventListener listener );
 
-    ReplicatedDatabaseEventDispatch getDatabaseEventDispatch( DatabaseId databaseId );
+    ReplicatedDatabaseEventDispatch getDatabaseEventDispatch( NamedDatabaseId namedDatabaseId );
 
     interface ReplicatedDatabaseEventListener
     {

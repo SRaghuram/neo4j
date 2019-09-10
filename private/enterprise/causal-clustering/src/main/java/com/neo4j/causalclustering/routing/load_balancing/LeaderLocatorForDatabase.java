@@ -9,9 +9,9 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 
 import java.util.Optional;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public interface LeaderLocatorForDatabase
 {
-    Optional<LeaderLocator> getLeader( DatabaseId databaseId );
+    Optional<LeaderLocator> getLeader( NamedDatabaseId namedDatabaseId );
 }

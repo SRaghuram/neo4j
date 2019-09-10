@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -46,8 +47,9 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.scheduler.JobHandle;
@@ -166,16 +168,15 @@ class RemoteTransactionTest
         GraphDatabaseFacade graphDatabaseFacade = mock( GraphDatabaseFacade.class );
         when( databaseManagementService.database( any() ) ).thenReturn( graphDatabaseFacade );
 
-        DatabaseId databaseId = mock( DatabaseId.class );
-        when( databaseId.name() ).thenReturn( "mega" );
+        NamedDatabaseId namedDatabaseId = DatabaseIdFactory.from( "mega", UUID.randomUUID() );
 
-        when( graphDatabaseFacade.databaseId() ).thenReturn( databaseId );
+        when( graphDatabaseFacade.databaseId() ).thenReturn( namedDatabaseId );
 
         when( fabricDatabaseManager.getDatabase( any() ) ).thenReturn( graphDatabaseFacade );
-        when( fabricDatabaseManager.isFabricDatabase( "mega" ) ).thenReturn( true );
+        when( fabricDatabaseManager.isFabricDatabase( namedDatabaseId.name() ) ).thenReturn( true );
 
         DatabaseIdRepository idRepository = mock( DatabaseIdRepository.class );
-        when( idRepository.getByName( "mega" ) ).thenReturn( Optional.of( databaseId ) );
+        when( idRepository.getByName( namedDatabaseId.name() ) ).thenReturn( Optional.of( namedDatabaseId ) );
         when( fabricDatabaseManager.databaseIdRepository() ).thenReturn( idRepository );
 
         InternalTransaction internalTransaction = mock( InternalTransaction.class );

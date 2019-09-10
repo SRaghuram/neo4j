@@ -9,7 +9,7 @@ import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class EnterpriseMultiDatabaseManager extends MultiDatabaseManager<StandaloneDatabaseContext>
 {
@@ -19,9 +19,9 @@ public class EnterpriseMultiDatabaseManager extends MultiDatabaseManager<Standal
     }
 
     @Override
-    protected StandaloneDatabaseContext createDatabaseContext( DatabaseId databaseId )
+    protected StandaloneDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
-        var databaseCreationContext = newDatabaseCreationContext( databaseId, globalModule.getGlobalDependencies(), globalModule.getGlobalMonitors() );
+        var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, globalModule.getGlobalDependencies(), globalModule.getGlobalMonitors() );
         var kernelDatabase = new Database( databaseCreationContext );
         return new StandaloneDatabaseContext( kernelDatabase );
     }

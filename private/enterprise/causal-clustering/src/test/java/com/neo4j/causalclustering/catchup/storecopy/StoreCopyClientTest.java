@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
@@ -146,12 +146,12 @@ class StoreCopyClientTest
     {
         // given
         mockClient( protocol );
-        DatabaseId altDbName = databaseIdRepository.getRaw( "alternative" );
+        NamedDatabaseId altDbName = databaseIdRepository.getRaw( "alternative" );
         StoreId defaultDbStoreId = new StoreId( 6, 3, 1, 2, 6 );
         StoreId altDbStoreId = new StoreId( 4, 6, 3, 1, 9 );
         Map<GetStoreIdRequest,StoreId> storeIdMap = new HashMap<>();
-        storeIdMap.put( new GetStoreIdRequest( databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ) ), defaultDbStoreId );
-        storeIdMap.put( new GetStoreIdRequest( altDbName ), altDbStoreId );
+        storeIdMap.put( new GetStoreIdRequest( databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ).databaseId() ), defaultDbStoreId );
+        storeIdMap.put( new GetStoreIdRequest( altDbName.databaseId() ), altDbStoreId );
         clientResponses.withStoreId( storeIdMap::get );
 
         StoreCopyClient subjectA = subject;
@@ -311,7 +311,7 @@ class StoreCopyClientTest
         ArgumentCaptor<File> fileArgumentCaptor = ArgumentCaptor.forClass( File.class );
         if ( protocol.equals( CATCHUP_3_0 ) )
         {
-            verify( v3Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( DatabaseId.class ) );
+            verify( v3Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), any( NamedDatabaseId.class ) );
         }
         else
         {

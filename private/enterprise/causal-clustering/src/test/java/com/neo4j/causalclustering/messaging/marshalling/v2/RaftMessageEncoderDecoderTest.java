@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.FormattedLogProvider;
@@ -75,13 +74,14 @@ class RaftMessageEncoderDecoderTest
 
     private static Stream<Arguments> data()
     {
-        DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+        var namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
+        var databaseId = namedDatabaseId.databaseId();
         return setUpParams( new RaftMessage[]{new RaftMessages.Heartbeat( MEMBER_ID, 1, 2, 3 ),
                 new RaftMessages.HeartbeatResponse( MEMBER_ID ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID, new DummyRequest( new byte[]{1, 2, 3, 4, 5, 6, 7, 8} ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6, 7, 8}, databaseId ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID,
-                        ReplicatedTransaction.from( new PhysicalTransactionRepresentation( Collections.emptyList() ), databaseId ) ),
+                        ReplicatedTransaction.from( new PhysicalTransactionRepresentation( Collections.emptyList() ), namedDatabaseId ) ),
                 new RaftMessages.NewEntry.Request( MEMBER_ID,
                         new DistributedOperation(
                                 new DistributedOperation(

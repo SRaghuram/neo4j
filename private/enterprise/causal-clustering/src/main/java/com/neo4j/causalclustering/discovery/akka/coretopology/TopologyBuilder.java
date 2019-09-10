@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.discovery.akka.coretopology;
 
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Map;
 import javax.annotation.Nullable;

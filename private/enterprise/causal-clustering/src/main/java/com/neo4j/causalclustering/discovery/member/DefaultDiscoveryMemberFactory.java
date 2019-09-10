@@ -14,6 +14,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
@@ -41,13 +42,14 @@ public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
                 .values()
                 .stream()
                 .map( DatabaseContext::database )
-                .filter( db -> !hasFailed( db.getDatabaseId() ) && db.isStarted() )
-                .map( Database::getDatabaseId )
+                .filter( db -> !hasFailed( db.getNamedDatabaseId() ) && db.isStarted() )
+                .map( Database::getNamedDatabaseId )
+                .map( NamedDatabaseId::databaseId )
                 .collect( toUnmodifiableSet() );
     }
 
-    private boolean hasFailed( DatabaseId databaseId )
+    private boolean hasFailed( NamedDatabaseId namedDatabaseId )
     {
-        return databaseStateService.causeOfFailure( databaseId ).isPresent();
+        return databaseStateService.causeOfFailure( namedDatabaseId ).isPresent();
     }
 }

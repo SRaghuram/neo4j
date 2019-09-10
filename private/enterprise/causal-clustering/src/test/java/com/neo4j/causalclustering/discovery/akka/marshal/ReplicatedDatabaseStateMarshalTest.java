@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -19,7 +19,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
@@ -41,10 +40,10 @@ public class ReplicatedDatabaseStateMarshalTest extends BaseMarshalTest<Replicat
         return Set.of( coreStates, rrStates );
     }
 
-    private static Map<MemberId,DatabaseState> memberStates( DatabaseId databaseId, int numMembers )
+    private static Map<MemberId,DiscoveryDatabaseState> memberStates( DatabaseId databaseId, int numMembers )
     {
         return Stream.generate( () -> Map.entry( new MemberId( UUID.randomUUID() ),
-                        new EnterpriseDatabaseState( databaseId, EnterpriseOperatorState.STARTED ) ) )
+                        new DiscoveryDatabaseState( databaseId, EnterpriseOperatorState.STARTED ) ) )
                 .limit( numMembers )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
     }

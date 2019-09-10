@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 
@@ -31,7 +31,6 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.asse
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDiscoveryService;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDiscoveryService;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
@@ -67,14 +66,14 @@ class CoreFallBehindIT
         private AtomicInteger systemDownloadCount = new AtomicInteger();
 
         @Override
-        public void startedDownloadingSnapshot( DatabaseId databaseId )
+        public void startedDownloadingSnapshot( NamedDatabaseId namedDatabaseId )
         {
         }
 
         @Override
-        public void downloadSnapshotComplete( DatabaseId databaseId )
+        public void downloadSnapshotComplete( NamedDatabaseId namedDatabaseId )
         {
-            if ( databaseId.isSystemDatabase() )
+            if ( namedDatabaseId.isSystemDatabase() )
             {
                 systemDownloadCount.incrementAndGet();
             }

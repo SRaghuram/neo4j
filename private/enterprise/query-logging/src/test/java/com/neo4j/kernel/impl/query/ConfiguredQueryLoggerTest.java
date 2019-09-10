@@ -21,7 +21,7 @@ import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorCounters;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.logging.AssertableLogProvider;
@@ -45,7 +45,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_paramete
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_threshold;
 import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class ConfiguredQueryLoggerTest
@@ -61,7 +61,7 @@ class ConfiguredQueryLoggerTest
     private static final String QUERY_3 = "MATCH (c)-[:FOO]->(d) RETURN d.size";
     private static final String QUERY_4 = "MATCH (n) WHERE n.age IN $ages RETURN n";
     private final FakeClock clock = Clocks.fakeClock();
-    private final DatabaseId defaultDbId = randomDatabaseId();
+    private final NamedDatabaseId defaultDbId = randomNamedDatabaseId();
     private final FakeCpuClock cpuClock = new FakeCpuClock();
     private final FakeMemoryTracker memoryTracker = new FakeMemoryTracker();
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -522,7 +522,7 @@ class ConfiguredQueryLoggerTest
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
-        var otherDbId = randomDatabaseId();
+        var otherDbId = randomNamedDatabaseId();
         ExecutingQuery anotherQuery = query( SESSION_1, otherDbId, "AnotherUser", QUERY_1 );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( anotherQuery );
@@ -614,11 +614,11 @@ class ConfiguredQueryLoggerTest
 
     private ExecutingQuery query(
             ClientConnectionInfo sessionInfo,
-            DatabaseId databaseId,
+            NamedDatabaseId namedDatabaseId,
             String username,
             String queryText )
     {
-        return query( sessionInfo, databaseId, username, queryText, emptyMap(), emptyMap() );
+        return query( sessionInfo, namedDatabaseId, username, queryText, emptyMap(), emptyMap() );
     }
 
     private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String username )
@@ -633,7 +633,7 @@ class ConfiguredQueryLoggerTest
 
     private ExecutingQuery query(
             ClientConnectionInfo sessionInfo,
-            DatabaseId databaseId,
+            NamedDatabaseId namedDatabaseId,
             String username,
             String queryText,
             Map<String,Object> params,
@@ -641,7 +641,7 @@ class ConfiguredQueryLoggerTest
     {
         Thread thread = Thread.currentThread();
         return new ExecutingQuery( queryId++,
-                sessionInfo, databaseId, username, queryText,
+                sessionInfo, namedDatabaseId, username, queryText,
                 ValueUtils.asMapValue( params ),
                 metaData,
                 () -> 0,

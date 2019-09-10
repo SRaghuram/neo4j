@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -28,7 +28,7 @@ class RaftMonitorTest
     private final AssertableLogProvider user = new AssertableLogProvider();
     private final AssertableLogProvider debug = new AssertableLogProvider();
 
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     private RaftBinder.Monitor raftBinderMonitor;
     private PersistentSnapshotDownloader.Monitor snapshotMonitor;
@@ -46,10 +46,10 @@ class RaftMonitorTest
     @Test
     void shouldNotDuplicateToAnyLog()
     {
-        var raftId = RaftId.from( databaseId );
-        raftBinderMonitor.boundToRaft( databaseId, raftId );
+        var raftId = RaftId.from( namedDatabaseId.databaseId() );
+        raftBinderMonitor.boundToRaft( namedDatabaseId, raftId );
 
-        var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s'.", databaseId.name(), raftId.uuid() ) );
+        var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() ) );
         user.rawMessageMatcher().assertContainsSingle( expected );
         debug.rawMessageMatcher().assertContainsSingle( expected );
     }
@@ -57,36 +57,36 @@ class RaftMonitorTest
     @Test
     void shouldWriteToUserLogWhenWaitingForCoreMembers()
     {
-        raftBinderMonitor.waitingForCoreMembers( databaseId, 42 );
+        raftBinderMonitor.waitingForCoreMembers( namedDatabaseId, 42 );
 
         user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Database '%s' is waiting for a total of %d core members" ), databaseId.name(), 42 ) );
+                containsString( "Database '%s' is waiting for a total of %d core members" ), namedDatabaseId.name(), 42 ) );
     }
 
     @Test
     void shouldWriteToUserLogWhenWaitingForBootstrap()
     {
-        raftBinderMonitor.waitingForBootstrap( databaseId );
+        raftBinderMonitor.waitingForBootstrap( namedDatabaseId );
 
         user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Database '%s' is waiting for bootstrap by other instance" ), databaseId.name() ) );
+                containsString( "Database '%s' is waiting for bootstrap by other instance" ), namedDatabaseId.name() ) );
     }
 
     @Test
     void shouldWriteToUserLogWhenStartingSnapshotDownload()
     {
-        snapshotMonitor.startedDownloadingSnapshot( databaseId );
+        snapshotMonitor.startedDownloadingSnapshot( namedDatabaseId );
 
         user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Started downloading snapshot for database '%s'" ), databaseId.name() ) );
+                containsString( "Started downloading snapshot for database '%s'" ), namedDatabaseId.name() ) );
     }
 
     @Test
     void shouldWriteToUserLogWhenFinishedSnapshotDownload()
     {
-        snapshotMonitor.downloadSnapshotComplete( databaseId );
+        snapshotMonitor.downloadSnapshotComplete( namedDatabaseId );
 
         user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Download of snapshot for database '%s' complete" ), databaseId.name() ) );
+                containsString( "Download of snapshot for database '%s' complete" ), namedDatabaseId.name() ) );
     }
 }

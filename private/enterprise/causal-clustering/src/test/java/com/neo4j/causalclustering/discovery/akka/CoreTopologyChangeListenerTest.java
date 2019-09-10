@@ -22,20 +22,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CoreTopologyChangeListenerTest
 {
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
     private final RetryStrategy discoveryRestartRetryStrategy = new NoRetriesStrategy();
@@ -59,9 +58,9 @@ class CoreTopologyChangeListenerTest
     @Test
     void shouldNotifyListenersOnTopologyChange()
     {
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( databaseId, RaftIdFactory.random(), Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( namedDatabaseId.databaseId(), RaftIdFactory.random(), Map.of() );
         Listener listener = mock( Listener.class );
-        when( listener.databaseId() ).thenReturn( databaseId );
+        when( listener.namedDatabaseId() ).thenReturn( namedDatabaseId );
         service.addLocalCoreTopologyListener( listener );
         service.topologyState().onTopologyUpdate( coreTopology );
         verify( listener ).onCoreTopologyChange( coreTopology );

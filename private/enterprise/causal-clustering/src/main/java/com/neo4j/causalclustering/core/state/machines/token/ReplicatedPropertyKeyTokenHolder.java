@@ -12,16 +12,16 @@ import java.util.function.Supplier;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.api.txstate.TransactionState;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.token.TokenRegistry;
 
 public class ReplicatedPropertyKeyTokenHolder extends ReplicatedTokenHolder
 {
-    public ReplicatedPropertyKeyTokenHolder( DatabaseId databaseId, TokenRegistry registry, Replicator replicator, IdGeneratorFactory idGeneratorFactory,
-            Supplier<StorageEngine> storageEngineSupplier )
+    public ReplicatedPropertyKeyTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
+            IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier )
     {
-        super( databaseId, registry, replicator, idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, storageEngineSupplier, TokenType.PROPERTY,
+        super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, storageEngineSupplier, TokenType.PROPERTY,
                 TransactionState::propertyKeyDoCreateForName );
     }
 }

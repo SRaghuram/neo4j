@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
  * Simple holder for a Collection of concurrently executing {@link CompletableFuture}s
@@ -37,18 +37,18 @@ public final class ReconcilerResult
         this.combinedFuture = combineFutures( reconciliationFutures );
     }
 
-    public void await( DatabaseId databaseId )
+    public void await( NamedDatabaseId namedDatabaseId )
     {
-        var future = reconciliationFutures.get( databaseId.name() );
+        var future = reconciliationFutures.get( namedDatabaseId.name() );
         if ( future != null )
         {
             future.join();
         }
     }
 
-    public void await( Collection<DatabaseId> databaseIds )
+    public void await( Collection<NamedDatabaseId> namedDatabaseIds )
     {
-        var futures = databaseIds.stream()
+        var futures = namedDatabaseIds.stream()
                 .map( id -> reconciliationFutures.get( id.name() ) )
                 .flatMap( Stream::ofNullable )
                 .toArray( CompletableFuture<?>[]::new );

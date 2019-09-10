@@ -16,9 +16,9 @@ import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
 import org.neo4j.kernel.database.DatabaseStartupController;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -46,17 +46,17 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
     private final ReadReplicaEditionModule editionModule;
     private final AccessCapabilityFactory accessCapabilityFactory;
 
-    public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, DatabaseId databaseId )
+    public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, NamedDatabaseId namedDatabaseId )
     {
         this.editionModule = editionModule;
         this.locksManager = new ReadReplicaLockManager();
         Config globalConfig = globalModule.getGlobalConfig();
-        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
+        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
         this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, databaseLogService ).select();
 
         IdContextFactory idContextFactory = IdContextFactoryBuilder.of( globalModule.getFileSystem(), globalModule.getJobScheduler(), globalConfig ).build();
 
-        this.idContext = idContextFactory.createIdContext( databaseId );
+        this.idContext = idContextFactory.createIdContext( namedDatabaseId );
         this.tokenHolders = new TokenHolders(
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_PROPERTY_KEY ),
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_LABEL ),

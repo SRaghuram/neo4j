@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.ArrayList;
@@ -28,6 +28,7 @@ import java.util.stream.IntStream;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static java.util.function.Function.identity;
@@ -41,15 +42,16 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
     //For this test class all members have the same role across all databases
     private final Map<MemberId,RoleInfo> coreRoles;
-    private final Map<DatabaseToMember,EnterpriseDatabaseState> databaseStates;
+    private final Map<DatabaseToMember,DiscoveryDatabaseState> databaseStates;
     private final MemberId myself;
 
-    public FakeTopologyService( Set<MemberId> cores, Set<MemberId> replicas, MemberId myself, Set<DatabaseId> databaseIds )
+    public FakeTopologyService( Set<MemberId> cores, Set<MemberId> replicas, MemberId myself, Set<NamedDatabaseId> namedDatabaseIds )
     {
         this.myself = myself;
 
         int offset = 0;
         this.coreMembers = new HashMap<>();
+        var databaseIds = namedDatabaseIds.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
         for ( MemberId core : cores )
         {
             coreMembers.put( core, TestTopology.addressesForCore( offset, false, databaseIds ) );
@@ -147,7 +149,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         replicaMembers.putAll( updatedRRs );
     }
 
-    public void setState( Set<MemberId> memberIds, EnterpriseDatabaseState state )
+    public void setState( Set<MemberId> memberIds, DiscoveryDatabaseState state )
     {
         var newStates = memberIds.stream()
                 .collect( Collectors.toMap( m -> new DatabaseToMember( state.databaseId(), m ), ignored -> state ) );
@@ -155,12 +157,12 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public void onDatabaseStart( DatabaseId databaseId )
+    public void onDatabaseStart( NamedDatabaseId namedDatabaseId )
     {
     }
 
     @Override
-    public void onDatabaseStop( DatabaseId databaseId )
+    public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
     }
 
@@ -176,8 +178,9 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var coresWithDatabase = coreMembers.entrySet().stream()
                 .filter( e -> e.getValue().startedDatabaseIds().contains( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
@@ -191,8 +194,9 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
+        var databaseId = namedDatabaseId.databaseId();
         var replicasWithDatabase = replicaMembers.entrySet().stream()
                 .filter( e -> e.getValue().startedDatabaseIds().contains( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
@@ -209,7 +213,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public RoleInfo lookupRole( DatabaseId ignored, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId ignored, MemberId memberId )
     {
         var role = coreRoles.get( memberId );
         if ( role == null )
@@ -227,27 +231,28 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
-        return databaseStates.get( new DatabaseToMember( databaseId, memberId ) );
+        return databaseStates.get( new DatabaseToMember( namedDatabaseId.databaseId(), memberId ) );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( final DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( final NamedDatabaseId namedDatabaseId )
     {
-        return getMemberStatesForRole( databaseId, allCoreServers().keySet() );
+        return getMemberStatesForRole( namedDatabaseId, allCoreServers().keySet() );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return getMemberStatesForRole( databaseId, allReadReplicas().keySet() );
+        return getMemberStatesForRole( namedDatabaseId, allReadReplicas().keySet() );
     }
 
-    private Map<MemberId,DatabaseState> getMemberStatesForRole( final DatabaseId databaseId, Set<MemberId> membersOfRole )
+    private Map<MemberId,DiscoveryDatabaseState> getMemberStatesForRole( final NamedDatabaseId namedDatabaseId, Set<MemberId> membersOfRole )
     {
         final var members = Set.copyOf( membersOfRole );
-        Predicate<DatabaseToMember> memberIsRoleForDb = key -> Objects.equals( key.databaseId(), databaseId ) && members.contains( key.memberId() );
+        Predicate<DatabaseToMember> memberIsRoleForDb =
+                key -> Objects.equals( key.databaseId(), namedDatabaseId.databaseId() ) && members.contains( key.memberId() );
 
         return databaseStates.entrySet().stream()
                 .filter( e -> memberIsRoleForDb.test( e.getKey() ) )

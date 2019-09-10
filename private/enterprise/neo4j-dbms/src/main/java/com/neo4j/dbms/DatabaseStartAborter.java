@@ -15,10 +15,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
  * Component which polls the system database to see if a given database should still be started.
@@ -29,7 +29,7 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 public class DatabaseStartAborter implements DatabaseStartupController
 {
     private final Duration ttl;
-    private final Map<DatabaseId,CachedDatabaseState> databaseStates;
+    private final Map<NamedDatabaseId,CachedDatabaseState> databaseStates;
     private final AvailabilityGuard globalAvailabilityGuard;
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final Clock clock;
@@ -51,26 +51,26 @@ public class DatabaseStartAborter implements DatabaseStartupController
      * Note that for the system database only the global availability guard is checked. It is assumed that if you wish to fully stop the system database
      * you must also stop the neo4j process.
      *
-     * @param databaseId the database whose desired state we should check in the system db.
+     * @param namedDatabaseId the database whose desired state we should check in the system db.
      * @return whether the database start should be aborted.
      */
     @Override
-    public boolean shouldAbort( DatabaseId databaseId )
+    public boolean shouldAbort( NamedDatabaseId namedDatabaseId )
     {
         if ( globalAvailabilityGuard.isShutdown() )
         {
             return true;
         }
-        else if ( Objects.equals( databaseId, SYSTEM_DATABASE_ID ) )
+        else if ( Objects.equals( namedDatabaseId, NAMED_SYSTEM_DATABASE_ID ) )
         {
             return false;
         }
 
-        var cached = databaseStates.compute( databaseId, ( id, cachedState ) ->
+        var cached = databaseStates.compute( namedDatabaseId, ( id, cachedState ) ->
         {
             if ( cachedState == null || cachedState.isTimeToDie() )
             {
-                return getFreshState( databaseId );
+                return getFreshState( namedDatabaseId );
             }
 
             return cachedState;
@@ -82,15 +82,15 @@ public class DatabaseStartAborter implements DatabaseStartupController
     /**
      * When a database is eventually started, it should be removed from the Aborter's cache
      */
-    public void started( DatabaseId databaseId )
+    public void started( NamedDatabaseId namedDatabaseId )
     {
-        databaseStates.remove( databaseId );
+        databaseStates.remove( namedDatabaseId );
     }
 
-    private CachedDatabaseState getFreshState( DatabaseId databaseId )
+    private CachedDatabaseState getFreshState( NamedDatabaseId namedDatabaseId )
     {
-        var message = String.format( "Failed to check if starting %s should abort as it doesn't exist in the system db!", databaseId );
-        var state = dbmsModel.getStatus( databaseId ).orElseThrow( () -> new IllegalStateException( message ) );
+        var message = String.format( "Failed to check if starting %s should abort as it doesn't exist in the system db!", namedDatabaseId );
+        var state = dbmsModel.getStatus( namedDatabaseId ).orElseThrow( () -> new IllegalStateException( message ) );
         return new CachedDatabaseState( clock.instant(), state );
     }
 

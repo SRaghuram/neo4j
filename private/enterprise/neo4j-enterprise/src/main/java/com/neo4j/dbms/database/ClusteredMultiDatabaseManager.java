@@ -25,14 +25,14 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext>
 {
@@ -63,82 +63,82 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         this.catchupComponentsFactory = catchupComponentsFactory;
         this.storeFiles = new StoreFiles( fs, pageCache );
         this.clusterStateLayout = clusterStateLayout;
-        Supplier<GraphDatabaseService> systemDbSupplier = () -> getDatabaseContext( SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
         this.dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
         this.databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );
     }
 
     @Override
-    protected final void startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final void startDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
     {
         try
         {
-            context = recreateContextIfNeeded( databaseId, context );
-            log.info( "Starting '%s' database.", databaseId.name() );
+            context = recreateContextIfNeeded( namedDatabaseId, context );
+            log.info( "Starting '%s' database.", namedDatabaseId.name() );
             context.clusteredDatabase().start();
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( format( "Unable to start database `%s`", databaseId ), t );
+            throw new DatabaseManagementException( format( "Unable to start database `%s`", namedDatabaseId ), t );
         }
     }
 
-    private ClusteredDatabaseContext recreateContextIfNeeded( DatabaseId databaseId, ClusteredDatabaseContext context ) throws Exception
+    private ClusteredDatabaseContext recreateContextIfNeeded( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context ) throws Exception
     {
         if ( context.clusteredDatabase().hasBeenStarted() )
         {
             context.clusteredDatabase().stop();
             // Clustering components cannot be reused, so we have to create a new context on each start->stop-start cycle.
-            var updatedContext = createDatabaseContext( databaseId );
-            databaseMap.put( databaseId, updatedContext );
+            var updatedContext = createDatabaseContext( namedDatabaseId );
+            databaseMap.put( namedDatabaseId, updatedContext );
             return updatedContext;
         }
         return context;
     }
 
     @Override
-    protected final void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final void stopDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
     {
         try
         {
-            log.info( "Stopping '%s' database.", databaseId.name() );
+            log.info( "Stopping '%s' database.", namedDatabaseId.name() );
             context.clusteredDatabase().stop();
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( format( "An error occurred! Unable to stop database `%s`.", databaseId ), t );
+            throw new DatabaseManagementException( format( "An error occurred! Unable to stop database `%s`.", namedDatabaseId ), t );
         }
     }
 
-    public void stopDatabaseBeforeStoreCopy( DatabaseId databaseId )
+    public void stopDatabaseBeforeStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        forSingleDatabase( databaseId, ( id, context ) ->
+        forSingleDatabase( namedDatabaseId, ( id, context ) ->
         {
             try
             {
-                log.info( "Stopping '%s' database for store copy.", databaseId.name() );
+                log.info( "Stopping '%s' database for store copy.", namedDatabaseId.name() );
                 context.database().stop();
             }
             catch ( Throwable t )
             {
-                throw new DatabaseManagementException( format( "Unable to stop database '%s' for store copy.", databaseId.name() ), t );
+                throw new DatabaseManagementException( format( "Unable to stop database '%s' for store copy.", namedDatabaseId.name() ), t );
             }
         } );
     }
 
-    public void startDatabaseAfterStoreCopy( DatabaseId databaseId )
+    public void startDatabaseAfterStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        forSingleDatabase( databaseId, ( id, context ) ->
+        forSingleDatabase( namedDatabaseId, ( id, context ) ->
         {
             try
             {
-                log.info( "Starting '%s' database after store copy.", databaseId.name() );
+                log.info( "Starting '%s' database after store copy.", namedDatabaseId.name() );
                 context.database().start();
             }
             catch ( Throwable t )
             {
-                throw new DatabaseManagementException( format( "Unable to start database '%s' after store copy.", databaseId.name() ), t );
+                throw new DatabaseManagementException( format( "Unable to start database '%s' after store copy.", namedDatabaseId.name() ), t );
             }
         } );
     }

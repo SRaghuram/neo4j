@@ -23,8 +23,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.storageengine.api.StoreId;
@@ -123,44 +123,45 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<DatabaseId> getDatabaseId( String databaseName )
+        public PreparedRequest<NamedDatabaseId> getDatabaseId( String databaseName )
         {
             return handler -> completedFuture( databaseIdRepository.getByName( databaseName ).get() );
         }
 
         @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId )
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( NamedDatabaseId namedDatabaseId )
         {
             return handler -> completedFuture( responses.coreSnapshot.get() );
         }
 
         @Override
-        public PreparedRequest<StoreId> getStoreId( DatabaseId databaseId )
+        public PreparedRequest<StoreId> getStoreId( NamedDatabaseId namedDatabaseId )
         {
-            StoreId storeId = responses.storeId.apply( new GetStoreIdRequest( databaseId ) );
+            StoreId storeId = responses.storeId.apply( new GetStoreIdRequest( namedDatabaseId.databaseId() ) );
             return handler -> completedFuture( storeId );
         }
 
         @Override
-        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId )
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, NamedDatabaseId namedDatabaseId )
         {
-            TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, databaseId ) );
+            TxStreamFinishedResponse pullResponse =
+                    responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, namedDatabaseId.databaseId() ) );
             return handler -> completedFuture( pullResponse );
         }
 
         @Override
-        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId )
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId )
         {
             PrepareStoreCopyResponse prepareStoreCopyResponse =
-                    responses.prepareStoreCopyResponse.apply( new PrepareStoreCopyRequest( storeId, databaseId ) );
+                    responses.prepareStoreCopyResponse.apply( new PrepareStoreCopyRequest( storeId, namedDatabaseId.databaseId() ) );
             return handler -> completedFuture( prepareStoreCopyResponse );
         }
 
         @Override
-        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId )
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, NamedDatabaseId namedDatabaseId )
         {
             StoreCopyFinishedResponse storeCopyFinishedResponse =
-                    responses.storeFiles.apply( new GetStoreFileRequest( storeId, file, requiredTxId, databaseId ) );
+                    responses.storeFiles.apply( new GetStoreFileRequest( storeId, file, requiredTxId, namedDatabaseId.databaseId() ) );
             return handler -> completedFuture( storeCopyFinishedResponse );
         }
     }

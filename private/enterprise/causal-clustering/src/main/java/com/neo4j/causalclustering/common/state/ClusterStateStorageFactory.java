@@ -27,7 +27,7 @@ import java.util.Objects;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemUtils;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLog;
@@ -113,7 +113,7 @@ public class ClusterStateStorageFactory
      * @param id the id of the new database to be created
      * @param logProvider the logger for this new database
      */
-    public void clearFor( DatabaseId id, DatabaseLogProvider logProvider ) throws IOException
+    public void clearFor( NamedDatabaseId id, DatabaseLogProvider logProvider ) throws IOException
     {
         File clusterStateForDb = layout.raftGroupDir( id.name() );
         if ( !fs.fileExists( clusterStateForDb ) )
@@ -127,12 +127,12 @@ public class ClusterStateStorageFactory
             var raftIdSimpleStorage = createSimpleStorage( layout.raftIdStateFile( id.name() ), CoreStateFiles.RAFT_ID, logProvider );
             RaftId raftId = raftIdSimpleStorage.readState();
 
-            if ( !Objects.equals( id.uuid(), raftId.uuid() ) )
+            if ( !Objects.equals( id.databaseId().uuid(), raftId.uuid() ) )
             {
                 DatabaseLog log = logProvider.getLog( getClass() );
                 log.warn( format( "There was orphan cluster state belonging to a previous database %s with a different id {Old:%s New:%s} " +
                         "This likely means a previous DROP did not complete successfully.",
-                        id.name(), raftId.uuid(), id.uuid() ) );
+                        id.name(), raftId.uuid(), id.databaseId().uuid() ) );
                 FileSystemUtils.deleteFile( fs, clusterStateForDb );
             }
         }

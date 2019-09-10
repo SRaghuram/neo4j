@@ -7,10 +7,10 @@ package com.neo4j.fabric.bolt;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
-import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
+import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import com.neo4j.fabric.transaction.TransactionManager;
 
 import java.time.Duration;
@@ -30,7 +30,7 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.values.virtual.MapValue;
@@ -41,20 +41,20 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
 {
 
     private final FabricExecutor fabricExecutor;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final FabricConfig config;
     private final TransactionManager transactionManager;
     private final Duration bookmarkTimeout;
     private final TransactionIdTracker transactionIdTracker;
 
-    public BoltFabricDatabaseService( DatabaseId databaseId,
+    public BoltFabricDatabaseService( NamedDatabaseId namedDatabaseId,
             FabricExecutor fabricExecutor,
             FabricConfig config,
             TransactionManager transactionManager,
             Duration bookmarkTimeout,
             TransactionIdTracker transactionIdTracker )
     {
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.config = config;
         this.transactionManager = transactionManager;
         this.fabricExecutor = fabricExecutor;
@@ -75,7 +75,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
                 accessMode,
                 loginContext,
                 clientInfo,
-                databaseId.name(),
+                namedDatabaseId.name(),
                 false,
                 txTimeout,
                 txMetadata
@@ -98,9 +98,9 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     }
 
     @Override
-    public DatabaseId getDatabaseId()
+    public NamedDatabaseId getNamedDatabaseId()
     {
-        return databaseId;
+        return namedDatabaseId;
     }
 
     private class BoltTransactionImpl implements BoltTransaction

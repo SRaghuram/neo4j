@@ -10,15 +10,16 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSetSerializer;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ChunkedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
@@ -125,7 +126,7 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
      */
     private static ReplicatedTransaction decodeTx( ByteBuf byteBuf ) throws IOException, EndOfStreamException
     {
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableChannel( byteBuf ) );
+        DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( new NetworkReadableChannel( byteBuf ) );
         int length = byteBuf.readableBytes();
         byte[] bytes = new byte[length];
         byteBuf.readBytes( bytes );

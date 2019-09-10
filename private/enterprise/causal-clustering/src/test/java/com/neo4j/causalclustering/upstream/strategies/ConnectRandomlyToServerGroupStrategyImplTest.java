@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
@@ -33,7 +33,7 @@ import static org.hamcrest.Matchers.is;
 
 class ConnectRandomlyToServerGroupStrategyImplTest
 {
-    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final NamedDatabaseId DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     @Test
     void shouldStayWithinGivenSingleServerGroup()
@@ -105,7 +105,8 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         assertThat( memberId, empty() );
     }
 
-    static TopologyService getTopologyService( List<String> myServerGroups, Set<MemberId> myGroupMemberIds, List<String> unwanted, Set<DatabaseId> databaseIds )
+    static TopologyService getTopologyService( List<String> myServerGroups, Set<MemberId> myGroupMemberIds, List<String> unwanted,
+            Set<NamedDatabaseId> namedDatabaseIds )
     {
         var thisCore =  memberId( -1 );
 
@@ -117,7 +118,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         var allReplicas = new HashSet<>( myGroupMemberIds );
         allReplicas.addAll( otherReplicas );
 
-        var topologyService =  new FakeTopologyService( singleton( thisCore ), allReplicas, thisCore, databaseIds );
+        var topologyService =  new FakeTopologyService( singleton( thisCore ), allReplicas, thisCore, namedDatabaseIds );
 
         topologyService.setGroups( myGroupMemberIds, Set.copyOf( myServerGroups ) );
         topologyService.setGroups( otherReplicas, Set.copyOf( unwanted ) );

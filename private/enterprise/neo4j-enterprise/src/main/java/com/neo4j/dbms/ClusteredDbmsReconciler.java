@@ -5,10 +5,10 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -16,9 +16,9 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.DatabaseNameLogContext;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -48,29 +48,29 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     }
 
     @Override
-    protected EnterpriseDatabaseState getReconcilerEntryFor( DatabaseId databaseId )
+    protected EnterpriseDatabaseState getReconcilerEntryFor( NamedDatabaseId namedDatabaseId )
     {
-        return currentStates.getOrDefault( databaseId.name(), initial( databaseId ) );
+        return currentStates.getOrDefault( namedDatabaseId.name(), initial( namedDatabaseId ) );
     }
 
-    private EnterpriseDatabaseState initial( DatabaseId databaseId )
+    private EnterpriseDatabaseState initial( NamedDatabaseId namedDatabaseId )
     {
-        var raftIdOpt = readRaftIdForDatabase( databaseId, databaseLogProvider( databaseId ) );
+        var raftIdOpt = readRaftIdForDatabase( namedDatabaseId, databaseLogProvider( namedDatabaseId ) );
         if ( raftIdOpt.isPresent() )
         {
             var raftId = raftIdOpt.get();
-            var previousDatabaseId = DatabaseIdFactory.from( databaseId.name(), raftId.uuid() );
-            if ( !Objects.equals( databaseId, previousDatabaseId ) )
+            var previousDatabaseId = DatabaseIdFactory.from( namedDatabaseId.name(), raftId.uuid() );
+            if ( !Objects.equals( namedDatabaseId, previousDatabaseId ) )
             {
                 return EnterpriseDatabaseState.unknown( previousDatabaseId );
             }
         }
-        return EnterpriseDatabaseState.initial( databaseId );
+        return EnterpriseDatabaseState.initial( namedDatabaseId );
     }
 
-    private Optional<RaftId> readRaftIdForDatabase( DatabaseId databaseId, DatabaseLogProvider logProvider )
+    private Optional<RaftId> readRaftIdForDatabase( NamedDatabaseId namedDatabaseId, DatabaseLogProvider logProvider )
     {
-        var databaseName = databaseId.name();
+        var databaseName = namedDatabaseId.name();
         var raftIdStorage = stateStorageFactory.createRaftIdStorage( databaseName, logProvider );
 
         if ( !raftIdStorage.exists() )
@@ -95,51 +95,51 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
         Transitions clusteredTransitions = Transitions.builder()
                 // All transitions from UNKNOWN to $X get deconstructed into UNKNOWN -> DROPPED -> $X
                 //     inside Transitions so only actions for this from/to pair need to be specified
-                .from( UNKNOWN ).to( DROPPED ).doTransitions( this::logCleanupAndDrop )
+                .from( UNKNOWN ).to( DROPPED ).doTransitions( databaseId -> logCleanupAndDrop( databaseId ) )
                 // No prepareDrop step needed here as the database will be stopped for store copying anyway
-                .from( STORE_COPYING ).to( DROPPED ).doTransitions( this::stop, this::drop )
+                .from( STORE_COPYING ).to( DROPPED ).doTransitions( databaseId1 -> stop( databaseId1 ), databaseId2 -> drop( databaseId2 ) )
                 // Some Cluster components still need stopped when store copying.
                 //   This will attempt to stop the kernel database again, but that should be idempotent.
-                .from( STORE_COPYING ).to( STOPPED ).doTransitions( this::stop )
-                .from( STORE_COPYING ).to( STARTED ).doTransitions( this::startAfterStoreCopy )
-                .from( STARTED ).to( STORE_COPYING ).doTransitions( this::stopBeforeStoreCopy )
+                .from( STORE_COPYING ).to( STOPPED ).doTransitions( databaseId3 -> stop( databaseId3 ) )
+                .from( STORE_COPYING ).to( STARTED ).doTransitions( databaseId4 -> startAfterStoreCopy( databaseId4 ) )
+                .from( STARTED ).to( STORE_COPYING ).doTransitions( databaseId5 -> stopBeforeStoreCopy( databaseId5 ) )
                 .build();
 
         return standaloneTransitions.extendWith( clusteredTransitions );
     }
 
     @Override
-    protected void panicDatabase( DatabaseId databaseId, Throwable error )
+    protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
     {
-        var databasePanicker = panicService.panickerFor( databaseId );
+        var databasePanicker = panicService.panickerFor( namedDatabaseId );
         databasePanicker.panic( error );
     }
 
     /* Operator Steps */
-    private EnterpriseDatabaseState startAfterStoreCopy( DatabaseId databaseId )
+    private EnterpriseDatabaseState startAfterStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.startDatabaseAfterStoreCopy( databaseId );
-        return new EnterpriseDatabaseState( databaseId, STARTED );
+        databaseManager.startDatabaseAfterStoreCopy( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
     }
 
-    private EnterpriseDatabaseState stopBeforeStoreCopy( DatabaseId databaseId )
+    private EnterpriseDatabaseState stopBeforeStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.stopDatabaseBeforeStoreCopy( databaseId );
-        return new EnterpriseDatabaseState( databaseId, STORE_COPYING );
+        databaseManager.stopDatabaseBeforeStoreCopy( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, STORE_COPYING );
     }
 
-    private EnterpriseDatabaseState logCleanupAndDrop( DatabaseId databaseId )
+    private EnterpriseDatabaseState logCleanupAndDrop( NamedDatabaseId namedDatabaseId )
     {
         var log = logProvider.getLog( getClass() );
         log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
                 "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. You may need to re-seed",
-                databaseId.uuid(), databaseId.name() ) );
-        databaseManager.dropDatabase( databaseId );
-        return new EnterpriseDatabaseState( databaseId, DROPPED );
+                namedDatabaseId.databaseId().uuid(), namedDatabaseId.name() ) );
+        databaseManager.dropDatabase( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, DROPPED );
     }
 
-    private DatabaseLogProvider databaseLogProvider( DatabaseId databaseId )
+    private DatabaseLogProvider databaseLogProvider( NamedDatabaseId namedDatabaseId )
     {
-       return new DatabaseLogProvider( new DatabaseNameLogContext( databaseId ), this.logProvider );
+       return new DatabaseLogProvider( new DatabaseNameLogContext( namedDatabaseId ), this.logProvider );
     }
 }

@@ -8,8 +8,6 @@ package com.neo4j.multidatabase.stresstest.commands;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.DatabaseId;
 
 public class StopStartManagerCommand extends DatabaseManagerCommand
 {

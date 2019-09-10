@@ -16,9 +16,10 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
-import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -61,7 +61,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private final PruningStateSink<ReplicatedDatabaseState> coresDbStateSink;
     private final PruningStateSink<ReplicatedDatabaseState> readReplicasDbStateSink;
     private final SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink;
-    private final Map<DatabaseId,DatabaseState> localDatabaseStates;
+    private final Map<DatabaseId,DiscoveryDatabaseState> localDatabaseStates;
     private final ActorRef clusterClient;
     private final Config config;
     private final Log log;
@@ -97,7 +97,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
                 .match( TopologiesRefresh.class, ignored -> handleRefresh() )
                 .match( DatabaseStartedMessage.class, this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class, this::handleDatabaseStoppedMessage )
-                .match( DatabaseState.class, this::handleLocalDatabaseStateUpdate )
+                .match( DiscoveryDatabaseState.class, this::handleLocalDatabaseStateUpdate )
                 .build();
     }
 
@@ -111,7 +111,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
     {
-        if ( startedDatabases.add( message.databaseId() ) )
+        if ( startedDatabases.add( message.namedDatabaseId().databaseId() ) )
         {
             sendReadReplicaInfo();
         }
@@ -119,7 +119,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
-        if ( startedDatabases.remove( message.databaseId() ) )
+        if ( startedDatabases.remove( message.namedDatabaseId().databaseId() ) )
         {
             sendReadReplicaInfo();
         }
@@ -137,7 +137,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         }
     }
 
-    private void handleLocalDatabaseStateUpdate( DatabaseState update )
+    private void handleLocalDatabaseStateUpdate( DiscoveryDatabaseState update )
     {
         if ( update.operatorState() == DROPPED )
         {

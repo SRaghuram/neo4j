@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 
 class UpstreamAddressLookupTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final MemberId defaultMember = new MemberId( UUID.randomUUID() );
     private final MemberId firstMember = new MemberId( UUID.randomUUID() );
     private final MemberId secondMember = new MemberId( UUID.randomUUID() );
@@ -60,9 +60,9 @@ class UpstreamAddressLookupTest
                 new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
         // when
-        SocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
-        SocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
-        SocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( databaseId );
+        SocketAddress firstResult = upstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId );
+        SocketAddress secondResult = upstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId );
+        SocketAddress thirdResult = upstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId );
 
         // then
         assertEquals( firstAddress, firstResult );
@@ -82,7 +82,7 @@ class UpstreamAddressLookupTest
                 new UpstreamAddressLookup( upstreamDatabaseStrategySelector, topologyService );
 
         // when & then
-        assertThrows( CatchupAddressResolutionException.class, () -> upstreamAddressLookup.lookupAddressForDatabase( databaseId ) );
+        assertThrows( CatchupAddressResolutionException.class, () -> upstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId ) );
     }
 
     private static class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
@@ -98,7 +98,7 @@ class UpstreamAddressLookupTest
         }
 
         @Override
-        public Optional<MemberId> upstreamMemberForDatabase( DatabaseId databaseId )
+        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
         {
             if ( numberOfIterations <= 0 )
             {

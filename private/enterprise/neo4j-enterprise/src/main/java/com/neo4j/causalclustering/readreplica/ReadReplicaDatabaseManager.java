@@ -22,7 +22,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseCreationContext;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -41,12 +41,12 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
+    protected ClusteredDatabaseContext createDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         Dependencies readReplicaDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         Monitors readReplicaMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), readReplicaDependencies );
 
-        DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( databaseId, readReplicaDependencies, readReplicaMonitors );
+        DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, readReplicaDependencies, readReplicaMonitors );
         Database kernelDatabase = new Database( databaseCreationContext );
 
         LogFiles transactionLogs = buildTransactionLogs( kernelDatabase.getDatabaseLayout() );
@@ -61,10 +61,10 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected void dropDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
     {
-        super.dropDatabase( databaseId, context );
-        cleanupClusterState( databaseId.name() );
+        super.dropDatabase( namedDatabaseId, context );
+        cleanupClusterState( namedDatabaseId.name() );
     }
 
     @Override

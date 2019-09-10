@@ -62,7 +62,6 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
-import org.neo4j.dbms.procedures.StandaloneDatabaseStateProcedure;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -74,8 +73,8 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -93,7 +92,7 @@ import org.neo4j.token.TokenHolders;
 
 import static java.lang.String.format;
 import static org.neo4j.function.Predicates.any;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
 import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
 import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
@@ -163,7 +162,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
-    protected Function<DatabaseId,TokenHolders> createTokenHolderProvider( GlobalModule platform )
+    protected Function<NamedDatabaseId,TokenHolders> createTokenHolderProvider( GlobalModule platform )
     {
         Config globalConfig = platform.getGlobalConfig();
         return databaseId -> {
@@ -191,7 +190,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID )
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
@@ -344,8 +343,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 new MultiDatabaseCatchupServerHandler( databaseManager, fs, maxChunkSize, internalLogProvider ),
                 new InstalledProtocolHandler(),
                 jobScheduler,
-                portRegister
-        );
+                portRegister );
 
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 

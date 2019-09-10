@@ -17,13 +17,14 @@ import java.util.List;
 
 public class ReplicatedContentChunkDecoder extends ByteToMessageDecoder
 {
-    private final Codec<ReplicatedContent> codec = new ReplicatedContentCodec();
+    private final Codec<ReplicatedContent> codec;
     private boolean expectingNewContent = true;
     private boolean isLast;
 
     ReplicatedContentChunkDecoder()
     {
         setCumulator( new ContentChunkCumulator() );
+        this.codec = new ReplicatedContentCodec();
     }
 
     @Override

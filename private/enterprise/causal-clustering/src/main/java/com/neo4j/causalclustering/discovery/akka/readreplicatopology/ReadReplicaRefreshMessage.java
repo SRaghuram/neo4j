@@ -9,12 +9,12 @@ import akka.actor.ActorRef;
 import akka.cluster.client.ClusterClient;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.AkkaTopologyClient;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 import java.util.Objects;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaRefreshMessage
@@ -23,10 +23,10 @@ public class ReadReplicaRefreshMessage
     private final MemberId memberId;
     private final ActorRef clusterClient;
     private final ActorRef topologyClient;
-    private final Map<DatabaseId,DatabaseState> databaseStates;
+    private final Map<DatabaseId,DiscoveryDatabaseState> databaseStates;
 
     public ReadReplicaRefreshMessage( ReadReplicaInfo readReplicaInfo, MemberId memberId, ActorRef clusterClient, ActorRef topologyClient,
-            Map<DatabaseId,DatabaseState> databaseStates )
+            Map<DatabaseId,DiscoveryDatabaseState> databaseStates )
     {
         this.readReplicaInfo = readReplicaInfo;
         this.memberId = memberId;
@@ -45,7 +45,7 @@ public class ReadReplicaRefreshMessage
         return memberId;
     }
 
-    public Map<DatabaseId,DatabaseState> databaseStates()
+    public Map<DatabaseId,DiscoveryDatabaseState> databaseStates()
     {
         return databaseStates;
     }

@@ -27,7 +27,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -52,7 +52,7 @@ import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngi
 
 class RemoteStoreTest
 {
-    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final NamedDatabaseId DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private SocketAddress localhost = new SocketAddress( "127.0.0.1", 1234 );

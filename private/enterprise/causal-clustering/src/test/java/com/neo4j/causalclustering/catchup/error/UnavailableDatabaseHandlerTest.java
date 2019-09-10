@@ -12,9 +12,14 @@ import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
@@ -22,7 +27,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.allOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -31,7 +36,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class UnavailableDatabaseHandlerTest
 {
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomNamedDatabaseId().databaseId();
     private final CatchupProtocolMessage.WithDatabaseId message = new GetStoreIdRequest( databaseId );
     private final EmbeddedChannel channel = new EmbeddedChannel();
     private final CatchupServerProtocol protocol = new CatchupServerProtocol();
@@ -55,27 +60,27 @@ class UnavailableDatabaseHandlerTest
     @Test
     void shouldLogWarningWhenUnavailable()
     {
-        testLogWarning( "database " + databaseId.name() + " is unavailable" );
+        testLogWarning( "database", databaseId.uuid().toString(), "unavailable" );
     }
 
     @Test
     void shouldLogWarningWhenShutdown()
     {
         when( availabilityGuard.isShutdown() ).thenReturn( true );
-        testLogWarning( "database " + databaseId.name() + " is shutdown" );
+        testLogWarning( "database", databaseId.uuid().toString(), "shutdown" );
     }
 
     @Test
     void shouldWriteErrorResponseWhenUnavailable()
     {
-        testErrorResponse( "database " + databaseId.name() + " is unavailable" );
+        testErrorResponse( "database", databaseId.uuid().toString(), "unavailable" );
     }
 
     @Test
     void shouldWriteErrorResponseWhenShutdown()
     {
         when( availabilityGuard.isShutdown() ).thenReturn( true );
-        testErrorResponse( "database " + databaseId.name() + " is shutdown" );
+        testErrorResponse( "database", databaseId.uuid().toString(), "shutdown" );
     }
 
     @Test
@@ -85,19 +90,25 @@ class UnavailableDatabaseHandlerTest
         assertTrue( protocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
     }
 
-    private void testLogWarning( String expectedMessage )
+    private void testLogWarning( String... messageComponents )
     {
         channel.writeInbound( message );
-        logProvider.assertAtLeastOnce( inLog( UnavailableDatabaseHandler.class ).warn( containsString( expectedMessage ) ) );
+
+        logProvider.assertAtLeastOnce( inLog( UnavailableDatabaseHandler.class ).warn( matchesAllOf( messageComponents ) ) );
     }
 
-    private void testErrorResponse( String expectedMessage )
+    private void testErrorResponse( String... messageComponents )
     {
         channel.writeInbound( message );
 
         assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
         CatchupErrorResponse response = channel.readOutbound();
         assertEquals( CatchupResult.E_STORE_UNAVAILABLE, response.status() );
-        assertThat( response.message(), containsString( expectedMessage ) );
+        assertThat( response.message(), matchesAllOf( messageComponents ) );
+    }
+
+    static Matcher<String> matchesAllOf( String... messageComponents )
+    {
+        return allOf( Stream.of( messageComponents ).map( Matchers::containsString ).collect( Collectors.toList() ) );
     }
 }

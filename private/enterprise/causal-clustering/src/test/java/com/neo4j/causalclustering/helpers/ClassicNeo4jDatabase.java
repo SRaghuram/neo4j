@@ -20,7 +20,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -58,7 +58,7 @@ public class ClassicNeo4jDatabase
         private final File baseDirectoryAbsolute;
         private final FileSystemAbstraction fileSystem;
 
-        private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+        private NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
         private boolean needRecover;
         private boolean transactionLogsInDatabaseFolder;
         private int nrOfNodes = 10;
@@ -85,9 +85,9 @@ public class ClassicNeo4jDatabase
             }
         }
 
-        public Neo4jDatabaseBuilder databaseId( DatabaseId databaseId )
+        public Neo4jDatabaseBuilder databaseId( NamedDatabaseId namedDatabaseId )
         {
-            this.databaseId = databaseId;
+            this.namedDatabaseId = namedDatabaseId;
             return this;
         }
 
@@ -131,7 +131,7 @@ public class ClassicNeo4jDatabase
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
                     .setConfig( GraphDatabaseSettings.databases_root_path, databasesRootDirectoryAbsolute.toPath() )
                     .build();
-            GraphDatabaseService db = managementService.database( databaseId.name() );
+            GraphDatabaseService db = managementService.database( namedDatabaseId.name() );
 
             for ( int i = 0; i < (nrOfNodes / 2); i++ )
             {

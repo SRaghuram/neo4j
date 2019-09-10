@@ -15,8 +15,8 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
@@ -55,20 +55,20 @@ class ClusterSystemGraphDbmsModelTest
     void shouldReturnInitialMembersAndStoreParameters()
     {
         // given
-        DatabaseId databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        NamedDatabaseId namedDatabaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         Set<UUID> expectedMembers = Set.of( UUID.randomUUID(), UUID.randomUUID() );
 
         StoreId expectedStoreId = new StoreId( 1, 2, MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
 
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNodeForCluster( tx, databaseId, expectedMembers, expectedStoreId );
+            makeDatabaseNodeForCluster( tx, namedDatabaseId, expectedMembers, expectedStoreId );
             tx.commit();
         }
 
         // when
-        Set<UUID> initialMembers = dbmsModel.getInitialMembers( databaseId );
-        StoreId storeId = dbmsModel.getStoreId( databaseId );
+        Set<UUID> initialMembers = dbmsModel.getInitialMembers( namedDatabaseId );
+        StoreId storeId = dbmsModel.getStoreId( namedDatabaseId );
 
         // then
         assertFalse( initialMembers.isEmpty() );
@@ -76,12 +76,12 @@ class ClusterSystemGraphDbmsModelTest
         assertEquals( expectedStoreId, storeId );
     }
 
-    private void makeDatabaseNodeForCluster( Transaction tx, DatabaseId databaseId, Set<UUID> initialMembers, StoreId storeId )
+    private void makeDatabaseNodeForCluster( Transaction tx, NamedDatabaseId namedDatabaseId, Set<UUID> initialMembers, StoreId storeId )
     {
         Node node = tx.createNode( DATABASE_LABEL );
-        node.setProperty( DATABASE_NAME_PROPERTY, databaseId.name() );
+        node.setProperty( DATABASE_NAME_PROPERTY, namedDatabaseId.name() );
         node.setProperty( DATABASE_STATUS_PROPERTY, "online" );
-        node.setProperty( DATABASE_UUID_PROPERTY, databaseId.uuid().toString() );
+        node.setProperty( DATABASE_UUID_PROPERTY, namedDatabaseId.databaseId().uuid().toString() );
 
         node.setProperty( INITIAL_MEMBERS, initialMembers.stream().map( UUID::toString ).toArray( String[]::new ) );
 

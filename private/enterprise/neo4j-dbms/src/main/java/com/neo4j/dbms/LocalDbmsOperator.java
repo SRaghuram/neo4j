@@ -6,8 +6,8 @@
 package com.neo4j.dbms;
 
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
@@ -46,7 +46,7 @@ public final class LocalDbmsOperator extends DbmsOperator
         trigger( ReconcilerRequest.force() ).await( id );
     }
 
-    private DatabaseId databaseId( String databaseName )
+    private NamedDatabaseId databaseId( String databaseName )
     {
         return databaseIdRepository.getByName( databaseName )
                 .orElseThrow( () -> new DatabaseNotFoundException( "Cannot find database: " + databaseName ) );

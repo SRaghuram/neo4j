@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -81,11 +81,11 @@ public class CoreDownloader
         return coreSnapshot;
     }
 
-    private Optional<SocketAddress> lookupPrimary( DatabaseId databaseId, CatchupAddressProvider addressProvider )
+    private Optional<SocketAddress> lookupPrimary( NamedDatabaseId namedDatabaseId, CatchupAddressProvider addressProvider )
     {
         try
         {
-            return Optional.of( addressProvider.primary( databaseId ) );
+            return Optional.of( addressProvider.primary( namedDatabaseId ) );
         }
         catch ( CatchupAddressResolutionException e )
         {

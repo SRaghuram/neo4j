@@ -16,7 +16,7 @@ import java.io.IOException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -41,7 +41,7 @@ class DefaultBackupStrategyTest
     private SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
     private StoreFiles storeFiles = mock( StoreFiles.class );
     private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
-    private DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
     private final String databaseName = "database name";
 
@@ -49,7 +49,7 @@ class DefaultBackupStrategyTest
     void setup() throws IOException, StoreIdDownloadFailedException, DatabaseIdDownloadFailedException
     {
         when( storeFiles.readStoreId( any() ) ).thenReturn( expectedStoreId );
-        when( backupDelegator.fetchDatabaseId( any(), anyString() ) ).thenReturn( databaseId );
+        when( backupDelegator.fetchDatabaseId( any(), anyString() ) ).thenReturn( namedDatabaseId );
         when( backupDelegator.fetchStoreId( any(), any() ) ).thenReturn( expectedStoreId );
     }
 
@@ -63,7 +63,7 @@ class DefaultBackupStrategyTest
 
         // then
         verify( backupDelegator ).fetchDatabaseId( eq( address ), eq( databaseName ) );
-        verify( backupDelegator ).tryCatchingUp( eq( address ), any( StoreId.class ), eq( databaseId ), eq( desiredBackupLayout ) );
+        verify( backupDelegator ).tryCatchingUp( eq( address ), any( StoreId.class ), eq( namedDatabaseId ), eq( desiredBackupLayout ) );
     }
 
     @Test
@@ -77,7 +77,7 @@ class DefaultBackupStrategyTest
 
         // then
         verify( backupDelegator ).fetchDatabaseId( address, databaseName );
-        verify( backupDelegator ).fetchStoreId( address, databaseId );
+        verify( backupDelegator ).fetchStoreId( address, namedDatabaseId );
     }
 
     @Test
@@ -90,8 +90,8 @@ class DefaultBackupStrategyTest
 
         // then
         verify( backupDelegator ).fetchDatabaseId( address, databaseName );
-        verify( backupDelegator ).fetchStoreId( address, databaseId );
-        verify( backupDelegator ).tryCatchingUp( eq( address ), eq( expectedStoreId ), eq( databaseId ), any() );
+        verify( backupDelegator ).fetchStoreId( address, namedDatabaseId );
+        verify( backupDelegator ).tryCatchingUp( eq( address ), eq( expectedStoreId ), eq( namedDatabaseId ), any() );
     }
 
     @Test
@@ -105,8 +105,8 @@ class DefaultBackupStrategyTest
 
         // then
         verify( backupDelegator ).fetchDatabaseId( address, databaseName );
-        verify( backupDelegator ).fetchStoreId( address, databaseId );
-        verify( backupDelegator ).copy( address, expectedStoreId, databaseId, desiredBackupLayout );
+        verify( backupDelegator ).fetchStoreId( address, namedDatabaseId );
+        verify( backupDelegator ).copy( address, expectedStoreId, namedDatabaseId, desiredBackupLayout );
     }
 
     @Test

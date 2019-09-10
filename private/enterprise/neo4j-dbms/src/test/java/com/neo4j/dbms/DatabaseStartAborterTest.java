@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.time.FakeClock;
 
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 class DatabaseStartAborterTest
 {
@@ -44,7 +44,7 @@ class DatabaseStartAborterTest
         var aborter = new DatabaseStartAborter( globalGuard, mock( EnterpriseSystemGraphDbmsModel.class ), new FakeClock(), Duration.ofSeconds( 5 ) );
 
         // when/then
-        assertTrue( aborter.shouldAbort( TestDatabaseIdRepository.randomDatabaseId() ), "Any database should abort in the event of global shutdown" );
+        assertTrue( aborter.shouldAbort( TestDatabaseIdRepository.randomNamedDatabaseId() ), "Any database should abort in the event of global shutdown" );
     }
 
     @Test
@@ -54,15 +54,15 @@ class DatabaseStartAborterTest
         var globaGuard = mock( AvailabilityGuard.class );
         when( globaGuard.isShutdown() ).thenReturn( false );
         var dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
-        when( dbmsModel.getStatus( any( DatabaseId.class ) ) ).thenReturn( Optional.of( STARTED ) );
+        when( dbmsModel.getStatus( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.of( STARTED ) );
         var aborter = new DatabaseStartAborter( globaGuard, dbmsModel, new FakeClock(), Duration.ofSeconds( 5 ) );
 
         // when/then
-        var otherId = TestDatabaseIdRepository.randomDatabaseId();
+        var otherId = TestDatabaseIdRepository.randomNamedDatabaseId();
         aborter.shouldAbort( otherId );
         verify( dbmsModel ).getStatus( otherId );
         verifyZeroInteractions( dbmsModel );
-        aborter.shouldAbort( SYSTEM_DATABASE_ID );
+        aborter.shouldAbort( NAMED_SYSTEM_DATABASE_ID );
     }
 
     @Test
@@ -73,12 +73,12 @@ class DatabaseStartAborterTest
         when( globaGuard.isShutdown() ).thenReturn( false );
         var dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
         var clock = new FakeClock();
-        when( dbmsModel.getStatus( any( DatabaseId.class ) ) ).thenReturn( Optional.of( STARTED ) ).thenReturn( Optional.of( STOPPED ) );
+        when( dbmsModel.getStatus( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.of( STARTED ) ).thenReturn( Optional.of( STOPPED ) );
         var ttlSeconds = 5;
         var aborter = new DatabaseStartAborter( globaGuard, dbmsModel, clock, Duration.ofSeconds( ttlSeconds ) );
 
         // when/then
-        var otherId = TestDatabaseIdRepository.randomDatabaseId();
+        var otherId = TestDatabaseIdRepository.randomNamedDatabaseId();
 
         for ( int i = 0; i < ttlSeconds; i++ )
         {
@@ -105,8 +105,8 @@ class DatabaseStartAborterTest
         var dropLast = new LinkedList<>( nonStopDrop );
         dropLast.add( Optional.of( DROPPED ) );
 
-        var id1 = TestDatabaseIdRepository.randomDatabaseId();
-        var id2 = TestDatabaseIdRepository.randomDatabaseId();
+        var id1 = TestDatabaseIdRepository.randomNamedDatabaseId();
+        var id2 = TestDatabaseIdRepository.randomNamedDatabaseId();
 
         var globaGuard = mock( AvailabilityGuard.class );
         when( globaGuard.isShutdown() ).thenReturn( false );

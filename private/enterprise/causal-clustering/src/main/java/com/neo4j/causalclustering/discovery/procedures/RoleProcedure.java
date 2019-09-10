@@ -17,7 +17,7 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
@@ -55,9 +55,9 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{stringValue( role.toString() )} );
     }
 
-    abstract RoleInfo role( DatabaseId databaseId );
+    abstract RoleInfo role( NamedDatabaseId namedDatabaseId );
 
-    private DatabaseId extractDatabaseId( AnyValue[] input ) throws ProcedureException
+    private NamedDatabaseId extractDatabaseId( AnyValue[] input ) throws ProcedureException
     {
         if ( input.length != 1 )
         {

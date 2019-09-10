@@ -21,7 +21,7 @@ import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.api.exceptions.Status;
 
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class TransactionBookmarkManager
 {
@@ -103,7 +103,7 @@ public class TransactionBookmarkManager
             }
             else
             {
-                if ( !bookmark.databaseId().equals( SYSTEM_DATABASE_ID ) )
+                if ( !bookmark.databaseId().equals( NAMED_SYSTEM_DATABASE_ID ) )
                 {
                     throw new FabricException( Status.Transaction.InvalidBookmarkMixture, "Bookmark for unexpected database encountered: " + bookmark );
                 }
@@ -119,7 +119,7 @@ public class TransactionBookmarkManager
     {
         if ( bookmarksByType.systemDbTxId != -1 )
         {
-            transactionIdTracker.awaitUpToDate( SYSTEM_DATABASE_ID, bookmarksByType.systemDbTxId, bookmarkTimeout );
+            transactionIdTracker.awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, bookmarksByType.systemDbTxId, bookmarkTimeout );
         }
     }
 

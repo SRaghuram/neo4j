@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -101,9 +101,9 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     }
 
     @Override
-    public DatabaseId databaseId()
+    public NamedDatabaseId databaseId()
     {
-        return database.getDatabaseId();
+        return database.getNamedDatabaseId();
     }
 
     @Override

@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.Objects.requireNonNull;
@@ -34,11 +34,11 @@ public class BootstrapState
         this.config = config;
     }
 
-    public boolean canBootstrapRaft( DatabaseId databaseId )
+    public boolean canBootstrapRaft( NamedDatabaseId namedDatabaseId )
     {
         boolean iDoNotRefuseToBeLeader = config != null && !config.get( refuse_to_be_leader );
         boolean clusterHasConverged = clusterView.converged();
-        boolean iAmFirstPotentialLeader = iAmFirstPotentialLeader( databaseId );
+        boolean iAmFirstPotentialLeader = iAmFirstPotentialLeader( namedDatabaseId );
 
         return iDoNotRefuseToBeLeader && clusterHasConverged && iAmFirstPotentialLeader;
     }
@@ -67,26 +67,26 @@ public class BootstrapState
         return Objects.hash( clusterView, memberData, selfAddress, config );
     }
 
-    private boolean iAmFirstPotentialLeader( DatabaseId databaseId )
+    private boolean iAmFirstPotentialLeader( NamedDatabaseId namedDatabaseId )
     {
         // Ensure consistent view of "first" member across cluster
         Optional<UniqueAddress> firstPotentialLeader = clusterView.availableMembers()
-                .filter( member -> isPotentialLeader( member, databaseId ) )
+                .filter( member -> isPotentialLeader( member, namedDatabaseId ) )
                 .findFirst();
 
         return firstPotentialLeader.map( address -> Objects.equals( address, selfAddress ) ).orElse( false );
     }
 
-    private boolean isPotentialLeader( UniqueAddress member, DatabaseId databaseId )
+    private boolean isPotentialLeader( UniqueAddress member, NamedDatabaseId namedDatabaseId )
     {
         return memberData.getOpt( member )
-                .map( metadata -> isPotentialLeader( metadata, databaseId ) )
+                .map( metadata -> isPotentialLeader( metadata, namedDatabaseId ) )
                 .orElse( false );
     }
 
-    private static boolean isPotentialLeader( CoreServerInfoForMemberId infoForMember, DatabaseId databaseId )
+    private static boolean isPotentialLeader( CoreServerInfoForMemberId infoForMember, NamedDatabaseId namedDatabaseId )
     {
         CoreServerInfo info = infoForMember.coreServerInfo();
-        return !info.refusesToBeLeader() && info.startedDatabaseIds().contains( databaseId );
+        return !info.refusesToBeLeader() && info.startedDatabaseIds().contains( namedDatabaseId.databaseId() );
     }
 }

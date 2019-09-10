@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
@@ -34,7 +35,8 @@ import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectorySupportExtension.class} )
 class ReplicatedLeaseStateMachineTest
 {
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final DatabaseId databaseId = namedDatabaseId.databaseId();
 
     @Inject
     private EphemeralFileSystemAbstraction fsa;
@@ -213,7 +215,7 @@ class ReplicatedLeaseStateMachineTest
         try ( Lifespan ignored = new Lifespan( storage2 ) )
         {
             ReplicatedLeaseState initialState = storage2.getInitialState();
-            ReplicatedLeaseRequest request = new ReplicatedLeaseRequest( initialState, databaseId );
+            ReplicatedLeaseRequest request = new ReplicatedLeaseRequest( initialState, namedDatabaseId );
             assertEquals( memberB, request.owner() );
             assertEquals( candidateId, request.id() );
         }
@@ -261,13 +263,13 @@ class ReplicatedLeaseStateMachineTest
         ReplicatedLeaseState initialState = new ReplicatedLeaseState( 123,
                 new ReplicatedLeaseRequest( initialHoldingCoreMember, 3, databaseId ) );
         when( storage.getInitialState() ).thenReturn( initialState );
-        ReplicatedLeaseRequest initialRequest = new ReplicatedLeaseRequest( initialState, databaseId );
+        ReplicatedLeaseRequest initialRequest = new ReplicatedLeaseRequest( initialState, namedDatabaseId );
         // When
         ReplicatedLeaseStateMachine stateMachine = new ReplicatedLeaseStateMachine( storage );
 
         // Then
         ReplicatedLeaseState state = stateMachine.snapshot();
-        Lease lease = new ReplicatedLeaseRequest( state, databaseId );
+        Lease lease = new ReplicatedLeaseRequest( state, namedDatabaseId );
         assertEquals( initialRequest.owner(), lease.owner() );
         assertEquals( initialRequest.id(), lease.id() );
     }

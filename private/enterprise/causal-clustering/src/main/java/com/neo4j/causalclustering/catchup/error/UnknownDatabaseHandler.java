@@ -23,6 +23,6 @@ public class UnknownDatabaseHandler<T extends CatchupProtocolMessage.WithDatabas
     CatchupErrorResponse newErrorResponse( T request )
     {
         return new CatchupErrorResponse( CatchupResult.E_DATABASE_UNKNOWN,
-                String.format( "CatchupRequest %s refused as intended database %s does not exist", request, request.databaseId().name() ) );
+                String.format( "CatchupRequest %s refused as intended database %s does not exist", request, request.databaseId() ) );
     }
 }

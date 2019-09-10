@@ -16,7 +16,8 @@ import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
+import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
@@ -53,7 +54,7 @@ class TopologyBuilderTest
       }
 
       "no member contains the database" in new Fixture {
-        val otherDatabaseId = randomDatabaseId()
+        val otherDatabaseId = randomNamedDatabaseId().databaseId()
         val topology = topologyBuilder().buildCoreTopology(otherDatabaseId, raftId, clusterState(3), memberMetaData(3))
         topology.databaseId() shouldBe otherDatabaseId
         topology.members() shouldBe empty
@@ -90,6 +91,14 @@ class TopologyBuilderTest
       val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterMembers, metadata)
       topology.members().keySet() should contain theSameElementsAs expected
     }
+
+    "equate a DatabaseIdRaw and a DatabaseId" in new Fixture {
+      val clusterSize = 3
+      val clusterMembers = clusterState(clusterSize)
+      val metadata = memberMetaData(clusterSize, databaseId = databaseId)
+      val topology = topologyBuilder().buildCoreTopology(databaseId, raftId, clusterMembers, metadata)
+      topology.members() should have size clusterSize
+    }
   }
 
   trait Fixture {
@@ -98,7 +107,7 @@ class TopologyBuilderTest
     type LeaderMap = LWWMap[String,LeaderInfo]
 
     implicit val cluster = mock[Cluster]
-    val databaseId = randomDatabaseId()
+    val databaseId = randomNamedDatabaseId().databaseId()
     val raftId = RaftId.from(databaseId)
 
     def topologyBuilder() =
@@ -114,9 +123,9 @@ class TopologyBuilderTest
       new ClusterViewMessage( CurrentClusterState(memberSet, unreachableMemberSet, Set.empty, leader) )
     }
 
-    def memberMetaData(n: Int, from: Int = 0, refusesToBeLeader: Int => Boolean = _ => false ): MetadataMessage = {
+    def memberMetaData(n: Int, from: Int = 0, refusesToBeLeader: Int => Boolean = _ => false, databaseId: DatabaseId = databaseId ): MetadataMessage = {
       val coreServerInfoStream = Stream.from(from)
-        .map(i => TestTopology.addressesForCore(i, refusesToBeLeader(i), Set(databaseId).asJava))
+        .map(i => TestTopology.addressesForCore(i, refusesToBeLeader(i), Set[DatabaseId](databaseId).asJava))
         .map(info => new CoreServerInfoForMemberId(new MemberId(UUID.randomUUID()), info))
 
       val addressWithInfo = uniqueAddressStreamFrom(from).zip(coreServerInfoStream).take(n)

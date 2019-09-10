@@ -30,6 +30,7 @@ import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
@@ -50,6 +51,7 @@ public final class CatchupServerBuilder
             NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, NeedsPortRegister,
             AcceptsOptionalParams
     {
+        private DatabaseIdRepository databaseIdRepository;
         private CatchupServerHandler catchupServerHandler;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;

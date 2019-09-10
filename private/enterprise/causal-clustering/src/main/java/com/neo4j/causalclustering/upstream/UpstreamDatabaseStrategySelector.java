@@ -11,7 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.neo4j.internal.helpers.collection.Iterables;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -36,13 +36,13 @@ public class UpstreamDatabaseStrategySelector
         strategies.add( defaultStrategy );
     }
 
-    public MemberId bestUpstreamMemberForDatabase( DatabaseId databaseId ) throws UpstreamDatabaseSelectionException
+    public MemberId bestUpstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
         for ( var strategy : strategies )
         {
             log.debug( "Trying selection strategy [%s]", strategy );
 
-            var upstreamMember = strategy.upstreamMemberForDatabase( databaseId );
+            var upstreamMember = strategy.upstreamMemberForDatabase( namedDatabaseId );
             if ( upstreamMember.isPresent() )
             {
                 var memberId = upstreamMember.get();
@@ -50,6 +50,6 @@ public class UpstreamDatabaseStrategySelector
                 return memberId;
             }
         }
-        throw new UpstreamDatabaseSelectionException( "Could not find an upstream member for database " + databaseId.name() + " with which to connect" );
+        throw new UpstreamDatabaseSelectionException( "Could not find an upstream member for database " + namedDatabaseId.name() + " with which to connect" );
     }
 }

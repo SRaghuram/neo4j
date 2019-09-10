@@ -21,7 +21,9 @@ import com.neo4j.causalclustering.discovery.CoreTopologyListenerService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
@@ -29,17 +31,16 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
-import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
-import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
-import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
@@ -58,6 +59,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -84,7 +86,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final Log userLog;
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
-    private final Map<DatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
+    private final Map<NamedDatabaseId,LeaderInfo> localLeadersByDatabaseId = new ConcurrentHashMap<>();
 
     private volatile ActorRef coreTopologyActorRef;
     private volatile ActorRef directoryActorRef;
@@ -205,7 +207,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     public void addLocalCoreTopologyListener( Listener listener )
     {
         listenerService.addCoreTopologyListener( listener );
-        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.databaseId() ) );
+        listener.onCoreTopologyChange( coreTopologyForDatabase( listener.namedDatabaseId() ) );
     }
 
     @Override
@@ -251,9 +253,9 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public boolean canBootstrapRaftGroup( DatabaseId databaseId )
+    public boolean canBootstrapRaftGroup( NamedDatabaseId namedDatabaseId )
     {
-        return globalTopologyState.bootstrapState().canBootstrapRaft( databaseId );
+        return globalTopologyState.bootstrapState().canBootstrapRaft( namedDatabaseId );
     }
 
     @VisibleForTesting
@@ -295,23 +297,23 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void onDatabaseStart( DatabaseId databaseId )
+    public void onDatabaseStart( NamedDatabaseId namedDatabaseId )
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
-            coreTopologyActor.tell( new DatabaseStartedMessage( databaseId ), noSender() );
+            coreTopologyActor.tell( new DatabaseStartedMessage( namedDatabaseId ), noSender() );
         }
     }
 
     @Override
-    public void onDatabaseStop( DatabaseId databaseId )
+    public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
-        localLeadersByDatabaseId.remove( databaseId );
+        localLeadersByDatabaseId.remove( namedDatabaseId );
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
-            coreTopologyActor.tell( new DatabaseStoppedMessage( databaseId ), noSender() );
+            coreTopologyActor.tell( new DatabaseStoppedMessage( namedDatabaseId ), noSender() );
         }
     }
 
@@ -321,27 +323,27 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var stateActor = databaseStateActorRef;
         if ( stateActor != null )
         {
-            stateActor.tell( newState, noSender() );
+            stateActor.tell( DiscoveryDatabaseState.from( newState ), noSender() );
         }
     }
 
     @Override
-    public void setLeader( LeaderInfo newLeaderInfo, DatabaseId databaseId )
+    public void setLeader( LeaderInfo newLeaderInfo, NamedDatabaseId namedDatabaseId )
     {
-        var currentLeaderInfo = getLocalLeader( databaseId );
+        var currentLeaderInfo = getLocalLeader( namedDatabaseId );
         if ( currentLeaderInfo.term() < newLeaderInfo.term() )
         {
-            log.info( "I am member %s. Updating leader info to member %s database %s and term %s", memberId(), newLeaderInfo.memberId(), databaseId.name(),
+            log.info( "I am member %s. Updating leader info to member %s database %s and term %s", memberId(), newLeaderInfo.memberId(), namedDatabaseId.name(),
                     newLeaderInfo.term() );
-            localLeadersByDatabaseId.put( databaseId, newLeaderInfo );
-            sendLeaderInfoIfNeeded( newLeaderInfo, databaseId );
+            localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
+            sendLeaderInfoIfNeeded( newLeaderInfo, namedDatabaseId );
         }
     }
 
     @Override
-    public void handleStepDown( long term, DatabaseId databaseId )
+    public void handleStepDown( long term, NamedDatabaseId namedDatabaseId )
     {
-        var currentLeaderInfo = getLocalLeader( databaseId );
+        var currentLeaderInfo = getLocalLeader( namedDatabaseId );
 
         var wasLeaderForTerm =
                 Objects.equals( memberId(), currentLeaderInfo.memberId() ) &&
@@ -350,23 +352,23 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         if ( wasLeaderForTerm )
         {
             log.info( "Step down event detected. This topology member, with MemberId %s, was leader for database %s in term %s, now moving " +
-                      "to follower.", memberId(), databaseId.name(), currentLeaderInfo.term() );
+                      "to follower.", memberId(), namedDatabaseId.name(), currentLeaderInfo.term() );
 
             var newLeaderInfo = currentLeaderInfo.stepDown();
-            localLeadersByDatabaseId.put( databaseId, newLeaderInfo );
-            sendLeaderInfoIfNeeded( newLeaderInfo, databaseId );
+            localLeadersByDatabaseId.put( namedDatabaseId, newLeaderInfo );
+            sendLeaderInfoIfNeeded( newLeaderInfo, namedDatabaseId );
         }
     }
 
     @Override
-    public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
-        var leaderInfo = localLeadersByDatabaseId.get( databaseId );
+        var leaderInfo = localLeadersByDatabaseId.get( namedDatabaseId );
         if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
         {
             return RoleInfo.LEADER;
         }
-        return globalTopologyState.role( databaseId, memberId );
+        return globalTopologyState.role( namedDatabaseId, memberId );
     }
 
     @Override
@@ -376,9 +378,9 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return globalTopologyState.coreTopologyForDatabase( databaseId );
+        return globalTopologyState.coreTopologyForDatabase( namedDatabaseId );
     }
 
     @Override
@@ -388,9 +390,9 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
+        return globalTopologyState.readReplicaTopologyForDatabase( namedDatabaseId );
     }
 
     @Override
@@ -413,21 +415,21 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
-        return globalTopologyState.stateFor( memberId, databaseId );
+        return globalTopologyState.stateFor( memberId, namedDatabaseId );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return Map.copyOf( globalTopologyState.coreStatesForDatabase( databaseId ).memberStates() );
+        return Map.copyOf( globalTopologyState.coreStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( databaseId ).memberStates() );
+        return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
     @VisibleForTesting
@@ -436,12 +438,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return globalTopologyState;
     }
 
-    private void sendLeaderInfoIfNeeded( LeaderInfo leaderInfo, DatabaseId databaseId )
+    private void sendLeaderInfoIfNeeded( LeaderInfo leaderInfo, NamedDatabaseId namedDatabaseId )
     {
         var directoryActor = directoryActorRef;
         if ( directoryActor != null && (leaderInfo.memberId() != null || leaderInfo.isSteppingDown()) )
         {
-            directoryActor.tell( new LeaderInfoSettingMessage( leaderInfo, databaseId ), noSender() );
+            directoryActor.tell( new LeaderInfoSettingMessage( leaderInfo, namedDatabaseId ), noSender() );
         }
     }
 
@@ -450,8 +452,8 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return new GlobalTopologyState( logProvider, listenerService::notifyListeners );
     }
 
-    private LeaderInfo getLocalLeader( DatabaseId databaseId )
+    private LeaderInfo getLocalLeader( NamedDatabaseId namedDatabaseId )
     {
-        return localLeadersByDatabaseId.getOrDefault( databaseId, LeaderInfo.INITIAL );
+        return localLeadersByDatabaseId.getOrDefault( namedDatabaseId, LeaderInfo.INITIAL );
     }
 }

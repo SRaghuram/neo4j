@@ -29,6 +29,6 @@ public class UnavailableDatabaseHandler<T extends CatchupProtocolMessage.WithDat
         var databaseStatus = availabilityGuard.isShutdown() ? "shutdown" : "unavailable";
 
         return new CatchupErrorResponse( CatchupResult.E_STORE_UNAVAILABLE,
-                String.format( "CatchupRequest %s refused as intended database %s is %s", request, request.databaseId().name(), databaseStatus ) );
+                String.format( "CatchupRequest %s refused as intended database %s is %s", request, request.databaseId(), databaseStatus ) );
     }
 }

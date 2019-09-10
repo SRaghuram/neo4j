@@ -7,22 +7,22 @@ package com.neo4j.causalclustering.discovery.akka.common;
 
 import java.util.Objects;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static java.util.Objects.requireNonNull;
 
 public class DatabaseStartedMessage
 {
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
 
-    public DatabaseStartedMessage( DatabaseId databaseId )
+    public DatabaseStartedMessage( NamedDatabaseId namedDatabaseId )
     {
-        this.databaseId = requireNonNull( databaseId );
+        this.namedDatabaseId = requireNonNull( namedDatabaseId );
     }
 
-    public DatabaseId databaseId()
+    public NamedDatabaseId namedDatabaseId()
     {
-        return databaseId;
+        return namedDatabaseId;
     }
 
     @Override
@@ -37,20 +37,20 @@ public class DatabaseStartedMessage
             return false;
         }
         var that = (DatabaseStartedMessage) o;
-        return Objects.equals( databaseId, that.databaseId );
+        return Objects.equals( namedDatabaseId, that.namedDatabaseId );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId );
+        return Objects.hash( namedDatabaseId );
     }
 
     @Override
     public String toString()
     {
         return "DatabaseStartedMessage{" +
-               "databaseId=" + databaseId +
+               "databaseId=" + namedDatabaseId +
                '}';
     }
 }

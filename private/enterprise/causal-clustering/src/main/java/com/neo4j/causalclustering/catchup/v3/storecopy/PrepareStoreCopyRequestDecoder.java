@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,7 +20,7 @@ public class PrepareStoreCopyRequestDecoder extends ByteToMessageDecoder
     protected void decode( ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list ) throws Exception
     {
         NetworkReadableChannel channel = new NetworkReadableChannel( byteBuf );
-        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        var databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         var storeId = StoreIdMarshal.INSTANCE.unmarshal( channel );
         list.add( new PrepareStoreCopyRequest( storeId, databaseId ) );
     }

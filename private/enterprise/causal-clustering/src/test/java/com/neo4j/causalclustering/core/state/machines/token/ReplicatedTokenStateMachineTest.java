@@ -73,7 +73,7 @@ public class ReplicatedTokenStateMachineTest
 {
     private final int EXPECTED_TOKEN_ID = 1;
     private final int UNEXPECTED_TOKEN_ID = 1024;
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final DatabaseId databaseId = TestDatabaseIdRepository.randomNamedDatabaseId().databaseId();
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();

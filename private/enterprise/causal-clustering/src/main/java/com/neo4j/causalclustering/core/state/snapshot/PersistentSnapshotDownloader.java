@@ -18,7 +18,7 @@ import java.util.Optional;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -27,9 +27,9 @@ public class PersistentSnapshotDownloader implements Runnable
 {
     public interface Monitor
     {
-        void startedDownloadingSnapshot( DatabaseId databaseId );
+        void startedDownloadingSnapshot( NamedDatabaseId namedDatabaseId );
 
-        void downloadSnapshotComplete( DatabaseId databaseId );
+        void downloadSnapshotComplete( NamedDatabaseId namedDatabaseId );
     }
 
     static final String OPERATION_NAME = "download of snapshot";

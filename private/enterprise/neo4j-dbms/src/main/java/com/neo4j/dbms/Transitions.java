@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
@@ -65,7 +65,7 @@ final class Transitions
         return prepareTransitionFunctions( lookup.current.operatorState(), lookup.desired.operatorState(), lookup.current.databaseId() );
     }
 
-    private Stream<Transition> prepareTransitionFunctions( EnterpriseOperatorState current, EnterpriseOperatorState desired, DatabaseId databaseId )
+    private Stream<Transition> prepareTransitionFunctions( EnterpriseOperatorState current, EnterpriseOperatorState desired, NamedDatabaseId namedDatabaseId )
     {
         if ( current == desired )
         {
@@ -73,7 +73,8 @@ final class Transitions
         }
         else if ( current == DROPPED )
         {
-            throw new IllegalArgumentException( format( "Trying to set database %s to %s, but is 'DROPPED', which is a final state.", databaseId, desired ) );
+            throw new IllegalArgumentException( format( "Trying to set database %s to %s, but is 'DROPPED', which is a final state.",
+                    namedDatabaseId, desired ) );
         }
 
         var transitions = transitionsTable.get( Pair.of( current, desired ) );
@@ -86,7 +87,7 @@ final class Transitions
         //    we pre-populate the functions with their databaseId parameter. This could be done at call
         //    time in the reconciler, but we do it here as its easier to provide sub-streams of functions
         //    with different databaseIds this way e.g. for DROP->CREATE transitions.
-        return Arrays.stream( transitions ).map( tn -> tn.prepare( databaseId ) );
+        return Arrays.stream( transitions ).map( tn -> tn.prepare( namedDatabaseId ) );
     }
 
     /**
@@ -211,11 +212,11 @@ final class Transitions
     @FunctionalInterface
     public interface TransitionFunction
     {
-        EnterpriseDatabaseState forTransition( DatabaseId databaseId );
+        EnterpriseDatabaseState forTransition( NamedDatabaseId namedDatabaseId );
 
-        default Transition prepare( DatabaseId databaseId )
+        default Transition prepare( NamedDatabaseId namedDatabaseId )
         {
-            return () -> forTransition( databaseId );
+            return () -> forTransition( namedDatabaseId );
         }
     }
 

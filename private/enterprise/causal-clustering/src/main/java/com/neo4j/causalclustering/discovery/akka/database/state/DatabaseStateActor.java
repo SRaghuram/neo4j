@@ -21,12 +21,10 @@ import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import org.neo4j.dbms.DatabaseState;
-
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DATABASE_STATE;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 
-public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseToMember,DatabaseState>>
+public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseToMember,DiscoveryDatabaseState>>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> discoveryUpdateSink,
             ActorRef rrTopologyActor, ReplicatedDataMonitor monitor, MemberId memberId )
@@ -71,10 +69,10 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder.match( DatabaseState.class, this::handleDatabaseState );
+        builder.match( DiscoveryDatabaseState.class, this::handleDatabaseState );
     }
 
-    private void handleDatabaseState( DatabaseState update )
+    private void handleDatabaseState( DiscoveryDatabaseState update )
     {
         if ( update.operatorState() == DROPPED )
         {
@@ -87,9 +85,9 @@ public class DatabaseStateActor extends BaseReplicatedDataActor<LWWMap<DatabaseT
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<DatabaseToMember,DatabaseState> newData )
+    protected void handleIncomingData( LWWMap<DatabaseToMember,DiscoveryDatabaseState> newData )
     {
-        data = data.merge( newData );
+        data = newData;
         var statesGroupedByDatabase = data.getEntries().entrySet().stream()
                 .map( e -> Map.entry( e.getKey().memberId(), e.getValue() ) )
                 .collect( Collectors.groupingBy( e -> e.getValue().databaseId(), entriesToMap() ) );

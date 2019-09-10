@@ -16,8 +16,8 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -183,7 +183,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public RoutingResult run( DatabaseId databaseId, MapValue context )
+        public RoutingResult run( NamedDatabaseId namedDatabaseId, MapValue context )
         {
             return null;
         }

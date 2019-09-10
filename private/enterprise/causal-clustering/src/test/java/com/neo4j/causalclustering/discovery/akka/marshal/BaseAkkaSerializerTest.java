@@ -12,17 +12,17 @@ import akka.cluster.UniqueAddress;
 import akka.testkit.javadsl.TestKit;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
-import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
-import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -39,7 +39,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static org.junit.Assert.assertEquals;
@@ -103,9 +102,9 @@ public class BaseAkkaSerializerTest
                 new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
                 new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()},
-                new Object[]{randomDatabaseId(), new DatabaseIdSerializer()},
+                new Object[]{randomDatabaseId(), new DatabaseIdWithoutNameSerializer()},
                 new Object[]{randomDatabaseToMember(), new DatabaseToMemberSerializer()},
-                new Object[]{randomDatabaseState( randomDatabaseId() ), new DatabaseStateSerializer()},
+                new Object[]{randomDatabaseState( randomDatabaseId() ), new DiscoveryDatabaseStateSerializer()},
                 new Object[]{randomReplicatedState(), new ReplicatedDatabaseStateSerializer()}
         );
     }
@@ -137,12 +136,12 @@ public class BaseAkkaSerializerTest
         return new DatabaseToMember( randomDatabaseId(), new MemberId( UUID.randomUUID() ) );
     }
 
-    private static DatabaseState randomDatabaseState( DatabaseId databaseId )
+    private static DiscoveryDatabaseState randomDatabaseState( DatabaseId databaseId )
     {
         int lim = EnterpriseOperatorState.values().length;
         int randomIdx = ThreadLocalRandom.current().nextInt( lim );
         var randomState = EnterpriseOperatorState.values()[randomIdx];
-        return new EnterpriseDatabaseState( databaseId, randomState );
+        return new DiscoveryDatabaseState( databaseId, randomState );
     }
 
     private static ReplicatedDatabaseState randomReplicatedState()

@@ -7,29 +7,29 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 public class DatabaseTopologyNotifier extends LifecycleAdapter
 {
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final TopologyService topologyService;
 
-    public DatabaseTopologyNotifier( DatabaseId databaseId, TopologyService topologyService )
+    public DatabaseTopologyNotifier( NamedDatabaseId namedDatabaseId, TopologyService topologyService )
     {
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.topologyService = topologyService;
     }
 
     @Override
     public void start()
     {
-        topologyService.onDatabaseStart( databaseId );
+        topologyService.onDatabaseStart( namedDatabaseId );
     }
 
     @Override
     public void stop()
     {
-        topologyService.onDatabaseStop( databaseId );
+        topologyService.onDatabaseStop( namedDatabaseId );
     }
 }

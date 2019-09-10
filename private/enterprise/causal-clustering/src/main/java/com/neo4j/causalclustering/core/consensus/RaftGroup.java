@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.common.RaftLogImplementation;
+import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.MonitoredRaftLog;
@@ -27,7 +28,6 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
@@ -43,7 +43,7 @@ import java.util.Map;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
@@ -68,19 +68,19 @@ public class RaftGroup
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
             MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, DatabaseId databaseId )
+            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
-        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, databaseId );
+        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
-        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( databaseId.name(), life, logProvider );
+        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( namedDatabaseId.name(), life, logProvider );
         StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, monitors );
-        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( databaseId.name(), life, logProvider );
-        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( databaseId.name(), life, logProvider );
+        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( namedDatabaseId.name(), life, logProvider );
+        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( namedDatabaseId.name(), life, logProvider );
 
         leaderAvailabilityTimers = createElectionTiming( config, timerService, logProvider );
 
@@ -114,7 +114,7 @@ public class RaftGroup
         monitors.addMonitorListener( durationSinceLastMessageMonitor );
         dependencies.satisfyDependency( durationSinceLastMessageMonitor );
 
-        life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, databaseId ) );
+        life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, namedDatabaseId ) );
         life.add( logShipping );
     }
 
@@ -125,7 +125,7 @@ public class RaftGroup
     }
 
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
-            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, DatabaseId databaseId )
+            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, NamedDatabaseId namedDatabaseId )
     {
         RaftLogImplementation raftLogImplementation = RaftLogImplementation.valueOf( config.get( CausalClusteringSettings.raft_log_implementation ) );
         switch ( raftLogImplementation )
@@ -143,7 +143,7 @@ public class RaftGroup
             CoreLogPruningStrategy pruningStrategy = new CoreLogPruningStrategyFactory(
                     config.get( CausalClusteringSettings.raft_log_pruning_strategy ), logProvider ).newInstance();
 
-            File directory = layout.raftLogDirectory( databaseId.name() );
+            File directory = layout.raftLogDirectory( namedDatabaseId.name() );
 
             return life.add(
                     new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, systemClock(), scheduler,

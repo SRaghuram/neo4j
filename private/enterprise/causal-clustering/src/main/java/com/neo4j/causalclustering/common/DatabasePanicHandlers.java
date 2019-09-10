@@ -10,31 +10,31 @@ import com.neo4j.causalclustering.error_handling.PanicService;
 
 import java.util.List;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 public abstract class DatabasePanicHandlers extends LifecycleAdapter
 {
     private final PanicService panicService;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final List<? extends DatabasePanicEventHandler> panicHandlerList;
 
-    protected DatabasePanicHandlers( PanicService panicService, DatabaseId databaseId, List<? extends DatabasePanicEventHandler> panicHandlerList )
+    protected DatabasePanicHandlers( PanicService panicService, NamedDatabaseId namedDatabaseId, List<? extends DatabasePanicEventHandler> panicHandlerList )
     {
         this.panicService = panicService;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.panicHandlerList = panicHandlerList;
     }
 
     @Override
     public void init()
     {
-        panicService.addPanicEventHandlers( databaseId, panicHandlerList );
+        panicService.addPanicEventHandlers( namedDatabaseId, panicHandlerList );
     }
 
     @Override
     public void shutdown()
     {
-        panicService.removePanicEventHandlers( databaseId );
+        panicService.removePanicEventHandlers( namedDatabaseId );
     }
 }

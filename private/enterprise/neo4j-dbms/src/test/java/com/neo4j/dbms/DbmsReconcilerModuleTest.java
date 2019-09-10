@@ -25,7 +25,7 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
@@ -50,7 +50,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -84,7 +84,7 @@ class DbmsReconcilerModuleTest
         reconcilerModule.start();
 
         // then
-        var system = databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID );
+        var system = databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID );
         var neo4j = databaseManager.getDatabaseContext( idRepository.defaultDatabase() );
         assertTrue( system.isPresent(), "System db should have been created" );
         assertTrue( neo4j.isPresent(), "Default db should have been created" );
@@ -101,18 +101,18 @@ class DbmsReconcilerModuleTest
         var bazId = idRepository.getRaw( "baz" );
 
         Map<String,EnterpriseDatabaseState> desiredDbStates = Stream.of( fooId, barId, bazId )
-                .collect( Collectors.toMap( DatabaseId::name, id -> new EnterpriseDatabaseState( id, STARTED ) ) );
+                .collect( Collectors.toMap( NamedDatabaseId::name, id -> new EnterpriseDatabaseState( id, STARTED ) ) );
 
         when( dbmsModel.getDatabaseStates() ).thenReturn( desiredDbStates );
         var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
                 mock( ReconciledTransactionTracker.class ), dbmsModel );
         reconcilerModule.start();
 
-        Function<DatabaseId,Stream<Database>> getDb = ( DatabaseId id ) -> databaseManager.getDatabaseContext( id )
+        Function<NamedDatabaseId,Stream<Database>> getDb = ( NamedDatabaseId id ) -> databaseManager.getDatabaseContext( id )
                 .map( DatabaseContext::database )
                 .stream();
 
-        var databases = Stream.of( fooId, barId, bazId, SYSTEM_DATABASE_ID )
+        var databases = Stream.of( fooId, barId, bazId, NAMED_SYSTEM_DATABASE_ID )
                 .flatMap( getDb )
                 .collect( Collectors.toList() );
 
@@ -144,7 +144,7 @@ class DbmsReconcilerModuleTest
             isStarting.set( true );
             startingLatch.await();
             return null;
-        } ).when( databaseManager ).startDatabase( any( DatabaseId.class ) );
+        } ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
         // a reconciler with a proper multi threaded executor
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler );
@@ -194,7 +194,7 @@ class DbmsReconcilerModuleTest
             isStarting.set( true );
             startingLatch.await();
             return null;
-        } ).when( databaseManager ).startDatabase( any( DatabaseId.class ) );
+        } ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
         // a reconciler with a proper multi threaded executor
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler );
@@ -234,8 +234,8 @@ class DbmsReconcilerModuleTest
         // given
         MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
 
-        DatabaseId foo = idRepository.getRaw( "foo" );
-        doThrow( failure ).when( databaseManager ).startDatabase( any( DatabaseId.class ) );
+        NamedDatabaseId foo = idRepository.getRaw( "foo" );
+        doThrow( failure ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
         DbmsReconciler reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler );
 

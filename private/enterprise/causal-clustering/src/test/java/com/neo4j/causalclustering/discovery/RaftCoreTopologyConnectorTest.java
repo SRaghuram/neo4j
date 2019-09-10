@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.mockito.Mockito.inOrder;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.mock;
 
 class RaftCoreTopologyConnectorTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     void shouldRegisterAsListenerWhenStarted()

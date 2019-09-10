@@ -24,7 +24,7 @@ import java.io.IOException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -47,7 +47,7 @@ class BackupDelegatorTest
     private BackupDelegator subject;
 
     private final SocketAddress anyAddress = new SocketAddress( "any.address", 1234 );
-    private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
+    private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     @BeforeEach
     void setup()
@@ -69,7 +69,7 @@ class BackupDelegatorTest
         DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "." ) );
 
         // when
-        subject.tryCatchingUp( fromAddress, expectedStoreId, databaseId, databaseLayout );
+        subject.tryCatchingUp( fromAddress, expectedStoreId, namedDatabaseId, databaseLayout );
 
         // then
         verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ), eq( true ),
@@ -107,7 +107,7 @@ class BackupDelegatorTest
         when( storeCopyClient.fetchStoreId( fromAddress ) ).thenReturn( expectedStoreId );
 
         // when
-        StoreId storeId = subject.fetchStoreId( fromAddress, databaseId );
+        StoreId storeId = subject.fetchStoreId( fromAddress, namedDatabaseId );
 
         // then
         assertEquals( expectedStoreId, storeId );
@@ -122,7 +122,7 @@ class BackupDelegatorTest
         DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "." ) );
 
         // when
-        subject.copy( anyAddress, storeId, databaseId, databaseLayout );
+        subject.copy( anyAddress, storeId, namedDatabaseId, databaseLayout );
 
         // then
         ArgumentCaptor<CatchupAddressProvider> argumentCaptor = ArgumentCaptor.forClass( CatchupAddressProvider.class );

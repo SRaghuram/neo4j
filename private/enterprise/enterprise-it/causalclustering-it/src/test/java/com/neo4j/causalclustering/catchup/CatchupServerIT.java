@@ -34,8 +34,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
@@ -54,6 +54,7 @@ import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResp
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCauseMessage;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -69,7 +70,7 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 class CatchupServerIT
 {
     private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
-    private static final DatabaseId UNKNOWN_DB_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final NamedDatabaseId UNKNOWN_NAMED_DB_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
     private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 1122, 3131, 45678 );
     private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
 
@@ -225,17 +226,20 @@ class CatchupServerIT
     @Test
     void shouldFailWithGoodErrorWhenListingFilesForDatabaseThatDoesNotExist() throws Exception
     {
-        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_ID ) )
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_NAMED_DB_ID ) )
         {
             Exception error = assertThrows( Exception.class, simpleCatchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( UNKNOWN_DB_ID.name() + " does not exist" ) );
+            assertThat( getRootCauseMessage( error ),
+                    allOf(
+                            containsString( UNKNOWN_NAMED_DB_ID.databaseId().uuid().toString() ),
+                            containsString( "does not exist" ) ) );
         }
     }
 
     @Test
     void shouldReturnCorrectStatusWhenRequestingFileForDatabaseThatDoesNotExist() throws Exception
     {
-        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_ID ) )
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_NAMED_DB_ID ) )
         {
             // individual file request does not throw when error response is received, it returns a status instead
             StoreCopyFinishedResponse response = simpleCatchupClient.requestIndividualFile( new File( EXISTING_FILE_NAME ) );
@@ -249,12 +253,17 @@ class CatchupServerIT
         var databaseName = "foo";
         managementService.createDatabase( databaseName );
 
-        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.getByName( databaseName ).get() ) )
+        NamedDatabaseId namedDatabaseId = databaseIdRepository.getByName( databaseName ).get();
+        try ( var catchupClient = newSimpleCatchupClient( namedDatabaseId ) )
         {
             managementService.shutdownDatabase( databaseName );
 
             var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( "database " + databaseName + " is shutdown" ) );
+            assertThat( getRootCauseMessage( error ),
+                    allOf(
+                            containsString( "database" ),
+                            containsString( namedDatabaseId.databaseId().uuid().toString() ),
+                            containsString( "is shutdown" ) ) );
         }
     }
 
@@ -264,12 +273,17 @@ class CatchupServerIT
         var databaseName = "bar";
         managementService.createDatabase( databaseName );
 
-        try ( var catchupClient = newSimpleCatchupClient( databaseIdRepository.getByName( databaseName ).get() ) )
+        NamedDatabaseId namedDatabaseId = databaseIdRepository.getByName( databaseName ).get();
+        try ( var catchupClient = newSimpleCatchupClient( namedDatabaseId ) )
         {
             makeDatabaseUnavailable( databaseName, managementService );
 
             var error = assertThrows( Exception.class, catchupClient::requestListOfFilesFromServer );
-            assertThat( getRootCauseMessage( error ), containsString( "database " + databaseName + " is unavailable" ) );
+            assertThat( getRootCauseMessage( error ),
+                    allOf(
+                            containsString( "database" ),
+                            containsString( namedDatabaseId.databaseId().uuid().toString() ),
+                            containsString( "is unavailable" ) ) );
         }
     }
 
@@ -333,9 +347,9 @@ class CatchupServerIT
         return newSimpleCatchupClient( databaseIdRepository.getByName( DEFAULT_DATABASE_NAME ).get() );
     }
 
-    private SimpleCatchupClient newSimpleCatchupClient( DatabaseId databaseId )
+    private SimpleCatchupClient newSimpleCatchupClient( NamedDatabaseId namedDatabaseId )
     {
-        return new SimpleCatchupClient( db, databaseId, fs, catchupClient, catchupServer, temporaryDirectory, LOG_PROVIDER );
+        return new SimpleCatchupClient( db, namedDatabaseId, fs, catchupClient, catchupServer, temporaryDirectory, LOG_PROVIDER );
     }
 
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )

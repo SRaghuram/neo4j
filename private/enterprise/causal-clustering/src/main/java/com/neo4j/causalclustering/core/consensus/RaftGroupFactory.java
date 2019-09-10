@@ -5,15 +5,15 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
@@ -26,8 +26,8 @@ public class RaftGroupFactory
     private final CoreTopologyService topologyService;
     private final ClusterStateStorageFactory storageFactory;
 
-    public RaftGroupFactory( MemberId myself, GlobalModule globalModule, ClusterStateLayout clusterState,
-            CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory )
+    public RaftGroupFactory( MemberId myself, GlobalModule globalModule, ClusterStateLayout clusterState, CoreTopologyService topologyService,
+            ClusterStateStorageFactory storageFactory )
     {
         this.myself = myself;
         this.globalModule = globalModule;
@@ -36,11 +36,11 @@ public class RaftGroupFactory
         this.storageFactory = storageFactory;
     }
 
-    public RaftGroup create( DatabaseId databaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
+    public RaftGroup create( NamedDatabaseId namedDatabaseId, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LifeSupport life, Monitors monitors,
             Dependencies dependencies, DatabaseLogService logService )
     {
         // TODO: Consider if additional services are per raft group, e.g. config, log-service.
         return new RaftGroup( globalModule.getGlobalConfig(), logService, globalModule.getFileSystem(), globalModule.getJobScheduler(),
-                globalModule.getGlobalClock(), myself, life, monitors, dependencies, outbound, clusterState, topologyService, storageFactory, databaseId );
+                globalModule.getGlobalClock(), myself, life, monitors, dependencies, outbound, clusterState, topologyService, storageFactory, namedDatabaseId );
     }
 }

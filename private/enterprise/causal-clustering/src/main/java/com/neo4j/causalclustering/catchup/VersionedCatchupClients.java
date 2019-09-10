@@ -15,7 +15,7 @@ import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.storageengine.api.StoreId;
 
 /**
@@ -64,17 +64,17 @@ public interface VersionedCatchupClients extends AutoCloseable
 
     interface CatchupClientV3
     {
-        PreparedRequest<DatabaseId> getDatabaseId( String databaseName );
+        PreparedRequest<NamedDatabaseId> getDatabaseId( String databaseName );
 
-        PreparedRequest<CoreSnapshot> getCoreSnapshot( DatabaseId databaseId );
+        PreparedRequest<CoreSnapshot> getCoreSnapshot( NamedDatabaseId namedDatabaseId );
 
-        PreparedRequest<StoreId> getStoreId( DatabaseId databaseId );
+        PreparedRequest<StoreId> getStoreId( NamedDatabaseId namedDatabaseId );
 
-        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, DatabaseId databaseId );
+        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, NamedDatabaseId namedDatabaseId );
 
-        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, DatabaseId databaseId );
+        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, NamedDatabaseId namedDatabaseId );
 
-        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, DatabaseId databaseId );
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, NamedDatabaseId namedDatabaseId );
     }
 
     @FunctionalInterface

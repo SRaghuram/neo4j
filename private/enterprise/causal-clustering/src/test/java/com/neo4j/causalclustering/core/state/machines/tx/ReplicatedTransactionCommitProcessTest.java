@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
@@ -31,7 +31,7 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 class ReplicatedTransactionCommitProcessTest
 {
-    private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final NamedDatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
 
     private final ClusterLeaseCoordinator leaseCoordinator = mock( ClusterLeaseCoordinator.class );
     private final Replicator replicator = mock( Replicator.class );

@@ -11,16 +11,16 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class GetDatabaseIdResponse
 {
-    private final DatabaseId databaseId;
+    private final DatabaseId databaseIdRaw;
 
-    public GetDatabaseIdResponse( DatabaseId databaseId )
+    public GetDatabaseIdResponse( DatabaseId databaseIdRaw )
     {
-        this.databaseId = databaseId;
+        this.databaseIdRaw = databaseIdRaw;
     }
 
     public DatabaseId databaseId()
     {
-        return databaseId;
+        return databaseIdRaw;
     }
 
     @Override
@@ -35,18 +35,18 @@ public class GetDatabaseIdResponse
             return false;
         }
         GetDatabaseIdResponse that = (GetDatabaseIdResponse) o;
-        return Objects.equals( databaseId, that.databaseId );
+        return Objects.equals( databaseIdRaw, that.databaseIdRaw );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId );
+        return Objects.hash( databaseIdRaw );
     }
 
     @Override
     public String toString()
     {
-        return "GetDatabaseIdResponse{" + "databaseId=" + databaseId + '}';
+        return "GetDatabaseIdResponse{" + "databaseId=" + databaseIdRaw + '}';
     }
 }

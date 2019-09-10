@@ -21,8 +21,8 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.internal.helpers.collection.Iterables;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
@@ -40,9 +40,9 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         this.systemDatabase = systemDatabase;
     }
 
-    Collection<DatabaseId> updatedDatabases( TransactionData transactionData )
+    Collection<NamedDatabaseId> updatedDatabases( TransactionData transactionData )
     {
-        Collection<DatabaseId> updatedDatabases;
+        Collection<NamedDatabaseId> updatedDatabases;
 
         try ( var tx = systemDatabase.get().beginTx() )
         {
@@ -88,12 +88,12 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         return databases;
     }
 
-    Optional<OperatorState> getStatus( DatabaseId databaseId )
+    Optional<OperatorState> getStatus( NamedDatabaseId namedDatabaseId )
     {
         Optional<OperatorState> result;
         try ( var tx = systemDatabase.get().beginTx() )
         {
-            var uuid = databaseId.uuid().toString();
+            var uuid = namedDatabaseId.databaseId().uuid().toString();
 
             var databaseNode = tx.findNode( DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid );
             var deletedDatabaseNode = tx.findNode( DELETED_DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid );
@@ -131,7 +131,7 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         }
     }
 
-    private DatabaseId getDatabaseId( Node node )
+    private NamedDatabaseId getDatabaseId( Node node )
     {
         var name = (String) node.getProperty( DATABASE_NAME_PROPERTY );
         var uuid = UUID.fromString( (String) node.getProperty( DATABASE_UUID_PROPERTY ) );

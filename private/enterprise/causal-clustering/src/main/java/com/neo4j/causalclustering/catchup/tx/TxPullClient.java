@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -21,16 +21,16 @@ import org.neo4j.storageengine.api.StoreId;
 public class TxPullClient
 {
     private final CatchupClientFactory catchUpClient;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final Supplier<Monitors> monitors;
     private final LogProvider logProvider;
 
     private PullRequestMonitor pullRequestMonitor = new PullRequestMonitor();
 
-    public TxPullClient( CatchupClientFactory catchUpClient, DatabaseId databaseId, Supplier<Monitors> monitors, LogProvider logProvider )
+    public TxPullClient( CatchupClientFactory catchUpClient, NamedDatabaseId namedDatabaseId, Supplier<Monitors> monitors, LogProvider logProvider )
     {
         this.catchUpClient = catchUpClient;
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.monitors = monitors;
         this.logProvider = logProvider;
     }
@@ -57,7 +57,7 @@ public class TxPullClient
 
         Log log = logProvider.getLog( getClass() );
         return catchUpClient.getClient( fromAddress, log )
-                .v3( c -> c.pullTransactions( storeId, previousTxId, databaseId ) )
+                .v3( c -> c.pullTransactions( storeId, previousTxId, namedDatabaseId ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }

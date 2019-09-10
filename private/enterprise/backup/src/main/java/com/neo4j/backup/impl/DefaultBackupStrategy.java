@@ -15,7 +15,7 @@ import java.util.Objects;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -50,7 +50,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 
         try
         {
-            backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.databaseId, targetDbLayout );
+            backupDelegator.copy( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.namedDatabaseId, targetDbLayout );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -69,7 +69,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
                     format( "Remote store id was %s but local is %s", backupInfo.remoteStoreId, backupInfo.localStoreId ) ) );
         }
 
-        catchup( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.databaseId, targetDbLayout );
+        catchup( backupInfo.remoteAddress, backupInfo.remoteStoreId, backupInfo.namedDatabaseId, targetDbLayout );
     }
 
     @Override
@@ -90,16 +90,16 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         {
             log.info( "Remote backup address is " + address );
 
-            DatabaseId databaseId = backupDelegator.fetchDatabaseId( address, databaseName );
-            log.info( "Database id is " + databaseId );
+            NamedDatabaseId namedDatabaseId = backupDelegator.fetchDatabaseId( address, databaseName );
+            log.info( "Database id is " + namedDatabaseId );
 
-            StoreId remoteStoreId = backupDelegator.fetchStoreId( address, databaseId );
+            StoreId remoteStoreId = backupDelegator.fetchStoreId( address, namedDatabaseId );
             log.info( "Remote store id is " + remoteStoreId );
 
             StoreId localStoreId = readLocalStoreId( databaseLayout );
             log.info( "Local store id is " + remoteStoreId );
 
-            return new BackupInfo( address, remoteStoreId, localStoreId, databaseId );
+            return new BackupInfo( address, remoteStoreId, localStoreId, namedDatabaseId );
         }
         catch ( StoreIdDownloadFailedException | DatabaseIdDownloadFailedException e )
         {
@@ -124,11 +124,12 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
     }
 
-    private void catchup( SocketAddress fromAddress, StoreId storeId, DatabaseId databaseId, DatabaseLayout databaseLayout ) throws BackupExecutionException
+    private void catchup( SocketAddress fromAddress, StoreId storeId, NamedDatabaseId namedDatabaseId, DatabaseLayout databaseLayout )
+            throws BackupExecutionException
     {
         try
         {
-            backupDelegator.tryCatchingUp( fromAddress, storeId, databaseId, databaseLayout );
+            backupDelegator.tryCatchingUp( fromAddress, storeId, namedDatabaseId, databaseLayout );
         }
         catch ( StoreCopyFailedException e )
         {
@@ -141,14 +142,14 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         final SocketAddress remoteAddress;
         final StoreId remoteStoreId;
         final StoreId localStoreId;
-        final DatabaseId databaseId;
+        final NamedDatabaseId namedDatabaseId;
 
-        BackupInfo( SocketAddress remoteAddress, StoreId remoteStoreId, StoreId localStoreId, DatabaseId databaseId )
+        BackupInfo( SocketAddress remoteAddress, StoreId remoteStoreId, StoreId localStoreId, NamedDatabaseId namedDatabaseId )
         {
             this.remoteAddress = remoteAddress;
             this.remoteStoreId = remoteStoreId;
             this.localStoreId = localStoreId;
-            this.databaseId = databaseId;
+            this.namedDatabaseId = namedDatabaseId;
         }
     }
 }

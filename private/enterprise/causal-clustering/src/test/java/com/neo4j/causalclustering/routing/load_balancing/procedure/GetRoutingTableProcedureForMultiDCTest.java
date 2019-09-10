@@ -40,7 +40,7 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTString;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -117,7 +117,7 @@ class GetRoutingTableProcedureForMultiDCTest
     @Test
     void shouldThrowWhenDatabaseIsStopped()
     {
-        var databaseId = randomDatabaseId();
+        var databaseId = randomNamedDatabaseId();
         var databaseManager = new StubClusteredDatabaseManager();
         var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         when( availabilityGuard.isAvailable() ).thenReturn( false );

@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -48,8 +48,8 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 public final class ClusterInternalDbmsOperator extends DbmsOperator
 {
     private final List<StoreCopyHandle> storeCopying = new CopyOnWriteArrayList<>();
-    private final Set<DatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
-    private final Set<DatabaseId> panicked = ConcurrentHashMap.newKeySet();
+    private final Set<NamedDatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
+    private final Set<NamedDatabaseId> panicked = ConcurrentHashMap.newKeySet();
 
     protected Map<String,EnterpriseDatabaseState> desired0()
     {
@@ -57,7 +57,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
 
         for ( var storeCopyHandle : storeCopying )
         {
-            var id = storeCopyHandle.databaseId;
+            var id = storeCopyHandle.namedDatabaseId;
             if ( !bootstrapping.contains( id ) )
             {
                 result.put( id.name(), new EnterpriseDatabaseState( id, STORE_COPYING ) );
@@ -73,65 +73,65 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     }
 
     /**
-     * Unlike {@link ClusterInternalDbmsOperator#bootstrap(DatabaseId)}, this method will explicitly trigger the reconciler,
+     * Unlike {@link ClusterInternalDbmsOperator#bootstrap(NamedDatabaseId)}, this method will explicitly trigger the reconciler,
      * and block until the database in question has explicitly transitioned to {@link EnterpriseOperatorState#STORE_COPYING}.
      *
      * The one exception to this blocking behaviour is if the operator currently also desires a database to be in a
      * bootstrapping state. To block in this circumstance would cause a deadlock, as a bootstrapping database *also*
      * performs a store copy, and waits for its completion.
      *
-     * @param databaseId the id of the database to be store copied
+     * @param namedDatabaseId the id of the database to be store copied
      * @return a handle which can be used to signal the completion of a store copy.
      */
-    public StoreCopyHandle stopForStoreCopy( DatabaseId databaseId )
+    public StoreCopyHandle stopForStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        StoreCopyHandle storeCopyHandle = new StoreCopyHandle( this, databaseId );
+        StoreCopyHandle storeCopyHandle = new StoreCopyHandle( this, namedDatabaseId );
         storeCopying.add( storeCopyHandle );
-        triggerReconcilerOnStoreCopy( databaseId );
+        triggerReconcilerOnStoreCopy( namedDatabaseId );
         return storeCopyHandle;
     }
 
-    public void stopOnPanic( DatabaseId databaseId, Throwable causeOfPanic )
+    public void stopOnPanic( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
     {
         Objects.requireNonNull( causeOfPanic, "The cause of a panic cannot be null!" );
-        panicked.add( databaseId );
-        var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( databaseId, causeOfPanic ) );
-        reconcilerResult.whenComplete( () -> panicked.remove( databaseId ) );
+        panicked.add( namedDatabaseId );
+        var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( namedDatabaseId, causeOfPanic ) );
+        reconcilerResult.whenComplete( () -> panicked.remove( namedDatabaseId ) );
     }
 
-    private boolean triggerReconcilerOnStoreCopy( DatabaseId databaseId )
+    private boolean triggerReconcilerOnStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        if ( !bootstrapping.contains( databaseId ) && !panicked.contains( databaseId ) )
+        if ( !bootstrapping.contains( namedDatabaseId ) && !panicked.contains( namedDatabaseId ) )
         {
-            trigger( ReconcilerRequest.simple() ).await( databaseId );
+            trigger( ReconcilerRequest.simple() ).await( namedDatabaseId );
             return true;
         }
         return false;
     }
 
     /**
-     * Note that unlike {@link ClusterInternalDbmsOperator#stopForStoreCopy(DatabaseId)} this operation does not trigger
+     * Note that unlike {@link ClusterInternalDbmsOperator#stopForStoreCopy(NamedDatabaseId)} this operation does not trigger
      * the reconciler, and is not blocking. Instead it simply serves as a marker for any other operators which
      * make trigger the reconciler in parallel, signalling that this database is bootstrapping.
      *
-     * @param databaseId the id of the database being bootstrapped
+     * @param namedDatabaseId the id of the database being bootstrapped
      * @return a handle which can be used to signal bootstrap completion
      */
-    public BootstrappingHandle bootstrap( DatabaseId databaseId )
+    public BootstrappingHandle bootstrap( NamedDatabaseId namedDatabaseId )
     {
-        bootstrapping.add( databaseId );
-        return new BootstrappingHandle( this, databaseId );
+        bootstrapping.add( namedDatabaseId );
+        return new BootstrappingHandle( this, namedDatabaseId );
     }
 
     public static class StoreCopyHandle
     {
         private final ClusterInternalDbmsOperator operator;
-        private final DatabaseId databaseId;
+        private final NamedDatabaseId namedDatabaseId;
 
-        private StoreCopyHandle( ClusterInternalDbmsOperator operator, DatabaseId databaseId )
+        private StoreCopyHandle( ClusterInternalDbmsOperator operator, NamedDatabaseId namedDatabaseId )
         {
             this.operator = operator;
-            this.databaseId = databaseId;
+            this.namedDatabaseId = namedDatabaseId;
         }
 
         /**
@@ -144,15 +144,15 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
             boolean exists = operator.storeCopying.remove( this );
             if ( !exists )
             {
-                throw new IllegalStateException( "Restart was already called for " + databaseId );
+                throw new IllegalStateException( "Restart was already called for " + namedDatabaseId );
             }
 
-            return operator.triggerReconcilerOnStoreCopy( databaseId );
+            return operator.triggerReconcilerOnStoreCopy( namedDatabaseId );
         }
 
-        public DatabaseId databaseId()
+        public NamedDatabaseId databaseId()
         {
-            return databaseId;
+            return namedDatabaseId;
         }
 
         @Override
@@ -167,32 +167,32 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
                 return false;
             }
             StoreCopyHandle that = (StoreCopyHandle) o;
-            return Objects.equals( databaseId, that.databaseId );
+            return Objects.equals( namedDatabaseId, that.namedDatabaseId );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( databaseId );
+            return Objects.hash( namedDatabaseId );
         }
     }
 
     public static class BootstrappingHandle
     {
         private final ClusterInternalDbmsOperator operator;
-        private final DatabaseId databaseId;
+        private final NamedDatabaseId namedDatabaseId;
 
-        private BootstrappingHandle( ClusterInternalDbmsOperator operator, DatabaseId databaseId )
+        private BootstrappingHandle( ClusterInternalDbmsOperator operator, NamedDatabaseId namedDatabaseId )
         {
             this.operator = operator;
-            this.databaseId = databaseId;
+            this.namedDatabaseId = namedDatabaseId;
         }
 
         public void bootstrapped()
         {
-            if ( !operator.bootstrapping.remove( databaseId ) )
+            if ( !operator.bootstrapping.remove( namedDatabaseId ) )
             {
-                throw new IllegalStateException( "Bootstrapped was already called for " + databaseId );
+                throw new IllegalStateException( "Bootstrapped was already called for " + namedDatabaseId );
             }
         }
     }

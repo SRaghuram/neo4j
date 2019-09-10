@@ -20,7 +20,7 @@ class DatabaseTopologyNotifierTest
     void shouldNotifyTopologyServiceOnStartAndStop()
     {
         // given
-        var databaseId = TestDatabaseIdRepository.randomDatabaseId();
+        var databaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
         var topologyService = mock( TopologyService.class );
         var notifier = new DatabaseTopologyNotifier( databaseId, topologyService );
 

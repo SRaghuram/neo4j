@@ -18,7 +18,8 @@ import java.util.function.Function;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,12 +27,13 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class MultiplexingCatchupRequestHandlerTest
 {
-    private static final DatabaseId EXISTING_DB_ID = randomDatabaseId();
-    private static final DatabaseId NON_EXISTING_DB_ID = randomDatabaseId();
+    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
+    private static final NamedDatabaseId EXISTING_DB_ID = DATABASE_ID_REPOSITORY.defaultDatabase();
+    private static final NamedDatabaseId NON_EXISTING_DB_ID = randomNamedDatabaseId();
     private static final String SUCCESS_RESPONSE = "Correct handler invoked";
 
     private final EmbeddedChannel channel = new EmbeddedChannel();
@@ -107,7 +109,7 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static DatabaseManager<?> newDbManager( DatabaseAvailabilityGuard existingDbAvailabilityGuard )
     {
-        var dbManager = new StubClusteredDatabaseManager();
+        var dbManager = new StubClusteredDatabaseManager( DATABASE_ID_REPOSITORY );
         dbManager.givenDatabaseWithConfig()
                 .withDatabaseId( EXISTING_DB_ID )
                 .withDatabaseAvailabilityGuard( existingDbAvailabilityGuard )
@@ -140,13 +142,13 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static SimpleChannelInboundHandler<CatchupProtocolMessage.WithDatabaseId> newHandlerFactory( Database db )
     {
-        assertEquals( EXISTING_DB_ID, db.getDatabaseId() );
+        assertEquals( EXISTING_DB_ID, db.getNamedDatabaseId() );
         return new CatchupProtocolMessageHandler();
     }
 
-    private static CatchupProtocolMessage.WithDatabaseId newCatchupRequest( DatabaseId databaseId )
+    private static CatchupProtocolMessage.WithDatabaseId newCatchupRequest( NamedDatabaseId namedDatabaseId )
     {
-        return new DummyMessage( databaseId );
+        return new DummyMessage( namedDatabaseId );
     }
 
     private static class CatchupProtocolMessageHandler extends SimpleChannelInboundHandler<CatchupProtocolMessage.WithDatabaseId>
@@ -160,9 +162,9 @@ class MultiplexingCatchupRequestHandlerTest
 
     private static class DummyMessage extends CatchupProtocolMessage.WithDatabaseId
     {
-        DummyMessage( DatabaseId databaseId )
+        DummyMessage( NamedDatabaseId namedDatabaseId )
         {
-            super( RequestMessageType.STORE_FILE, databaseId );
+            super( RequestMessageType.STORE_FILE, namedDatabaseId.databaseId() );
         }
     }
 }

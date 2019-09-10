@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdWithoutNameMarshal;
 import com.neo4j.causalclustering.messaging.ByteBufBacked;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.OutputStreamWritableChannel;
 import io.netty.buffer.ByteBuf;
 
@@ -25,9 +25,10 @@ public class ReplicatedTransactionMarshalV2
     {
     }
 
-    public static void marshal( WritableChannel writableChannel, ByteArrayReplicatedTransaction replicatedTransaction ) throws IOException
+    public static void marshal( WritableChannel writableChannel, ByteArrayReplicatedTransaction replicatedTransaction )
+            throws IOException
     {
-        DatabaseIdMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
+        DatabaseIdWithoutNameMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
         int length = replicatedTransaction.getTxBytes().length;
         writableChannel.putInt( length );
         writableChannel.put( replicatedTransaction.getTxBytes(), length );
@@ -35,7 +36,7 @@ public class ReplicatedTransactionMarshalV2
 
     public static ReplicatedTransaction unmarshal( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+        DatabaseId databaseId = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
         int txBytesLength = channel.getInt();
         byte[] txBytes = new byte[txBytesLength];
         channel.get( txBytes, txBytesLength );
@@ -44,7 +45,7 @@ public class ReplicatedTransactionMarshalV2
 
     public static void marshal( WritableChannel writableChannel, TransactionRepresentationReplicatedTransaction replicatedTransaction ) throws IOException
     {
-        DatabaseIdMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
+        DatabaseIdWithoutNameMarshal.INSTANCE.marshal( replicatedTransaction.databaseId(), writableChannel );
         if ( writableChannel instanceof ByteBufBacked )
         {
             /*

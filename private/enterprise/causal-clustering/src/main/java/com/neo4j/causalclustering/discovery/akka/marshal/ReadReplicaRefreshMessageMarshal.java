@@ -9,30 +9,30 @@ import akka.actor.ActorRef;
 import akka.actor.ExtendedActorSystem;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadReplicaRefreshMessage>
 {
-    private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
+    private final ChannelMarshal<ReadReplicaInfo> readReplicaInfoMarshal;
     private final ChannelMarshal<MemberId> memberIdMarshal = new MemberId.Marshal();
     private final ChannelMarshal<ActorRef> actorRefMarshal;
 
     public ReadReplicaRefreshMessageMarshal( ExtendedActorSystem system )
     {
         this.actorRefMarshal = new ActorRefMarshal( system );
+        readReplicaInfoMarshal = new ReadReplicaInfoMarshal();
     }
 
     @Override
@@ -43,12 +43,12 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
         var clusterClient = actorRefMarshal.unmarshal( channel );
         var topologyClient = actorRefMarshal.unmarshal( channel );
 
-        var databaseStates = new HashMap<DatabaseId,DatabaseState>();
+        var databaseStates = new HashMap<DatabaseId,DiscoveryDatabaseState>();
         int size = channel.getInt();
         for ( int i = 0; i < size; i++ )
         {
-            var id = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
-            var state = DatabaseStateMarshal.INSTANCE.unmarshal( channel );
+            var id = DatabaseIdWithoutNameMarshal.INSTANCE.unmarshal( channel );
+            var state = DiscoveryDatabaseStateMarshal.INSTANCE.unmarshal( channel );
             databaseStates.put( id, state );
         }
 
@@ -65,10 +65,10 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
 
         var databaseStates = readReplicaRefreshMessage.databaseStates();
         channel.putInt( databaseStates.size() );
-        for ( Map.Entry<DatabaseId,DatabaseState> entry : databaseStates.entrySet() )
+        for ( Map.Entry<DatabaseId,DiscoveryDatabaseState> entry : databaseStates.entrySet() )
         {
-            DatabaseIdMarshal.INSTANCE.marshal( entry.getKey(), channel );
-            DatabaseStateMarshal.INSTANCE.marshal( entry.getValue(), channel );
+            DatabaseIdWithoutNameMarshal.INSTANCE.marshal( entry.getKey(), channel );
+            DiscoveryDatabaseStateMarshal.INSTANCE.marshal( entry.getValue(), channel );
         }
     }
 }

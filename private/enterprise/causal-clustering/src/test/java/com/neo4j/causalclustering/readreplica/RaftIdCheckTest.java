@@ -10,9 +10,8 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
-
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class RaftIdCheckTest
 {
@@ -20,7 +19,7 @@ class RaftIdCheckTest
     void shouldFailToStartOnRaftIdDatabaseIdMismatch()
     {
         // given
-        var databaseId = TestDatabaseIdRepository.randomDatabaseId();
+        var databaseId = randomNamedDatabaseId();
         var raftId = RaftIdFactory.random();
 
         var raftIdStorage = new InMemorySimpleStorage<RaftId>();

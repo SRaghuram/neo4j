@@ -16,11 +16,12 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
-import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
@@ -34,6 +35,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
@@ -76,10 +78,14 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         ClusterClientSettings clusterClientSettings = actorSystemLifecycle.clusterClientSettings();
         ActorRef clusterClient = actorSystemLifecycle.systemActorOf( ClusterClient.props( clusterClientSettings ), "cluster-client" );
 
-        SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
-        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
-        SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
+        SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
 
         DiscoveryMember discoveryMember = discoveryMemberFactory.create( myself );
 
@@ -105,22 +111,22 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void onDatabaseStart( DatabaseId databaseId )
+    public void onDatabaseStart( NamedDatabaseId namedDatabaseId )
     {
         var clientTopologyActor = clientTopologyActorRef;
         if ( clientTopologyActor != null )
         {
-            clientTopologyActor.tell( new DatabaseStartedMessage( databaseId ), noSender() );
+            clientTopologyActor.tell( new DatabaseStartedMessage( namedDatabaseId ), noSender() );
         }
     }
 
     @Override
-    public void onDatabaseStop( DatabaseId databaseId )
+    public void onDatabaseStop( NamedDatabaseId namedDatabaseId )
     {
         var clientTopologyActor = clientTopologyActorRef;
         if ( clientTopologyActor != null )
         {
-            clientTopologyActor.tell( new DatabaseStoppedMessage( databaseId ), noSender() );
+            clientTopologyActor.tell( new DatabaseStoppedMessage( namedDatabaseId ), noSender() );
         }
     }
 
@@ -130,7 +136,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         var clientTopologyActor = clientTopologyActorRef;
         if ( clientTopologyActor != null )
         {
-            clientTopologyActor.tell( newState, noSender() );
+            clientTopologyActor.tell( DiscoveryDatabaseState.from( newState ), noSender() );
         }
     }
 
@@ -141,9 +147,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return globalTopologyState.coreTopologyForDatabase( databaseId );
+        return globalTopologyState.coreTopologyForDatabase( namedDatabaseId );
     }
 
     @Override
@@ -153,9 +159,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
+    public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return globalTopologyState.readReplicaTopologyForDatabase( databaseId );
+        return globalTopologyState.readReplicaTopologyForDatabase( namedDatabaseId );
     }
 
     @Override
@@ -170,9 +176,9 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
-        return globalTopologyState.role( databaseId, memberId );
+        return globalTopologyState.role( namedDatabaseId, memberId );
     }
 
     @Override
@@ -182,21 +188,21 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
+    public DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
-        return globalTopologyState.stateFor( memberId, databaseId );
+        return globalTopologyState.stateFor( memberId, namedDatabaseId );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return Map.copyOf( globalTopologyState.coreStatesForDatabase( databaseId ).memberStates() );
+        return Map.copyOf( globalTopologyState.coreStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
     @Override
-    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( databaseId ).memberStates() );
+        return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
     @VisibleForTesting

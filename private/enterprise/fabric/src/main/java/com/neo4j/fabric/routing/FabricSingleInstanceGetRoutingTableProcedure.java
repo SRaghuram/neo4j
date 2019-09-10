@@ -13,7 +13,7 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
@@ -34,14 +34,14 @@ public class FabricSingleInstanceGetRoutingTableProcedure extends SingleInstance
     }
 
     @Override
-    protected RoutingResult invoke( DatabaseId databaseId, MapValue routingContext )
+    protected RoutingResult invoke( NamedDatabaseId namedDatabaseId, MapValue routingContext )
     {
-        if ( fabricDatabaseManager.isFabricDatabase( databaseId.name() ) )
+        if ( fabricDatabaseManager.isFabricDatabase( namedDatabaseId.name() ) )
         {
             var fabricServers = fabricConfig.getFabricServers();
             return new RoutingResult( fabricServers, fabricServers, fabricServers, fabricConfig.getRoutingTtl().toSeconds() );
         }
 
-        return super.invoke( databaseId, routingContext );
+        return super.invoke( namedDatabaseId, routingContext );
     }
 }

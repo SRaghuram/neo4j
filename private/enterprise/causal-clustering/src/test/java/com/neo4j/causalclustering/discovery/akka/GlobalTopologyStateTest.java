@@ -25,6 +25,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
@@ -45,8 +46,10 @@ class GlobalTopologyStateTest
     private final GlobalTopologyState state = new GlobalTopologyState( NullLogProvider.getInstance(), listener );
 
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "db1" );
-    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "db2" );
+    private final NamedDatabaseId namedDatabaseId1 = databaseIdRepository.getRaw( "db1" );
+    private final DatabaseId databaseId1 = databaseIdRepository.getRaw( "db1" ).databaseId();
+    private final NamedDatabaseId namedDatabaseId2 = databaseIdRepository.getRaw( "db2" );
+    private final DatabaseId databaseId2 = databaseIdRepository.getRaw( "db2" ).databaseId();
 
     private final MemberId coreId1 = new MemberId( UUID.randomUUID() );
     private final MemberId coreId2 = new MemberId( UUID.randomUUID() );
@@ -65,11 +68,11 @@ class GlobalTopologyStateTest
     {
         assertEquals( Map.of(), state.allCoreServers() );
         assertEquals( Map.of(), state.allReadReplicas() );
-        assertEquals( DatabaseCoreTopology.empty( databaseId1 ), state.coreTopologyForDatabase( databaseId1 ) );
-        assertEquals( DatabaseReadReplicaTopology.empty( databaseId1 ), state.readReplicaTopologyForDatabase( databaseId1 ) );
+        assertEquals( DatabaseCoreTopology.empty( databaseId1 ), state.coreTopologyForDatabase( namedDatabaseId1 ) );
+        assertEquals( DatabaseReadReplicaTopology.empty( databaseId1 ), state.readReplicaTopologyForDatabase( namedDatabaseId1 ) );
         assertNull( state.retrieveCatchupServerAddress( coreId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, coreId2 ) );
     }
 
     @Test
@@ -85,8 +88,8 @@ class GlobalTopologyStateTest
         state.onTopologyUpdate( coreTopology2 );
 
         assertEquals( Map.of( coreId1, coreInfo1, coreId2, coreInfo2, coreId3, coreInfo3 ), state.allCoreServers() );
-        assertEquals( coreTopology1, state.coreTopologyForDatabase( databaseId1 ) );
-        assertEquals( coreTopology2, state.coreTopologyForDatabase( databaseId2 ) );
+        assertEquals( coreTopology1, state.coreTopologyForDatabase( namedDatabaseId1 ) );
+        assertEquals( coreTopology2, state.coreTopologyForDatabase( namedDatabaseId2 ) );
     }
 
     @Test
@@ -129,8 +132,8 @@ class GlobalTopologyStateTest
         state.onTopologyUpdate( readReplicaTopology2 );
 
         assertEquals( Map.of( readReplicaId1, readReplicaInfo1, readReplicaId2, readReplicaInfo2 ), state.allReadReplicas() );
-        assertEquals( readReplicaTopology1, state.readReplicaTopologyForDatabase( databaseId1 ) );
-        assertEquals( readReplicaTopology2, state.readReplicaTopologyForDatabase( databaseId2 ) );
+        assertEquals( readReplicaTopology1, state.readReplicaTopologyForDatabase( namedDatabaseId1 ) );
+        assertEquals( readReplicaTopology2, state.readReplicaTopologyForDatabase( namedDatabaseId2 ) );
     }
 
     @Test
@@ -143,22 +146,22 @@ class GlobalTopologyStateTest
         var coreTopology2 = new DatabaseCoreTopology( databaseId2, RaftId.from( databaseId2 ), coreMembers );
         state.onTopologyUpdate( coreTopology2 );
 
-        var leaderInfos = Map.of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 4242 ) );
+        var leaderInfos = Map.<DatabaseId,LeaderInfo>of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 4242 ) );
 
         state.onDbLeaderUpdate( leaderInfos );
 
-        assertEquals( RoleInfo.LEADER, state.role( databaseId1, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId1, coreId2 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId1, coreId3 ) );
+        assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId1, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId1, coreId2 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId1, coreId3 ) );
 
-        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId2, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId2, coreId2 ) );
-        assertEquals( RoleInfo.LEADER, state.role( databaseId2, coreId3 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId2, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId2, coreId2 ) );
+        assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId2, coreId3 ) );
 
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, readReplicaId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, readReplicaId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, readReplicaId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, readReplicaId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, readReplicaId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, readReplicaId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, readReplicaId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, readReplicaId2 ) );
     }
 
     @Test
@@ -168,9 +171,9 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId3 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, coreId3 ) );
     }
 
     @Test
@@ -180,8 +183,8 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId3 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, coreId3 ) );
     }
 
     @Test
@@ -198,13 +201,13 @@ class GlobalTopologyStateTest
 
         state.onDbLeaderUpdate( Map.of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 42 ) ) );
 
-        assertEquals( RoleInfo.LEADER, state.role( databaseId1, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId1, coreId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId3 ) );
+        assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId1, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId1, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId1, coreId3 ) );
 
-        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId2, coreId2 ) );
-        assertEquals( RoleInfo.LEADER, state.role( databaseId2, coreId3 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( namedDatabaseId2, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( namedDatabaseId2, coreId2 ) );
+        assertEquals( RoleInfo.LEADER, state.role( namedDatabaseId2, coreId3 ) );
     }
 
     @Test
@@ -242,7 +245,7 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( coreTopology, state.coreTopologyForDatabase( databaseId1 ) );
+        assertEquals( coreTopology, state.coreTopologyForDatabase( namedDatabaseId1 ) );
     }
 
     @Test
@@ -252,7 +255,7 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( DatabaseCoreTopology.empty( databaseId2 ), state.coreTopologyForDatabase( databaseId2 ) );
+        assertEquals( DatabaseCoreTopology.empty( databaseId2 ), state.coreTopologyForDatabase( namedDatabaseId2 ) );
     }
 
     @Test
@@ -262,7 +265,7 @@ class GlobalTopologyStateTest
         var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
-        assertEquals( readReplicaTopology, state.readReplicaTopologyForDatabase( databaseId1 ) );
+        assertEquals( readReplicaTopology, state.readReplicaTopologyForDatabase( namedDatabaseId1 ) );
     }
 
     @Test
@@ -272,7 +275,7 @@ class GlobalTopologyStateTest
         var readReplicaTopology = new DatabaseReadReplicaTopology( databaseId1, readReplicas );
         state.onTopologyUpdate( readReplicaTopology );
 
-        assertEquals( DatabaseReadReplicaTopology.empty( databaseId2 ), state.readReplicaTopologyForDatabase( databaseId2 ) );
+        assertEquals( DatabaseReadReplicaTopology.empty( databaseId2 ), state.readReplicaTopologyForDatabase( namedDatabaseId2 ) );
     }
 
     @Test
@@ -327,8 +330,8 @@ class GlobalTopologyStateTest
         verify( listener ).accept( coreTopology2 );
 
         // seconds core topology is not stored because it does not contain any members
-        var emptyTopology1 = state.coreTopologyForDatabase( databaseId1 );
-        var emptyTopology2 = state.coreTopologyForDatabase( databaseId1 );
+        var emptyTopology1 = state.coreTopologyForDatabase( namedDatabaseId1 );
+        var emptyTopology2 = state.coreTopologyForDatabase( namedDatabaseId1 );
 
         assertEquals( emptyTopology1, emptyTopology2 );
         assertNotSame( emptyTopology1, emptyTopology2 );
@@ -348,8 +351,8 @@ class GlobalTopologyStateTest
         state.onTopologyUpdate( readReplicaTopology2 );
 
         // seconds read replica topology is not stored because it does not contain any members
-        var emptyTopology1 = state.readReplicaTopologyForDatabase( databaseId1 );
-        var emptyTopology2 = state.readReplicaTopologyForDatabase( databaseId1 );
+        var emptyTopology1 = state.readReplicaTopologyForDatabase( namedDatabaseId1 );
+        var emptyTopology2 = state.readReplicaTopologyForDatabase( namedDatabaseId1 );
 
         assertEquals( emptyTopology1, emptyTopology2 );
         assertNotSame( emptyTopology1, emptyTopology2 );

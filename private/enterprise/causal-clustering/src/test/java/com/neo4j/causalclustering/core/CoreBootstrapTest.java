@@ -16,7 +16,7 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,7 +35,7 @@ class CoreBootstrapTest
     {
         // given
         var databaseStartAborter = mock( DatabaseStartAborter.class );
-        when( databaseStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+        when( databaseStartAborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
 
         var databaseId = databaseIdRepository.getRaw( "products" );
 
@@ -57,7 +57,7 @@ class CoreBootstrapTest
     {
         // given
         var databaseStartAborter = mock( DatabaseStartAborter.class );
-        when( databaseStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+        when( databaseStartAborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
 
         var databaseId = databaseIdRepository.getRaw( "products" );
         var raftBinder = mock( RaftBinder.class );
@@ -70,10 +70,10 @@ class CoreBootstrapTest
         verify( databaseStartAborter ).started( databaseId );
     }
 
-    private static CoreBootstrap createBootstrap( DatabaseId databaseId, DatabaseStartAborter databaseStartAborter, RaftBinder raftBinder )
+    private static CoreBootstrap createBootstrap( NamedDatabaseId namedDatabaseId, DatabaseStartAborter databaseStartAborter, RaftBinder raftBinder )
     {
         var database = mock( Database.class );
-        when( database.getDatabaseId() ).thenReturn( databaseId );
+        when( database.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
 
         var messageHandler = mock( LifecycleMessageHandler.class );
         var snapshotService = mock( CoreSnapshotService.class );

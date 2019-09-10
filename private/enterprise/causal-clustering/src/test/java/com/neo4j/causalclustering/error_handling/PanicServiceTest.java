@@ -15,7 +15,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -45,8 +45,8 @@ class PanicServiceTest
 
     private final PanicService panicService = new PanicService( jobScheduler, logService );
 
-    private final DatabaseId databaseId1 = randomDatabaseId();
-    private final DatabaseId databaseId2 = randomDatabaseId();
+    private final NamedDatabaseId namedDatabaseId1 = randomNamedDatabaseId();
+    private final NamedDatabaseId namedDatabaseId2 = randomNamedDatabaseId();
 
     @AfterEach
     void afterEach() throws Exception
@@ -61,10 +61,10 @@ class PanicServiceTest
         var lockedEventHandler1 = new LockedEventHandler();
         var lockedEventHandler2 = new LockedEventHandler();
 
-        panicService.addPanicEventHandlers( databaseId1, List.of( lockedEventHandler1 ) );
-        panicService.addPanicEventHandlers( databaseId2, List.of( lockedEventHandler2 ) );
+        panicService.addPanicEventHandlers( namedDatabaseId1, List.of( lockedEventHandler1 ) );
+        panicService.addPanicEventHandlers( namedDatabaseId2, List.of( lockedEventHandler2 ) );
 
-        var panicker1 = panicService.panickerFor( databaseId1 );
+        var panicker1 = panicService.panickerFor( namedDatabaseId1 );
 
         panicker1.panic( new Exception() );
         panicker1.panic( new IOException() );
@@ -83,14 +83,14 @@ class PanicServiceTest
     void shouldLogPanicInformation() throws Exception
     {
         var error = new Exception();
-        var panicker = panicService.panickerFor( databaseId2 );
+        var panicker = panicService.panickerFor( namedDatabaseId2 );
 
         panicker.panic( error );
 
         panicExecutor.awaitBackgroundTaskCompletion();
         assertableLogProvider.assertExactly( inLog( panicService.getClass() )
                 .error(
-                        equalTo( format( "Clustering components for database '%s' have encountered a critical error", databaseId2.name() ) ),
+                        equalTo( format( "Clustering components for database '%s' have encountered a critical error", namedDatabaseId2.name() ) ),
                         equalTo( error ) ) );
     }
 
@@ -107,9 +107,9 @@ class PanicServiceTest
                 new FailingReportingEventHandler( numberOfInvokedHandlers ),
                 new ReportingEventHandler( numberOfInvokedHandlers ) );
 
-        panicService.addPanicEventHandlers( databaseId1, handlers );
+        panicService.addPanicEventHandlers( namedDatabaseId1, handlers );
 
-        var panicker = panicService.panickerFor( databaseId1 );
+        var panicker = panicService.panickerFor( namedDatabaseId1 );
         panicker.panic( new Exception() );
 
         assertEventually( numberOfInvokedHandlers::get, equalTo( handlers.size() ), 30, SECONDS );
@@ -122,9 +122,9 @@ class PanicServiceTest
 
         var handlers = List.<DatabasePanicEventHandler>of( cause -> handlerIds.add( 1 ), cause -> handlerIds.add( 2 ), cause -> handlerIds.add( 3 ) );
 
-        panicService.addPanicEventHandlers( databaseId2, handlers );
+        panicService.addPanicEventHandlers( namedDatabaseId2, handlers );
 
-        var panicker = panicService.panickerFor( databaseId2 );
+        var panicker = panicService.panickerFor( namedDatabaseId2 );
         panicker.panic( new Exception() );
 
         panicExecutor.awaitBackgroundTaskCompletion();

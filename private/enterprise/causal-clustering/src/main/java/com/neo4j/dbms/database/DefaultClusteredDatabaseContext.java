@@ -17,7 +17,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
@@ -37,7 +37,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final Log log;
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private final LogFiles txLogs;
     private final Database database;
     private final GraphDatabaseFacade facade;
@@ -56,7 +56,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
         this.databaseLayout = database.getDatabaseLayout();
         this.storeFiles = storeFiles;
         this.txLogs = txLogs;
-        this.databaseId = database.getDatabaseId();
+        this.namedDatabaseId = database.getNamedDatabaseId();
         this.log = logProvider.getLog( getClass() );
         this.clusterDatabase = clusterDatabase;
         this.clusterDatabaseMonitors = clusterDatabaseMonitors;
@@ -176,9 +176,9 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
      * @return the name of this database
      */
     @Override
-    public DatabaseId databaseId()
+    public NamedDatabaseId databaseId()
     {
-        return databaseId;
+        return namedDatabaseId;
     }
 
     @Override

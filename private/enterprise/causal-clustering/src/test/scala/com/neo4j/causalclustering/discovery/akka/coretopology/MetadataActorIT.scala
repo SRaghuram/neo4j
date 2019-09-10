@@ -17,8 +17,8 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdenti
 import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
-import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
-import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.neo4j.kernel.database.{DatabaseId, NamedDatabaseId, TestDatabaseIdRepository}
 
 import scala.collection.JavaConverters._
 
@@ -28,7 +28,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     behave like replicatedDataActor(new Fixture())
 
     "update data on pre start" in new Fixture {
-      expectUpdateWithDatabases(databaseIds)
+      expectUpdateWithDatabases(namedDatabaseIds)
     }
 
     "send metadata to core topology actor on update" in new Fixture {
@@ -73,40 +73,40 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
 
     "update data on database start" in new Fixture {
       Given("database IDs to start")
-      val databaseId1, databaseId2 = randomDatabaseId()
+      val namedDatabaseId1, namedDatabaseId2 = randomNamedDatabaseId()
 
       And("initial update")
       expectReplicatorUpdates(replicator, dataKey)
 
       When("receive both start messages")
-      replicatedDataActorRef ! new DatabaseStartedMessage(databaseId1)
-      replicatedDataActorRef ! new DatabaseStartedMessage(databaseId2)
+      replicatedDataActorRef ! new DatabaseStartedMessage(namedDatabaseId1)
+      replicatedDataActorRef ! new DatabaseStartedMessage(namedDatabaseId2)
 
       Then("update replicator")
-      expectUpdateWithDatabases(databaseIds + databaseId1)
-      expectUpdateWithDatabases(databaseIds + databaseId1 + databaseId2)
+      expectUpdateWithDatabases(namedDatabaseIds + namedDatabaseId1)
+      expectUpdateWithDatabases(namedDatabaseIds + namedDatabaseId1 + namedDatabaseId2)
     }
 
     "update data on database stop" in new Fixture {
       Given("database IDs to start and stop")
-      val databaseId1, databaseId2 = randomDatabaseId()
+      val namedDatabaseId1, namedDatabaseId2 = randomNamedDatabaseId()
 
       And("initial update")
       expectReplicatorUpdates(replicator, dataKey)
 
       And("both databases started")
-      replicatedDataActorRef ! new DatabaseStartedMessage(databaseId1)
-      replicatedDataActorRef ! new DatabaseStartedMessage(databaseId2)
-      expectUpdateWithDatabases(databaseIds + databaseId1)
-      expectUpdateWithDatabases(databaseIds + databaseId1 + databaseId2)
+      replicatedDataActorRef ! new DatabaseStartedMessage(namedDatabaseId1)
+      replicatedDataActorRef ! new DatabaseStartedMessage(namedDatabaseId2)
+      expectUpdateWithDatabases(namedDatabaseIds + namedDatabaseId1)
+      expectUpdateWithDatabases(namedDatabaseIds + namedDatabaseId1 + namedDatabaseId2)
 
       When("receive both stop messages")
-      replicatedDataActorRef ! new DatabaseStoppedMessage(databaseId2)
-      replicatedDataActorRef ! new DatabaseStoppedMessage(databaseId1)
+      replicatedDataActorRef ! new DatabaseStoppedMessage(namedDatabaseId2)
+      replicatedDataActorRef ! new DatabaseStoppedMessage(namedDatabaseId1)
 
       Then("update replicator")
-      expectUpdateWithDatabases(databaseIds + databaseId1)
-      expectUpdateWithDatabases(databaseIds)
+      expectUpdateWithDatabases(namedDatabaseIds + namedDatabaseId1)
+      expectUpdateWithDatabases(namedDatabaseIds)
     }
   }
 
@@ -117,10 +117,10 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val data = LWWMap.empty[UniqueAddress, CoreServerInfoForMemberId]
 
     val databaseIdRepository = new TestDatabaseIdRepository()
-    val databaseIds = Set(databaseIdRepository.getRaw("system"), databaseIdRepository.getRaw("not_system"))
-    var discoveryMember = new TestDiscoveryMember(myself, databaseIds.asJava)
+    val namedDatabaseIds = Set("system", "not_system").map(databaseIdRepository.getRaw)
+    var discoveryMember = new TestDiscoveryMember(myself, namedDatabaseIds.asJava)
 
-    val coreServerInfo = TestTopology.addressesForCore(0, false, databaseIds.asJava)
+    val coreServerInfo = TestTopology.addressesForCore(0, false, (Set.empty[DatabaseId] ++ namedDatabaseIds.map(_.databaseId())).asJava)
 
     val config = {
       val conf = Config.newBuilder().fromConfig(TestTopology.configFor(coreServerInfo)).build();
@@ -130,13 +130,13 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     val replicatedDataActorRef = system.actorOf(MetadataActor.props(
       discoveryMember, cluster, replicator.ref, coreTopologyProbe.ref, config, monitor))
 
-    def expectUpdateWithDatabases(databaseIds: Set[DatabaseId]): Unit = {
+    def expectUpdateWithDatabases(namedDatabaseIds: Set[NamedDatabaseId]): Unit = {
       val update = expectReplicatorUpdates(replicator, dataKey)
       val data = update.modify.apply(Some(LWWMap.create()))
       val infoForMemberId = data.entries(cluster.selfUniqueAddress)
       infoForMemberId.memberId() should equal(discoveryMember.id())
       val serverInfo = infoForMemberId.coreServerInfo()
-      serverInfo.startedDatabaseIds should contain theSameElementsAs databaseIds
+      serverInfo.startedDatabaseIds should contain theSameElementsAs namedDatabaseIds.map(_.databaseId())
     }
   }
 }

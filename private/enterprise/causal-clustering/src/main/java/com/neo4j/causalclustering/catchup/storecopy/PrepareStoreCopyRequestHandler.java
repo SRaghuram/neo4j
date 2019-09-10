@@ -93,7 +93,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     {
         if ( !db.getDatabaseAvailabilityGuard().isAvailable() )
         {
-            log.warn( "Unable to prepare for store copy because database '" + db.getDatabaseId().name() + "' is unavailable" );
+            log.warn( "Unable to prepare for store copy because database '" + db.getNamedDatabaseId().name() + "' is unavailable" );
             return false;
         }
         return true;

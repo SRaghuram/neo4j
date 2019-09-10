@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
+import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -26,7 +28,8 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.MapValueBuilder;
@@ -48,8 +51,9 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     public static final String PROCEDURE_NAME = "overview";
 
     private final TopologyService topologyService;
+    private final DatabaseIdRepository databaseIdRepository;
 
-    public ClusterOverviewProcedure( TopologyService topologyService )
+    public ClusterOverviewProcedure( TopologyService topologyService, DatabaseIdRepository databaseIdRepository )
     {
         super( procedureSignature( new QualifiedName( PROCEDURE_NAMESPACE, PROCEDURE_NAME ) )
                 .out( "id", Neo4jTypes.NTString )
@@ -60,6 +64,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
                 .systemProcedure()
                 .build() );
         this.topologyService = topologyService;
+        this.databaseIdRepository = databaseIdRepository;
     }
 
     @Override
@@ -88,20 +93,22 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 
     private ResultRow buildResultRowForCore( MemberId memberId, CoreServerInfo coreInfo )
     {
-        var databases = coreInfo.startedDatabaseIds()
-                .stream()
-                .collect( toMap( identity(), databaseId -> topologyService.lookupRole( databaseId, memberId ) ) );
-
-        return new ResultRow( memberId.getUuid(), coreInfo.connectors(), databases, coreInfo.groups() );
+        return buildResultRow( memberId, coreInfo, databaseId -> topologyService.lookupRole( databaseId, memberId ) );
     }
 
-    private static ResultRow buildResultRowForReadReplica( MemberId memberId, ReadReplicaInfo readReplicaInfo )
+    private ResultRow buildResultRowForReadReplica( MemberId memberId, ReadReplicaInfo readReplicaInfo )
     {
-        var databases = readReplicaInfo.startedDatabaseIds()
-                .stream()
-                .collect( toMap( identity(), ignore -> RoleInfo.READ_REPLICA ) );
+        return buildResultRow( memberId, readReplicaInfo, ignore -> RoleInfo.READ_REPLICA );
+    }
 
-        return new ResultRow( memberId.getUuid(), readReplicaInfo.connectors(), databases, readReplicaInfo.groups() );
+    private ResultRow buildResultRow( MemberId memberId, DiscoveryServerInfo serverInfo, Function<NamedDatabaseId,RoleInfo> result )
+    {
+        var databases = serverInfo.startedDatabaseIds()
+                .stream()
+                .flatMap( databaseId -> databaseIdRepository.getById( databaseId ).stream() )
+                .collect( toMap( identity(), result ) );
+
+        return new ResultRow( memberId.getUuid(), serverInfo.connectors(), databases, serverInfo.groups() );
     }
 
     private static AnyValue[] formatResultRow( ResultRow row )
@@ -151,10 +158,10 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     {
         final UUID memberId;
         final ClientConnectorAddresses addresses;
-        final Map<DatabaseId,RoleInfo> databases;
+        final Map<NamedDatabaseId,RoleInfo> databases;
         final Set<String> groups;
 
-        ResultRow( UUID memberId, ClientConnectorAddresses addresses, Map<DatabaseId,RoleInfo> databases, Set<String> groups )
+        ResultRow( UUID memberId, ClientConnectorAddresses addresses, Map<NamedDatabaseId,RoleInfo> databases, Set<String> groups )
         {
             this.memberId = memberId;
             this.addresses = addresses;

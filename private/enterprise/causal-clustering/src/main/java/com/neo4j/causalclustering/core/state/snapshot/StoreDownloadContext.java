@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.StoreId;
@@ -37,9 +37,9 @@ public class StoreDownloadContext
         this.internalOperator = internalOperator;
     }
 
-    DatabaseId databaseId()
+    NamedDatabaseId databaseId()
     {
-        return database.getDatabaseId();
+        return database.getNamedDatabaseId();
     }
 
     DatabaseLayout databaseLayout()
@@ -81,7 +81,7 @@ public class StoreDownloadContext
 
     ClusterInternalDbmsOperator.StoreCopyHandle stopForStoreCopy()
     {
-        return internalOperator.stopForStoreCopy( database.getDatabaseId() );
+        return internalOperator.stopForStoreCopy( database.getNamedDatabaseId() );
     }
 
     public Database database()

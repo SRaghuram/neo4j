@@ -19,20 +19,19 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
-import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TransitionsTest
 {
@@ -281,7 +280,7 @@ class TransitionsTest
     private class StubTransitionFunction implements TransitionFunction
     {
         private String name;
-        private List<DatabaseId> forTransitionCalls;
+        private List<NamedDatabaseId> forTransitionCalls;
 
         StubTransitionFunction( String name )
         {
@@ -290,43 +289,43 @@ class TransitionsTest
         }
 
         @Override
-        public EnterpriseDatabaseState forTransition( DatabaseId databaseId )
+        public EnterpriseDatabaseState forTransition( NamedDatabaseId namedDatabaseId )
         {
-            forTransitionCalls.add( databaseId );
+            forTransitionCalls.add( namedDatabaseId );
             return null;
         }
 
         @Override
-        public Transition prepare( DatabaseId databaseId )
+        public Transition prepare( NamedDatabaseId namedDatabaseId )
         {
-            return new StubTransition( name, databaseId, this );
+            return new StubTransition( name, namedDatabaseId, this );
         }
 
-        private void assertCalled( DatabaseId calledFor, long expectedTimes )
+        private void assertCalled( NamedDatabaseId calledFor, long expectedTimes )
         {
-            Map<DatabaseId,Long> counts = forTransitionCalls.stream().collect( Collectors.groupingBy( Function.identity(), Collectors.counting() ) );
+            Map<NamedDatabaseId,Long> counts = forTransitionCalls.stream().collect( Collectors.groupingBy( Function.identity(), Collectors.counting() ) );
             assertEquals( expectedTimes, counts.getOrDefault( calledFor, 0L ), format( "TransitionFunction#forTransition was not called the " +
                     "expected number of times for the databaseId %s", calledFor ) );
         }
     }
 
-    private class StubTransition implements Transition
+    private static class StubTransition implements Transition
     {
         private String name;
-        private DatabaseId databaseId;
+        private NamedDatabaseId namedDatabaseId;
         private TransitionFunction function;
 
-        StubTransition( String name, DatabaseId databaseId, TransitionFunction function )
+        StubTransition( String name, NamedDatabaseId namedDatabaseId, TransitionFunction function )
         {
             this.name = name;
-            this.databaseId = databaseId;
+            this.namedDatabaseId = namedDatabaseId;
             this.function = function;
         }
 
         @Override
         public EnterpriseDatabaseState doTransition()
         {
-            return function.forTransition( databaseId );
+            return function.forTransition( namedDatabaseId );
         }
 
         @Override
@@ -341,13 +340,13 @@ class TransitionsTest
                 return false;
             }
             StubTransition that = (StubTransition) o;
-            return Objects.equals( name, that.name ) && Objects.equals( databaseId, that.databaseId );
+            return Objects.equals( name, that.name ) && Objects.equals( namedDatabaseId, that.namedDatabaseId );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( name, databaseId );
+            return Objects.hash( name, namedDatabaseId );
         }
     }
 }

@@ -47,7 +47,7 @@ class GetStoreFileRequestHandlerTest
 {
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 1, 1, 1, 1, 1 );
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4, 5 );
-    private static final DatabaseId DEFAULT_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
+    private static final DatabaseId DEFAULT_DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase().databaseId();
     private final DefaultFileSystemAbstraction fileSystemAbstraction = new DefaultFileSystemAbstraction();
 
     private final Database database = mock( Database.class );

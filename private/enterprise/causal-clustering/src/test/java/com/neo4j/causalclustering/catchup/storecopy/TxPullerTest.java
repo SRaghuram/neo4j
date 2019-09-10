@@ -23,7 +23,7 @@ import java.net.ConnectException;
 import java.time.Clock;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.when;
 
 class TxPullerTest
 {
-    private static final DatabaseId DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final NamedDatabaseId DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     private static final int MAX_FAILED_TX_PULL_REQUESTS = 5;
     private final LogProvider logProvider = NullLogProvider.getInstance();

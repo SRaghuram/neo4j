@@ -20,7 +20,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 {
@@ -72,7 +72,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private void startInitialDatabases()
     {
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
-        systemOperator.trigger( ReconcilerRequest.simple() ).await( SYSTEM_DATABASE_ID );
+        systemOperator.trigger( ReconcilerRequest.simple() ).await( NAMED_SYSTEM_DATABASE_ID );
 
         // Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
@@ -121,7 +121,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 
     private GraphDatabaseAPI getSystemDatabase( MultiDatabaseManager<?> databaseManager )
     {
-        return databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
+        return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
     }
 
     private static DbmsReconciler createReconciler( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager )

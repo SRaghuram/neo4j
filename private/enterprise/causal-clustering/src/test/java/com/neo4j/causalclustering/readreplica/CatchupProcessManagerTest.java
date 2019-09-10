@@ -27,7 +27,7 @@ import java.util.Optional;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.CallingThreadExecutor;
@@ -53,7 +53,7 @@ class CatchupProcessManagerTest
 
     private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId databaseId = databaseIdRepository.getRaw( "db1" );
+    private final NamedDatabaseId namedDatabaseId = databaseIdRepository.getRaw( "db1" );
     private final ReadReplicaDatabaseContext databaseContext = mock( ReadReplicaDatabaseContext.class );
     private final FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
     private final CountingTimerService timerService = new CountingTimerService( scheduler, NullLogProvider.getInstance() );
@@ -64,11 +64,11 @@ class CatchupProcessManagerTest
     void before()
     {
         //Mock the components of CatchupComponentsRepository
-        databaseService.registerDatabase( databaseId, getMockDatabase( databaseId ) );
+        databaseService.registerDatabase( namedDatabaseId, getMockDatabase( namedDatabaseId ) );
         CatchupComponents components = new CatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) );
 
         //Wire these mocked components to the ServerModule mock
-        when( catchupComponents.componentsFor( any( DatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
+        when( catchupComponents.componentsFor( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.of( components ) );
 
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
@@ -76,10 +76,10 @@ class CatchupProcessManagerTest
                 NullLogProvider.getInstance(), pageCursorTracerSupplier, Config.defaults(), mock( ReplicatedDatabaseEventDispatch.class ) ) );
     }
 
-    private ClusteredDatabaseContext getMockDatabase( DatabaseId databaseId )
+    private ClusteredDatabaseContext getMockDatabase( NamedDatabaseId namedDatabaseId )
     {
         return databaseService.givenDatabaseWithConfig()
-                .withDatabaseId( databaseId )
+                .withDatabaseId( namedDatabaseId )
                 .withDependencies( mock( Dependencies.class ) )
                 .register();
     }

@@ -41,7 +41,7 @@ import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
@@ -122,21 +122,21 @@ public class DbmsReconciler implements DatabaseStateService
         this.listeners = new CopyOnWriteArrayList<>();
     }
 
-    private EnterpriseDatabaseState stateFor( DatabaseId id )
+    private EnterpriseDatabaseState stateFor( NamedDatabaseId id )
     {
         return currentStates.getOrDefault( id.name(), EnterpriseDatabaseState.unknown( id ) );
     }
 
     @Override
-    public OperatorState stateOfDatabase( DatabaseId databaseId )
+    public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return currentStates.getOrDefault( databaseId.name(), EnterpriseDatabaseState.unknown( databaseId ) ).operatorState();
+        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).operatorState();
     }
 
     @Override
-    public Optional<Throwable> causeOfFailure( DatabaseId databaseId )
+    public Optional<Throwable> causeOfFailure( NamedDatabaseId namedDatabaseId )
     {
-        return currentStates.getOrDefault( databaseId.name(), EnterpriseDatabaseState.unknown( databaseId ) ).failure();
+        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).failure();
     }
 
     public void registerListener( DatabaseStateChangedListener listener )
@@ -183,9 +183,9 @@ public class DbmsReconciler implements DatabaseStateService
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    protected EnterpriseDatabaseState getReconcilerEntryFor( DatabaseId databaseId )
+    protected EnterpriseDatabaseState getReconcilerEntryFor( NamedDatabaseId namedDatabaseId )
     {
-        return currentStates.getOrDefault( databaseId.name(), EnterpriseDatabaseState.initial( databaseId ) );
+        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.initial( namedDatabaseId ) );
     }
 
     /**
@@ -304,9 +304,9 @@ public class DbmsReconciler implements DatabaseStateService
         var backoff = backoffStrategy.newTimeout();
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
 
-        DatabaseId databaseId = desiredState.databaseId();
+        NamedDatabaseId namedDatabaseId = desiredState.databaseId();
         return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor  )
-                .thenCompose( result -> handleResult( databaseId, desiredState, result, executor, backoff, 0 ) );
+                .thenCompose( result -> handleResult( namedDatabaseId, desiredState, result, executor, backoff, 0 ) );
     }
 
     private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState, Stream<Transition> steps, EnterpriseDatabaseState desiredState )
@@ -341,7 +341,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private CompletableFuture<ReconcilerStepResult> handleResult( DatabaseId databaseId, EnterpriseDatabaseState desiredState,
+    private CompletableFuture<ReconcilerStepResult> handleResult( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState desiredState,
             ReconcilerStepResult result, Executor executor, TimeoutStrategy.Timeout backoff, int retries )
     {
         boolean isFatalError = result.error() != null && isFatalError( result.error() );
@@ -351,13 +351,13 @@ public class DbmsReconciler implements DatabaseStateService
         }
 
         var attempt = retries + 1;
-        log.warn( "Retrying reconciliation of database %s to state '%s'. This is attempt %d.", databaseId.name(),
+        log.warn( "Retrying reconciliation of database %s to state '%s'. This is attempt %d.", namedDatabaseId.name(),
                 desiredState.operatorState().description(), attempt );
 
         var remainingSteps = getLifecycleTransitionSteps( result.state(), desiredState );
         return CompletableFuture.supplyAsync( () -> doTransitions( result.state(), remainingSteps, desiredState ),
                 delayedExecutor( backoff.getAndIncrement(), TimeUnit.MILLISECONDS, executor ) )
-                .thenCompose( retryResult -> handleResult( databaseId, desiredState, retryResult, executor, backoff, attempt ) );
+                .thenCompose( retryResult -> handleResult( namedDatabaseId, desiredState, retryResult, executor, backoff, attempt ) );
     }
 
     private void postReconcile( String databaseName, ReconcilerRequest request, ReconcilerStepResult result, Throwable throwable )
@@ -429,15 +429,15 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private void reportErrorAndPanicDatabase( DatabaseId databaseId, String message, Throwable error )
+    private void reportErrorAndPanicDatabase( NamedDatabaseId namedDatabaseId, String message, Throwable error )
     {
         log.error( message, error );
         var panicCause = new IllegalStateException( message, error );
-        panicDatabase( databaseId, panicCause );
+        panicDatabase( namedDatabaseId, panicCause );
     }
 
-    private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( DatabaseId databaseId, EnterpriseDatabaseState currentState,
-            ReconcilerRequest request )
+    private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
+            EnterpriseDatabaseState currentState, ReconcilerRequest request )
     {
         if ( request.forceReconciliation() )
         {
@@ -449,7 +449,7 @@ public class DbmsReconciler implements DatabaseStateService
             // preserve the current failed state because we didn't force reconciliation
             return currentState.failure();
         }
-        return request.causeOfPanic( databaseId );
+        return request.causeOfPanic( namedDatabaseId );
     }
 
     private void releaseLockOn( String databaseName )
@@ -504,43 +504,43 @@ public class DbmsReconciler implements DatabaseStateService
         return transitions.fromCurrent( currentState ).toDesired( desiredState );
     }
 
-    protected void panicDatabase( DatabaseId databaseId, Throwable error )
+    protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
     {
-        databaseManager.getDatabaseContext( databaseId )
+        databaseManager.getDatabaseContext( namedDatabaseId )
                 .map( ctx -> ctx.database().getDatabaseHealth() )
                 .ifPresent( health -> health.panic( error ) );
     }
 
     /* Operator Steps */
-    protected final EnterpriseDatabaseState stop( DatabaseId databaseId )
+    protected final EnterpriseDatabaseState stop( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.stopDatabase( databaseId );
-        return new EnterpriseDatabaseState( databaseId, STOPPED );
+        databaseManager.stopDatabase( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, STOPPED );
     }
 
-    private EnterpriseDatabaseState prepareDrop( DatabaseId databaseId )
+    private EnterpriseDatabaseState prepareDrop( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.getDatabaseContext( databaseId )
+        databaseManager.getDatabaseContext( namedDatabaseId )
                 .map( DatabaseContext::database )
                 .ifPresent( Database::prepareToDrop );
-        return new EnterpriseDatabaseState( databaseId, STARTED );
+        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
     }
 
-    protected final EnterpriseDatabaseState drop( DatabaseId databaseId )
+    protected final EnterpriseDatabaseState drop( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.dropDatabase( databaseId );
-        return new EnterpriseDatabaseState( databaseId, DROPPED );
+        databaseManager.dropDatabase( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, DROPPED );
     }
 
-    protected final EnterpriseDatabaseState start( DatabaseId databaseId )
+    protected final EnterpriseDatabaseState start( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.startDatabase( databaseId );
-        return new EnterpriseDatabaseState( databaseId, STARTED );
+        databaseManager.startDatabase( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
     }
 
-    protected final EnterpriseDatabaseState create( DatabaseId databaseId )
+    protected final EnterpriseDatabaseState create( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.createDatabase( databaseId );
-        return new EnterpriseDatabaseState( databaseId, STOPPED );
+        databaseManager.createDatabase( namedDatabaseId );
+        return new EnterpriseDatabaseState( namedDatabaseId, STOPPED );
     }
 }

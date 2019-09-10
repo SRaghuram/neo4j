@@ -5,16 +5,14 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
-import java.io.IOException;
-
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSetSerializer;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
-import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -22,6 +20,8 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMa
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
+
+import java.io.IOException;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -112,7 +112,8 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
         }
     }
 
-    public static ContentBuilder<ReplicatedContent> unmarshal( byte contentType, ReadableChannel channel ) throws IOException, EndOfStreamException
+    public static ContentBuilder<ReplicatedContent> unmarshal( byte contentType, ReadableChannel channel )
+            throws IOException, EndOfStreamException
     {
         switch ( contentType )
         {

@@ -64,7 +64,7 @@ public class CommandApplicationProcessTest
     private final int flushEvery = 10;
     private final int batchSize = 16;
 
-    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
     private InFlightCache inFlightCache = spy( new ConsecutiveInFlightCache() );
     private final Monitors monitors = new Monitors();

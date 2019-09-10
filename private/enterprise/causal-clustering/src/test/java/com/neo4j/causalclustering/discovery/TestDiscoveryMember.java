@@ -10,14 +10,16 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 public class TestDiscoveryMember implements DiscoveryMember
 {
     private final MemberId id;
-    private final Set<DatabaseId> startedDatabases;
+    private final Set<NamedDatabaseId> startedDatabases;
 
     public TestDiscoveryMember()
     {
@@ -29,7 +31,7 @@ public class TestDiscoveryMember implements DiscoveryMember
         this( memberId, Set.of( new TestDatabaseIdRepository().defaultDatabase() ) );
     }
 
-    public TestDiscoveryMember( MemberId id, Set<DatabaseId> startedDatabases )
+    public TestDiscoveryMember( MemberId id, Set<NamedDatabaseId> startedDatabases )
     {
         this.id = id;
         this.startedDatabases = startedDatabases;
@@ -44,6 +46,6 @@ public class TestDiscoveryMember implements DiscoveryMember
     @Override
     public Set<DatabaseId> startedDatabases()
     {
-        return startedDatabases;
+        return startedDatabases.stream().map( NamedDatabaseId::databaseId ).collect( Collectors.toSet() );
     }
 }

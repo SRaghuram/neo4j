@@ -16,7 +16,6 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import java.util.Optional;
 
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobHandle;
 
 class CoreBootstrap
@@ -44,7 +43,7 @@ class CoreBootstrap
 
     public void perform() throws Exception
     {
-        var signal = clusterInternalOperator.bootstrap( kernelDatabase.getDatabaseId() );
+        var signal = clusterInternalOperator.bootstrap( kernelDatabase.getNamedDatabaseId() );
         try
         {
             BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
@@ -67,7 +66,7 @@ class CoreBootstrap
         }
         finally
         {
-            databaseStartAborter.started( kernelDatabase.getDatabaseId() );
+            databaseStartAborter.started( kernelDatabase.getNamedDatabaseId() );
             signal.bootstrapped();
         }
     }

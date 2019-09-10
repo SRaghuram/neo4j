@@ -56,7 +56,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
@@ -451,7 +451,7 @@ public class Cluster
         return numberOfMembersReportedByCoreTopology( databaseName, CoreTopologyService::readReplicaTopologyForDatabase );
     }
 
-    private int numberOfMembersReportedByCoreTopology( String databaseName, BiFunction<CoreTopologyService,DatabaseId,Topology<?>> topologySelector )
+    private int numberOfMembersReportedByCoreTopology( String databaseName, BiFunction<CoreTopologyService,NamedDatabaseId,Topology<?>> topologySelector )
     {
         return coreMembers
                 .values()

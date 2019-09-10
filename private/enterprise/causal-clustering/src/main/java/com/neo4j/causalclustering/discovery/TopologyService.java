@@ -6,14 +6,14 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.DatabaseStateChangedListener;
 
 import java.util.Map;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.dbms.DatabaseState;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 /**
@@ -21,9 +21,9 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
  */
 public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 {
-    void onDatabaseStart( DatabaseId databaseId );
+    void onDatabaseStart( NamedDatabaseId namedDatabaseId );
 
-    void onDatabaseStop( DatabaseId databaseId );
+    void onDatabaseStop( NamedDatabaseId namedDatabaseId );
 
     MemberId memberId();
 
@@ -31,17 +31,17 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 
     Map<MemberId,ReadReplicaInfo> allReadReplicas();
 
-    DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId );
+    DatabaseCoreTopology coreTopologyForDatabase( NamedDatabaseId namedDatabaseId );
 
-    DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
+    DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId );
 
     SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
-    RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId );
+    RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId );
 
-    DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId );
+    DiscoveryDatabaseState lookupDatabaseState( NamedDatabaseId namedDatabaseId, MemberId memberId );
 
-    Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId );
+    Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId );
 
-    Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId );
+    Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId );
 }

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -23,8 +23,8 @@ import static org.mockito.Mockito.when;
 class CoreTopologyListenerServiceTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
-    private final DatabaseId id1 = databaseIdRepository.getRaw( "database_one" );
-    private final DatabaseId id2 = databaseIdRepository.getRaw( "database_two" );
+    private final NamedDatabaseId id1 = databaseIdRepository.getRaw( "database_one" );
+    private final NamedDatabaseId id2 = databaseIdRepository.getRaw( "database_two" );
 
     private final CoreTopologyListenerService listenerService = new CoreTopologyListenerService();
 
@@ -39,8 +39,8 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.addCoreTopologyListener( listener3 );
 
-        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1, RaftId.from( id1 ), Map.of() );
-        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2, RaftId.from( id2 ), Map.of() );
+        DatabaseCoreTopology coreTopology1 = new DatabaseCoreTopology( id1.databaseId(), RaftId.from( id1.databaseId() ), Map.of() );
+        DatabaseCoreTopology coreTopology2 = new DatabaseCoreTopology( id2.databaseId(), RaftId.from( id2.databaseId() ), Map.of() );
 
         listenerService.notifyListeners( coreTopology1 );
         listenerService.notifyListeners( coreTopology2 );
@@ -64,7 +64,7 @@ class CoreTopologyListenerServiceTest
         listenerService.addCoreTopologyListener( listener2 );
         listenerService.removeCoreTopologyListener( listener1 );
 
-        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1, RaftId.from( id1 ), Map.of() );
+        DatabaseCoreTopology coreTopology = new DatabaseCoreTopology( id1.databaseId(), RaftId.from( id1.databaseId() ), Map.of() );
 
         listenerService.notifyListeners( coreTopology );
 
@@ -72,10 +72,10 @@ class CoreTopologyListenerServiceTest
         verify( listener2 ).onCoreTopologyChange( coreTopology );
     }
 
-    private static Listener newListenerMock( DatabaseId databaseId )
+    private static Listener newListenerMock( NamedDatabaseId namedDatabaseId )
     {
         Listener listener = mock( Listener.class );
-        when( listener.databaseId() ).thenReturn( databaseId );
+        when( listener.namedDatabaseId() ).thenReturn( namedDatabaseId );
         return listener;
     }
 }

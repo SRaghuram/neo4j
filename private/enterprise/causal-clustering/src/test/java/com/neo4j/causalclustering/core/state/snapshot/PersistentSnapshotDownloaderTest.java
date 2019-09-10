@@ -26,7 +26,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.logging.Log;
@@ -59,7 +59,7 @@ class PersistentSnapshotDownloaderTest
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
     private StoreCopyHandle storeCopyHandle;
 
-    private DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     private ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
     private SimpleTransactionIdStore txIdStore = new SimpleTransactionIdStore();
@@ -73,12 +73,12 @@ class PersistentSnapshotDownloaderTest
     @BeforeEach
     void setUp()
     {
-        when( downloadContext.databaseId() ).thenReturn( databaseId );
+        when( downloadContext.databaseId() ).thenReturn( namedDatabaseId );
 
         storeCopyHandle = mock( StoreCopyHandle.class );
         when( downloadContext.stopForStoreCopy() ).thenReturn( storeCopyHandle );
 
-        when( databaseEventService.getDatabaseEventDispatch( databaseId ) ).thenReturn( databaseEventDispatch );
+        when( databaseEventService.getDatabaseEventDispatch( namedDatabaseId ) ).thenReturn( databaseEventDispatch );
 
         Database database = mock( Database.class );
         when( downloadContext.database() ).thenReturn( database );

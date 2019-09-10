@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 
 class GetDatabaseIdRequestHandlerTest
 {
@@ -50,14 +50,14 @@ class GetDatabaseIdRequestHandlerTest
     void shouldWriteDatabaseIdForKnownDatabaseName()
     {
         var databaseName = "foo";
-        var databaseId = randomDatabaseId();
+        var namedDatabaseId = randomNamedDatabaseId();
         var request = new GetDatabaseIdRequest( databaseName );
-        when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.of( databaseId ) );
+        when( databaseIdRepository.getByName( databaseName ) ).thenReturn( Optional.of( namedDatabaseId ) );
 
         assertFalse( channel.writeInbound( request ) );
 
         assertEquals( ResponseMessageType.DATABASE_ID_RESPONSE, channel.readOutbound() );
-        assertEquals( databaseId, channel.readOutbound() );
+        assertEquals( namedDatabaseId.databaseId(), channel.readOutbound() );
         assertTrue( protocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
     }
 
