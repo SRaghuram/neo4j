@@ -1280,7 +1280,7 @@ class SystemGraphOnFollowerInClusterIT
             }
             catch ( IllegalStateException e )
             {
-                assertEquals( "Failed to drop the specified database '" + dbName + "': " + followerError, e.getMessage() );
+                assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
         } );
 

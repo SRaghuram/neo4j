@@ -814,7 +814,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
-    } should have message "Failed to drop the specified database 'foo': Database does not exist."
+    } should have message "Failed to delete the specified database 'foo': Database does not exist."
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set.empty)
@@ -824,7 +824,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // WHEN
       execute("DROP DATABASE ``")
       // THEN
-    } should have message "Failed to drop the specified database '': Database does not exist."
+    } should have message "Failed to delete the specified database '': Database does not exist."
 
     // THEN
     execute("SHOW DATABASE ``").toSet should be(Set.empty)
@@ -861,7 +861,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // WHEN
       execute("DROP DATABASE foo")
       // THEN
-    } should have message "Failed to drop the specified database 'foo': Database does not exist."
+    } should have message "Failed to delete the specified database 'foo': Database does not exist."
 
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set.empty)
@@ -890,7 +890,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // WHEN
       execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
-    } should have message "Not allowed to drop system database."
+    } should have message "Not allowed to delete system database."
 
     // THEN
     execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
@@ -900,7 +900,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // WHEN
       execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME IF EXISTS")
       // THEN
-    } should have message "Not allowed to drop system database."
+    } should have message "Not allowed to delete system database."
 
     // THEN
     execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
