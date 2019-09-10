@@ -590,7 +590,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case (key, slot)  =>
        if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
          lhsArgLongSlots += (key -> slot)
-       }  else if (slot.offset < argumentSize.nReferences) {
+       }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
          lhsArgRefSlots += (key -> slot)
        }
     }, onCachedProperty = {
@@ -603,7 +603,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case (key, slot)  =>
         if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
           rhsArgLongSlots += (key -> slot)
-        }  else if (slot.offset < argumentSize.nReferences) {
+        }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key -> slot)
         }
     }, onCachedProperty = {
