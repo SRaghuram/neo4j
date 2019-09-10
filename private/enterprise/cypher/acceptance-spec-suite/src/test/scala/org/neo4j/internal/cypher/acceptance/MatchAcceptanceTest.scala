@@ -31,7 +31,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       case (query: String, res: Seq[Seq[Any]]) =>
         val expected = res.map(v => Map("variable" -> v.head, "n.name" -> v(1), "n.number" -> v(2)))
         val result = executeWith(Configs.InterpretedAndSlotted, query)
-        result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Distinct").onTopOf(aPlan("Union").onTopOf(aPlan("NodeIndexSeekByRange"))))
+        result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aSourcePlan("Distinct").onTopOf(aSourcePlan("Union").onTopOf(aSourcePlan("NodeIndexSeekByRange"))))
         result.toList should equal(expected)
     }
   }
