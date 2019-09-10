@@ -6,22 +6,25 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
 import org.neo4j.logging.NullLogProvider;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
@@ -76,7 +79,7 @@ class ClusterBindingHandlerTest
         ) );
 
         // then
-        verify( delegate, Mockito.never() ).handle( ArgumentMatchers.any( RaftMessages.ReceivedInstantRaftIdAwareMessage.class ) );
+        verify( delegate, Mockito.never() ).handle( any( RaftMessages.ReceivedInstantRaftIdAwareMessage.class ) );
     }
 
     @Test
@@ -153,7 +156,31 @@ class ClusterBindingHandlerTest
         InOrder inOrder = inOrder( messageDispatcher, delegate );
         inOrder.verify( delegate ).start( raftId );
         inOrder.verify( messageDispatcher ).registerHandlerChain( raftId, handler );
-        inOrder.verify( delegate ).stop();
         inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
+        inOrder.verify( delegate ).stop();
+    }
+
+    @Test
+    void shouldStopWhenNotStarted()
+    {
+        var logProvider = NullLogProvider.getInstance();
+        handler = new ClusterBindingHandler( new RaftMessageDispatcher( logProvider, Clock.systemUTC() ), delegate, logProvider );
+
+        assertDoesNotThrow( handler::stop );
+    }
+
+    @Test
+    void shouldStopDelegateIfMessageDispatcherThrows() throws Exception
+    {
+        var error = new RuntimeException();
+        doThrow( error ).when( messageDispatcher ).deregisterHandlerChain( raftId );
+        handler.start( raftId );
+
+        var thrownError = assertThrows( RuntimeException.class, handler::stop );
+
+        assertEquals( error, thrownError );
+        var inOrder = inOrder( messageDispatcher, delegate );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( raftId );
+        inOrder.verify( delegate ).stop();
     }
 }

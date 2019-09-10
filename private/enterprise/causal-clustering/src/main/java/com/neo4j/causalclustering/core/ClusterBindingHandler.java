@@ -50,12 +50,15 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     {
         try
         {
-            delegateHandler.stop();
+            if ( boundRaftId != null )
+            {
+                raftMessageDispatcher.deregisterHandlerChain( boundRaftId );
+                boundRaftId = null;
+            }
         }
         finally
         {
-            raftMessageDispatcher.deregisterHandlerChain( boundRaftId );
-            boundRaftId = null;
+            delegateHandler.stop();
         }
     }
 
