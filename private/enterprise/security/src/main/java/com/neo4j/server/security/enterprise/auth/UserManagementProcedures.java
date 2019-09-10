@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Result;
@@ -103,8 +104,12 @@ public class UserManagementProcedures extends AuthProceduresBase
     @SystemProcedure
     @Description( "Suspend the specified user." )
     @Procedure( name = "dbms.security.suspendUser", mode = DBMS )
-    public void suspendUser( @Name( "username" ) String username ) throws ProcedureException
+    public void suspendUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
+        if ( isSelf( username ) )
+        {
+            throw new InvalidArgumentsException( "Suspending yourself (user '" + username + "') is not allowed." );
+        }
         var query = String.format( "ALTER USER %s SET STATUS SUSPENDED", escapeParameter( username ) );
         runSystemCommand( query, "dbms.security.suspendUser" );
     }
@@ -115,9 +120,14 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.activateUser", mode = DBMS )
     public void activateUser( @Name( "username" ) String username,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws ProcedureException
+            throws ProcedureException, InvalidArgumentsException
     {
-        var query = String.format( "ALTER USER %s SET STATUS ACTIVE", escapeParameter( username ) );
+        if ( isSelf( username ) )
+        {
+            throw new InvalidArgumentsException( "Activating yourself (user '" + username + "') is not allowed." );
+        }
+        var query = String.format( "ALTER USER %s %sSET STATUS ACTIVE", escapeParameter( username ),
+                requirePasswordChange ? "SET PASSWORD CHANGE REQUIRED " : "" );
         runSystemCommand( query, "dbms.security.activateUser" );
     }
 
@@ -170,7 +180,10 @@ public class UserManagementProcedures extends AuthProceduresBase
                 var role = row.getString( "role" );
                 var user = row.getString( "member" );
                 var users = result.computeIfAbsent( role, k -> new HashSet<>() );
-                users.add( user );
+                if ( user != null )
+                {
+                    users.add( user );
+                }
                 return true;
             }
         };
@@ -178,13 +191,18 @@ public class UserManagementProcedures extends AuthProceduresBase
         return result.entrySet().stream().map( e -> new RoleResult( e.getKey(), e.getValue() ) );
     }
 
-    @Admin
     @SystemProcedure
     @Description( "List all roles assigned to the specified user." )
     @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS )
     public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
         var result = new HashSet<StringResult>();
+        var userExists = listUsers().anyMatch( res -> res.username.equals( username ) );
+        if ( !userExists )
+        {
+            throw new InvalidArgumentsException( String.format( "User '%s' does not exist.", username ) );
+        }
+
         var visitor = new ResultVisitor<RuntimeException>()
         {
             @Override
@@ -201,11 +219,6 @@ public class UserManagementProcedures extends AuthProceduresBase
         };
         queryForRoles( visitor, "dbms.security.listRolesForUser" );
 
-        if ( result.isEmpty() )
-        {
-            throw new InvalidArgumentsException( String.format( "User '%s' does not exist.", username ) );
-        }
-
         return result.stream();
     }
 
@@ -215,6 +228,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS )
     public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws ProcedureException, InvalidArgumentsException
     {
+        var roleExists = new AtomicBoolean( false );
         var result = new HashSet<StringResult>();
         var visitor = new ResultVisitor<RuntimeException>()
         {
@@ -225,14 +239,18 @@ public class UserManagementProcedures extends AuthProceduresBase
                 var user = row.getString( "member" );
                 if ( roleName.equals( role ) )
                 {
-                    result.add( new StringResult( user ) );
+                    roleExists.set( true );
+                    if ( user != null )
+                    {
+                        result.add( new StringResult( user ) );
+                    }
                 }
                 return true;
             }
         };
         queryForRoles( visitor, "dbms.security.listUsersForRole" );
 
-        if ( result.isEmpty() )
+        if ( !roleExists.get() )
         {
             throw new InvalidArgumentsException( String.format( "Role '%s' does not exist.", roleName ) );
         }
@@ -258,6 +276,11 @@ public class UserManagementProcedures extends AuthProceduresBase
     {
         var query = String.format( "DROP ROLE %s", escapeParameter( roleName ) );
         runSystemCommand( query, "dbms.security.deleteRole" );
+    }
+
+    private boolean isSelf( String username )
+    {
+        return securityContext.subject().hasUsername( username );
     }
 
     private void queryForRoles( ResultVisitor<RuntimeException> visitor, String procedureName ) throws ProcedureException
