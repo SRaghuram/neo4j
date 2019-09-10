@@ -209,9 +209,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RequireRole(source, roleName) => (context, parameterMapping, securityContext) =>
       UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name})
+          |SET role.ignore = 0 // need to be a write query to trigger error on follower in a cluster
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
-        QueryHandler.handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist."))),
+        QueryHandler
+          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist.")))
+          .handleError {
+            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to create a role as copy of '$roleName': $followerError", error)
+            case error => new IllegalStateException(s"Failed to create a role as copy of '$roleName'.", error) // should not get here but need a default case
+          },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -561,10 +568,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
       UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
+          |SET db.ignore = 0 // need to be a write query to trigger error on follower in a cluster
           |RETURN db.name AS name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
-        QueryHandler.handleNoResult(() =>
-          Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist."))),
+        QueryHandler
+          .handleNoResult(() => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist.")))
+          .handleError {
+            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+              new IllegalStateException(s"Failed to $action the specified database '$dbName': $followerError", error)
+            case error => new IllegalStateException(s"Failed to $action the specified database '$dbName'.", error) // should not get here but need a default case
+          },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 

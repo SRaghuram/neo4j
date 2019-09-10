@@ -61,6 +61,7 @@ class SystemGraphOnFollowerInClusterIT
     private static String followerError = "Administration commands must be executed on the LEADER server.";
     private String userName = "foo";
     private String roleName = "bar";
+    private String roleName2 = "foo";
     private String dbName = "foo";
 
     @BeforeAll
@@ -77,24 +78,23 @@ class SystemGraphOnFollowerInClusterIT
     {
         if ( cluster != null )
         {
-            List<String> queries = Arrays.asList( "DROP DATABASE " + dbName, "DROP ROLE " + roleName, "DROP USER " + userName );
-            for ( String query : queries )
+            leaderTx( ( sys, tx ) ->
+            {
+                tx.execute( "ALTER USER neo4j SET PASSWORD CHANGE REQUIRED" );
+                tx.commit();
+            } );
+            List<String> toBeDropped = Arrays.asList( "DATABASE " + dbName, "ROLE " + roleName, "ROLE " + roleName2, "USER " + userName );
+            for ( String dropMe : toBeDropped )
             {
                 leaderTx( ( sys, tx ) ->
                 {
-                    try
-                    {
-                        tx.execute( query );
-                        tx.commit();
-                    }
-                    catch ( DatabaseNotFoundException | QueryExecutionException e )
-                    {
-                        // expected errors for non-existing database, role or user
-                    }
+                    tx.execute( "DROP " + dropMe + " IF EXISTS" );
+                    tx.commit();
                 } );
             }
             CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
             CausalClusteringTestHelpers.assertRoleDoesNotExist( roleName, cluster );
+            CausalClusteringTestHelpers.assertRoleDoesNotExist( roleName2, cluster );
             CausalClusteringTestHelpers.assertUserDoesNotExist( userName, cluster );
         }
     }
@@ -159,6 +159,176 @@ class SystemGraphOnFollowerInClusterIT
     }
 
     @Test
+    void createUserIfNotExistsNonExisting() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE USER " + userName + " IF NOT EXISTS SET PASSWORD 'f00'" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to create the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( "neo4j", result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE USER " + userName + " IF NOT EXISTS SET PASSWORD 'f00'" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j", userName ), Set.of( result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createUserIfNotExistsWhenExisting() throws Exception
+    {
+        // set-up user
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE USER " + userName + " SET PASSWORD 'f00' CHANGE REQUIRED" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( List.of( true, true ), List.of( result.next(), result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE USER " + userName + " IF NOT EXISTS SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to create the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( List.of( true, true ), List.of( result.next(), result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            // gives no error, does nothing
+            tx.execute( "CREATE USER " + userName + " IF NOT EXISTS SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( List.of( true, true ), List.of( result.next(), result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createOrReplaceUserNonExisting() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE OR REPLACE USER " + userName + " SET PASSWORD 'f00'" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                // First fail on trying to delete the old user
+                assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( "neo4j", result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE OR REPLACE USER " + userName + " SET PASSWORD 'f00'" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j", userName ), Set.of( result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createOrReplaceUserWhenExisting() throws Exception
+    {
+        // set-up user
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE USER " + userName + " SET PASSWORD 'f00' CHANGE REQUIRED" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( List.of( true, true ), List.of( result.next(), result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE OR REPLACE USER " + userName + " SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                // First fail on deleting the old user
+                assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( List.of( true, true ), List.of( result.next(), result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            // replaces user
+            tx.execute( "CREATE OR REPLACE USER " + userName + " SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "passwordChangeRequired" );
+            assertEquals( Set.of( true, false ), Set.of( result.next(), result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
     void deleteUser() throws Exception
     {
         leaderTx( ( sys, tx ) ->
@@ -201,6 +371,85 @@ class SystemGraphOnFollowerInClusterIT
     }
 
     @Test
+    void deleteUserIfExistsNonExisting() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "DROP USER " + userName + " IF EXISTS" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j" ), Set.of( result.next() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            // gives no error, does nothing
+            tx.execute( "DROP USER " + userName + " IF EXISTS" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j" ), Set.of( result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void deleteUserIfExistsWhenExisting() throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE USER " + userName + " SET PASSWORD '123'" );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "DROP USER " + userName + " IF EXISTS" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j", userName ), Set.of( result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "DROP USER " + userName + " IF EXISTS" );
+
+            var result = tx.execute( "SHOW USERS" ).columnAs( "user" );
+            assertEquals( Set.of( "neo4j" ), Set.of( result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
     void alterUser() throws Exception
     {
         followerTx( ( sys, tx ) ->
@@ -233,6 +482,37 @@ class SystemGraphOnFollowerInClusterIT
             assertEquals( false, result.next() );
             assertFalse( result.hasNext() );
             tx.commit();
+        } );
+    }
+
+    @Test
+    void alterUserNonExisting() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "ALTER USER " + userName + " SET PASSWORD CHANGE NOT REQUIRED" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to alter the specified user '" + userName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        // But it works on leader (gives correct error for the command and setup)
+        leaderTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "ALTER USER " + userName + " SET PASSWORD CHANGE NOT REQUIRED" );
+                fail( "Should have failed to alter non-existing user, but succeeded." );
+            }
+            catch ( QueryExecutionException e )
+            {
+                assertEquals( "Failed to alter the specified user '" + userName + "': User does not exist.", e.getMessage() );
+            }
         } );
     }
 
@@ -325,6 +605,159 @@ class SystemGraphOnFollowerInClusterIT
     }
 
     @Test
+    void createRoleAsCopyOfAnother() throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName );
+
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE ROLE " + roleName2 + " AS COPY OF " + roleName );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                // First fail on checking that roleName exists
+                assertEquals( "Failed to create a role as copy of '" + roleName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName2 + " AS COPY OF "+ roleName );
+
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName, roleName2 ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createRoleIfNotExists() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE ROLE " + roleName + " IF NOT EXISTS" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to create the specified role '" + roleName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName + " IF NOT EXISTS" );
+
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createOrReplaceRole() throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName );
+            tx.execute( "CREATE USER " + userName + " SET PASSWORD '123'" );
+            tx.execute( "GRANT ROLE " + roleName + " TO " + userName );
+
+            var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
+            assertEquals( Set.of( PredefinedRoles.ADMIN, roleName ), Set.of( result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE OR REPLACE ROLE " + roleName );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                // First fail on deleting the old user
+                assertEquals( "Failed to delete the specified role '" + roleName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
+            assertEquals( Set.of( PredefinedRoles.ADMIN, roleName ), Set.of( result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            // replaces role
+            tx.execute( "CREATE OR REPLACE ROLE " + roleName );
+
+            var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
+            assertEquals( PredefinedRoles.ADMIN, result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
     void deleteRole() throws Exception
     {
         followerTx( ( sys, tx ) ->
@@ -352,6 +785,64 @@ class SystemGraphOnFollowerInClusterIT
             {
                 assertEquals( "Failed to delete the specified role '" + roleName + "': Role does not exist.", e.getMessage() );
             }
+        } );
+    }
+
+    @Test
+    void deleteRoleIfExists() throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE ROLE " + roleName );
+
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "DROP ROLE " + roleName + " IF EXISTS" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to delete the specified role '" + roleName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "DROP ROLE " + roleName + " IF EXISTS" );
+
+            var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
+            assertEquals(
+                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
+                            PredefinedRoles.EDITOR, PredefinedRoles.READER ),
+                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
+                            result.next().toString(), result.next().toString() ) );
+            assertFalse( result.hasNext() );
+            tx.commit();
         } );
     }
 
@@ -681,6 +1172,96 @@ class SystemGraphOnFollowerInClusterIT
     }
 
     @Test
+    void createDatabaseIfExists() throws Exception
+    {
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE DATABASE " + dbName + " IF NOT EXISTS" );
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "STOP DATABASE " + dbName );
+
+            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
+            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE DATABASE " + dbName + " IF NOT EXISTS" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to create the specified database '" + dbName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
+            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            // gives no error, does nothing
+            tx.execute( "CREATE DATABASE " + dbName + " IF NOT EXISTS" );
+
+            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
+            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createOrReplaceDatabase() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "CREATE OR REPLACE DATABASE " + dbName );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                // First fail on trying to delete the old user
+                assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        leaderTx( ( sys, tx ) ->
+        {
+            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
+            assertFalse( result.hasNext() );
+            tx.commit();
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            tx.execute( "CREATE OR REPLACE DATABASE " + dbName );
+
+            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
+            assertTrue( result.hasNext() );
+            result.close();
+            tx.commit();
+        } );
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+    }
+
+    @Test
     void deleteDatabase() throws Exception
     {
         leaderTx( ( sys, tx ) ->
@@ -699,7 +1280,7 @@ class SystemGraphOnFollowerInClusterIT
             }
             catch ( IllegalStateException e )
             {
-                assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
+                assertEquals( "Failed to drop the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
         } );
 
@@ -721,6 +1302,30 @@ class SystemGraphOnFollowerInClusterIT
             tx.commit();
         } );
         CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
+    }
+
+    @Test
+    void deleteDatabaseIfExists() throws Exception
+    {
+        followerTx( ( sys, tx ) ->
+        {
+            try
+            {
+                tx.execute( "DROP DATABASE " + dbName + " IF EXISTS" );
+                fail( "Should have failed to write on a FOLLOWER, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
+            }
+        } );
+
+        // But it works on leader
+        leaderTx( ( sys, tx ) ->
+        {
+            // gives no error, does nothing
+            tx.execute( "DROP DATABASE " + dbName + " IF EXISTS" );
+        } );
     }
 
     @Test
