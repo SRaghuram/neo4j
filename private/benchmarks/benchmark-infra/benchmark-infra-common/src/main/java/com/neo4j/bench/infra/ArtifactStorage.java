@@ -21,21 +21,21 @@ public interface ArtifactStorage
     /**
      * Uploads build artifacts into artifacts storage.
      *
-     * @param buildID unique build id
+     * @param artifactBaseURI the bucket to upload the files to, should exist
      * @param workspace description of build artifacts which are included in workspace
      * @return URI to uploaded location
      * @throws ArtifactStoreException
      */
-    URI uploadBuildArtifacts( String buildID, Workspace workspace ) throws ArtifactStoreException;
+    URI uploadBuildArtifacts( URI artifactBaseURI, Workspace workspace ) throws ArtifactStoreException;
 
     /**
      * Downloads build artifacts from artifact storage.
      *
      * @param baseDir base directory, where artifacts will be downloaded
-     * @param buildID unique build id
+     * @param artifactBaseURI the bucket to upload the files to, should exist
      * @throws ArtifactStoreException
      */
-    void downloadBuildArtifacts( Path baseDir, String buildID ) throws ArtifactStoreException;
+    void downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
 
     /**
      * Downloads data set for specific Neo4j version

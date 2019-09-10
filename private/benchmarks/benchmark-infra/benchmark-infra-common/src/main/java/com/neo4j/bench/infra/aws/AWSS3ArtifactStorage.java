@@ -32,13 +32,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
 public class AWSS3ArtifactStorage implements ArtifactStorage
@@ -87,50 +86,61 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public URI uploadBuildArtifacts( String buildID, Workspace workspace ) throws ArtifactStoreException
+    public URI uploadBuildArtifacts( URI artifactBaseURI, Workspace workspace ) throws ArtifactStoreException
     {
-        LOG.debug( "uploading build {} artifacts from workspace {}", buildID, workspace.baseDir() );
-
+        LOG.debug( "uploading build {} artifacts from workspace {}", artifactBaseURI, workspace.baseDir() );
+        String bucketName = artifactBaseURI.getAuthority();
+        String s3Path = getS3Path( artifactBaseURI.getPath() );
+        if ( !amazonS3.doesBucketExistV2( bucketName ) )
+        {
+            throw new RuntimeException( format( "the bucket %s does not exists, please create it.", bucketName ) );
+        }
         try
         {
             for ( Path artifact : workspace.allArtifacts() )
             {
-                String key = createBuildArtifactKey( buildID, workspace.baseDir().relativize( artifact ) );
                 ObjectMetadata objectMetadata = new ObjectMetadata();
+                String s3key = s3Path + artifact.getFileName();
                 // don't you ever dare to touch it,
                 // otherwise you will run out of memory
                 // as AWS S3 client tries to cache whole stream in memory
                 // if size is unknown
                 objectMetadata.setContentLength( Files.size( artifact ) );
-                LOG.info( "upload artifact {} with build id {}", artifact.toString(), buildID );
-                PutObjectResult result = amazonS3.putObject( BENCHMARKING_BUCKET_NAME, key,
+                LOG.info( "upload artifact {} to path {}", artifact.toString(), s3key );
+                PutObjectResult result = amazonS3.putObject( bucketName,  s3key,
                                                              Files.newInputStream( artifact ), objectMetadata );
                 // TODO this fails under tests, and works with real implementation
                 // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
             }
-            String uriPath = Paths.get( "/", ARTIFACTS_PREFIX, buildID ).toString();
-            return new URI( "s3", BENCHMARKING_BUCKET_NAME, uriPath, null );
+            return artifactBaseURI;
         }
-        catch ( IOException | URISyntaxException e )
+        catch ( IOException e )
         {
             throw new ArtifactStoreException( e );
         }
     }
 
-    @Override
-    public void downloadBuildArtifacts( Path baseDir, String buildID ) throws ArtifactStoreException
+    private String getS3Path( String fullPath )
     {
-        String keyPrefix = createBuildArtifactPrefix( buildID );
-        LOG.info( "downloading build artifacts for build {} from bucket {} at key prefix {}", buildID, BENCHMARKING_BUCKET_NAME, keyPrefix );
+        return fullPath.substring( 1 ) + "/";
+    }
 
-        ObjectListing objectListing = amazonS3.listObjects( BENCHMARKING_BUCKET_NAME, keyPrefix );
+    @Override
+    public void downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
+    {
+        String bucketName = artifactBaseURI.getAuthority();
+        String s3Path = getS3Path( artifactBaseURI.getPath() );
+        LOG.info( "downloading build artifacts from bucket {} at key prefix {}", bucketName, s3Path );
+
+        ObjectListing objectListing = amazonS3.listObjects( bucketName, s3Path );
+        System.out.println(objectListing);
         try
         {
             for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() )
             {
                 String key = objectSummary.getKey();
-                String relativeArtifact = key.replace( keyPrefix + "/", "" );
-                S3Object s3Object = amazonS3.getObject( BENCHMARKING_BUCKET_NAME, key );
+                String relativeArtifact = key.replace( s3Path, "" );
+                S3Object s3Object = amazonS3.getObject( bucketName, key );
                 Path absoluteArtifact = baseDir.resolve( relativeArtifact );
                 Files.createDirectories( absoluteArtifact.getParent() );
                 LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
@@ -154,19 +164,20 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     private String createDatasetKey( String neo4jVersion, String dataset )
     {
-        return String.format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
+        return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
     }
 
     private static String createBuildArtifactPrefix( String buildID )
     {
-        return String.format( "%s/%s", ARTIFACTS_PREFIX, buildID );
+        return format( "%s/%s", ARTIFACTS_PREFIX, buildID );
     }
 
-    public void verifyBuildArtifactsExpirationRule()
+    public void verifyBuildArtifactsExpirationRule( URI artifactBaseURI )
     {
+        String bucketName = artifactBaseURI.getAuthority();
         LOG.debug( "verifying build artifacts expiration rule" );
         Optional<BucketLifecycleConfiguration> lifecycleConfiguration = Optional.ofNullable( amazonS3.getBucketLifecycleConfiguration(
-                new GetBucketLifecycleConfigurationRequest( BENCHMARKING_BUCKET_NAME ) ) );
+                new GetBucketLifecycleConfigurationRequest( bucketName ) ) );
 
         Rule rule = lifecycleConfiguration
                 .map( BucketLifecycleConfiguration::getRules )
@@ -179,11 +190,11 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             .withStatus( BucketLifecycleConfiguration.ENABLED );
 
         BucketLifecycleConfiguration configuration = new BucketLifecycleConfiguration().withRules( asList( rule ) );
-        amazonS3.setBucketLifecycleConfiguration( BENCHMARKING_BUCKET_NAME, configuration );
+        amazonS3.setBucketLifecycleConfiguration( bucketName, configuration );
     }
 
     private static String createBuildArtifactKey( String buildID, Path artifact )
     {
-        return String.format( "%s/%s/%s", ARTIFACTS_PREFIX, buildID, artifact.toString() );
+        return format( "%s/%s/%s", ARTIFACTS_PREFIX, buildID, artifact.toString() );
     }
 }

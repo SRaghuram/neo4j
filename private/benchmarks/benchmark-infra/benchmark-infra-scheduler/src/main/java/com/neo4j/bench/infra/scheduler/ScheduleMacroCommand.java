@@ -72,8 +72,8 @@ public class ScheduleMacroCommand extends BaseInfraCommand
             AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( infraParams.awsRegion(),
                                                                                 infraParams.awsKey(),
                                                                                 infraParams.awsSecret() );
-            artifactStorage.verifyBuildArtifactsExpirationRule();
-            URI buildArtifactsUri = artifactStorage.uploadBuildArtifacts( runWorkloadParams.teamcityBuild().toString(), workspace );
+            artifactStorage.verifyBuildArtifactsExpirationRule( artifactBaseUri );
+            URI buildArtifactsUri = artifactStorage.uploadBuildArtifacts( artifactBaseUri, workspace );
             LOG.info( "upload build artifacts into {}", buildArtifactsUri );
 
             JobScheduler jobScheduler = AWSBatchJobScheduler.create( infraParams.awsRegion(),
