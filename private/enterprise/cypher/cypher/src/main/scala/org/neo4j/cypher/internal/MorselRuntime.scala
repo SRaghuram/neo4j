@@ -44,75 +44,10 @@ class MorselRuntime(parallelExecution: Boolean,
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
-    var shouldFuseOperators = context.config.fuseOperators
-    var compilationCompleted = false
-    var physicalPlan: PhysicalPlan = null
-    var executablePipelines: IndexedSeq[ExecutablePipeline] = null
-    var executionGraphDefinition: ExecutionGraphDefinition = null
-    val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
-
-
-    while (!compilationCompleted) {
-      val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
-      val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
-      physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-                                          query.logicalPlan,
-                                          query.semanticTable,
-                                          breakingPolicy,
-                                          allocateArgumentSlots = true)
-
-      MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
-
-      val converters: ExpressionConverters = if (context.compileExpressions) {
-        new ExpressionConverters(
-          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
-          SlottedExpressionConverters(physicalPlan),
-          CommunityExpressionConverter(context.tokenContext))
-      } else {
-        new ExpressionConverters(
-          SlottedExpressionConverters(physicalPlan),
-          CommunityExpressionConverter(context.tokenContext))
-      }
-
-      DebugLog.logDiff("PhysicalPlanner.plan")
-      executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
-      val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexRegistrator,
-                                                query.semanticTable)
-
-      DebugLog.logDiff("PipelineBuilder")
-      //=======================================================
-      val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution)
-
-      try {
-        executablePipelines = fuseOperators.compilePipelines(executionGraphDefinition)
-        compilationCompleted = true
-        DebugLog.logDiff("FuseOperators")
-        //=======================================================
-      } catch {
-        case e: CantCompileQueryException =>
-          // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
-          DebugLog.log("Could not compile pipeline because of %s", e)
-          shouldFuseOperators = false
-      }
-    }
-
-    val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
-
-    val morselSize = selectMorselSize(query, context)
-
-    val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
-    MorselExecutionPlan(executablePipelines,
-                        executionGraphDefinition,
-                        queryIndexRegistrator.result(),
-                        physicalPlan.nExpressionSlots,
-                        physicalPlan.logicalPlan,
-                        physicalPlan.parameterMapping,
-                        query.resultColumns,
-                        executor,
-                        context.runtimeEnvironment.tracer,
-                        morselSize,
-                        context.config.memoryTrackingController,
-                        maybeThreadSafeCursors)
+    compilePlan(context.operatorEngine ==  CypherOperatorEngineOption.compiled,
+                query,
+                context,
+                new QueryIndexRegistrator(context.schemaRead))
   }
 
   private def selectMorselSize(query: LogicalQuery,
@@ -120,6 +55,71 @@ class MorselRuntime(parallelExecution: Boolean,
     val maxCardinality = query.logicalPlan.flatten.map(plan => query.cardinalities.get(plan.id)).max
     val morselSize = if (maxCardinality.amount.toLong > context.config.morselSizeBig) context.config.morselSizeBig else context.config.morselSizeSmall
     morselSize
+  }
+
+  /**
+    * If `shouldFuseOperators` is `true` it first attempts to fuse operators but in the case of failure
+    * it steps back and redo the physical planning without any attempts to fuse operators.
+    */
+  private def compilePlan(shouldFuseOperators: Boolean,
+                          query: LogicalQuery,
+                          context: EnterpriseRuntimeContext,
+                          queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
+    val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
+    val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy)
+    val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
+                                            query.logicalPlan,
+                                            query.semanticTable,
+                                            breakingPolicy,
+                                            allocateArgumentSlots = true)
+    val converters: ExpressionConverters = if (context.compileExpressions) {
+      new ExpressionConverters(
+        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
+        SlottedExpressionConverters(physicalPlan),
+        CommunityExpressionConverter(context.tokenContext))
+    } else {
+      new ExpressionConverters(
+        SlottedExpressionConverters(physicalPlan),
+        CommunityExpressionConverter(context.tokenContext))
+    }
+
+    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
+    DebugLog.logDiff("PhysicalPlanner.plan")
+    val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
+    val operatorFactory = new OperatorFactory(executionGraphDefinition, converters, true, queryIndexRegistrator,
+                                              query.semanticTable)
+    DebugLog.logDiff("PipelineBuilder")
+    //=======================================================
+    val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution)
+
+    try {
+      val executablePipelines: IndexedSeq[ExecutablePipeline] = fuseOperators.compilePipelines(executionGraphDefinition)
+      DebugLog.logDiff("FuseOperators")
+      //=======================================================
+
+      val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
+
+      val morselSize = selectMorselSize(query, context)
+
+      val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
+      MorselExecutionPlan(executablePipelines,
+                          executionGraphDefinition,
+                          queryIndexRegistrator.result(),
+                          physicalPlan.nExpressionSlots,
+                          physicalPlan.logicalPlan,
+                          physicalPlan.parameterMapping,
+                          query.resultColumns,
+                          executor,
+                          context.runtimeEnvironment.tracer,
+                          morselSize,
+                          context.config.memoryTrackingController,
+                          maybeThreadSafeCursors)
+    } catch {
+      case e: CantCompileQueryException if shouldFuseOperators =>
+        // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
+        DebugLog.log("Could not compile pipeline because of %s", e)
+        compilePlan(shouldFuseOperators = false, query, context, queryIndexRegistrator)
+    }
   }
 
   case class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
