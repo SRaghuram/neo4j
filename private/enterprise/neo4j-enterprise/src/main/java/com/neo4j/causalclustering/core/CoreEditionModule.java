@@ -50,16 +50,15 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
-import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.io.File;
 import java.util.Collection;
@@ -75,6 +74,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -264,16 +264,21 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         return raftMessageLogger;
     }
 
-    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager, ReplicatedDatabaseEventService databaseEventService )
+    private void createDatabaseManagerDependentModules( final CoreDatabaseManager databaseManager )
     {
-        final LifeSupport globalLife = globalModule.getGlobalLife();
-        final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
-        MemberId myIdentity = identityModule.myself();
+        var databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
+        var globalLife = globalModule.getGlobalLife();
+        var fileSystem = globalModule.getFileSystem();
+        var myIdentity = identityModule.myself();
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
+                reconciledTxTracker, panicService );
 
-        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
-        DiscoveryModule discoveryModule = new DiscoveryModule( myIdentity, discoveryServiceFactory, discoveryMemberFactory, globalModule, sslPolicyLoader );
+        var dependencies = globalModule.getGlobalDependencies();
+        dependencies.satisfyDependencies( databaseEventService );
+        dependencies.satisfyDependency( databaseManager );
+        dependencies.satisfyDependency( reconciledTxTracker );
 
-        topologyService = discoveryModule.topologyService();
+        topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.reconciler() );
 
         final RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
@@ -297,32 +302,19 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         // must start last and stop first, since it handles external requests
         createCoreServers( globalLife, databaseManager, fileSystem );
+
+        globalModule.getGlobalLife().add( databaseManager );
+        globalModule.getGlobalLife().add( reconcilerModule );
     }
 
     // TODO extract common
     @Override
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
-        var internalOperator = new ClusterInternalDbmsOperator();
-
-        //TODO: Pass internal operator to database manager so it can pass to factories
         var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig(), clusterStateLayout );
 
-        ReplicatedDatabaseEventService databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
-        createDatabaseManagerDependentModules( databaseManager, databaseEventService );
-
-        var dependencies = globalModule.getGlobalDependencies();
-        dependencies.satisfyDependencies( databaseEventService );
-
-        globalModule.getGlobalLife().add( databaseManager );
-        dependencies.satisfyDependency( databaseManager );
-
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, internalOperator,
-                storageFactory, reconciledTxTracker, panicService );
-        globalModule.getGlobalLife().add( reconcilerModule );
-        dependencies.satisfyDependency( reconciledTxTracker );
-
+        createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
 
@@ -402,5 +394,13 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, logService.getUserLogProvider() );
 
         return new ClientChannelInitializer( handshakeInitializer, pipelineBuilders.client(), handshakeTimeout, logProvider );
+    }
+
+    private CoreTopologyService createTopologyService( MemberId myIdentity, DatabaseManager<ClusteredDatabaseContext> databaseManager,
+            DatabaseStateService databaseStateService )
+    {
+        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
+        DiscoveryModule discoveryModule = new DiscoveryModule( myIdentity, discoveryServiceFactory, discoveryMemberFactory, globalModule, sslPolicyLoader );
+        return discoveryModule.topologyService();
     }
 }

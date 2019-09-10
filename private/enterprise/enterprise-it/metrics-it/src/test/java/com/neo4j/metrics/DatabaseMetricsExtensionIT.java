@@ -20,13 +20,11 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -66,8 +64,10 @@ class DatabaseMetricsExtensionIT
     @Inject
     private GraphDatabaseAPI db;
 
+    @Inject
+    private DatabaseManagementService managementService;
+
     private File outputPath;
-    private TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @ExtensionCallback
     void configure( TestDatabaseManagementServiceBuilder builder )
@@ -229,31 +229,27 @@ class DatabaseMetricsExtensionIT
     @Test
     void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
-        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
 
-        DatabaseId testdb = databaseIdRepository.getRaw( "testdb" );
-        databaseManager.createDatabase( testdb );
+        managementService.createDatabase( "testDb" );
 
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
-        databaseManager.dropDatabase( testdb );
+        managementService.dropDatabase( "testDb" );
     }
 
     @Test
     void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
-        DatabaseId testDbName = databaseIdRepository.getRaw( "testdb" );
-        databaseManager.createDatabase( testDbName );
+        managementService.createDatabase( "testDb" );
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
 
-        databaseManager.stopDatabase( testDbName );
+        managementService.shutdownDatabase( "testDb" );
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
-        databaseManager.dropDatabase( testDbName );
+        managementService.dropDatabase( "testDb" );
     }
 
     private void connectTwoNodes()

@@ -31,10 +31,9 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -333,13 +332,13 @@ public class StoreUpgradeIT
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.build();
-            GraphDatabaseService databaseService = managementService.database( DEFAULT_DATABASE_NAME );
+            GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
-                DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) databaseService).getDependencyResolver().resolveDependency( DatabaseManager.class );
-                DatabaseContext databaseContext = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
-                assertTrue( databaseContext.isFailed() );
-                assertThat( databaseContext.failureCause(), new RootCauseMatcher<>( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
+                DatabaseStateService dbStateService = database.getDependencyResolver().resolveDependency( DatabaseStateService.class );
+                var failure = dbStateService.databaseHasFailed( database.databaseId() );
+                assertTrue( failure.isPresent() );
+                assertThat( failure.get(), new RootCauseMatcher<>( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
             }
             finally
             {

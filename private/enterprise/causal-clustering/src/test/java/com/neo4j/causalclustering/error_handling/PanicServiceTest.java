@@ -120,10 +120,7 @@ class PanicServiceTest
     {
         var handlerIds = new LinkedBlockingQueue<Integer>();
 
-        var handlers = List.<DatabasePanicEventHandler>of(
-                () -> handlerIds.add( 1 ),
-                () -> handlerIds.add( 2 ),
-                () -> handlerIds.add( 3 ) );
+        var handlers = List.<DatabasePanicEventHandler>of( cause -> handlerIds.add( 1 ), cause -> handlerIds.add( 2 ), cause -> handlerIds.add( 3 ) );
 
         panicService.addPanicEventHandlers( databaseId2, handlers );
 
@@ -146,9 +143,9 @@ class PanicServiceTest
         }
 
         @Override
-        public void onPanic()
+        public void onPanic( Throwable cause )
         {
-            super.onPanic();
+            super.onPanic( cause );
             throw new RuntimeException();
         }
     }
@@ -163,7 +160,7 @@ class PanicServiceTest
         }
 
         @Override
-        public void onPanic()
+        public void onPanic( Throwable cause )
         {
             invocationCounter.getAndIncrement();
         }
@@ -176,7 +173,7 @@ class PanicServiceTest
         volatile boolean isComplete;
 
         @Override
-        public void onPanic()
+        public void onPanic( Throwable cause )
         {
             numberOfPanicEvents.getAndIncrement();
             latch.await();

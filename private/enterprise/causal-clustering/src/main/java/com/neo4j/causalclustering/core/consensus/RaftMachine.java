@@ -61,7 +61,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     }
 
     @Override
-    public void onPanic()
+    public void onPanic( Throwable cause )
     {
         stopTimers();
     }

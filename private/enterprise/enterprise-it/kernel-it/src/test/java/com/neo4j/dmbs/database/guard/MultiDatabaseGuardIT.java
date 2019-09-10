@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -52,28 +51,22 @@ class MultiDatabaseGuardIT
     void databaseGuardDynamicRegistration()
     {
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
-        DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
-        CompositeDatabaseAvailabilityGuard compositeGuard =
-                dependencyResolver.resolveDependency( CompositeDatabaseAvailabilityGuard.class );
+        CompositeDatabaseAvailabilityGuard compositeGuard = dependencyResolver.resolveDependency( CompositeDatabaseAvailabilityGuard.class );
 
         assertEquals( 2, compositeGuard.getGuards().size() );
 
-        var firstDatabase = randomDatabaseId();
-        var secondDatabase = randomDatabaseId();
-        var thirdDatabase = randomDatabaseId();
-
-        databaseManager.createDatabase( firstDatabase );
+        managementService.createDatabase( "firstDatabase" );
         assertEquals( 3, compositeGuard.getGuards().size() );
 
-        databaseManager.createDatabase( secondDatabase );
-        databaseManager.createDatabase( thirdDatabase );
+        managementService.createDatabase( "secondDatabase" );
+        managementService.createDatabase( "thirdDatabase" );
         assertEquals( 5, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( thirdDatabase );
+        managementService.shutdownDatabase( "thirdDatabase" );
         assertEquals( 4, compositeGuard.getGuards().size() );
 
-        databaseManager.stopDatabase( firstDatabase );
-        databaseManager.stopDatabase( secondDatabase );
+        managementService.shutdownDatabase( "secondDatabase" );
+        managementService.shutdownDatabase( "firstDatabase" );
 
         assertEquals( 2, compositeGuard.getGuards().size() );
     }

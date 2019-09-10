@@ -15,8 +15,9 @@ public interface DatabasePanicEventHandler
     /**
      * Since resources may be very limited during a panic any implementation of this interface should be as simple as possible.
      * Don't use up any extra memory or create new threads.
+     * @param cause the cause of the panic
      */
-    void onPanic();
+    void onPanic( Throwable cause );
 
     static DatabasePanicEventHandler raiseAvailabilityGuard( Database db )
     {

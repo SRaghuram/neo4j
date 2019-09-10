@@ -42,6 +42,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
@@ -166,38 +167,32 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
-        var internalOperator = new ClusterInternalDbmsOperator();
-
-        //TODO: Pass internal operator to database manager so it can pass to factories
         var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig, clusterStateLayout );
 
-        ReplicatedDatabaseEventService databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
-        createDatabaseManagerDependentModules( databaseManager, databaseEventService );
-
-        var dependencies = globalModule.getGlobalDependencies();
-        dependencies.satisfyDependencies( databaseEventService );
-
-        globalModule.getGlobalLife().add( databaseManager );
-        dependencies.satisfyDependency( databaseManager );
-
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, internalOperator,
-                storageFactory, reconciledTxTracker, panicService );
-        globalModule.getGlobalLife().add( reconcilerModule );
-        dependencies.satisfyDependency( reconciledTxTracker );
-
+        createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
 
-    private void createDatabaseManagerDependentModules( ReadReplicaDatabaseManager databaseManager, ReplicatedDatabaseEventService databaseEventService )
+    private void createDatabaseManagerDependentModules( ReadReplicaDatabaseManager databaseManager )
     {
+        var databaseEventService = new SystemDbOnlyReplicatedDatabaseEventService( logProvider );
         var globalLife = globalModule.getGlobalLife();
-        var globalDependencies = globalModule.getGlobalDependencies();
         var globalLogService = globalModule.getLogService();
         var fileSystem = globalModule.getFileSystem();
+        var dependencies = globalModule.getGlobalDependencies();
 
-        topologyService = createTopologyService( databaseManager, globalLogService );
-        globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
+        dependencies.satisfyDependency( databaseManager );
+        dependencies.satisfyDependency( reconciledTxTracker );
+        dependencies.satisfyDependencies( databaseEventService );
+
+        globalModule.getGlobalLife().add( databaseManager );
+
+        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
+                databaseEventService, storageFactory, reconciledTxTracker, panicService );
+
+        topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
+        globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
         var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, logProvider );
         var installedProtocolsHandler = new InstalledProtocolHandler();
@@ -210,6 +205,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         globalLife.add( catchupServer ); // must start last and stop first, since it handles external requests
         backupServerOptional.ifPresent( globalLife::add );
+        globalLife.add( reconcilerModule );
 
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
@@ -250,9 +246,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         return new DefaultNetworkConnectionTracker();
     }
 
-    private TopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, LogService logService )
+    private TopologyService createTopologyService( DatabaseManager<ClusteredDatabaseContext> databaseManager, DatabaseStateService databaseStateService,
+            LogService logService )
     {
-        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
+        DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
         return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, myIdentity, hostnameResolver,
                 sslPolicyLoader, discoveryMemberFactory );

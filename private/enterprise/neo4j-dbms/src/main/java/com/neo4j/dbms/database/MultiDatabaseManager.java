@@ -113,16 +113,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             {
                 throw new DatabaseNotFoundException( format( "Database with name `%s` not found.", databaseId.name() ) );
             }
-            try
-            {
-                return operation.apply( databaseId, currentContext );
-            }
-            catch ( Throwable t )
-            {
-                log.error( "Failed to perform operation with database " + databaseId, t );
-                currentContext.fail( t );
-                return currentContext;
-            }
+            return operation.apply( databaseId, currentContext );
         } );
     }
 

@@ -73,7 +73,7 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
         var databaseName = databaseId.name();
         var raftIdStorage = stateStorageFactory.createRaftIdStorage( databaseName, logProvider );
 
-        if ( ! raftIdStorage.exists() )
+        if ( !raftIdStorage.exists() )
         {
             return Optional.empty();
         }

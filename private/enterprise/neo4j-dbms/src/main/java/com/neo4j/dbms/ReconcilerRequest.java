@@ -6,6 +6,7 @@
 package com.neo4j.dbms;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -14,16 +15,18 @@ import org.neo4j.kernel.database.DatabaseId;
  */
 public class ReconcilerRequest
 {
-    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( false, null );
-    private static final ReconcilerRequest FORCE = new ReconcilerRequest( true, null );
+    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( false, null, null );
+    private static final ReconcilerRequest FORCE = new ReconcilerRequest( true, null, null );
 
     private final boolean forceReconciliation;
     private final DatabaseId panickedDatabaseId;
+    private final Throwable causeOfPanic;
 
-    private ReconcilerRequest( boolean forceReconciliation, DatabaseId panickedDatabaseId )
+    private ReconcilerRequest( boolean forceReconciliation, DatabaseId panickedDatabaseId, Throwable causeOfPanic )
     {
         this.forceReconciliation = forceReconciliation;
         this.panickedDatabaseId = panickedDatabaseId;
+        this.causeOfPanic = causeOfPanic;
     }
 
     /**
@@ -51,9 +54,9 @@ public class ReconcilerRequest
      *
      * @return a reconciler request.
      */
-    public static ReconcilerRequest forPanickedDatabase( DatabaseId databaseId )
+    public static ReconcilerRequest forPanickedDatabase( DatabaseId databaseId, Throwable causeOfPanic )
     {
-        return new ReconcilerRequest( false, databaseId );
+        return new ReconcilerRequest( false, databaseId, causeOfPanic );
     }
 
     /**
@@ -68,12 +71,14 @@ public class ReconcilerRequest
 
     /**
      * Whether or not the given database panicked and should be marked as failed in {@link DatabaseState} after the reconciliation attempt.
+     * Returns an Optional cause, where the *lack* of a cause marks that the give database has not panicked.
      *
-     * @return {@code true} if the state should be failed, {@code false} otherwise.
+     * @return {@code Optional.of( cause )} if the state should be failed, {@code Optional.empty()} otherwise.
      */
-    boolean databasePanicked( DatabaseId databaseId )
+    Optional<Throwable> databasePanicked( DatabaseId databaseId )
     {
-        return panickedDatabaseId != null && panickedDatabaseId.equals( databaseId );
+        boolean thisDatabaseHasPanicked = panickedDatabaseId != null && panickedDatabaseId.equals( databaseId );
+        return thisDatabaseHasPanicked ? Optional.of( causeOfPanic ) : Optional.empty();
     }
 
     @Override
@@ -87,23 +92,21 @@ public class ReconcilerRequest
         {
             return false;
         }
-        var that = (ReconcilerRequest) o;
-        return forceReconciliation == that.forceReconciliation &&
-               Objects.equals( panickedDatabaseId, that.panickedDatabaseId );
+        ReconcilerRequest that = (ReconcilerRequest) o;
+        return forceReconciliation == that.forceReconciliation && Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) &&
+                Objects.equals( causeOfPanic, that.causeOfPanic );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( forceReconciliation, panickedDatabaseId );
+        return Objects.hash( forceReconciliation, panickedDatabaseId, causeOfPanic );
     }
 
     @Override
     public String toString()
     {
-        return "ReconcilerRequest{" +
-               "forceReconciliation=" + forceReconciliation +
-               ", panickedDatabaseId=" + panickedDatabaseId +
-               '}';
+        return "ReconcilerRequest{" + "forceReconciliation=" + forceReconciliation + ", panickedDatabaseId=" + panickedDatabaseId + ", causeOfPanic=" +
+                causeOfPanic + '}';
     }
 }

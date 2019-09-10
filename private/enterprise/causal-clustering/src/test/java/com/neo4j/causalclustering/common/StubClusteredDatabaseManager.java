@@ -101,7 +101,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         when( db.isStarted() ).thenReturn( config.databaseStarted );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logFiles, config.storeFiles,
-                config.logProvider, config.catchupComponentsFactory, config.failure );
+                config.logProvider, config.catchupComponentsFactory );
 
         if ( config.storeId != null )
         {
@@ -128,7 +128,6 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         private LogFiles logFiles = mock( LogFiles.class );
         private DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         private Health health;
-        private Throwable failure;
         private boolean databaseStarted = true;
 
         private DatabaseContextConfig()
@@ -198,12 +197,6 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         public DatabaseContextConfig withDatabaseHealth( Health health )
         {
             this.health = health;
-            return this;
-        }
-
-        public DatabaseContextConfig withFailure( Throwable failure )
-        {
-            this.failure = failure;
             return this;
         }
 

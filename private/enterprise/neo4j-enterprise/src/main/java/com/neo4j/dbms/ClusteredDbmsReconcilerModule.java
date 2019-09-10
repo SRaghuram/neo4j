@@ -20,20 +20,14 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
 {
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
-    private final ClusterStateStorageFactory stateStorageFactory;
-    private final PanicService panicService;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ReplicatedDatabaseEventService databaseEventService, ClusterInternalDbmsOperator internalOperator,
-            ClusterStateStorageFactory stateStorageFactory, ReconciledTransactionTracker reconciledTxTracker, PanicService panicService )
+            ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
+            ReconciledTransactionTracker reconciledTxTracker, PanicService panicService )
     {
-        super( globalModule, databaseManager, reconciledTxTracker );
+        super( globalModule, databaseManager, reconciledTxTracker, createReconciler( globalModule, databaseManager, stateStorageFactory, panicService ) );
         this.databaseEventService = databaseEventService;
-        this.internalOperator = internalOperator;
-        this.stateStorageFactory = stateStorageFactory;
-        this.panicService = panicService;
-        //TODO: don't need if we do end up injecting
-        globalModule.getGlobalDependencies().satisfyDependencies( internalOperator );
+        this.internalOperator = databaseManager.internalDbmsOperator();
     }
 
     @Override
@@ -48,8 +42,8 @@ public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModul
         databaseEventService.registerListener( SYSTEM_DATABASE_ID, new SystemOperatingDatabaseEventListener( systemOperator ) );
     }
 
-    @Override
-    protected ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager )
+    private static ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
+            ClusterStateStorageFactory stateStorageFactory, PanicService panicService )
     {
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
                 globalModule.getJobScheduler(), stateStorageFactory, panicService );

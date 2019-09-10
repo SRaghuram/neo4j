@@ -38,10 +38,9 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Monitors monitors;
     private final StoreFiles storeFiles;
     private final LogFiles logFiles;
-    private final Throwable failure;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
-            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory, Throwable failure )
+            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory )
     {
         this.database = database;
         this.facade = facade;
@@ -52,7 +51,6 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
         storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         this.monitors = new Monitors();
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
-        this.failure = failure;
     }
 
     @Override
@@ -120,24 +118,6 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
         return facade;
     }
 
-    @Override
-    public void fail( Throwable t )
-    {
-    }
-
-    @Override
-    public boolean isFailed()
-    {
-        return failure != null;
-    }
-
-    @Override
-    public Throwable failureCause()
-    {
-        return failure;
-    }
-
-    @Override
     public CatchupComponentsRepository.CatchupComponents catchupComponents()
     {
         return catchupComponents;

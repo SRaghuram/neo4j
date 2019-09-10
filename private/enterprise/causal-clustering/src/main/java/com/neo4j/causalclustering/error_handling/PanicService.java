@@ -60,7 +60,7 @@ public class PanicService
         var handlers = handlersByDatabase.get( databaseId );
         if ( handlers != null )
         {
-            handlers.handlePanic();
+            handlers.handlePanic( error );
         }
     }
 
@@ -75,7 +75,7 @@ public class PanicService
             this.panicked = new AtomicBoolean();
         }
 
-        void handlePanic()
+        void handlePanic( Throwable cause )
         {
             if ( panicked.compareAndSet( false, true ) )
             {
@@ -83,7 +83,7 @@ public class PanicService
                 {
                     try
                     {
-                        handler.onPanic();
+                        handler.onPanic( cause );
                     }
                     catch ( Throwable t )
                     {

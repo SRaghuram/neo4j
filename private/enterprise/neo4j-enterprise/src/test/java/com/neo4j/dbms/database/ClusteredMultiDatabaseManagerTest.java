@@ -114,13 +114,13 @@ class ClusteredMultiDatabaseManagerTest
         }
 
         @Override
-        protected void start0() throws Exception
+        protected void start0()
         {
             startStopTracker.start();
         }
 
         @Override
-        protected void stop0() throws Exception
+        protected void stop0()
         {
             startStopTracker.stop();
         }

@@ -72,7 +72,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     }
 
     @Override
-    public void onPanic()
+    public void onPanic( Throwable cause )
     {
         applierState.panic();
     }

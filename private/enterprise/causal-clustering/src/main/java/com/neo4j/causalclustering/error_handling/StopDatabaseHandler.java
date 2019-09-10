@@ -21,8 +21,8 @@ public class StopDatabaseHandler implements DatabasePanicEventHandler
     }
 
     @Override
-    public void onPanic()
+    public void onPanic( Throwable cause )
     {
-        internalOperator.stopOnPanic( db.getDatabaseId() );
+        internalOperator.stopOnPanic( db.getDatabaseId(), cause );
     }
 }

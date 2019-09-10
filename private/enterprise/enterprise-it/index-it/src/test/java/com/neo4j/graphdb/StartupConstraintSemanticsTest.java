@@ -6,8 +6,10 @@
 package com.neo4j.graphdb;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -87,16 +89,16 @@ class StartupConstraintSemanticsTest
         }
     }
 
-    private GraphDatabaseService getCommunityDatabase()
+    private GraphDatabaseAPI getCommunityDatabase()
     {
         managementService = new TestDatabaseManagementServiceBuilder( dir.storeDir() ).build();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     private void assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( String constraintCreationQuery, String errorMessage )
     {
         // given
-        GraphDatabaseService graphDb = getEnterpriseDatabase();
+        GraphDatabaseAPI graphDb = getEnterpriseDatabase();
         try
         {
             try ( Transaction transaction = graphDb.beginTx() )
@@ -115,10 +117,9 @@ class StartupConstraintSemanticsTest
         try
         {
             graphDb = getCommunityDatabase();
-            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency( DatabaseManager.class );
-            DatabaseContext databaseContext = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
-            assertTrue( databaseContext.isFailed() );
-            Throwable error = Exceptions.rootCause( databaseContext.failureCause() );
+            DatabaseStateService dbStateService = graphDb.getDependencyResolver().resolveDependency( DatabaseStateService.class );
+            assertTrue( dbStateService.databaseHasFailed( graphDb.databaseId() ).isPresent() );
+            Throwable error = Exceptions.rootCause( dbStateService.databaseHasFailed( graphDb.databaseId() ).get() );
             assertThat( error, instanceOf( IllegalStateException.class ) );
             assertEquals( errorMessage, error.getMessage() );
         }
@@ -131,9 +132,9 @@ class StartupConstraintSemanticsTest
         }
     }
 
-    private GraphDatabaseService getEnterpriseDatabase()
+    private GraphDatabaseAPI getEnterpriseDatabase()
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( dir.storeDir() ).build();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 }

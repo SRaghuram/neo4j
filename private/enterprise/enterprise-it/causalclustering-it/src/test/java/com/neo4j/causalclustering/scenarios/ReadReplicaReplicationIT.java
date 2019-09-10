@@ -40,6 +40,7 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTrackerException;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Label;
@@ -550,8 +551,9 @@ class ReadReplicaReplicationIT
     private static void assertFailedToStart( ReadReplica readReplica, String databaseName )
     {
         ReadReplicaDatabaseManager databaseManager = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, ReadReplicaDatabaseManager.class );
-        var defaultDatabase = databaseManager.getDatabaseContext( databaseName ).orElseThrow();
-        assertTrue( defaultDatabase.isFailed() );
+        var dbStateService = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
+        var db = databaseManager.getDatabaseContext( databaseName ).orElseThrow();
+        assertTrue( dbStateService.databaseHasFailed( db.databaseId() ).isPresent() );
     }
 
     private Cluster startClusterWithDefaultConfig() throws Exception

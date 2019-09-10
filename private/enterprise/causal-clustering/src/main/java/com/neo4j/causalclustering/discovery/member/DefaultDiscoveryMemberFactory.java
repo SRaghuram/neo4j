@@ -8,8 +8,12 @@ package com.neo4j.causalclustering.discovery.member;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
+import java.util.function.Function;
 
+import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
@@ -17,10 +21,12 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
 {
     private final DatabaseManager<?> databaseManager;
+    private final DatabaseStateService databaseStateService;
 
-    public DefaultDiscoveryMemberFactory( DatabaseManager<?> databaseManager )
+    public DefaultDiscoveryMemberFactory( DatabaseManager<?> databaseManager, DatabaseStateService databaseStateService )
     {
         this.databaseManager = databaseManager;
+        this.databaseStateService = databaseStateService;
     }
 
     @Override
@@ -35,8 +41,14 @@ public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
         return databaseManager.registeredDatabases()
                 .values()
                 .stream()
-                .filter( ctx -> !ctx.isFailed() && ctx.database().isStarted() )
-                .map( ctx -> ctx.database().getDatabaseId() )
+                .map( DatabaseContext::database )
+                .filter( db -> !hasFailed( db.getDatabaseId() ) && db.isStarted() )
+                .map( Database::getDatabaseId )
                 .collect( toUnmodifiableSet() );
+    }
+
+    private boolean hasFailed( DatabaseId databaseId )
+    {
+        return databaseStateService.databaseHasFailed( databaseId ).isPresent();
     }
 }

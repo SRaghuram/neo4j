@@ -6,6 +6,7 @@
 package com.neo4j.dbms;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -16,28 +17,28 @@ class DatabaseState
 {
     private final DatabaseId databaseId;
     private final OperatorState operationalState;
-    private final boolean failed;
+    private final Throwable failure;
 
     public static DatabaseState initial( DatabaseId id )
     {
-        return new DatabaseState( id, INITIAL, false );
+        return new DatabaseState( id, INITIAL, null );
     }
 
     public static DatabaseState unknown( DatabaseId id )
     {
-        return new DatabaseState( id, UNKNOWN, false );
+        return new DatabaseState( id, UNKNOWN, null );
     }
 
     DatabaseState( DatabaseId databaseId, OperatorState operationalState )
     {
-        this( databaseId, operationalState, false );
+        this( databaseId, operationalState, null );
     }
 
-    private DatabaseState( DatabaseId databaseId, OperatorState operationalState, boolean failed )
+    private DatabaseState( DatabaseId databaseId, OperatorState operationalState, Throwable failure )
     {
         this.databaseId = databaseId;
         this.operationalState = operationalState;
-        this.failed = failed;
+        this.failure = failure;
     }
 
     public DatabaseId databaseId()
@@ -50,25 +51,30 @@ class DatabaseState
         return operationalState;
     }
 
-    public DatabaseState passed()
+    public DatabaseState healthy()
     {
-        return new DatabaseState( databaseId, operationalState, false );
+        return new DatabaseState( databaseId, operationalState, null );
     }
 
-    public DatabaseState failed()
+    public DatabaseState failed( Throwable failure )
     {
-        return new DatabaseState( databaseId, operationalState, true );
+        return new DatabaseState( databaseId, operationalState, failure );
     }
 
     public boolean hasFailed()
     {
-        return failed;
+        return failure != null;
+    }
+
+    public Optional<Throwable> failure()
+    {
+        return Optional.ofNullable( failure );
     }
 
     @Override
     public String toString()
     {
-        return "DatabaseState{" + "databaseId=" + databaseId + ", operationalState=" + operationalState + ", failed=" + failed + '}';
+        return "DatabaseState{" + "databaseId=" + databaseId + ", operationalState=" + operationalState + ", failed=" + hasFailed() + '}';
     }
 
     @Override
@@ -83,12 +89,12 @@ class DatabaseState
             return false;
         }
         DatabaseState that = (DatabaseState) o;
-        return failed == that.failed && Objects.equals( databaseId, that.databaseId ) && operationalState == that.operationalState;
+        return hasFailed() == that.hasFailed() && Objects.equals( databaseId, that.databaseId ) && operationalState == that.operationalState;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( databaseId, operationalState, failed );
+        return Objects.hash( databaseId, operationalState, hasFailed() );
     }
 }

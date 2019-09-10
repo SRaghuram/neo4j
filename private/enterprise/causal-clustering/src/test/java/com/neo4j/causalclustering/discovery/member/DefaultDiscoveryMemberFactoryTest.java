@@ -10,9 +10,11 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
@@ -22,12 +24,15 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DefaultDiscoveryMemberFactoryTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
-    private final DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager );
+    private final DatabaseStateService databaseStateService = mock( DatabaseStateService.class );
+    private final DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
 
     private final MemberId id = new MemberId( UUID.randomUUID() );
 
@@ -58,7 +63,8 @@ class DefaultDiscoveryMemberFactoryTest
     @Test
     void shouldCreateDiscoveryMemberWithNonFailedDatabases()
     {
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).withFailure( new IOException() ).register();
+        when( databaseStateService.databaseHasFailed( databaseId1 ) ).thenReturn( Optional.of( new IOException() ) );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();
 

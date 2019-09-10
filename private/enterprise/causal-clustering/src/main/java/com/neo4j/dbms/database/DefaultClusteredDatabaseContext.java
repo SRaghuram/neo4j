@@ -116,19 +116,16 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
         storeFiles.delete( databaseLayout, txLogs );
     }
 
-    @Override
     public void fail( Throwable failureCause )
     {
         this.failureCause = failureCause;
     }
 
-    @Override
     public Throwable failureCause()
     {
         return failureCause;
     }
 
-    @Override
     public boolean isFailed()
     {
         return failureCause != null;

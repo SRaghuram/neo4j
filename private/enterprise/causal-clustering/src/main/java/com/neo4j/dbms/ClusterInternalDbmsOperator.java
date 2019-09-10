@@ -91,10 +91,10 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
         return storeCopyHandle;
     }
 
-    public void stopOnPanic( DatabaseId databaseId )
+    public void stopOnPanic( DatabaseId databaseId, Throwable causeOfPanic )
     {
         panicked.add( databaseId );
-        var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( databaseId ) );
+        var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( databaseId, causeOfPanic ) );
         reconcilerResult.whenComplete( () -> panicked.remove( databaseId ) );
     }
 

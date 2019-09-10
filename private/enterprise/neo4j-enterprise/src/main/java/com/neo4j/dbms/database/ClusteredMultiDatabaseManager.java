@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContextFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.dbms.ClusterInternalDbmsOperator;
 
 import java.io.IOException;
 
@@ -38,11 +39,13 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final StoreFiles storeFiles;
     protected final CatchupComponentsFactory catchupComponentsFactory;
     protected final ClusterStateLayout clusterStateLayout;
+    private final ClusterInternalDbmsOperator internalDbmsOperator;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
         super( globalModule, edition );
+        this.internalDbmsOperator = new ClusterInternalDbmsOperator();
         this.contextFactory = DefaultClusteredDatabaseContext::new;
         this.logProvider = logProvider;
         this.fs = fs;
@@ -132,6 +135,8 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
 
     public abstract void cleanupClusterState( String databaseName );
 
+    //TODO: Clean out shouldRecreateContext on drop!
+
     protected final LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
     {
         try
@@ -142,5 +147,10 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         {
             throw new RuntimeException( e );
         }
+    }
+
+    public final ClusterInternalDbmsOperator internalDbmsOperator()
+    {
+        return internalDbmsOperator;
     }
 }

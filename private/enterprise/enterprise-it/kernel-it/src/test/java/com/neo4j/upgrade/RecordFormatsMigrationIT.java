@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -102,13 +103,13 @@ class RecordFormatsMigrationIT
         executeAndStopDb( startDb( HighLimit.NAME ), RecordFormatsMigrationIT::createNode );
         assertLatestHighLimitStore();
 
-        GraphDatabaseService database = startStandardFormatDb();
+        GraphDatabaseAPI database = (GraphDatabaseAPI) startStandardFormatDb();
         try
         {
-            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
-            DatabaseContext databaseContext = databaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
-            assertTrue( databaseContext.isFailed() );
-            assertThat( getRootCause( databaseContext.failureCause() ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
+            DatabaseStateService dbStateService = database.getDependencyResolver().resolveDependency( DatabaseStateService.class );
+            assertTrue( dbStateService.databaseHasFailed( database.databaseId() ).isPresent() );
+            assertThat( getRootCause( dbStateService.databaseHasFailed( database.databaseId() ).get() ),
+                    instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
         }
         finally
         {

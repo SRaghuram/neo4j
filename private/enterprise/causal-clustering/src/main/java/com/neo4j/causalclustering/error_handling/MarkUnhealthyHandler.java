@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.error_handling;
 
 import org.neo4j.kernel.database.Database;
 
-import static com.neo4j.causalclustering.error_handling.PanicException.EXCEPTION;
 
 class MarkUnhealthyHandler implements DatabasePanicEventHandler
 {
@@ -19,12 +18,12 @@ class MarkUnhealthyHandler implements DatabasePanicEventHandler
     }
 
     @Override
-    public void onPanic()
+    public void onPanic( Throwable cause )
     {
         var dbHealth = db.getDatabaseHealth();
         if ( dbHealth != null )
         {
-            dbHealth.panic( EXCEPTION );
+            dbHealth.panic( cause );
         }
     }
 }

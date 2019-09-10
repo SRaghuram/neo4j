@@ -32,8 +32,15 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private final ShutdownOperator shutdownOperator;
     protected final DatabaseIdRepository databaseIdRepository;
     private final ReconciledTransactionTracker reconciledTxTracker;
+    private final DbmsReconciler reconciler;
 
     public StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, ReconciledTransactionTracker reconciledTxTracker )
+    {
+        this( globalModule, databaseManager, reconciledTxTracker, createReconciler( globalModule, databaseManager ) );
+    }
+
+    protected StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, ReconciledTransactionTracker reconciledTxTracker,
+            DbmsReconciler reconciler )
     {
         var internalLogProvider = globalModule.getLogService().getInternalLogProvider();
         var txBridge = globalModule.getThreadToTransactionBridge();
@@ -46,6 +53,8 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         EnterpriseSystemGraphDbmsModel dbmsModel = new EnterpriseSystemGraphDbmsModel( () -> getSystemDatabase( databaseManager ) );
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, txBridge, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager );
+        this.reconciler = reconciler;
+        globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
     }
 
@@ -53,12 +62,8 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     public void start()
     {
         registerWithListenerService( globalModule, systemOperator );
-        DbmsReconciler reconciler = createReconciler( globalModule, databaseManager );
-        globalModule.getGlobalDependencies().satisfyDependency( reconciler );
-
         var connector = new OperatorConnector( reconciler );
         operators().forEach( op -> op.connect( connector ) );
-
         startInitialDatabases();
     }
 
@@ -94,6 +99,11 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         stopAllDatabases();
     }
 
+    public DbmsReconciler reconciler()
+    {
+        return reconciler;
+    }
+
     protected Stream<DbmsOperator> operators()
     {
         return Stream.of( localOperator, systemOperator, shutdownOperator );
@@ -116,7 +126,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         return databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
     }
 
-    protected DbmsReconciler createReconciler( GlobalModule globalModule, DM databaseManager )
+    private static <DM extends MultiDatabaseManager<? extends DatabaseContext>> DbmsReconciler createReconciler( GlobalModule globalModule, DM databaseManager )
     {
         return new DbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
                 globalModule.getJobScheduler() );

@@ -44,9 +44,6 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     @Override
     protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
-        // TODO: Remove need for resolving these dependencies? Remove internal operator?
-        ClusterInternalDbmsOperator internalDbmsOperator = globalModule.getGlobalDependencies().resolveDependency( ClusterInternalDbmsOperator.class );
-
         Dependencies readReplicaDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         Monitors readReplicaMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), readReplicaDependencies );
 
@@ -55,9 +52,9 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
 
         LogFiles transactionLogs = buildTransactionLogs( kernelDatabase.getDatabaseLayout() );
         ReadReplicaDatabaseContext databaseContext = new ReadReplicaDatabaseContext( kernelDatabase, readReplicaMonitors, readReplicaDependencies, storeFiles,
-                transactionLogs, internalDbmsOperator );
+                transactionLogs, internalDbmsOperator() );
 
-        ReadReplicaDatabaseLife readReplicaDatabase = edition.readReplicaDatabaseFactory().createDatabase( databaseContext, internalDbmsOperator );
+        ReadReplicaDatabaseLife readReplicaDatabase = edition.readReplicaDatabaseFactory().createDatabase( databaseContext, internalDbmsOperator() );
 
         return contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
                 readReplicaDatabase, readReplicaMonitors );
