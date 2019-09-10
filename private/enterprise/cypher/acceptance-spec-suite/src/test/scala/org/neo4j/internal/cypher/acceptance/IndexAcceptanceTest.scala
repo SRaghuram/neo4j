@@ -155,7 +155,7 @@ class IndexAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       // WHEN
       executeSingle("DROP INDEX ON :Person(name)")
       // THEN
-    } should have message "Unable to drop index on :Person(name): No such INDEX ON :Person(name)."
+    } should have message "Unable to drop index on :Person(name): No such index :Person(name)."
   }
 
   test("should get error when trying to drop the same named index twice") {
@@ -169,7 +169,7 @@ class IndexAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       // WHEN
       executeSingle("DROP INDEX my_index")
       // THEN
-    } should have message "No such INDEX my_index." // TODO not as nice error message
+    } should have message "No such index my_index." // TODO not as nice error message
   }
 
   test("should get error when trying to drop non-existing index") {
@@ -177,7 +177,7 @@ class IndexAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       // WHEN
       executeSingle("DROP INDEX ON :Person(name)")
       // THEN
-    } should have message "Unable to drop index on :Person(name): No such INDEX ON :Person(name)."
+    } should have message "Unable to drop index on :Person(name): No such index :Person(name)."
   }
 
   test("should get error when trying to drop non-existing named index") {
@@ -185,7 +185,7 @@ class IndexAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       // WHEN
       executeSingle("DROP INDEX my_index")
       // THEN
-    } should have message "No such INDEX my_index." // TODO not as nice error message
+    } should have message "No such index my_index." // TODO not as nice error message
   }
 
   // Create constraint
