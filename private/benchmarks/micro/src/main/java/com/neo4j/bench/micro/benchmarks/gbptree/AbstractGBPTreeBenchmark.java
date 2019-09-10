@@ -188,7 +188,8 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 NO_MONITOR,
                 NO_HEADER_READER,
                 NO_HEADER_WRITER,
-                RecoveryCleanupWorkCollector.immediate() );
+                RecoveryCleanupWorkCollector.immediate(),
+                false );
     }
 
     @Override

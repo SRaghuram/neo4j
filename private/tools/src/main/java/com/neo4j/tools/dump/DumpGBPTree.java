@@ -47,7 +47,7 @@ public class DumpGBPTree
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = pageCache( jobScheduler ) )
         {
-            PrintingGBPTreeVisitor visitor = new PrintingGBPTreeVisitor( System.out, false, false, false, false );
+            PrintingGBPTreeVisitor visitor = new PrintingGBPTreeVisitor( System.out, false, false, false, false, false );
             GBPTreeStructure.visitHeader( pageCache, file, visitor );
         }
     }
