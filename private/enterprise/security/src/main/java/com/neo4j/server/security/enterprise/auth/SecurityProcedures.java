@@ -9,6 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 
 import java.util.stream.Stream;
 
+import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -22,6 +23,7 @@ public class SecurityProcedures extends AuthProceduresBase
     @Context
     public CommercialAuthManager authManager;
 
+    @SystemProcedure
     @Description( "Show the current user." )
     @Procedure( name = "dbms.showCurrentUser", mode = DBMS )
     public Stream<UserManagementProcedures.UserResult> showCurrentUser()
@@ -30,6 +32,7 @@ public class SecurityProcedures extends AuthProceduresBase
     }
 
     @Admin
+    @SystemProcedure
     @Description( "Clears authentication and authorization cache." )
     @Procedure( name = "dbms.security.clearAuthCache", mode = DBMS )
     public void clearAuthenticationCache()

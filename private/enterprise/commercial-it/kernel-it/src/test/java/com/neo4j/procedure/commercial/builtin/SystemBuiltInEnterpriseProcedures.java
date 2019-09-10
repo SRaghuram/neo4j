@@ -156,7 +156,7 @@ class SystemBuiltInEnterpriseProcedures implements ProcedureITBase
                 "CALL db.createUniquePropertyConstraint(':Person(name)', 'lucene+native-2.0')",
                 "CALL db.index.fulltext.createNodeIndex('businessNameIndex', ['Business'],['name'])",
                 "CALL db.index.fulltext.createRelationshipIndex('businessNameIndex', ['Business'],['name'])",
-                "CALL dbms.setTXMetaData( { User: 'Sascha' } )",  // enterprise only
+                "CALL dbms.setTXMetaData( { User: 'Sascha' } )",
                 "CALL db.index.fulltext.drop('businessNameIndex')" );
 
         for ( String q : queries )
