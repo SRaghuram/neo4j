@@ -130,6 +130,7 @@ Feature "ShortestPathAcceptance": Scenario "Optionally finds shortest path using
 Feature "ShortestPathAcceptance": Scenario "Optionally finds shortest path"
 Feature "ShortestPathAcceptance": Scenario "Returns null when not finding a shortest path during an OPTIONAL MATCH"
 Feature "SkipLimitAcceptance": Scenario "Floating point parameter for SKIP should fail"
+Feature "SkipLimitAcceptance": Scenario "Negative parameter for SKIP should fail"
 Feature "SkipLimitAcceptance": Scenario "Reduce SKIP should be allowed"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with empty db"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"
