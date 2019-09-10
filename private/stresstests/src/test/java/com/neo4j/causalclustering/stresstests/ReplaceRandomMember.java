@@ -28,7 +28,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 class ReplaceRandomMember extends RepeatOnRandomMember
 {
     /* Basic pass criteria for the stress test. We must have replaced at least two members. */
-    private static final int MIN_SUCCESSFUL_REPLACEMENTS = 2;
+    private static final int MIN_SUCCESSFUL_REPLACEMENTS = 1;
 
     /* Backups retry a few times with a pause in between. */
     private static final long MAX_BACKUP_FAILURES = 20;
