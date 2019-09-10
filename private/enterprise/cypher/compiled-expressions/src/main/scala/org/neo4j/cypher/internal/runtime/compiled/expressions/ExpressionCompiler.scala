@@ -862,7 +862,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
            r <- intermediateCompileExpression(rhs)
       } yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, nullCheck(l, r)(
+        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, noValueOr(l, r)(
           invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("equals"), l.ir, r.ir))))
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -874,7 +874,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
            r <- intermediateCompileExpression(rhs)
       } yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, nullCheck(l, r)(
+        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, noValueOr(l, r)(
           invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("notEquals"), l.ir, r.ir))))
 
         val ops = block(lazySet, load(variableName))
@@ -961,7 +961,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
 
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-                                     nullCheck(l, r)(
+                                               noValueOr(l, r)(
                                        invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThan"), l.ir,
                                                     r.ir))))
 
@@ -975,7 +975,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
            r <- intermediateCompileExpression(rhs)} yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-                                     nullCheck(l, r)(
+                                               noValueOr(l, r)(
                                        invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("lessThanOrEqual"),
                                                     l.ir, r.ir))))
 
@@ -989,7 +989,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
            r <- intermediateCompileExpression(rhs)} yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-                                     nullCheck(l, r)(
+                                               noValueOr(l, r)(
                                        invokeStatic(method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThan"),
                                                     l.ir, r.ir))))
 
@@ -1003,7 +1003,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
            r <- intermediateCompileExpression(rhs)} yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-                                     nullCheck(l, r)(invokeStatic(
+                                               noValueOr(l, r)(invokeStatic(
                                        method[CypherBoolean, Value, AnyValue, AnyValue]("greaterThanOrEqual"), l.ir,
                                        r.ir))))
 
@@ -1038,7 +1038,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
 
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-                                     nullCheck(r)(invokeStatic(
+                                               noValueOr(r)(invokeStatic(
                                        method[CypherBoolean, Value, AnyValue, AnyValue]("in"), l.ir,
                                        nullCheckIfRequired(r)))))
 
@@ -1143,7 +1143,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
            idx <- intermediateCompileExpression(index)
       } yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, nullCheck(c, idx)(nullCheck(c, idx)(
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(noValueOr(c, idx)(
           invokeStatic(method[CypherFunctions, AnyValue, AnyValue, AnyValue, DbAccess,
             NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
                        c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))))
@@ -1243,7 +1243,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
         val propertyGet = invokeStatic(method[CypherFunctions, AnyValue, String, AnyValue, DbAccess,
           NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
                                        constant(key), map.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
-        val call = nullCheck(map)(propertyGet)
+        val call = noValueOr(map)(propertyGet)
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, call))
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1765,7 +1765,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
       intermediateCompileExpression(c.args.head).map(in => {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
-                                               nullCheck(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
+                                               noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1792,7 +1792,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
       intermediateCompileExpression(c.args.head).map(in => {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
-                                               nullCheck(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
+                                               noValueOr(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1943,7 +1943,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
       for (in <- intermediateCompileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
-                                               nullCheck(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
+                                               noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1955,7 +1955,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
       for (in <- intermediateCompileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
-                                               nullCheck(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toFloat"), in.ir))))
+                                               noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toFloat"), in.ir))))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1967,7 +1967,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
       for (in <- intermediateCompileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
-                                               nullCheck(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
+                                               noValueOr(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1983,7 +1983,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
     case functions.Properties =>
       for (in <- intermediateCompileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, nullCheck(in)(invokeStatic(
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(in)(invokeStatic(
           method[CypherFunctions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("properties"),
           in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
 
@@ -2265,7 +2265,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
     //this is the inner block of the condition
     val inner = (e: IntermediateExpression) => {
       val exceptionName = namer.nextVariableName()
-      val loadValue = tryCatch[RuntimeException](exceptionName)(assign(returnValue, nullCheck(e)(invokeStatic(ASSERT_PREDICATE, e.ir))))(
+      val loadValue = tryCatch[RuntimeException](exceptionName)(assign(returnValue, noValueOr(e)(invokeStatic(ASSERT_PREDICATE, e.ir))))(
         assign(error, load(exceptionName)))
 
         if (nullable) {
@@ -2312,7 +2312,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
           assign(error, constant(null)),
           //assign returnValue to head of expressions
           tryCatch[RuntimeException](exceptionName)(
-            assign(returnValue, nullCheck(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir))))(
+            assign(returnValue, noValueOr(firstExpression)(invokeStatic(ASSERT_PREDICATE, firstExpression.ir))))(
             assign(error, load(exceptionName)))) ++ nullCheckAssign ++ Seq(
           //generated unrolls tail of expression
           loop(expressions.tail),
@@ -2591,7 +2591,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
     for ((nodeOps, relOps) <- compileSteps(steps) ) yield {
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName,
-                                   nullCheck(nodeOps ++ relOps: _*)(
+                                             noValueOr(nodeOps ++ relOps: _*)(
                                      invokeStatic(
                                        method[VirtualValues, PathValue, Array[NodeValue], Array[RelationshipValue]](
                                          "path"),
@@ -2688,7 +2688,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                  cast[ListValue](relOps.ir), cast[NodeValue](target.ir))
               } else {
                 invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue, AnyValue](methodName),
-                                 nullCheckIfRequired(relOps), nullCheck(target)(target.ir))
+                                 nullCheckIfRequired(relOps), noValueOr(target)(target.ir))
               }
             case None =>
               if (relOps.nullChecks.isEmpty) {
@@ -2940,14 +2940,18 @@ object ExpressionCompiler {
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
 
-  def nullCheck(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
+  def noValueOr(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
+    nullCheck(expressions:_*)(noValue)(onNotNull)
+  }
+
+  def nullCheck(expressions: IntermediateExpression*)(onNull: IntermediateRepresentation = noValue)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
     val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullChecks)
-    if (checks.nonEmpty) ternary(checks.reduceLeft(or), noValue, onNotNull)
+    if (checks.nonEmpty) ternary(checks.reduceLeft(or), onNull, onNotNull)
     else onNotNull
   }
 
-  def nullCheckIfRequired(expression: IntermediateExpression): IntermediateRepresentation =
-    if (expression.requireNullCheck) nullCheck(expression)(expression.ir) else expression.ir
+  def nullCheckIfRequired(expression: IntermediateExpression, onNull: IntermediateRepresentation = noValue): IntermediateRepresentation =
+    if (expression.requireNullCheck) nullCheck(expression)(onNull)(expression.ir) else expression.ir
 }
 
 private class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean) extends ExpressionCompiler(slots, readOnly) {

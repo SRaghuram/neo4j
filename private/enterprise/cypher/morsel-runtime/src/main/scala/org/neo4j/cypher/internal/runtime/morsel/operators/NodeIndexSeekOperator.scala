@@ -32,7 +32,7 @@ import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
-import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.{ListValue, VirtualValues}
 
 class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             offset: Int,
@@ -411,7 +411,8 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       * }}}
       */
     block(
-      declareAndAssign(typeRefOf[ListValue], queriesVariable, nullCheckIfRequired(queries)),
+      declareAndAssign(typeRefOf[ListValue], queriesVariable,
+                       nullCheckIfRequired(queries, getStatic[VirtualValues, ListValue]("EMPTY_LIST"))),
       setField(queryIteratorField,
                invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), load(queriesVariable))),
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
