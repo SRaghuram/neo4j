@@ -236,6 +236,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
     block(
       beginInnerLoop,
       declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, isPredicatePossible),
+      setField(canContinue, constant(false)),
       condition(load(hasInnerLoopVar))(
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
