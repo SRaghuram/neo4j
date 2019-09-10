@@ -13,13 +13,13 @@ import org.junit.rules.RuleChain;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.neo4j.function.ThrowingAction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.Log;
@@ -108,38 +108,49 @@ public class ClusterStressTesting
                 workload.validate();
             }
         }
-        catch ( Throwable cause )
+        catch ( Throwable e )
         {
-            control.onFailure( cause );
+            control.onFailure( e );
         }
 
-        log.info( "Shutting down executor" );
-        executor.shutdownNow();
-        executor.awaitTermination( 5, TimeUnit.MINUTES );
-
-        control.assertNoFailure();
-
-        Set<Validation> preStopValidations = validations.stream().filter( v -> !v.postStop() ).collect( Collectors.toSet() );
+        catchFailures( control, () ->
+        {
+            log.info( "Shutting down executor" );
+            executor.shutdownNow();
+            executor.awaitTermination( 5, TimeUnit.MINUTES );
+            log.info( "Shut down of executor complete" ); // Control suppresses interrupted exceptions, so we have an additional print here for traceability.
+        } );
 
         log.info( "Validating results pre-stop" );
-        for ( Validation validation : preStopValidations )
-        {
-            validation.validate();
-        }
+        validations
+                .stream()
+                .filter( v -> !v.postStop() )
+                .forEach( validation -> catchFailures( control, validation::validate ) );
 
         log.info( "Stopping resources" );
-        resources.stop();
-
-        Set<Validation> postStopValidations = validations.stream().filter( Validation::postStop ).collect( Collectors.toSet() );
+        catchFailures( control, resources::stop );
 
         log.info( "Validating results post-stop" );
-        for ( Validation validation : postStopValidations )
-        {
-            validation.validate();
-        }
+        validations
+                .stream()
+                .filter( Validation::postStop )
+                .forEach( validation -> catchFailures( control, validation::validate ) );
 
-        // let us only cleanup resources when everything went well, and otherwise leave them for post-mortem
+        control.assertNoFailure(); // Will throw and skip clean up if there were any failures, leaving the files for post-mortem.
+
         log.info( "Cleaning up" );
         resources.cleanup();
+    }
+
+    private static void catchFailures( Control control, ThrowingAction<Exception> task )
+    {
+        try
+        {
+            task.apply();
+        }
+        catch ( Throwable e )
+        {
+            control.onFailure( e );
+        }
     }
 }
