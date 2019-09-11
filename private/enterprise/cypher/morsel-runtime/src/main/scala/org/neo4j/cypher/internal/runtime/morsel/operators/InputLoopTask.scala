@@ -169,8 +169,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputRow.finishedWriting()
     block(
-      setField(canContinue, INPUT_ROW_IS_VALID),
-      labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
+      labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
           condition(not(loadField(innerLoop)))(setField(innerLoop, genInitializeInnerLoop)),
           ifElse(loadField(innerLoop))(
