@@ -133,7 +133,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         LOG.info( "downloading build artifacts from bucket {} at key prefix {}", bucketName, s3Path );
 
         ObjectListing objectListing = amazonS3.listObjects( bucketName, s3Path );
-        System.out.println(objectListing);
         try
         {
             for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() )

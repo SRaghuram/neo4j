@@ -39,13 +39,6 @@ public class ScheduleMacroCommand extends BaseInfraCommand
     private static final Logger LOG = LoggerFactory.getLogger( ScheduleMacroCommand.class );
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_ARTIFACT_BASE_URI,
-             description = "Location of worker jar and other artifacts needed (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
-             title = "Location of worker jar" )
-    @Required
-    private URI artifactBaseUri;
-
-    @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_JOB_QUEUE,
              title = "AWS Batch Job Queue Name" )
     private String jobQueue = "macro-benchmark-run-queue";
@@ -72,8 +65,8 @@ public class ScheduleMacroCommand extends BaseInfraCommand
             AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( infraParams.awsRegion(),
                                                                                 infraParams.awsKey(),
                                                                                 infraParams.awsSecret() );
-            artifactStorage.verifyBuildArtifactsExpirationRule( artifactBaseUri );
-            URI buildArtifactsUri = artifactStorage.uploadBuildArtifacts( artifactBaseUri, workspace );
+            artifactStorage.verifyBuildArtifactsExpirationRule( infraParams.artifactBaseUri() );
+            URI buildArtifactsUri = artifactStorage.uploadBuildArtifacts( infraParams.artifactBaseUri(), workspace );
             LOG.info( "upload build artifacts into {}", buildArtifactsUri );
 
             JobScheduler jobScheduler = AWSBatchJobScheduler.create( infraParams.awsRegion(),
@@ -83,7 +76,7 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                                                                      jobDefinition,
                                                                      batchStack );
 
-            JobId jobId = jobScheduler.schedule( artifactBaseUri, infraParams, runWorkloadParams );
+            JobId jobId = jobScheduler.schedule( infraParams.artifactBaseUri(), infraParams, runWorkloadParams );
             LOG.info( "job scheduled, with id {} and logs stream at {}", jobId.id(), AWSBatchJobLogs.getLogStreamName( jobDefinition, jobId ) );
             // wait until they are done, or fail
             RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()

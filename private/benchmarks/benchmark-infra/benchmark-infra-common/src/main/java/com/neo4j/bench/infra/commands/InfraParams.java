@@ -12,7 +12,6 @@ import java.util.Map;
 
 public class InfraParams
 {
-    public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     public static final String CMD_JOB_QUEUE = "--job-queue";
     public static final String CMD_JOB_DEFINITION = "--job-definition";
     public static final String CMD_BATCH_STACK = "--batch-stack";
@@ -45,6 +44,9 @@ public class InfraParams
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
     private final URI resultsStoreUri;
 
+    public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
+    private final URI artifactBaseUri;
+
     public InfraParams( Path workspaceDir,
                         String awsSecret,
                         String awsKey,
@@ -52,7 +54,8 @@ public class InfraParams
                         String storeName,
                         String resultsStoreUsername,
                         String resultsStorePassword,
-                        URI resultsStoreUri )
+                        URI resultsStoreUri,
+                        URI artifactBaseUri )
     {
         this.workspaceDir = workspaceDir;
         this.awsSecret = awsSecret;
@@ -62,6 +65,7 @@ public class InfraParams
         this.resultsStoreUsername = resultsStoreUsername;
         this.resultsStorePassword = resultsStorePassword;
         this.resultsStoreUri = resultsStoreUri;
+        this.artifactBaseUri = artifactBaseUri;
     }
 
     public Path workspaceDir()
@@ -107,6 +111,11 @@ public class InfraParams
     public URI resultsStoreUri()
     {
         return resultsStoreUri;
+    }
+
+    public URI artifactBaseUri()
+    {
+        return artifactBaseUri;
     }
 
     public Map<String,String> asMap()
