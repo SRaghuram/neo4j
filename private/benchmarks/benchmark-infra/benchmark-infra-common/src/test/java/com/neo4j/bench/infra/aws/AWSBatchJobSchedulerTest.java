@@ -101,6 +101,7 @@ public class AWSBatchJobSchedulerTest
         String resultsStorePassword = "password";
         URI resultsStoreUri = URI.create( "https://store.place" );
         URI workerArtifactUri = URI.create( "s3://benchmarking.neohq.net/worker.jar" );
+        URI baseArtifactUri = URI.create( "s3://benchmarking.neohq.net/" );
 
         InfraParams infraParams = new InfraParams(
                 workspaceDir,
@@ -111,17 +112,20 @@ public class AWSBatchJobSchedulerTest
                 resultsStoreUsername,
                 resultsStorePassword,
                 resultsStoreUri,
+                baseArtifactUri,
                 workerArtifactUri );
 
         Map<String,String> expectedParams = new HashMap<>();
         expectedParams.putAll( runWorkloadParams.asMap() );
         expectedParams.putAll( infraParams.asMap() );
 
-        expectedParams.put( InfraParams.CMD_ARTIFACT_BASE_URI, workerArtifactUri.toString() );
+        expectedParams.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
+        expectedParams.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
 
         // when
         JobId jobId = jobScheduler.schedule(
                 workerArtifactUri,
+                baseArtifactUri,
                 infraParams,
                 runWorkloadParams );
 

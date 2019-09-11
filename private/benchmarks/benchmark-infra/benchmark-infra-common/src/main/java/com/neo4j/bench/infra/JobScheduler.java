@@ -21,11 +21,12 @@ public interface JobScheduler
      * Schedules a benchmark run
      *
      * @param workerArtifactUri
+     * @param baseArtifactUri
      * @param infraParams
      * @param runWorkloadParams
      * @return ID of scheduled job
      */
-    JobId schedule( URI workerArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams );
+    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams );
 
     /**
      * Fetches status of scheduled job

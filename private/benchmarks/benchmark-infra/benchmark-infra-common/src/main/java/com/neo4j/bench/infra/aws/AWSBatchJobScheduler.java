@@ -89,14 +89,14 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public JobId schedule( URI workerArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams )
+    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams )
     {
         Map<String,String> paramsMap = new HashMap<>();
         paramsMap.putAll( infraParams.asMap() );
         paramsMap.putAll( runWorkloadParams.asMap() );
         // not a common infra command arg, but required by bootstrap-worker.sh to retrieve jar and launch run-worker command
-        paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, workerArtifactUri.toString() );
-//        paramsMap.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
+        paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
+        paramsMap.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
 
         String jobName = getJobName( runWorkloadParams.workloadName() );
         SubmitJobRequest submitJobRequest = new SubmitJobRequest()

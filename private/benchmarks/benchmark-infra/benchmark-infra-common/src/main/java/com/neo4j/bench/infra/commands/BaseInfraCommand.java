@@ -77,6 +77,13 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
     @Required
     private URI artifactBaseUri;
 
+    @Option( type = OptionType.COMMAND,
+             name = InfraParams.CMD_ARTIFACT_WORKER_URI,
+             description = "Location of worker jar(e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
+             title = "Location of worker jar" )
+    @Required
+    private URI artifactWorkerUri;
+
     @Override
     protected final void doRun( RunWorkloadParams runWorkloadParams )
     {
@@ -88,7 +95,8 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
                                                    resultsStoreUsername,
                                                    resultsStorePassword,
                                                    resultsStoreUri,
-                                                   artifactBaseUri );
+                                                   artifactBaseUri,
+                                                   artifactWorkerUri );
         doRunInfra( runWorkloadParams, infraParams );
     }
 

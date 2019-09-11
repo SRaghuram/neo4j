@@ -47,6 +47,9 @@ public class InfraParams
     public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     private final URI artifactBaseUri;
 
+    public static final String CMD_ARTIFACT_WORKER_URI = "--worker-artifact-uri";
+    private final URI artifactWorkerUri;
+
     public InfraParams( Path workspaceDir,
                         String awsSecret,
                         String awsKey,
@@ -55,7 +58,8 @@ public class InfraParams
                         String resultsStoreUsername,
                         String resultsStorePassword,
                         URI resultsStoreUri,
-                        URI artifactBaseUri )
+                        URI artifactBaseUri,
+                        URI artifactWorkerUri )
     {
         this.workspaceDir = workspaceDir;
         this.awsSecret = awsSecret;
@@ -66,6 +70,7 @@ public class InfraParams
         this.resultsStorePassword = resultsStorePassword;
         this.resultsStoreUri = resultsStoreUri;
         this.artifactBaseUri = artifactBaseUri;
+        this.artifactWorkerUri = artifactWorkerUri;
     }
 
     public Path workspaceDir()
@@ -116,6 +121,11 @@ public class InfraParams
     public URI artifactBaseUri()
     {
         return artifactBaseUri;
+    }
+
+    public URI artifactWorkerUri()
+    {
+        return artifactWorkerUri;
     }
 
     public Map<String,String> asMap()
