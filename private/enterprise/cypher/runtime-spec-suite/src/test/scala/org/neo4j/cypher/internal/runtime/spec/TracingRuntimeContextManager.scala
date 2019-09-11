@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import java.time.Clock
 
+import org.neo4j.cypher.CypherOperatorExecutionModeOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.morsel.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, RuntimeContextManager, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
@@ -29,7 +29,8 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                       clock: Clock,
                       debugOptions: Set[String],
                       compileExpressions: Boolean,
-                      materializedEntitiesMode: Boolean): EnterpriseRuntimeContext = {
+                      materializedEntitiesMode: Boolean,
+                      operatorExecutionMode: CypherOperatorExecutionModeOption): EnterpriseRuntimeContext = {
 
     EnterpriseRuntimeContext(tokenContext,
                              schemaRead,
@@ -40,7 +41,8 @@ case class TracingRuntimeContextManager(codeStructure: CodeStructure[GeneratedQu
                              config,
                              runtimeEnvironment,
                              compileExpressions,
-                             materializedEntitiesMode)
+                             materializedEntitiesMode,
+                             operatorExecutionMode)
   }
 
   override def assertAllReleased(): Unit = {

@@ -6,10 +6,9 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.time.Clock
-import java.util.concurrent.TimeUnit
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
+import org.neo4j.cypher.CypherOperatorExecutionModeOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.NO_TRACKING_CONTROLLER
@@ -25,8 +24,6 @@ import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 import org.scalatest.mock.MockitoSugar
 
-import scala.concurrent.duration.Duration
-
 object ContextHelper extends MockitoSugar {
 
   private val runtimeConfig = CypherRuntimeConfiguration(
@@ -35,7 +32,6 @@ object ContextHelper extends MockitoSugar {
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
-    fuseOperators = true,
     memoryTrackingController = NO_TRACKING_CONTROLLER
     )
 
@@ -64,6 +60,7 @@ object ContextHelper extends MockitoSugar {
       runtimeConfig,
       runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport, workerManager),
       compileExpressions = useCompiledExpressions,
-      materializedEntitiesMode = materializedEntitiesMode)
+      materializedEntitiesMode = materializedEntitiesMode,
+      operatorExecutionMode = CypherOperatorExecutionModeOption.compiled)
   }
 }

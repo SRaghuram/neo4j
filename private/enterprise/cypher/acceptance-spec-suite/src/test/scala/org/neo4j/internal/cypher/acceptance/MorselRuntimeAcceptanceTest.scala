@@ -84,29 +84,6 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with 
       })
     })
   }
-
-  ignore("don't stall for nested plan expressions") {
-    // Given
-    graph.withTx( tx =>
-    tx.execute( """CREATE (a:A)
-                     |CREATE (a)-[:T]->(:B),
-                     |       (a)-[:T]->(:C)""".stripMargin))
-
-
-    // When
-    graph.withTx( tx => {
-      val result =
-        tx.execute( """ CYPHER runtime=parallel
-                         | MATCH (n)
-                         | RETURN CASE
-                         |          WHEN id(n) >= 0 THEN (n)-->()
-                         |          ELSE 42
-                         |        END AS p""".stripMargin)
-
-      // Then
-      asScalaResult(result).toList should not be empty
-    })
-  }
 }
 
 class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
@@ -116,7 +93,7 @@ class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
     GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
-    GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
+    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.INTERPRETED
   )
 }
 
@@ -127,6 +104,6 @@ class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceT
     GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
-    GraphDatabaseSettings.cypher_morsel_fuse_operators -> FALSE
+    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.INTERPRETED
   )
 }
