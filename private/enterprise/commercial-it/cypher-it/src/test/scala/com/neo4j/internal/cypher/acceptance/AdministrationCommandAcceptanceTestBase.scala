@@ -124,6 +124,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "schema")).action("write").node("*")
   def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "system")).action("write").node("*")
 
+  type builderType = (PrivilegeMapBuilder, String) => PrivilegeMapBuilder
+  def addNode(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.node(name)
+  def addRel(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.relationship(name)
+
   def testUserLogin(username: String, password: String, expected: AuthenticationResult): Unit = {
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
     val result = login.subject().getAuthenticationResult
