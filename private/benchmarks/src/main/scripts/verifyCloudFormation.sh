@@ -6,4 +6,4 @@
 #
 
 set -e
-aws cloudformation validate-template --template-body "$(cat benchmark-infra/src/main/stack/aws-batch-formation.json)"
+aws --region eu-west-1 cloudformation validate-template --template-body "$(cat benchmark-infra/src/main/stack/aws-batch-formation.json)"
