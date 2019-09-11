@@ -650,7 +650,7 @@ class SystemGraphOnFollowerInClusterIT
         // But it works on leader
         leaderTx( ( sys, tx ) ->
         {
-            tx.execute( "CREATE ROLE " + roleName2 + " AS COPY OF "+ roleName );
+            tx.execute( "CREATE ROLE " + roleName2 + " AS COPY OF " + roleName );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
             assertEquals(
