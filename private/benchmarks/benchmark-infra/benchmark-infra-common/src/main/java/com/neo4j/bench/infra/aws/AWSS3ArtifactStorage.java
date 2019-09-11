@@ -100,7 +100,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             for ( Path artifact : workspace.allArtifacts() )
             {
                 ObjectMetadata objectMetadata = new ObjectMetadata();
-                String s3key = s3Path + artifact.getFileName();
+                String s3key = s3Path + workspace.baseDir().relativize( artifact );
                 // don't you ever dare to touch it,
                 // otherwise you will run out of memory
                 // as AWS S3 client tries to cache whole stream in memory

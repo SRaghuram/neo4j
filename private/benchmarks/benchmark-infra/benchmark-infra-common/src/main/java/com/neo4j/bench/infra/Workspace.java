@@ -118,12 +118,6 @@ public class Workspace
 
     public boolean isValid( Path anotherBaseDir )
     {
-        allArtifacts.stream()
-                    .map( baseDir::relativize )
-                    .map( anotherBaseDir::resolve ).forEach( p -> {
-                                                                    System.out.println( p.getFileName() );
-                                                                    System.out.println( Files.isRegularFile( p ) );
-        } );
         return allArtifacts.stream()
                            .map( baseDir::relativize )
                            .map( anotherBaseDir::resolve )
