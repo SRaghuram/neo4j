@@ -1313,21 +1313,23 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    val expected2 = List(
+      (1, null),
+      (3, null)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
-
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
   }
 
   test("should read correct properties using properties() function when denied match privilege for all reltypes and specific property") {
@@ -1364,20 +1366,23 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    val expected2 = List(
+      util.Map.of("id", 1L),
+      util.Map.of("id", 3L)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected2(index))
+    }) should be(2)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected2(index))
+    }) should be(2)
 
   }
 
@@ -1513,19 +1518,23 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3, 4))
-    }) should be(1)
+    val expected2 = List(
+      (1, null),
+      (3, 4)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-      (row.getNumber("r.id"), row.getNumber("r.foo")) should be((3, 4))
-    }) should be(1)
-
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.getNumber("r.id"), row.getNumber("r.foo")) should be(expected2(index))
+    }) should be(2)
   }
 
   test("should read correct properties using properties() function when denied match privilege for specific reltype and specific property") {
@@ -1562,18 +1571,23 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-      row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
-    }) should be(1)
+    val expected2 = List(
+      util.Map.of("id", 1L),
+      util.Map.of("id", 3L, "foo", 4L)
+    )
+
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected2(index))
+    }) should be(2)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-      row.get("props") should be(util.Map.of("id", 3L, "foo", 4L))
-    }) should be(1)
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("props") should be(expected2(index))
+    }) should be(2)
 
   }
 

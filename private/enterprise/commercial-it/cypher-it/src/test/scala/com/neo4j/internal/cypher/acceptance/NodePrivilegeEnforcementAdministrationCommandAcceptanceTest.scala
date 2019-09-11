@@ -1309,21 +1309,30 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
+    val expected2 = List(
+      (null, 2), // :A
+      (null, 4), // :B
+      (null, 6), // :A:B
+      (null, 8) // no labels
+    )
+
+    // THEN
     // THEN
     executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(4)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
+    // THEN
     executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+      resultHandler = (row, index) => {
+        (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
+      }) should be(4)
   }
 
   test("should read correct properties using properties() function when denied match privilege for all labels and specific property") {
@@ -1355,11 +1364,18 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
+    val expected2 = List(
+      util.Map.of("bar", 2L), // :A
+      util.Map.of("bar", 4L), // :B
+      util.Map.of("bar", 6L), // :A:B
+      util.Map.of("bar", 8L) // no labels
+    )
+
     // THEN
     executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+      resultHandler = (row, index) => {
+        row.get("props") should be(expected2(index))
+      }) should be(4)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1367,9 +1383,9 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // THEN
     executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+      resultHandler = (row, index) => {
+        row.get("props") should be(expected2(index))
+      }) should be(4)
   }
 
   test("should read correct properties when denied match privilege for specific labels and all properties") {
@@ -1506,13 +1522,15 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     val expected2 = List(
       (3, 4), // :B
       (7, 8), // no labels
+      (null, 2), // :A
+      (null, 6) // :A:B
     )
 
     // THEN
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-      }) should be(2)
+      }) should be(4)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1522,7 +1540,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
-      }) should be(2)
+      }) should be(4)
   }
 
   test("should read correct properties using properties function() when denied match privilege for specific label and specific property") {
@@ -1557,13 +1575,15 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     val expected2 = List(
       util.Map.of("foo", 3L, "bar", 4L), // :B
       util.Map.of("foo", 7L, "bar", 8L), // no labels
+      util.Map.of("bar", 2L), // :A
+      util.Map.of("bar", 6L) // :A:B
     )
 
     // THEN
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
-      }) should be(2)
+      }) should be(4)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1573,7 +1593,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         row.get("props") should be(expected2(index))
-      }) should be(2)
+      }) should be(4)
   }
 
   test("should get correct count within transaction for restricted user") {
