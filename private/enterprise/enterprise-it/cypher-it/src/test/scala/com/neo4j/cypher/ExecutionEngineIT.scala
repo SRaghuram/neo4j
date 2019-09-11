@@ -29,6 +29,26 @@ import scala.collection.mutable.ArrayBuffer
 
 class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
+  test("should close resources on TX rollback") {
+    val managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent().build()
+    try {
+      // given
+      val db = managementService.database(DEFAULT_DATABASE_NAME)
+
+      val tx = db.beginTx()
+
+      tx.createNode()
+      tx.createNode()
+
+      // We need two node vars to have one non-pooled cursor
+      val r = tx.execute("MATCH (n), (m) WHERE true RETURN n, m, n.name, m.name")
+      r.next()
+      tx.rollback() // This should close all cursors
+    } finally {
+      managementService.shutdown()
+    }
+  }
+
   test("should be possible to close compiled result after it is consumed") {
     val managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent().build()
     // given
