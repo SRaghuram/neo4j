@@ -477,38 +477,6 @@ class QueryLoggerIT
     }
 
     @Test
-    void shouldNotLogPasswordWhenChangingWithProcedure() throws Exception
-    {
-        databaseManagementService = databaseBuilder
-                .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
-
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        String query = "CALL dbms.security.changePassword('abc123')";
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( query );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
-
-        List<String> logLines = readAllLines( logFilename );
-        var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "CALL dbms.security.changePassword('******')";
-        assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( DEFAULT_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
-    }
-
-    @Test
     void shouldNotLogPasswordWhenChangedByAdmin() throws Exception
     {
         databaseManagementService = databaseBuilder
@@ -549,7 +517,7 @@ class QueryLoggerIT
                 .setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
         GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
 
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
@@ -573,7 +541,7 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CALL dbms.security.changeUserPassword('foo', '******')";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( DEFAULT_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
@@ -607,39 +575,6 @@ class QueryLoggerIT
         var obfuscatedQuery = "CREATE USER foo SET PASSWORD '******'";
         assertThat( logLines.get( lastEntry ),
                 endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
-    }
-
-    @Test
-    void shouldNotLogPasswordForCreateWithProcedureOnDefault() throws Exception
-    {
-        databaseManagementService = databaseBuilder
-                .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
-
-        executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
-
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( "CALL dbms.security.createUser('foo', 'abc123')" );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
-
-        List<String> logLines = readAllLines( logFilename );
-        var lastEntry = logLines.size() - 1;
-        var obfuscatedQuery = "CALL dbms.security.createUser('foo', '******')";
-        assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - {}", connectionAndDatabaseDetails( DEFAULT_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
