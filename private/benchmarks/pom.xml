@@ -138,6 +138,31 @@
                                     <executable>src/main/scripts/checkShellScrips.sh</executable>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>packer-validate</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <basedir>benchmark-infra/</basedir>
+                                    <executable>packer</executable>
+                                    <arguments>
+                                        <argument>validate</argument>
+                                        <argument>src/main/ami/benchmark-run-batch-worker/template.json</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>cloudformation-validate</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <executable>src/main/scripts/verifyCloudFormation.sh</executable>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
