@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
-import java.lang.Boolean.{FALSE, TRUE}
+import java.lang.Boolean.TRUE
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -42,10 +42,11 @@ object ENTERPRISE {
     GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(4),
     GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(4))
 
-  val FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0))
+  val FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
+    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.COMPILED)
 
   val NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
-                                                   GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.INTERPRETED)
+    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.INTERPRETED)
 
   val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](

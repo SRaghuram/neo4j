@@ -131,10 +131,10 @@ class MorselSingleThreadedNoFusingProvidedOrderTest extends ProvidedOrderTestBas
 // REACTIVE
 class MorselReactiveResultsTest extends ReactiveResultTestBase(FUSING, MORSEL)
 class MorselReactiveResultsNoFusingTest extends ReactiveResultTestBase(NO_FUSING, MORSEL)
-class MorselReactiveParallelStressTest
+class MorselReactiveResultsStressTest
   extends ReactiveResultStressTestBase(FUSING, MORSEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
-class MorselReactiveParallelNoFusingStressTest
+class MorselReactiveResultsNoFusingStressTest
   extends ReactiveResultStressTestBase(NO_FUSING, MORSEL,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
