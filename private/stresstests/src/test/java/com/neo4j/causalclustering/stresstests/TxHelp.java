@@ -10,6 +10,7 @@ import java.util.concurrent.TimeoutException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.kernel.impl.api.EpochException;
 import org.neo4j.lock.AcquireLockTimeoutException;
 
 class TxHelp
@@ -21,6 +22,7 @@ class TxHelp
                         e instanceof DatabaseShutdownException ||
                         e instanceof TransactionFailureException ||
                         e instanceof AcquireLockTimeoutException ||
+                        e instanceof EpochException ||
                         e instanceof TransientTransactionFailureException ||
                         isInterrupted( e.getCause() ) );
     }
