@@ -21,6 +21,9 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
   override protected var controller: ConcurrentStateController[STATE] = _
 
   @volatile
+  override protected var hasController = true
+
+  @volatile
   override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,

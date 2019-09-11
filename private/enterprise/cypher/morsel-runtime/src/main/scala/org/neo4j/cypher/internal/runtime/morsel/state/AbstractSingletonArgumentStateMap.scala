@@ -26,6 +26,8 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     */
   protected var controller: CONTROLLER
 
+  protected var hasController: Boolean
+
   // Not assigned here since the Concurrent implementation needs to declare this volatile
   /**
     * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]. Will only be -1 or 0.
@@ -45,7 +47,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def clearAll(f: STATE => Unit): Unit = {
-    if (controller != null && controller.take()) {
+    if (hasController && controller.take()) {
       // We do not remove the controller from controllers here in case there
       // is some outstanding work unit that wants to update count of accumulator
       f(controller.state)
@@ -72,9 +74,9 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def takeOneCompleted(): STATE = {
-    if (controller != null && controller.tryTake()) {
+    if (hasController && controller.tryTake()) {
       val completedState = controller.state
-      controller = null.asInstanceOf[CONTROLLER]
+      hasController = false
       DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
       return completedState
     }
@@ -82,12 +84,12 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
-    if (controller != null && controller.tryTake()) {
+    if (hasController && controller.tryTake()) {
       lastCompletedArgumentId = TopLevelArgument.VALUE
       val completedState = controller.state
-      controller = null.asInstanceOf[CONTROLLER]
+      hasController = false
       ArgumentStateWithCompleted(completedState, isCompleted = true)
-    } else if (controller != null) {
+    } else if (hasController) {
       ArgumentStateWithCompleted(controller.state, isCompleted = false)
     } else {
       null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
@@ -95,13 +97,13 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def nextArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
-    controller != null && (controller.isZero || statePredicate(controller.state))
+    hasController && (controller.isZero || statePredicate(controller.state))
   }
 
   override def peekNext(): STATE = peek(lastCompletedArgumentId + 1)
 
   override def peekCompleted(): Iterator[STATE] = {
-    if (controller != null && controller.isZero) Iterator.single(controller.state)
+    if (hasController && controller.isZero) Iterator.single(controller.state)
     else Iterator.empty
   }
 
@@ -114,7 +116,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def hasCompleted: Boolean = {
-    controller != null && controller.isZero
+    hasController && controller.isZero
   }
 
   override def hasCompleted(argument: Long): Boolean = {
@@ -124,7 +126,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   override def remove(argument: Long): Boolean = {
     DebugSupport.ASM.log("ASM %s rem %03d", argumentStateMapId, argument)
     if (argument == TopLevelArgument.VALUE) {
-      controller == null
+      hasController = false
       true
     } else {
       false
@@ -153,7 +155,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   override def toString: String = {
     val sb = new StringBuilder
     sb ++= "ArgumentStateMap(\n"
-    sb ++= s"0 -> $controller\n"
+    sb ++= s"0 -> ${if (hasController) controller else null}\n"
     sb += ')'
     sb.result()
   }
