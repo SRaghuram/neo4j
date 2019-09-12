@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.fabric.stream.summary;
+
+import org.neo4j.graphdb.ExecutionPlanDescription;
+import org.neo4j.graphdb.Notification;
+import org.neo4j.graphdb.QueryExecutionType;
+import org.neo4j.graphdb.QueryStatistics;
+
+public interface Summary
+{
+    /**
+     * The {@link QueryExecutionType} of the query,
+     */
+    QueryExecutionType executionType();
+
+    /**
+     * @return The plan description of the query.
+     */
+    ExecutionPlanDescription executionPlanDescription();
+
+    /**
+     * @return all notifications and warnings of the query.
+     */
+    Iterable<Notification> getNotifications();
+
+    QueryStatistics getQueryStatistics();
+}

@@ -1,0 +1,120 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.fabric.auth;
+
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+
+import java.util.Arrays;
+import java.util.Map;
+
+import org.neo4j.internal.kernel.api.security.AuthSubject;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.api.security.AuthToken;
+import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.impl.security.Credential;
+
+public class FabricAuthManagerWrapper implements CommercialAuthManager
+{
+    private final CommercialAuthManager wrappedAuthManager;
+
+    public FabricAuthManagerWrapper( CommercialAuthManager wrappedAuthManager )
+    {
+        this.wrappedAuthManager = wrappedAuthManager;
+    }
+
+    @Override
+    public CommercialLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException
+    {
+        boolean authProvided = !authToken.get( AuthToken.SCHEME_KEY ).equals( "none" );
+        String username = null;
+        byte[] password = null;
+
+        if ( authToken.containsKey( AuthToken.PRINCIPAL ) && authToken.containsKey( AuthToken.CREDENTIALS ) )
+        {
+            username = AuthToken.safeCast( AuthToken.PRINCIPAL, authToken );
+            byte[] originalPassword = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, authToken );
+            // the original password is erased after the authentication
+            password = Arrays.copyOf( originalPassword, originalPassword.length );
+        }
+
+        CommercialLoginContext wrappedLoginContext = wrappedAuthManager.login( authToken );
+
+        Credentials credentials = new Credentials( username, password, authProvided );
+        FabricAuthSubject fabricAuthSubject = new FabricAuthSubject( wrappedLoginContext.subject(), credentials );
+        return new FabricLoginContext( wrappedLoginContext, fabricAuthSubject );
+    }
+
+    public static Credentials getCredentials( AuthSubject authSubject )
+    {
+        if ( !(authSubject instanceof FabricAuthSubject) )
+        {
+            throw new IllegalArgumentException( "The submitted subject was not created by Fabric Authentication manager: " + authSubject );
+        }
+
+        return ((FabricAuthSubject) authSubject).getCredentials();
+    }
+
+    @Override
+    public void clearAuthCache()
+    {
+        wrappedAuthManager.clearAuthCache();
+    }
+
+    @Override
+    public void clearCacheForRole( String role )
+    {
+        wrappedAuthManager.clearCacheForRole( role );
+    }
+
+    @Override
+    public void clearCacheForRoles()
+    {
+        wrappedAuthManager.clearCacheForRoles();
+    }
+
+    @Override
+    public Credential createCredentialForPassword( byte[] password )
+    {
+        return wrappedAuthManager.createCredentialForPassword( password );
+    }
+
+    @Override
+    public Credential deserialize( String part ) throws Throwable
+    {
+        return wrappedAuthManager.deserialize( part );
+    }
+
+    @Override
+    public void log( String message, SecurityContext securityContext )
+    {
+        wrappedAuthManager.log( message, securityContext );
+    }
+
+    @Override
+    public void init()
+    {
+        // the wrapped auth manger will take care of its lifecycle
+    }
+
+    @Override
+    public void start()
+    {
+        // the wrapped auth manger will take care of its lifecycle
+    }
+
+    @Override
+    public void stop()
+    {
+        // the wrapped auth manger will take care of its lifecycle
+    }
+
+    @Override
+    public void shutdown()
+    {
+        // the wrapped auth manger will take care of its lifecycle
+    }
+}
