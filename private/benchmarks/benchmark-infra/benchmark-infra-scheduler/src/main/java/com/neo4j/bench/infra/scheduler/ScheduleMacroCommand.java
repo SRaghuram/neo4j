@@ -9,7 +9,6 @@ import com.amazonaws.SdkClientException;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
-import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.JobId;
@@ -39,13 +38,6 @@ public class ScheduleMacroCommand extends BaseInfraCommand
     private static final Logger LOG = LoggerFactory.getLogger( ScheduleMacroCommand.class );
 
     @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_WORKER_ARTIFACT_URI,
-             description = "Location of worker jar (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/benchmark-infra-worker.jar) in S3",
-             title = "Location of worker jar" )
-    @Required
-    private URI workerArtifactUri;
-
-    @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_JOB_QUEUE,
              title = "AWS Batch Job Queue Name" )
     private String jobQueue = "macro-benchmark-run-queue";
@@ -56,9 +48,9 @@ public class ScheduleMacroCommand extends BaseInfraCommand
     private String jobDefinition = "macro-benchmark-job-definition";
 
     @Option( type = OptionType.COMMAND,
-            name = InfraParams.CMD_BATCH_STACK,
-            title = "AWS Batch Stack Name" )
-   private String batchStack = "benchmarking";
+             name = InfraParams.CMD_BATCH_STACK,
+             title = "AWS Batch Stack Name" )
+    private String batchStack = "benchmarking";
 
     @Override
     protected void doRunInfra( RunWorkloadParams runWorkloadParams, InfraParams infraParams )
@@ -72,8 +64,8 @@ public class ScheduleMacroCommand extends BaseInfraCommand
             AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( infraParams.awsRegion(),
                                                                                 infraParams.awsKey(),
                                                                                 infraParams.awsSecret() );
-            artifactStorage.verifyBuildArtifactsExpirationRule();
-            URI buildArtifactsUri = artifactStorage.uploadBuildArtifacts( runWorkloadParams.teamcityBuild().toString(), workspace );
+            artifactStorage.verifyBuildArtifactsExpirationRule( infraParams.artifactBaseUri() );
+            URI buildArtifactsUri = artifactStorage.uploadBuildArtifacts( infraParams.artifactBaseUri(), workspace );
             LOG.info( "upload build artifacts into {}", buildArtifactsUri );
 
             JobScheduler jobScheduler = AWSBatchJobScheduler.create( infraParams.awsRegion(),
@@ -82,8 +74,7 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                                                                      jobQueue,
                                                                      jobDefinition,
                                                                      batchStack );
-
-            JobId jobId = jobScheduler.schedule( workerArtifactUri, infraParams, runWorkloadParams );
+            JobId jobId = jobScheduler.schedule( infraParams.artifactWorkerUri(), infraParams.artifactBaseUri(), infraParams, runWorkloadParams );
             LOG.info( "job scheduled, with id {} and logs stream at {}", jobId.id(), AWSBatchJobLogs.getLogStreamName( jobDefinition, jobId ) );
             // wait until they are done, or fail
             RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()

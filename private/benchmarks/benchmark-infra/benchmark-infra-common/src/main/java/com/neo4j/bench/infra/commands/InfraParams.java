@@ -12,7 +12,6 @@ import java.util.Map;
 
 public class InfraParams
 {
-    public static final String CMD_WORKER_ARTIFACT_URI = "--worker-artifact-uri";
     public static final String CMD_JOB_QUEUE = "--job-queue";
     public static final String CMD_JOB_DEFINITION = "--job-definition";
     public static final String CMD_BATCH_STACK = "--batch-stack";
@@ -31,6 +30,12 @@ public class InfraParams
 
     public static final String CMD_DB_NAME = "--db-name";
     private final String storeName;
+
+    public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
+    private final URI artifactBaseUri;
+
+    public static final String CMD_ARTIFACT_WORKER_URI = "--worker-artifact-uri";
+    private final URI artifactWorkerUri;
 
     // -----------------------------------------------------------------------
     // Common: Result Client Report Results Args
@@ -52,7 +57,9 @@ public class InfraParams
                         String storeName,
                         String resultsStoreUsername,
                         String resultsStorePassword,
-                        URI resultsStoreUri )
+                        URI resultsStoreUri,
+                        URI artifactBaseUri,
+                        URI artifactWorkerUri )
     {
         this.workspaceDir = workspaceDir;
         this.awsSecret = awsSecret;
@@ -62,6 +69,8 @@ public class InfraParams
         this.resultsStoreUsername = resultsStoreUsername;
         this.resultsStorePassword = resultsStorePassword;
         this.resultsStoreUri = resultsStoreUri;
+        this.artifactBaseUri = artifactBaseUri;
+        this.artifactWorkerUri = artifactWorkerUri;
     }
 
     public Path workspaceDir()
@@ -107,6 +116,16 @@ public class InfraParams
     public URI resultsStoreUri()
     {
         return resultsStoreUri;
+    }
+
+    public URI artifactBaseUri()
+    {
+        return artifactBaseUri;
+    }
+
+    public URI artifactWorkerUri()
+    {
+        return artifactWorkerUri;
     }
 
     public Map<String,String> asMap()

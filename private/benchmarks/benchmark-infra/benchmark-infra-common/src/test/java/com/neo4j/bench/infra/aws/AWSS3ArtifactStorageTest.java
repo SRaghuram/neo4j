@@ -82,25 +82,26 @@ class AWSS3ArtifactStorageTest
                     Paths.get( "artifact1/artifact1.jar" )
                  ).build();
 
-        String buildID = "buildID";
         AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
         //when
-        artifactStorage.verifyBuildArtifactsExpirationRule();
-        URI artifactURI = artifactStorage.uploadBuildArtifacts( buildID, workspace );
+        URI uri = URI.create( "s3://benchmarking.neo4j.com/artifacts/buildID" );
+        artifactStorage.verifyBuildArtifactsExpirationRule( uri );
+        URI artifactURI = artifactStorage.uploadBuildArtifacts( uri, workspace );
         // then
         assertEquals(
                 URI.create( "s3://benchmarking.neo4j.com/artifacts/buildID" ),
                 artifactURI );
+
+        System.out.println( s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( artifact0.getFileName() ).toFile().toString() );
+
         assertTrue( Files
                 .isRegularFile(
                         s3Dir
-                            .resolve( AWSS3ArtifactStorage.BENCHMARKING_BUCKET_NAME )
-                            .resolve( "artifacts" )
-                            .resolve( buildID )
-                            .resolve( artifact0.getFileName() ) ) );
+                                .resolve( "benchmarking.neo4j.com/artifacts/buildID" )
+                                .resolve( artifact0.getFileName() ) ) );
         // when
         Path downloadDir = Files.createTempDirectory( "download" );
-        artifactStorage.downloadBuildArtifacts( downloadDir, buildID );
+        artifactStorage.downloadBuildArtifacts( downloadDir, uri );
         // then
         assertTrue(workspace.isValid(downloadDir));
 
