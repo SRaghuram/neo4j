@@ -93,7 +93,7 @@ class ParallelMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceTest {
     GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
-    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.INTERPRETED
+    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.CypherOperatorExecutionMode.INTERPRETED
   )
 }
 
@@ -104,6 +104,6 @@ class SingleThreadedMorselRuntimeAcceptanceTest extends MorselRuntimeAcceptanceT
     GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(1),
-    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.OperatorExecutionMode.INTERPRETED
+    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.CypherOperatorExecutionMode.INTERPRETED
   )
 }
