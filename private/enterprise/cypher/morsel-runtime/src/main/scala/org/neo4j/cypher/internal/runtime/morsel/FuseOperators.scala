@@ -578,7 +578,6 @@ class FuseOperators(operatorFactory: OperatorFactory,
       }
 
     // Did we find any sequence of operators that we can fuse with the headPlan?
-    //TODO this is wrong since we need to take into account that a pipeline.fusedHeadPlans
     //might have failed and should now be a middle plan
     if (fusedPipeline.fusedPlans.length < FUSE_LIMIT) {
       (None, pipeline.fusedHeadPlans.tail ++ middlePlans, output)

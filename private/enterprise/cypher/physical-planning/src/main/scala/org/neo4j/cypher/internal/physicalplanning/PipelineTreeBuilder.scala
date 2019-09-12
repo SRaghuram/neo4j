@@ -262,7 +262,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                         source: PipelineDefinitionBuild,
                                         argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
 
-    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuseMiddle(plan)
+    def canFuseMiddle: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuseMiddle(plan)
+    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuse(plan)
 
     plan match {
       case produceResult: ProduceResult =>
@@ -290,7 +291,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Optional =>
-        if (canFuse) {
+        if (canFuseMiddle) {
           source.fusedHeadPlans += plan
           source
         } else if (breakingPolicy.breakOn(plan)) {
@@ -308,7 +309,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: OptionalExpand |
            _: FindShortestPaths |
            _: UnwindCollection =>
-        if (canFuse) {
+        if (canFuseMiddle) {
           source.fusedHeadPlans += plan
           source
         } else if (breakingPolicy.breakOn(plan)) {
@@ -323,7 +324,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       case _: Limit =>
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
         markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
-        if (canFuse) {
+        if (canFuseMiddle) {
           source.fusedHeadPlans += plan
           source
         } else {
