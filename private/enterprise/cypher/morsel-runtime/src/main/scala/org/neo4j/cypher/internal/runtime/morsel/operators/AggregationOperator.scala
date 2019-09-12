@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util.concurrent.ConcurrentHashMap
 
+import org.neo4j.codegen.api.IntermediateRepresentation.{arrayLoad, arrayOf, getStatic, invoke, method}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -258,24 +259,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   }
 }
 
-class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
-                                            override val id: Id,
-                                            argumentSlotOffset: Int,
-                                            aggregators: Array[Aggregator],
-                                            outputBufferId: BufferId,
-                                            aggregationExpressionsCreator : () => Array[IntermediateExpression],
-                                            groupingKeyExpressionCreator: () => IntermediateExpression,
-                                            aggregationExpressions: Array[AstExpression])
-                                           (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
-  import OperatorCodeGenHelperTemplates._
-  import org.neo4j.codegen.api.IntermediateRepresentation._
-
-  type AggMap = java.util.LinkedHashMap[AnyValue, Array[Any]]
-  type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
-
-  override def toString: String = "AggregationMapperOperatorTaskTemplate"
-
-  private def createAggregators(): IntermediateRepresentation = {
+object AggregationMapperOperatorTaskTemplate {
+  def createAggregators(aggregators: Array[Aggregator]): IntermediateRepresentation = {
     val newAggregators = aggregators.map {
       case CountStarAggregator => getStatic[Aggregators,Aggregator]("COUNT_STAR")
       case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
@@ -290,18 +275,36 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     arrayOf[Aggregator](newAggregators: _ *)
   }
 
-  private def createUpdaters(): IntermediateRepresentation = {
+  def createUpdaters(aggregators: Array[Aggregator], aggregatorsVar: IntermediateRepresentation): IntermediateRepresentation = {
     val newUpdaters = aggregators.indices.map(i =>
-      invoke(arrayLoad(load(aggregatorsVar), i), method[Aggregator, Updater]("newUpdater"))
+      invoke(arrayLoad(aggregatorsVar, i), method[Aggregator, Updater]("newUpdater"))
     )
     arrayOf[Updater](newUpdaters: _ *)
   }
+}
+class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+                                            override val id: Id,
+                                            argumentSlotOffset: Int,
+                                            aggregators: Array[Aggregator],
+                                            outputBufferId: BufferId,
+                                            aggregationExpressionsCreator : () => Array[IntermediateExpression],
+                                            groupingKeyExpressionCreator: () => IntermediateExpression,
+                                            aggregationExpressions: Array[AstExpression])
+                                           (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+  import OperatorCodeGenHelperTemplates._
+  import org.neo4j.codegen.api.IntermediateRepresentation._
+  import org.neo4j.cypher.internal.runtime.morsel.operators.AggregationMapperOperatorTaskTemplate._
+
+  type AggMap = java.util.LinkedHashMap[AnyValue, Array[Any]]
+  type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
+
+  override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
   private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
   private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[AggMap]]]](codeGen.namer.nextVariableName())
   private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
 
-  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators())
+  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators(aggregators))
   private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
   private val aggPreMapVar = variable[AggMap](codeGen.namer.nextVariableName(), constant(null))
 
@@ -415,7 +418,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                        invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),
       condition(isNull(load(updaters)))(
         block(
-          assign(updaters, createUpdaters()),
+          assign(updaters, createUpdaters(aggregators, load(aggregatorsVar))),
           invokeSideEffect(load(aggPreMapVar),
                            method[AggMap, Any, Any, Any]("put"),
                            load(groupingValue),

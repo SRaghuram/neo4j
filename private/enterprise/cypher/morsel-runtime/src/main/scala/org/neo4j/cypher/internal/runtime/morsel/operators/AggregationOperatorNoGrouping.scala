@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Aggregators, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, MaxAggregator, MinAggregator, SumAggregator, Updater}
+import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Updater}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.PerArgument
@@ -21,7 +21,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
@@ -176,39 +175,18 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
                                                      (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
+  import org.neo4j.cypher.internal.runtime.morsel.operators.AggregationMapperOperatorTaskTemplate._
 
   type Agg = Array[Any]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[Agg]]
 
-  override def toString: String = "AggregationMapperOperatorTaskTemplate"
-
-  private def createAggregators(): IntermediateRepresentation = {
-    val newAggregators = aggregators.map {
-      case CountStarAggregator => getStatic[Aggregators,Aggregator]("COUNT_STAR")
-      case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
-      case SumAggregator => getStatic[Aggregators,Aggregator]("SUM")
-      case AvgAggregator => getStatic[Aggregators,Aggregator]("AVG")
-      case MaxAggregator => getStatic[Aggregators,Aggregator]("MAX")
-      case MinAggregator => getStatic[Aggregators,Aggregator]("MIN")
-      case CollectAggregator => getStatic[Aggregators,Aggregator]("COLLECT")
-      case aggregator =>
-        throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
-    }
-    arrayOf[Aggregator](newAggregators: _ *)
-  }
-
-  private def createUpdaters(): IntermediateRepresentation = {
-    val newUpdaters = aggregators.indices.map(i =>
-      invoke(arrayLoad(load(aggregatorsVar), i), method[Aggregator, Updater]("newUpdater"))
-    )
-    arrayOf[Updater](newUpdaters: _ *)
-  }
+  override def toString: String = "AggregationMapperNoGroupingOperatorTaskTemplate"
 
   private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
   private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[Agg]]]](codeGen.namer.nextVariableName())
   private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
 
-  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators())
+  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators(aggregators))
   private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
   private val updatersVar = variable[Agg](codeGen.namer.nextVariableName(), constant(null))
 
@@ -284,7 +262,7 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
       condition(notEqual(load(currentArg), load(argVar)))(
         block(
           assign(argVar, load(currentArg)),
-          assign(updatersVar, createUpdaters()),
+          assign(updatersVar, createUpdaters(aggregators, load(aggregatorsVar))),
           invokeSideEffect(loadField(perArgsField),
                            method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
                            newInstance(constructor[PerArgument[Agg], Long, Any], load(argVar), load(updatersVar)))
