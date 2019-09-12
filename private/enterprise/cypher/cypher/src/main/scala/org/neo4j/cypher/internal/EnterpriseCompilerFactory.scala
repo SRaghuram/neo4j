@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
-import org.neo4j.cypher.{CypherOperatorExecutionModeOption, CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
+import org.neo4j.cypher.{CypherOperatorEngineOption, CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
@@ -90,7 +90,7 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     runtimeEnvironment: RuntimeEnvironment,
                                     compileExpressions: Boolean,
                                     materializedEntitiesMode: Boolean,
-                                    operatorExecutionMode: CypherOperatorExecutionModeOption) extends RuntimeContext
+                                    operatorEngine: CypherOperatorEngineOption) extends RuntimeContext
 
 /**
   * Manager of EnterpriseRuntimeContexts.
@@ -107,7 +107,7 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                       debugOptions: Set[String],
                       compileExpressions: Boolean,
                       materializedEntitiesMode: Boolean,
-                      operatorExecutionMode: CypherOperatorExecutionModeOption): EnterpriseRuntimeContext =
+                      operatorEngine: CypherOperatorEngineOption): EnterpriseRuntimeContext =
     EnterpriseRuntimeContext(tokenContext,
                              schemaRead,
                              codeStructure,
@@ -118,7 +118,7 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                              runtimeEnvironment,
                              compileExpressions,
                              materializedEntitiesMode,
-                             operatorExecutionMode)
+                             operatorEngine)
 
   override def assertAllReleased(): Unit = {
     // This is for test assertions only, and should run on the parallel executor.

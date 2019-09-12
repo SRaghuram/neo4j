@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal
 import java.lang
 import java.util.Optional
 
-import org.neo4j.cypher.CypherOperatorExecutionModeOption
+import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PhysicalPlanner, PipelineBuilder}
@@ -72,7 +72,7 @@ class MorselRuntime(parallelExecution: Boolean,
     //=======================================================
     val fuseOperators = new FuseOperators(
       operatorFactory,
-      context.operatorExecutionMode == CypherOperatorExecutionModeOption.compiled,
+      context.operatorEngine == CypherOperatorEngineOption.compiled,
       context.tokenContext,
       parallelExecution)
 

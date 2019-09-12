@@ -260,16 +260,16 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     intercept[Exception](executeSingle("CYPHER runtime=compiled expressionEngine=compiled RETURN 1")).getMessage should be("Cannot combine EXPRESSION ENGINE 'compiled' with RUNTIME 'compiled'")
   }
 
-  test("should provide sensible error message for using compiled operator execution mode with compiled runtime") {
-    intercept[Exception](executeSingle("CYPHER runtime=compiled operatorExecutionMode=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR EXECUTION MODE 'compiled' with RUNTIME 'compiled'")
+  test("should provide sensible error message for using compiled operator engine with compiled runtime") {
+    intercept[Exception](executeSingle("CYPHER runtime=compiled operatorEngine=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR ENGINE 'compiled' with RUNTIME 'compiled'")
   }
 
-  test("should provide sensible error message for using compiled operator execution mode with slotted runtime") {
-    intercept[Exception](executeSingle("CYPHER runtime=slotted operatorExecutionMode=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR EXECUTION MODE 'compiled' with RUNTIME 'slotted'")
+  test("should provide sensible error message for using compiled operator engine with slotted runtime") {
+    intercept[Exception](executeSingle("CYPHER runtime=slotted operatorEngine=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR ENGINE 'compiled' with RUNTIME 'slotted'")
   }
 
-  test("should provide sensible error message for using compiled operator execution mode with interpreted runtime") {
-    intercept[Exception](executeSingle("CYPHER runtime=interpreted operatorExecutionMode=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR EXECUTION MODE 'compiled' with RUNTIME 'interpreted'")
+  test("should provide sensible error message for using compiled operator engine with interpreted runtime") {
+    intercept[Exception](executeSingle("CYPHER runtime=interpreted operatorEngine=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR ENGINE 'compiled' with RUNTIME 'interpreted'")
   }
 
   test("should be able to use compiled expression engine with slotted") {

@@ -43,10 +43,10 @@ object ENTERPRISE {
     GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(4))
 
   val FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
-    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.CypherOperatorExecutionMode.COMPILED)
+    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED)
 
   val NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
-    GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.CypherOperatorExecutionMode.INTERPRETED)
+    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED)
 
   val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](

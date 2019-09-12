@@ -36,7 +36,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("morsel profile should include expected profiling data with non-fused operators") {
-    restartWithConfig(Map(GraphDatabaseSettings.cypher_operator_execution_mode -> GraphDatabaseSettings.CypherOperatorExecutionMode.INTERPRETED))
+    restartWithConfig(Map(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED))
 
     createNode()
     val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN n")

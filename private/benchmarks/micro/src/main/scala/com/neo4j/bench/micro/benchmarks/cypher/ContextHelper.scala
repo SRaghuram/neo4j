@@ -8,7 +8,7 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import java.time.Clock
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.CypherOperatorExecutionModeOption
+import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.NO_TRACKING_CONTROLLER
@@ -61,6 +61,6 @@ object ContextHelper extends MockitoSugar {
       runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport, workerManager),
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
-      operatorExecutionMode = CypherOperatorExecutionModeOption.compiled)
+      operatorEngine = CypherOperatorEngineOption.compiled)
   }
 }
