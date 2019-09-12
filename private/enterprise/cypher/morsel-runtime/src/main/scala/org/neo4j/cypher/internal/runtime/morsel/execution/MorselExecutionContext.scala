@@ -6,15 +6,18 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
-import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, TopLevelArgument}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration, TopLevelArgument}
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
+import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -327,9 +330,47 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   override def getCachedPropertyAt(offset: Int): Value = getRefAt(offset).asInstanceOf[Value]
 
-  override def invalidateCachedNodeProperties(node: Long): Unit = fail()
+  override def invalidateCachedNodeProperties(node: Long): Unit = {
+    slots.foreachCachedSlot {
+      case (cnp, propertyRefSLot) =>
+        slots.get(cnp.entityName) match {
+          case Some(longSlot: LongSlot) =>
+            if (longSlot.typ == CTNode && getLongAt(longSlot.offset) == node) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case Some(refSlot: RefSlot) =>
+            if (refSlot.typ == CTNode && getRefAt(refSlot.offset).asInstanceOf[VirtualNodeValue].id == node) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case None =>
+            // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
+            AssertionRunner.runUnderAssertion {
+              throw new IllegalStateException(s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
+            }
+        }
+    }
+  }
 
-  override def invalidateCachedRelationshipProperties(rel: Long): Unit = fail()
+  override def invalidateCachedRelationshipProperties(rel: Long): Unit = {
+    slots.foreachCachedSlot {
+      case (crp, propertyRefSLot) =>
+        slots.get(crp.entityName) match {
+          case Some(longSlot: LongSlot) =>
+            if (longSlot.typ == CTRelationship && getLongAt(longSlot.offset) == rel) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case Some(refSlot: RefSlot) =>
+            if (refSlot.typ == CTRelationship && getRefAt(refSlot.offset).asInstanceOf[VirtualRelationshipValue].id == rel) {
+              setCachedPropertyAt(propertyRefSLot.offset, null)
+            }
+          case None =>
+            // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
+            AssertionRunner.runUnderAssertion {
+              throw new IllegalStateException(s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
+            }
+        }
+    }
+  }
 
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
 
