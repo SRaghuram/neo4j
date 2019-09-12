@@ -31,6 +31,12 @@ public class InfraParams
     public static final String CMD_DB_NAME = "--db-name";
     private final String storeName;
 
+    public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
+    private final URI artifactBaseUri;
+
+    public static final String CMD_ARTIFACT_WORKER_URI = "--worker-artifact-uri";
+    private final URI artifactWorkerUri;
+
     // -----------------------------------------------------------------------
     // Common: Result Client Report Results Args
     // -----------------------------------------------------------------------
@@ -43,12 +49,6 @@ public class InfraParams
 
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
     private final URI resultsStoreUri;
-
-    public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
-    private final URI artifactBaseUri;
-
-    public static final String CMD_ARTIFACT_WORKER_URI = "--worker-artifact-uri";
-    private final URI artifactWorkerUri;
 
     public InfraParams( Path workspaceDir,
                         String awsSecret,
