@@ -32,7 +32,7 @@ public interface ArtifactStorage
      * Downloads build artifacts from artifact storage.
      *
      * @param baseDir base directory, where artifacts will be downloaded
-     * @param artifactBaseURI the bucket to upload the files to, should exist
+     * @param artifactBaseURI the bucket to download the files from, should exist
      * @throws ArtifactStoreException
      */
     void downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
