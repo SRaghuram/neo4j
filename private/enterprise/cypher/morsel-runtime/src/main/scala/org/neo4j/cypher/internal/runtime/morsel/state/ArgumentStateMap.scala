@@ -89,7 +89,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
     * Decrement the argument counter for `argument`.
     * @return true iff count has reached zero
     */
-  def decrement(argument: Long): Boolean
+  def decrement(argument: Long): S
 
   /**
     * ID of this ArgumentStateMap

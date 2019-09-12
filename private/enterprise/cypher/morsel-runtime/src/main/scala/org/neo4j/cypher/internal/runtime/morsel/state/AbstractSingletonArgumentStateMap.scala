@@ -145,11 +145,15 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     DebugSupport.ASM.log("ASM %s incr %03d to %d", argumentStateMapId, argument, newCount)
   }
 
-  override def decrement(argument: Long): Boolean = {
+  override def decrement(argument: Long): STATE = {
     TopLevelArgument.assertTopLevelArgument(argument)
     val newCount = controller.decrement()
     DebugSupport.ASM.log("ASM %s decr %03d to %d", argumentStateMapId, argument, newCount)
-    newCount == 0
+    if (newCount == 0) {
+      controller.state
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def toString: String = {

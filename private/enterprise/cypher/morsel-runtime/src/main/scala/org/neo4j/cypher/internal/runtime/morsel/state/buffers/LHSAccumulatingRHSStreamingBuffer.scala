@@ -233,10 +233,10 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     }
 
     override def decrement(argumentRowId: Long): Unit = {
-      val isZero = rhsArgumentStateMap.decrement(argumentRowId)
-      if (isZero) {
+      val maybeBuffer = rhsArgumentStateMap.decrement(argumentRowId)
+      if (maybeBuffer != null) {
         // Decrement for an ArgumentID in RHS's accumulator
-        val argumentRowIdsForReducers = rhsArgumentStateMap.peek(argumentRowId).argumentRowIdsForReducers
+        val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers
         forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
         tracker.decrement()
       }

@@ -148,10 +148,15 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s incr %03d to %d", argumentStateMapId, argument, newCount)
   }
 
-  override def decrement(argument: Long): Boolean = {
-    val newCount = controllers.get(argument).decrement()
+  override def decrement(argument: Long): STATE = {
+    val controller = controllers.get(argument)
+    val newCount = controller.decrement()
     DebugSupport.ASM.log("ASM %s decr %03d to %d", argumentStateMapId, argument, newCount)
-    newCount == 0
+    if (newCount == 0) {
+      controller.state
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def toString: String = {
