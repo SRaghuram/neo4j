@@ -30,7 +30,7 @@ import scala.collection.mutable.ArrayBuffer
 class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
   test("should close resources on TX rollback") {
-    val managementService = new TestCommercialDatabaseManagementServiceBuilder().impermanent().build()
+    val managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent().build()
     try {
       // given
       val db = managementService.database(DEFAULT_DATABASE_NAME)

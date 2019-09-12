@@ -44,6 +44,14 @@ trait ResourceTracking extends CypherFunSuite {
         case _ =>
       }
 
+    override def untrace(resource: AutoCloseablePlus): Unit =
+      resource match {
+        case CSVResource(url, _) =>
+          val currCount = traced.getOrElse(url, 0)
+          traced += url -> (currCount - 1)
+        case _ =>
+      }
+
     override def close(resource: AutoCloseablePlus): Unit =
       resource match {
         case CSVResource(url, _) =>
