@@ -30,6 +30,7 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_graph;
+import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_index_structure;
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_indexes;
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_label_scan_store;
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_property_owners;
@@ -91,6 +92,9 @@ class OnlineBackupContextFactory
     static final String ARG_NAME_CHECK_INDEXES = "cc-indexes";
     static final String ARG_DESC_CHECK_INDEXES = "Perform consistency checks on indexes.";
 
+    static final String ARG_NAME_CHECK_INDEX_STRUCTURE = "cc-index-structure";
+    static final String ARG_DESC_CHECK_INDEX_STRUCTURE = "Perform structure checks on indexes.";
+
     static final String ARG_NAME_CHECK_LABELS = "cc-label-scan-store";
     static final String ARG_DESC_CHECK_LABELS = "Perform consistency checks on the label scan store.";
 
@@ -141,6 +145,8 @@ class OnlineBackupContextFactory
                         ARG_NAME_CHECK_GRAPH, true, ARG_DESC_CHECK_GRAPH ) )
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_CHECK_INDEXES, true, ARG_DESC_CHECK_INDEXES ) )
+                .withArgument( new OptionalBooleanArg(
+                        ARG_NAME_CHECK_INDEX_STRUCTURE, false, ARG_DESC_CHECK_INDEX_STRUCTURE ) )
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_CHECK_LABELS, true, ARG_DESC_CHECK_LABELS ) )
                 .withArgument( new OptionalBooleanArg(
@@ -199,6 +205,7 @@ class OnlineBackupContextFactory
             ConsistencyFlags consistencyFlags = new ConsistencyFlags(
                     oneOf.apply( ARG_NAME_CHECK_GRAPH, consistency_check_graph ),
                     oneOf.apply( ARG_NAME_CHECK_INDEXES, consistency_check_indexes ),
+                    oneOf.apply( ARG_NAME_CHECK_INDEX_STRUCTURE, consistency_check_index_structure ),
                     oneOf.apply( ARG_NAME_CHECK_LABELS, consistency_check_label_scan_store ),
                     oneOf.apply( ARG_NAME_CHECK_OWNERS, consistency_check_property_owners ) );
             return new OnlineBackupContext( requiredArguments, config, consistencyFlags );

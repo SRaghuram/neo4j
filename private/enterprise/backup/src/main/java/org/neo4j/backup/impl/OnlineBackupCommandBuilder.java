@@ -46,6 +46,7 @@ public class OnlineBackupCommandBuilder
     private SelectedBackupProtocol selectedBackupProtocol;
     private Boolean consistencyCheckGraph;
     private Boolean consistencyCheckIndexes;
+    private Boolean consistencyCheckIndexStructure;
     private Boolean consistencyCheckLabel;
     private Boolean consistencyCheckOwners;
     private String database;
@@ -118,6 +119,12 @@ public class OnlineBackupCommandBuilder
         return this;
     }
 
+    public OnlineBackupCommandBuilder withIndexStructureConsistencyCheck( Boolean flag )
+    {
+        this.consistencyCheckIndexStructure = flag;
+        return this;
+    }
+
     public OnlineBackupCommandBuilder withLabelConsistencyCheck( Boolean flag )
     {
         this.consistencyCheckLabel = flag;
@@ -184,6 +191,7 @@ public class OnlineBackupCommandBuilder
                 argAdditionalConf( targetLocation ),
                 argCcGraph(),
                 argCcIndexes(),
+                argCcIndexStructure(),
                 argCcLabel(),
                 argCcOwners() );
     }
@@ -287,6 +295,13 @@ public class OnlineBackupCommandBuilder
     {
         return Optional.ofNullable( this.consistencyCheckIndexes )
                 .map( value -> format( "--cc-indexes=%b", this.consistencyCheckIndexes ) )
+                .orElse( "" );
+    }
+
+    private String argCcIndexStructure()
+    {
+        return Optional.ofNullable( this.consistencyCheckIndexStructure )
+                .map( value -> format( "--cc-index-structure=%b", this.consistencyCheckIndexStructure ) )
                 .orElse( "" );
     }
 

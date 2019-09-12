@@ -27,6 +27,7 @@ public class BackupHelpOutput
         lines.add( "                          [--additional-config=<config-file-path>]" );
         lines.add( "                          [--cc-graph[=<true|false>]]" );
         lines.add( "                          [--cc-indexes[=<true|false>]]" );
+        lines.add( "                          [--cc-index-structure[=<true|false>]]" );
         lines.add( "                          [--cc-label-scan-store[=<true|false>]]" );
         lines.add( "                          [--cc-property-owners[=<true|false>]]" );
         lines.add( "" );
@@ -77,6 +78,8 @@ public class BackupHelpOutput
         lines.add( "                                           types and tokens. [default:true]" );
         lines.add( "  --cc-indexes=<true|false>                Perform consistency checks on" );
         lines.add( "                                           indexes. [default:true]" );
+        lines.add( "  --cc-index-structure=<true|false>        Perform structure checks on indexes." );
+        lines.add( "                                           [default:false]" );
         lines.add( "  --cc-label-scan-store=<true|false>       Perform consistency checks on the" );
         lines.add( "                                           label scan store. [default:true]" );
         lines.add( "  --cc-property-owners=<true|false>        Perform additional consistency checks" );
