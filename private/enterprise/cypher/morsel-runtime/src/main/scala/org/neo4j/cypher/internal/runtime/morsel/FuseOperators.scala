@@ -58,7 +58,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     //For a fully fused pipeline that includes ProduceResult or Aggregation we don't need to allocate an output morsel
     val needsMorsel = (p.outputDefinition, maybeHeadOperator, unhandledMiddlePlans) match {
       case (_:ProduceResultOutput, Some(_), Seq()) => false
-      case (ReduceOutput(_,plans.Aggregation(_,groupingExpressions,_)), Some(_), Seq()) if groupingExpressions.nonEmpty => false
+      case (ReduceOutput(_,plans.Aggregation(_,_,_)), Some(_), Seq()) => false
       case _ => true
     }
 
@@ -135,7 +135,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
             (template, List(p), NoOutput)
 
           case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions,
-                                                          aggregationExpressionsMap)) if groupingExpressions.nonEmpty =>
+                                                          aggregationExpressionsMap)) =>
             innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
             innermostTemplate.shouldCheckDemand = false // No need to check subscription demand when not in final pipeline
             innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
@@ -145,37 +145,6 @@ class FuseOperators(operatorFactory: OperatorFactory,
             // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
             val outputSlots = physicalPlan.slotConfigurations(p.id)
 
-            val aggregators = Array.newBuilder[Aggregator]
-            val aggregationExpressions = Array.newBuilder[Expression]
-            aggregationExpressionsMap.foreach {
-              case (_, astExpression) =>
-                val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
-                aggregators += aggregator
-                aggregationExpressions += innerAstExpression
-            }
-
-            val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
-            val template =
-              new AggregationMapperOperatorTaskTemplate(innermostTemplate,
-                                                        p.id,
-                                                        argumentSlotOffset,
-                                                        aggregators.result(),
-                                                        bufferId,
-                                                        aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
-                                                        groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
-                                                        aggregationAstExpressions)(expressionCompiler)
-            (template, List(p), NoOutput)
-
-          case ReduceOutput(bufferId, p@plans.Aggregation(_, _, aggregationExpressionsMap)) =>
-          innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
-          innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
-          innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
-          val applyPlanId = physicalPlan.applyPlans(id)
-          val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
-
-          // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
-          val outputSlots = physicalPlan.slotConfigurations(p.id)
-
           val aggregators = Array.newBuilder[Aggregator]
           val aggregationExpressions = Array.newBuilder[Expression]
           aggregationExpressionsMap.foreach {
@@ -184,16 +153,26 @@ class FuseOperators(operatorFactory: OperatorFactory,
               aggregators += aggregator
               aggregationExpressions += innerAstExpression
           }
-
           val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
-          val template =
+          val aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)())
+          val template = if (groupingExpressions.nonEmpty) {
+            new AggregationMapperOperatorTaskTemplate(innermostTemplate,
+                                                      p.id,
+                                                      argumentSlotOffset,
+                                                      aggregators.result(),
+                                                      bufferId,
+                                                      aggregationExpressionsCreator,
+                                                        groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
+                                                        aggregationAstExpressions)(expressionCompiler)
+            } else {
             new AggregationMapperOperatorNoGroupingTaskTemplate(innermostTemplate,
                                                                 p.id,
                                                                 argumentSlotOffset,
                                                                 aggregators.result(),
                                                                 bufferId,
-                                                                aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
+                                                                aggregationExpressionsCreator,
                                                                 aggregationAstExpressions)(expressionCompiler)
+          }
           (template, List(p), NoOutput)
 
         case unhandled =>

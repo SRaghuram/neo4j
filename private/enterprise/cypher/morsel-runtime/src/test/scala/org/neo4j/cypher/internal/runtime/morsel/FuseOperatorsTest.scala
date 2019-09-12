@@ -73,6 +73,19 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.outputOperator shouldBe NoOutputOperator
   }
 
+  test("should fuse full pipeline, ending in aggregation with no grouping") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> groupAggregation(Map.empty, Map("y"->countStar()))
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators shouldBe empty
+    compiled.outputOperator shouldBe NoOutputOperator
+  }
+
   test("should fuse partial pipelines, ending in produce results 1") {
     // given
     val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> dummy ~> produceResult("x")
@@ -99,6 +112,19 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.outputOperator should not be NoOutputOperator
   }
 
+  test("should fuse partial pipelines, ending in aggregation with no grouping 1") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> dummy ~> groupAggregation(Map.empty, Map("y"->countStar()))
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 2
+    compiled.outputOperator should not be NoOutputOperator
+  }
+
   test("should fuse partial pipelines, ending in produce results 2") {
     // given
     val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> filter(trueLiteral) ~> produceResult("x")
@@ -115,6 +141,19 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   test("should fuse partial pipelines, ending in aggregation 2") {
     // given
     val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> filter(trueLiteral) ~> groupAggregation(Map("x" -> varFor("x")), Map("y"->countStar()))
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 2
+    compiled.outputOperator should not be NoOutputOperator
+  }
+
+  test("should fuse partial pipelines, ending in aggregation with no grouping 2") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> filter(trueLiteral) ~> groupAggregation(Map.empty, Map("y"->countStar()))
 
     // when
     val compiled = fuse(pipeline)
