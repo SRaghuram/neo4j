@@ -166,9 +166,38 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                         aggregationAstExpressions)(expressionCompiler)
             (template, List(p), NoOutput)
 
-          case unhandled =>
-            (innermostTemplate, List.empty[LogicalPlan], unhandled)
-        }
+          case ReduceOutput(bufferId, p@plans.Aggregation(_, _, aggregationExpressionsMap)) =>
+          innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
+          innermostTemplate.shouldCheckDemand = false    // No need to check subscription demand when not in final pipeline
+          innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
+          val applyPlanId = physicalPlan.applyPlans(id)
+          val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
+
+          // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
+          val outputSlots = physicalPlan.slotConfigurations(p.id)
+
+          val aggregators = Array.newBuilder[Aggregator]
+          val aggregationExpressions = Array.newBuilder[Expression]
+          aggregationExpressionsMap.foreach {
+            case (_, astExpression) =>
+              val (aggregator, innerAstExpression) = aggregatorFactory.newAggregator(astExpression)
+              aggregators += aggregator
+              aggregationExpressions += innerAstExpression
+          }
+
+          val aggregationAstExpressions: Array[Expression] = aggregationExpressions.result()
+          val template =
+            new AggregationMapperOperatorNoGroupingTaskTemplate(innermostTemplate,
+                                                                p.id,
+                                                                argumentSlotOffset,
+                                                                aggregators.result(),
+                                                                bufferId,
+                                                                aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
+                                                                aggregationAstExpressions)(expressionCompiler)
+          (template, List(p), NoOutput)
+
+        case unhandled =>
+          (innermostTemplate, List.empty[LogicalPlan], unhandled)}
       }
     }
 

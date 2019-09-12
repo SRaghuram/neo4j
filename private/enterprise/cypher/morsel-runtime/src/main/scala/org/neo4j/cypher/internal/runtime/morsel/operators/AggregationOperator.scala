@@ -347,7 +347,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       *     perArgs.add(perArg)
       *   }
       *
-      *   // ----- create updaters group for for each new grouping -----
+      *   // ----- create updaters group for each new grouping -----
       *
       *   val groupingValue: AnyValue = {compiledGroupingExpression.ir}
       *   val updaters: Updater[] = aggPreMap.get(groupingValue)

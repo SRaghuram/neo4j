@@ -153,6 +153,7 @@ class ParallelRuntimeSortTest extends SortTestBase(ENTERPRISE.FUSING, PARALLEL, 
 class ParallelRuntimeTopTest extends TopTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 class ParallelRuntimeTopNoFusingTest extends TopTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 
+// TODO
 // AGGREGATION
 class ParallelRuntimeAggregationTest extends AggregationTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest

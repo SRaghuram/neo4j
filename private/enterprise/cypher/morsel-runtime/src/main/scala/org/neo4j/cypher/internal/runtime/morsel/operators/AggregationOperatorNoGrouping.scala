@@ -5,19 +5,27 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Updater}
+import org.neo4j.cypher.internal.runtime.morsel.aggregators.{AggregatingAccumulator, Aggregator, Aggregators, AvgAggregator, CollectAggregator, CountAggregator, CountStarAggregator, MaxAggregator, MinAggregator, SumAggregator, Updater}
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Sink
-import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState}
+import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.values.AnyValue
+
+import scala.collection.mutable.ArrayBuffer
 
 case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                                          aggregations: Array[Aggregator]) {
@@ -158,3 +166,176 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
   }
 }
 
+class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTemplate,
+                                                      override val id: Id,
+                                                      argumentSlotOffset: Int,
+                                                      aggregators: Array[Aggregator],
+                                                      outputBufferId: BufferId,
+                                                      aggregationExpressionsCreator: () => Array[IntermediateExpression],
+                                                      aggregationExpressions: Array[AstExpression])
+                                                     (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+  import OperatorCodeGenHelperTemplates._
+  import org.neo4j.codegen.api.IntermediateRepresentation._
+
+  type Agg = Array[Any]
+  type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[Agg]]
+
+  override def toString: String = "AggregationMapperOperatorTaskTemplate"
+
+  private def createAggregators(): IntermediateRepresentation = {
+    val newAggregators = aggregators.map {
+      case CountStarAggregator => getStatic[Aggregators,Aggregator]("COUNT_STAR")
+      case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
+      case SumAggregator => getStatic[Aggregators,Aggregator]("SUM")
+      case AvgAggregator => getStatic[Aggregators,Aggregator]("AVG")
+      case MaxAggregator => getStatic[Aggregators,Aggregator]("MAX")
+      case MinAggregator => getStatic[Aggregators,Aggregator]("MIN")
+      case CollectAggregator => getStatic[Aggregators,Aggregator]("COLLECT")
+      case aggregator =>
+        throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
+    }
+    arrayOf[Aggregator](newAggregators: _ *)
+  }
+
+  private def createUpdaters(): IntermediateRepresentation = {
+    val newUpdaters = aggregators.indices.map(i =>
+      invoke(arrayLoad(load(aggregatorsVar), i), method[Aggregator, Updater]("newUpdater"))
+    )
+    arrayOf[Updater](newUpdaters: _ *)
+  }
+
+  private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
+  private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[Agg]]]](codeGen.namer.nextVariableName())
+  private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
+
+  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators())
+  private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
+  private val updatersVar = variable[Agg](codeGen.namer.nextVariableName(), constant(null))
+
+  private var compiledAggregationExpressions: Array[IntermediateExpression] = _
+
+  // constructor
+  override def genInit: IntermediateRepresentation = {
+    block(
+      setField(perArgsField, newInstance(constructor[AggOut])),
+      setField(bufferIdField, constant(outputBufferId.x)),
+      inner.genInit
+    )
+  }
+
+  // this operates on a single row only
+  override def genOperate: IntermediateRepresentation = {
+    if (null == compiledAggregationExpressions) {
+      compiledAggregationExpressions = aggregationExpressionsCreator()
+    }
+
+    /**
+      *
+      * // this is the final result: a list of pre-aggregations, one per argument
+      * val perArgs = new ArrayList<PerArgument<Updater[]>>()
+      *
+      * // last seen argument
+      * long arg = -1
+      *
+      * {{{
+      *
+      *   // ----- track when argument changes & create updaters group -----
+      *
+      *   val currentArg = getFromLongSlot(argumentSlotOffset)
+      *   if (currentArg != arg) {
+      *     arg = currentArg
+      *     updaters = new Updater[]{ aggregations[0].newUpdater,
+      *                               aggregations[1].newUpdater,
+      *                               ...
+      *                               aggregations[n-1].newUpdater}
+      *     val perArg = new PerArgument<Updater[]>(arg, updaters)
+      *     perArgs.add(perArg)
+      *   }
+      *
+      *   // ----- aggregate -----
+      *
+      *   {
+      *     updaters[0].update(aggregationExpression[0]())
+      *     updaters[1].update(aggregationExpression[1]())
+      *     ...
+      *     updaters[n-1].update(aggregationExpression[n-1]())
+      *   }
+      * }}}
+      *
+      */
+
+    // argument of current morsel row
+    val currentArg = codeGen.namer.nextVariableName()
+
+    block(
+
+      /*
+       * val currentArg = getFromLongSlot(argumentSlotOffset)
+       * if (currentArg != arg) {
+       *   arg = currentArg
+       *   updaters = new Updater[]{ aggregations[0].newUpdater,
+       *                             aggregations[1].newUpdater,
+       *                             ...
+       *                             aggregations[n-1].newUpdater}
+       *   perArgs.add(new PerArgument<Updater[]>(arg, updaters))
+       * }
+       */
+      declareAndAssign(typeRefOf[Long], currentArg, codeGen.getArgumentAt(argumentSlotOffset)),
+      condition(notEqual(load(currentArg), load(argVar)))(
+        block(
+          assign(argVar, load(currentArg)),
+          assign(updatersVar, createUpdaters()),
+          invokeSideEffect(loadField(perArgsField),
+                           method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
+                           newInstance(constructor[PerArgument[Agg], Long, Any], load(argVar), load(updatersVar)))
+        )),
+
+      /*
+       * updaters[0].update(aggregationExpression[0]())
+       * updaters[1].update(aggregationExpression[1]())
+       * ...
+       * updaters[n-1].update(aggregationExpression[n-1]())
+       */
+      block(
+        compiledAggregationExpressions.indices.map(i => {
+          invokeSideEffect(arrayLoad(cast[Array[Updater]](load(updatersVar)), i), method[Updater, Unit, AnyValue]("update"), compiledAggregationExpressions(i).ir)
+        }): _ *
+      ),
+
+      inner.genOperateWithExpressions
+    )
+  }
+
+  override protected def genCreateState: IntermediateRepresentation = {
+    block(
+      setField(sinkField,
+               invoke(EXECUTION_STATE,
+                      method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
+                      PIPELINE_ID,
+                      loadField(bufferIdField)))
+    )
+  }
+
+  override protected def genProduce: IntermediateRepresentation = {
+    block(
+      invokeSideEffect(loadField(sinkField),
+                       method[Sink[_], Unit, Any]("put"),
+                       loadField(perArgsField)),
+      setField(perArgsField, newInstance(constructor[AggOut]))
+    )
+  }
+
+  override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))
+
+  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField)
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, updatersVar)
+
+  override def genExpressions: Seq[IntermediateExpression] = compiledAggregationExpressions
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+}
