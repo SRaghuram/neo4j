@@ -7,11 +7,14 @@ package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.{MORSEL, PARALLEL}
+import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.{MorselDbHitsTestBase, ProfileNoTimeTestBase, SchedulerTracerTestBase}
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.result.OperatorProfile
 
 object ParallelRuntimeSpecSuite {
   val SIZE_HINT = 1000
@@ -189,5 +192,35 @@ class ParallelErrorHandlingTest extends ParallelErrorHandlingTestBase(PARALLEL) 
 class ParallelRuntimeProfileNoFusingRowsTest extends ProfileRowsTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 class ParallelRuntimeProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 class ParallelRuntimeProfileNoFusingTimeTest extends ProfileTimeTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
-class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest {
+  //this test differs in Morsel and Parallel since we fuse differently
+  test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
+    // given
+    circleGraph(SIZE_HINT, "X")
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("c")
+      .sort(Seq(Ascending("c")))
+      .aggregation(Seq("x AS x"), Seq("count(*) AS c"))
+      .filter("x.prop = null")
+      .expand("(x)-->(y)")
+      .nodeByLabelScan("x", "X")
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime)
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).time() should not be(OperatorProfile.NO_DATA) // produce results - not fused
+    queryProfile.operatorProfile(1).time() should not be(OperatorProfile.NO_DATA) // sort - not fused
+    queryProfile.operatorProfile(2).time() should not be(OperatorProfile.NO_DATA) // aggregation - not fused
+    queryProfile.operatorProfile(3).time() should be(OperatorProfile.NO_DATA) // filter - fused
+    queryProfile.operatorProfile(4).time() should not be(OperatorProfile.NO_DATA) // expand - fused, but the prepare output time is attributed here
+    queryProfile.operatorProfile(5).time() should not be(OperatorProfile.NO_DATA) // node by label scan - not fused
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
+  }
+}
 class ParallelRuntimeProfileNoFusingDbHitsTest extends MorselDbHitsTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
