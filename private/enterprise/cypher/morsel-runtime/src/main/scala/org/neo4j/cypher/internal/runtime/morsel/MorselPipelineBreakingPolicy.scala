@@ -35,10 +35,8 @@ case class MorselPipelineBreakingPolicy(config: CypherRuntimeConfiguration, fusi
       => true
 
       // 1 child operators
-      case e: Expand =>
-        if (e.mode == ExpandAll) !canFuseOneChildOperator(e)
-        else
-          throw unsupported("ExpandInto")
+      case e: Expand if (e.mode == ExpandAll)
+      => !canFuseOneChildOperator(e)
 
       case _: UnwindCollection |
            _: Sort |

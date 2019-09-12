@@ -10,7 +10,7 @@ import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.CypherOperatorEngineOption
-import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes.DISABLED
+import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes.{ALL_POSSIBLE_PLANS, DISABLED}
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
@@ -104,9 +104,14 @@ class MorselRuntime(parallelExecution: Boolean,
 
     DebugLog.logDiff("PhysicalPlanner.plan")
     val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
+    val readOnly =
+      if (context.config.useInterpretedPipes == ALL_POSSIBLE_PLANS)
+        query.readOnly
+      else
+        true
     val operatorFactory = new OperatorFactory(executionGraphDefinition,
                                               converters,
-                                              readOnly = true,
+                                              readOnly = readOnly,
                                               queryIndexRegistrator,
                                               query.semanticTable,
                                               slottedPipeBuilder)

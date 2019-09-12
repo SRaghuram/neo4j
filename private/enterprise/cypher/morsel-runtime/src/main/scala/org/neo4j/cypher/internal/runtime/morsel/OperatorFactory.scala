@@ -330,6 +330,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),
                              physicalPlan.argumentSizes(id))
+
       case _ if slottedPipeBuilder.isDefined =>
         createSlottedPipeHeadOperator(plan)
 
