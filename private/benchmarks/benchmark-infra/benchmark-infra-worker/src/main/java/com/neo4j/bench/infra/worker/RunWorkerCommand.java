@@ -51,14 +51,14 @@ public class RunWorkerCommand extends BaseInfraCommand
             {
                 artifactStorage = AWSS3ArtifactStorage.create( infraParams.awsRegion(), infraParams.awsKey(), infraParams.awsSecret() );
             }
-            artifactStorage.verifyBuildArtifactsExpirationRule();
+            artifactStorage.verifyBuildArtifactsExpirationRule( infraParams.artifactBaseUri() );
 
             // download & extract dataset
             Dataset dataset = artifactStorage.downloadDataset( runWorkloadParams.neo4jBranch(), infraParams.storeName() );
             dataset.extractInto( macroDir );
 
             // download artifacts
-            artifactStorage.downloadBuildArtifacts( infraParams.workspaceDir(), Long.toString( runWorkloadParams.teamcityBuild() ) );
+            artifactStorage.downloadBuildArtifacts( infraParams.workspaceDir(), infraParams.artifactBaseUri() );
             Files.setPosixFilePermissions( macroDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
 
             Workspace.assertMacroWorkspace( infraParams.workspaceDir(), runWorkloadParams.neo4jEdition(), runWorkloadParams.neo4jVersion() );
