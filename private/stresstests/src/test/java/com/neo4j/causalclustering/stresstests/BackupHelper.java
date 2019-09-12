@@ -9,6 +9,7 @@ import com.neo4j.backup.impl.BackupExecutionException;
 import com.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import com.neo4j.backup.impl.OnlineBackupContext;
 import com.neo4j.backup.impl.OnlineBackupExecutor;
+import com.neo4j.causalclustering.catchup.storecopy.DatabaseIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.ClusterMember;
@@ -41,7 +42,8 @@ class BackupHelper
 
     private static final Set<Class<? extends Throwable>> STORE_COPY_EXCEPTIONS = asSet(
             StoreCopyFailedException.class,
-            StoreIdDownloadFailedException.class
+            StoreIdDownloadFailedException.class,
+            DatabaseIdDownloadFailedException.class
     );
 
     private static final String DB_NAME = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
