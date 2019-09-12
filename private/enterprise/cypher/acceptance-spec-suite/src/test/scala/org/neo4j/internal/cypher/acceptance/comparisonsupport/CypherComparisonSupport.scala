@@ -370,8 +370,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   private def innerExecute(tx: InternalTransaction, queryText: String, params: Map[String, Any]) = {
     val subscriber = new RecordingQuerySubscriber
     val context = transactionalContext(tx, queryText -> params)
-    val innerResult = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), context, subscriber)
     val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
+    val innerResult = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), context, subscriber)
     RewindableExecutionResult(innerResult, queryContext, subscriber)
   }
 }
