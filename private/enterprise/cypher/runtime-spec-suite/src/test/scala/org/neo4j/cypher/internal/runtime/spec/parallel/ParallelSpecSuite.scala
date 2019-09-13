@@ -175,7 +175,8 @@ class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(ENTERPRISE.PA
 class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.PARALLEL, PARALLEL)
 class ParallelRuntimeNoFusingMiscTest extends MiscTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 class ParallelRuntimeSchedulerTracerTest extends SchedulerTracerTestBase(PARALLEL)
-class ParallelRuntimeMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.PARALLEL, MORSEL)
+class ParallelRuntimeMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.PARALLEL, PARALLEL)
+class ParallelRuntimeSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL)
 
 // WORKLOAD
 class ParallelRuntimeWorkloadTest extends WorkloadTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)

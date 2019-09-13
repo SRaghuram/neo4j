@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner.Thunk
+import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 import scala.collection.mutable.ArrayBuffer
@@ -271,14 +272,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   private def postDecrement(newCount: Long): Unit = {
     if (newCount == 0) {
       try {
-        if (!errors.isEmpty) {
-          subscriber.onError(allErrors())
-        } else if (_cancelledOrFailed) {
-          // Nothing to do for now. Probably a subscriber.onCancelled callback later
-        } else {
-          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
-        }
-        queryContext.transactionalContext.transaction.thawLocks()
+        reportQueryEndToSubscriber()
+        thawTransactionLocks()
 
         // IMPORTANT: update _hasEnded before releasing waiters, to coordinate properly with await().
         _hasEnded = true
@@ -290,6 +285,32 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       }
     } else if (newCount < 0) {
       throw new IllegalStateException("Cannot count below 0")
+    }
+  }
+
+  private def thawTransactionLocks(): Unit = {
+    try {
+      queryContext.transactionalContext.transaction.thawLocks()
+    } catch {
+      case _: LocksNotFrozenException =>
+        // locks are already thawed, nothing more to do
+      case thawError: Throwable => // unexpected, stash and continue
+        errors.add(thawError)
+    }
+  }
+
+  private def reportQueryEndToSubscriber(): Unit = {
+    try {
+      if (!errors.isEmpty) {
+        subscriber.onError(allErrors())
+      } else if (_cancelledOrFailed) {
+        // Nothing to do for now. Probably a subscriber.onCancelled callback later
+      } else {
+        subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+      }
+    } catch {
+      case reportError: Throwable =>
+        errors.add(reportError)
     }
   }
 
