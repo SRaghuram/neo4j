@@ -579,7 +579,9 @@
       "Type": "AWS::SecretsManager::Secret",
       "Properties": {
         "Description": "Secret to submit results to the result store",
-        "Name": "ResultStoreSecret-${STAGE}",
+        "Name": {
+          "Fn::Sub": "ResultStoreSecret-${STAGE}"
+        },
         "SecretString": "${RESULTSTORESECRET}"
       }
     }
