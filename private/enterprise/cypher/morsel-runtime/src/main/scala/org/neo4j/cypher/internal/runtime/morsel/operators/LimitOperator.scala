@@ -254,7 +254,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         cast[Long](invoke(OUTPUT_ROW, method[MorselExecutionContext, Int]("getValidRows")))
       } else if (innermost.shouldCheckOutputCounter) {
         // Use the output counter to determine our maximum chunk of the total limit
-        load(OUTPUT_COUNTER)
+        cast[Long](load(OUTPUT_COUNTER))
       } else {
         // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
         // Reserve as much as we can get
