@@ -16,10 +16,11 @@ import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
-import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException}
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
@@ -570,48 +571,35 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // Empty name
-    the[IllegalArgumentException] thrownBy {
-      // WHEN
-      execute("CREATE DATABASE ``")
-      // THEN
-    } should have message "The provided database name is empty."
+    testCreateDbWithInvalidName("``", "The provided database name is empty.")
 
     // Starting on invalid character
-    the[IllegalArgumentException] thrownBy {
-      // WHEN
-      execute("CREATE DATABASE _default")
-      // THEN
-    } should have message "Database name '_default' is not starting with an ASCII alphabetic character."
+    testCreateDbWithInvalidName("_default", "Database name '_default' is not starting with an ASCII alphabetic character.")
 
     // Has prefix 'system'
-    the[IllegalArgumentException] thrownBy {
-      // WHEN
-      execute("CREATE DATABASE `system-mine`")
-      // THEN
-    } should have message "Database name 'system-mine' is invalid, due to the prefix 'system'."
+    testCreateDbWithInvalidName("`system-mine`", "Database name 'system-mine' is invalid, due to the prefix 'system'.")
 
     // Contains invalid characters
-    the[IllegalArgumentException] thrownBy {
-      // WHEN
-      execute("CREATE DATABASE `myDbWith_and%`")
-      // THEN
-    } should have message
-      "Database name 'mydbwith_and%' contains illegal characters. Use simple ascii characters, numbers, dots and dashes."
+    testCreateDbWithInvalidName("`myDbWith_and%`",
+      "Database name 'mydbwith_and%' contains illegal characters. Use simple ascii characters, numbers, dots and dashes.")
 
     // Too short name
-    the[IllegalArgumentException] thrownBy {
-      // WHEN
-      execute("CREATE DATABASE me")
-      // THEN
-    } should have message "The provided database name must have a length between 3 and 63 characters."
+    testCreateDbWithInvalidName("me", "The provided database name must have a length between 3 and 63 characters.")
 
     // Too long name
-    the[IllegalArgumentException] thrownBy {
-      // WHEN
-      val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
-      execute(s"CREATE DATABASE `$name`")
-      // THEN
-    } should have message "The provided database name must have a length between 3 and 63 characters."
+    val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
+    testCreateDbWithInvalidName("me", "The provided database name must have a length between 3 and 63 characters.")
+  }
+
+  private def testCreateDbWithInvalidName(name: String, expectedErrorMessage: String): Unit = {
+
+    val e = the[InvalidArgumentException] thrownBy {
+      execute("CREATE DATABASE " + name)
+    }
+
+    e should have message expectedErrorMessage
+    e.status().code().toString should be("Status.Code[Neo.ClientError.Statement.ArgumentError]")
+
   }
 
   test("should fail when creating a database when not on system database") {
