@@ -56,7 +56,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(hits = 1, misses = 1, flushes = 1))
+    counter.counts should equal(CacheCounts(misses = 1, flushes = 1))
   }
 
   test("should monitor cache misses and hits") {
@@ -69,7 +69,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(hits = 2, misses = 1, flushes = 1))
+    counter.counts should equal(CacheCounts(hits = 1, misses = 1, flushes = 1))
   }
 
   test("should monitor cache flushes") {
@@ -83,7 +83,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(hits = 3, misses = 3, flushes = 2))
+    counter.counts should equal(CacheCounts(misses = 3, flushes = 2))
   }
 
   test("should monitor cache evictions") {
@@ -101,7 +101,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute(query).toList
 
     // then
-    counter.counts should equal(CacheCounts(hits = 2, misses = 2, flushes = 1, evicted = 1))
+    counter.counts should equal(CacheCounts(misses = 2, flushes = 1, evicted = 1))
   }
 
   override lazy val logProvider: AssertableLogProvider = new AssertableLogProvider()
