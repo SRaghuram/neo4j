@@ -5,9 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.mockito.Mockito._
 import org.mockito.ArgumentMatchers._
-import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutingQuery, QueryManager, QueryResources, SchedulingPolicy}
+import org.mockito.Mockito._
+import org.neo4j.cypher.internal.runtime.morsel.execution._
+import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class WorkerTest extends CypherFunSuite {
@@ -55,6 +56,54 @@ class WorkerTest extends CypherFunSuite {
 
     verify(sleeper, never()).reportStopWorkUnit()
     verify(sleeper, times(ATTEMPTS)).reportIdle()
+  }
+
+  test("should handle scheduling error which occurred before getting morsel from parallelizer") {
+    val cause = new Exception
+    val originalMorsel = mock[MorselExecutionContext]
+    val input = mock[MorselParallelizer]
+    when(input.originalForClosing).thenReturn(originalMorsel)
+    val query = mock[ExecutingQuery]
+    val executionState = mock[ExecutionState]
+    when(query.executionState).thenReturn(executionState)
+    val pipeline = mock[ExecutablePipeline]
+    val resources = mock[QueryResources]
+
+    val schedulingPolicy: SchedulingPolicy =
+      (_: ExecutingQuery, _: QueryResources) =>
+        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+
+    val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
+    worker.scheduleNextTask(query, resources) shouldBe null
+
+    verify(input, times(1)).originalForClosing
+    verify(input, never()).nextCopy
+    verify(executionState, times(1)).closeMorselTask(pipeline, originalMorsel)
+    verify(executionState, times(1)).failQuery(cause, resources, pipeline)
+  }
+
+  test("should handle scheduling error which occurred after getting morsel from parallelizer") {
+    val cause = new Exception
+    val originalMorsel = mock[MorselExecutionContext]
+    val input = mock[MorselParallelizer]
+    when(input.originalForClosing).thenReturn(originalMorsel)
+    val query = mock[ExecutingQuery]
+    val executionState = mock[ExecutionState]
+    when(query.executionState).thenReturn(executionState)
+    val pipeline = mock[ExecutablePipeline]
+    val resources = mock[QueryResources]
+
+    val schedulingPolicy: SchedulingPolicy =
+      (_: ExecutingQuery, _: QueryResources) =>
+        throw NextTaskException(pipeline, SchedulingInputException(input, cause))
+
+    val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
+    worker.scheduleNextTask(query, resources) shouldBe null
+
+    verify(input, times(1)).originalForClosing
+    verify(input, never()).nextCopy
+    verify(executionState, times(1)).closeMorselTask(pipeline, originalMorsel)
+    verify(executionState, times(1)).failQuery(cause, resources, pipeline)
   }
 
   class NoMoreAttemptsException() extends IllegalArgumentException

@@ -140,13 +140,14 @@ class Worker(val workerId: Int,
     }
   }
 
-  private def scheduleNextTask(executingQuery: ExecutingQuery, resources: QueryResources): Task[QueryResources] = {
+  // protected to allow unit-testing
+  protected[morsel] def scheduleNextTask(executingQuery: ExecutingQuery, resources: QueryResources): Task[QueryResources] = {
     try {
       schedulingPolicy.nextTask(executingQuery, resources)
     } catch {
       // Failure in nextTask of a pipeline, after taking Morsel
       case NextTaskException(pipeline, SchedulingInputException(morsel: MorselParallelizer, cause)) =>
-        executingQuery.executionState.closeMorselTask(pipeline, morsel.nextCopy)
+        executingQuery.executionState.closeMorselTask(pipeline, morsel.originalForClosing)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         null
 

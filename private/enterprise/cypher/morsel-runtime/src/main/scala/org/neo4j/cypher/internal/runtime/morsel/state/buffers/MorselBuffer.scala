@@ -125,6 +125,8 @@ class MorselBuffer(id: BufferId,
   class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
     private var usedOriginal = false
 
+    override def originalForClosing: MorselExecutionContext = original
+
     override def nextCopy: MorselExecutionContext = {
       if (!usedOriginal) {
         usedOriginal = true

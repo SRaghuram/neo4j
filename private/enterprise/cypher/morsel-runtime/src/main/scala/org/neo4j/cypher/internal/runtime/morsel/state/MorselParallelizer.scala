@@ -13,6 +13,11 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 trait MorselParallelizer {
 
   /**
+    * Return the original morsel holding the data of this parallelizer.
+    */
+  def originalForClosing: MorselExecutionContext
+
+  /**
     * Return the next shallow copy of the underlying morsel.
     */
   def nextCopy: MorselExecutionContext
