@@ -262,8 +262,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                         source: PipelineDefinitionBuild,
                                         argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
 
-    def canFuseMiddle: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuseMiddle(plan)
-    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && (source.fusedHeadPlans.last eq plan.lhs.get) && operatorFusionPolicy.canFuse(plan)
+    def canFuseMiddle: Boolean = source.fusedHeadPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuseMiddle(plan)
+    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuse(plan)
 
     plan match {
       case produceResult: ProduceResult =>
@@ -368,7 +368,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
     plan match {
       case apply: plans.Apply =>
-        val applyRhsPlan = if (rhs.middlePlans.isEmpty) rhs.headPlan else rhs.middlePlans.last
+        //This is a little complicated: rhs.middlePlans can be empty because we have fused plans
+        val applyRhsPlan = if (rhs.middlePlans.isEmpty && rhs.fusedHeadPlans.size <= 1) rhs.headPlan
+                            else if (rhs.middlePlans.isEmpty) rhs.fusedHeadPlans.last
+                            else rhs.middlePlans.last
         applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
 

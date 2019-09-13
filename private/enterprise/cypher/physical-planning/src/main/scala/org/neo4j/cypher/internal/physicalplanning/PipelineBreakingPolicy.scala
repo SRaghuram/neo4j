@@ -87,6 +87,9 @@ object OperatorFusionPolicy {
              _: Limit
         => true
 
+        case _: Apply =>
+          true
+
         case _ =>
           false
       }
