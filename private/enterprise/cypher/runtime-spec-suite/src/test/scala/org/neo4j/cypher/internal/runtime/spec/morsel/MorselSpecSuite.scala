@@ -151,6 +151,7 @@ class MorselMemoryManagementTest extends MemoryManagementTestBase(SINGLE_THREADE
 class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(SINGLE_THREADED_NO_FUSING, MORSEL)
                                          with WithSlotsMemoryManagementTestBase
 class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(SINGLE_THREADED, MORSEL)
+class MorselSubscriberErrorTest extends SubscriberErrorTestBase(SINGLE_THREADED, MORSEL)
 
 // WORKLOAD
 class MorselWorkloadTest extends WorkloadTestBase(SINGLE_THREADED, MORSEL, SIZE_HINT)

@@ -62,3 +62,4 @@ class SlottedMemoryManagementTest extends MemoryManagementTestBase(ENTERPRISE.SI
                                   with FullSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
                                   with SlottedMemoryManagementTestBase
 class SlottedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
+class SlottedSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.SINGLE_THREADED, SlottedRuntime)
