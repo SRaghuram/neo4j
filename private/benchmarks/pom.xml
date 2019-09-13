@@ -136,8 +136,9 @@
                                     <executable>packer</executable>
                                     <arguments>
                                         <argument>validate</argument>
-                                        <argument>src/main/ami/benchmark-run-batch-worker/template.json</argument>
+                                        <argument>ami/benchmark-run-batch-worker/template.json</argument>
                                     </arguments>
+                                    <workingDirectory>benchmark-infra/src/main</workingDirectory>
                                 </configuration>
                             </execution>
                             <execution>
