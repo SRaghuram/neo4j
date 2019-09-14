@@ -207,6 +207,11 @@ class MorselRuntime(parallelExecution: Boolean,
 
     private def ensureQuerySubscription(): Unit = {
       if (querySubscription == null) {
+        // Only call onResult on first call. Having this callback before execute()
+        // ensure that we do not leave any inconsistent state around if onResult
+        // throws an exception.
+        subscriber.onResult(fieldNames.length)
+
         val ProfiledQuerySubscription(sub, prof, memTrack) = queryExecutor.execute(
           executablePipelines,
           executionGraphDefinition,
@@ -225,9 +230,6 @@ class MorselRuntime(parallelExecution: Boolean,
         querySubscription = sub
         _queryProfile = prof
         _memoryTracker = memTrack
-
-        //Only call onResult on first call
-        subscriber.onResult(fieldNames.length)
       }
     }
   }

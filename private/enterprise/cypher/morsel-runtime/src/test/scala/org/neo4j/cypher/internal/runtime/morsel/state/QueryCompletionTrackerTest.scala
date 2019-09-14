@@ -135,6 +135,26 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     }
   }
 
+  test("should cleanly deal with reference counting bug") {
+    val x = newTracker()
+
+    // when
+    x.increment()
+    x.decrementBy(2) // whoopsie
+
+    // then
+    val errorCaptor = argCaptor[Throwable]
+    verify(subscriber).onError(errorCaptor.capture())
+    errorCaptor.getValue shouldBe a[ReferenceCountingException]
+    verify(subscriber, never()).onResultCompleted(stats)
+    verify(tracer).stopQuery()
+    verify(transaction, if (shouldThawLocks) times(1) else never()).thawLocks()
+    x.hasEnded shouldBe true
+    intercept[ReferenceCountingException] {
+      x.await()
+    }
+  }
+
   test("isCompleted when not completed") {
     val x = newTracker()
 

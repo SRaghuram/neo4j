@@ -111,6 +111,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   private var throwable: Throwable = _
   private var demand = 0L
   private var cancelled = false
+  private var _hasEnded = false
 
   override def increment(): Unit = {
     count += 1
@@ -142,22 +143,33 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   private def postDecrement(): Unit = {
-    if (count == 0) {
-      try {
-        if (throwable != null) {
-
-          subscriber.onError(throwable)
-        } else if (!cancelled) {
-          subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+    if (count <= 0) {
+      if (count < 0) {
+        error(new ReferenceCountingException("Cannot count below 0, but got count " + count))
+      }
+      if (!_hasEnded) {
+        try {
+          if (throwable != null) {
+            subscriber.onError(throwable)
+          } else if (!cancelled) {
+            subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
+          }
+        } catch {
+          case reportError: Throwable =>
+            error(reportError) // stash and continue
         }
-      } finally {
         tracer.stopQuery()
+        _hasEnded = true
       }
     }
   }
 
   override def error(throwable: Throwable): Unit = {
-    this.throwable = throwable
+    if (this.throwable == null) {
+      this.throwable = throwable
+    } else {
+      this.throwable.addSuppressed(throwable)
+    }
   }
 
   override def getDemand: Long = demand
@@ -168,7 +180,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     demand -= newlyServed
   }
 
-  override def hasEnded: Boolean = count == 0
+  override def hasEnded: Boolean = _hasEnded
 
   override def peekError: Throwable = throwable
 
@@ -242,7 +254,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   override def increment(): Unit = {
     if (_hasEnded) {
-      throw new IllegalStateException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}")
+      throw new ReferenceCountingException(s"Increment called even though query has ended. That should not happen. Current count: ${count.get()}")
     }
     val newCount = count.incrementAndGet()
     debug("Increment to %d", newCount)
@@ -270,8 +282,11 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
   }
 
   private def postDecrement(newCount: Long): Unit = {
-    if (newCount == 0) {
-      try {
+    if (newCount <= 0) {
+      if (newCount < 0) {
+        errors.add(new ReferenceCountingException("Cannot count below 0, but got count " + newCount))
+      }
+      if (!_hasEnded) {
         reportQueryEndToSubscriber()
         thawTransactionLocks()
 
@@ -280,11 +295,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
         waiters.forEach(waitState => waitState.latch.countDown())
         waiters.clear()
-      } finally {
         tracer.stopQuery()
       }
-    } else if (newCount < 0) {
-      throw new IllegalStateException("Cannot count below 0")
     }
   }
 
