@@ -208,7 +208,9 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -322,7 +324,9 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -436,7 +440,9 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -550,7 +556,9 @@
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -573,14 +581,6 @@
           "Vcpus": 4,
           "Memory": 8384
         }
-      }
-    },
-    "ResultStoreSecret": {
-      "Type": "AWS::SecretsManager::Secret",
-      "Properties": {
-        "Description": "Secret to submit results to the result store",
-        "Name": "ResultStoreSecret-${STAGE}",
-        "SecretString": "${RESULTSTORESECRET}"
       }
     }
   },
