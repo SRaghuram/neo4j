@@ -17,12 +17,13 @@ import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
-import org.neo4j.cypher.internal.{FullyParsedQuery, CypherPreParser, PeriodicCommitHint, QueryOptions}
+import org.neo4j.cypher.internal.{CypherPreParser, FullyParsedQuery, PeriodicCommitHint, QueryOptions}
 import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption}
+import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
 
-case class FabricPlanner(config: FabricConfig) {
+case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
 
   private val catalog = Catalog.fromConfig(config)
   private val renderer = Prettifier(ExpressionStringifier())
@@ -44,12 +45,16 @@ case class FabricPlanner(config: FabricConfig) {
     query: String,
     parameters: MapValue
   ): PlannerContext = {
-    val state = Pipeline.parseAndPrepare.process(query)
+
+    val pipeline = Pipeline.Instance(monitors, query)
+    val state = pipeline.parseAndPrepare.process(query)
+
     PlannerContext(
       original = state.statement(),
       parameters = parameters,
       semantic = state.semantics(),
-      catalog = catalog
+      catalog = catalog,
+      pipeline = pipeline
     )
   }
 
@@ -57,7 +62,8 @@ case class FabricPlanner(config: FabricConfig) {
     original: Statement,
     parameters: MapValue,
     semantic: SemanticState,
-    catalog: Catalog
+    catalog: Catalog,
+    pipeline: Pipeline.Instance
   ) {
 
     def plan: FabricQuery = {
@@ -106,7 +112,7 @@ case class FabricPlanner(config: FabricConfig) {
         .bottomUp {
           // Prepare for planning (run rest of pipeline for local queries)
           case PartialState(stmt) =>
-            Pipeline.checkAndFinalize.process(stmt)
+            pipeline.checkAndFinalize.process(stmt)
         }
     }
 

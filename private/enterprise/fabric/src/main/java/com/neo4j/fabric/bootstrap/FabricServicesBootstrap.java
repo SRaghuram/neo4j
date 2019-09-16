@@ -26,6 +26,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
 public class FabricServicesBootstrap
@@ -50,7 +51,8 @@ public class FabricServicesBootstrap
             serviceBootstrapper.registerService( new FabricRemoteExecutor( driverPool, credentialsProvider ), FabricRemoteExecutor.class );
             serviceBootstrapper.registerService( new FabricLocalExecutor( fabricConfig, fabricDatabaseManager ), FabricLocalExecutor.class );
             serviceBootstrapper.registerService( new TransactionManager( dependencies ), TransactionManager.class );
-            var planner = serviceBootstrapper.registerService( new FabricPlanner( fabricConfig ), FabricPlanner.class );
+            var monitors = new Monitors();
+            var planner = serviceBootstrapper.registerService( new FabricPlanner( fabricConfig, monitors ), FabricPlanner.class );
             var catalog = Catalog.fromConfig( fabricConfig );
             var fromEvaluation = serviceBootstrapper.registerService( new FromEvaluation( catalog,
                     () -> dependencies.resolveDependency( GlobalProcedures.class ) ), FromEvaluation.class );

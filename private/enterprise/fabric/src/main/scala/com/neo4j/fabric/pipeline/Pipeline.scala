@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.pipeline
 
+import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
 import org.neo4j.cypher.internal.v4_0.ast.Statement
@@ -12,41 +13,49 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comp
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticErrorDef, SemanticState}
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
-import org.neo4j.cypher.internal.v4_0.rewriting.{AstRewritingMonitor, Deprecations, RewriterStepSequencer}
+import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer}
 import org.neo4j.cypher.internal.v4_0.util.CypherExceptionFactory
+import org.neo4j.monitoring.{Monitors => KernelMonitors}
 
-import scala.reflect.ClassTag
 
 
 object Pipeline {
 
-  trait BlankBaseContext extends BaseContext {
-    override def tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING
+  case class Instance(
+    kernelMonitors: KernelMonitors,
+    queryText: String,
+  ) {
+    private val monitors = WrappedMonitors(kernelMonitors)
+    private val exceptionFactory = Neo4jCypherExceptionFactory(queryText, None)
+    private val context: BaseContext = new BlankBaseContext(exceptionFactory, monitors)
 
-    override def notificationLogger: InternalNotificationLogger = devNullLogger
+    val parseAndPrepare = ParsingPipeline(Seq(
+      parse,
+      deprecations,
+      prepare,
+      semantics,
+      fabricPrepare,
+      semantics
+    ), context)
 
-    override def monitors: Monitors = new Monitors {
-      override def newMonitor[T <: AnyRef : ClassTag](tags: String*): T =
-        new AstRewritingMonitor {
-          override def abortedRewriting(obj: AnyRef): Unit = ()
-
-          override def abortedRewritingDueToLargeDNF(obj: AnyRef): Unit = ()
-        }.asInstanceOf[T]
-
-      override def addMonitorListener[T](monitor: T, tags: String*): Unit = ()
-    }
+    val checkAndFinalize = AnalysisPipeline(Seq(
+      prepare,
+      semantics,
+      rewrite
+    ), context)
   }
 
-  val exceptionFactory = Neo4jCypherExceptionFactory("", None)
-  case class DefaultContext(cypherExceptionFactory: CypherExceptionFactory)
+  class BlankBaseContext(
+    val cypherExceptionFactory: CypherExceptionFactory,
+    val monitors: Monitors,
+    val tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING,
+    val notificationLogger: InternalNotificationLogger = devNullLogger
+  ) extends BaseContext {
 
-  private val defaultContext: BaseContext =
-    new BlankBaseContext() {
-      override def cypherExceptionFactory: CypherExceptionFactory = exceptionFactory
-
-      override def errorHandler: Seq[SemanticErrorDef] => Unit =
-        (errors: Seq[SemanticErrorDef]) => errors.foreach(e => throw cypherExceptionFactory.syntaxException(e.msg, e.position))
-    }
+    override val errorHandler: Seq[SemanticErrorDef] => Unit =
+      (errors: Seq[SemanticErrorDef]) =>
+        errors.foreach(e => throw cypherExceptionFactory.syntaxException(e.msg, e.position))
+  }
 
   private val features = Seq(
     Cypher9Comparability,
@@ -75,20 +84,6 @@ object Pipeline {
       literalExtraction = Never,
       innerVariableNamer = new GeneratingNamer)
 
-  val parseAndPrepare = ParsingPipeline(Seq(
-    parse,
-    deprecations,
-    prepare,
-    semantics,
-    fabricPrepare,
-    semantics
-  ), defaultContext)
-
-  val checkAndFinalize = AnalysisPipeline(Seq(
-    prepare,
-    semantics,
-    rewrite
-  ), defaultContext)
 }
 
 trait Pipeline {

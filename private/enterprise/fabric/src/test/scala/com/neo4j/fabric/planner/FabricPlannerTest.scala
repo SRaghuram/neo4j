@@ -17,6 +17,7 @@ import com.neo4j.fabric.{AstHelp, Test}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Query, SingleQuery}
 import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, NodePattern, Variable}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
+import org.neo4j.monitoring.Monitors
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
 
@@ -34,7 +35,8 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSuppor
   )
   private val params = MapValue.EMPTY
 
-  private val planner = FabricPlanner(config)
+  private val monitors = new Monitors();
+  private val planner = FabricPlanner(config, monitors)
 
   implicit class Caster[A](a: A) {
     def as[T](implicit ct: ClassTag[T]): T = {
@@ -348,7 +350,7 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSuppor
     "cache" - {
 
       "two equal input strings" in {
-        val newPlanner = FabricPlanner(config)
+        val newPlanner = FabricPlanner(config, monitors)
 
         val q =
           """WITH 1 AS x
@@ -371,7 +373,7 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSuppor
       }
 
       "two equal input strings with different params" in {
-        val newPlanner = FabricPlanner(config)
+        val newPlanner = FabricPlanner(config, monitors)
 
         val q =
           """WITH 1 AS x
