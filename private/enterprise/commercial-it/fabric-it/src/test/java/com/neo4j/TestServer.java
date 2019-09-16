@@ -49,7 +49,7 @@ public class TestServer implements AutoCloseable
         this.directory = createDirectory();
         var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory.toFile(), mocks );
         this.dbms = dbmsBuilder.setConfig( config )
-                .setConfig( GraphDatabaseSettings.auth_enabled , "false" )
+                .setConfig( GraphDatabaseSettings.auth_enabled , false )
                 .build();
 
         dependencies = dbmsBuilder.getDependencies();

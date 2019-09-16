@@ -5,15 +5,15 @@
  */
 package com.neo4j.fabric.pipeline
 
-import com.neo4j.fabric.planner.Errors
+import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
 import org.neo4j.cypher.internal.v4_0.ast.Statement
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases, MultipleGraphs, SubQueries}
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases, MultipleGraphs}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticErrorDef, SemanticState}
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
 import org.neo4j.cypher.internal.v4_0.rewriting.{AstRewritingMonitor, Deprecations, RewriterStepSequencer}
-import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
+import org.neo4j.cypher.internal.v4_0.util.CypherExceptionFactory
 
 import scala.reflect.ClassTag
 
@@ -24,8 +24,6 @@ object Pipeline {
     override def tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING
 
     override def notificationLogger: InternalNotificationLogger = devNullLogger
-
-    override def exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null
 
     override def monitors: Monitors = new Monitors {
       override def newMonitor[T <: AnyRef : ClassTag](tags: String*): T =
@@ -39,17 +37,20 @@ object Pipeline {
     }
   }
 
-  trait ErrorHandlerThrowing {
-    def errorHandler: Seq[SemanticErrorDef] => Unit = Errors.invalidOnError
-  }
+  val exceptionFactory = Neo4jCypherExceptionFactory("", None)
+  case class DefaultContext(cypherExceptionFactory: CypherExceptionFactory)
 
   private val defaultContext: BaseContext =
-    new BlankBaseContext with ErrorHandlerThrowing
+    new BlankBaseContext() {
+      override def cypherExceptionFactory: CypherExceptionFactory = exceptionFactory
+
+      override def errorHandler: Seq[SemanticErrorDef] => Unit =
+        (errors: Seq[SemanticErrorDef]) => errors.foreach(e => throw cypherExceptionFactory.syntaxException(e.msg, e.position))
+    }
 
   private val features = Seq(
     Cypher9Comparability,
     MultipleDatabases,
-    SubQueries,
     MultipleGraphs
   )
 

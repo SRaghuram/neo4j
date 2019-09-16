@@ -30,8 +30,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
@@ -40,6 +38,10 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.kernel.availability.UnavailableException;
+import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
@@ -71,7 +73,7 @@ class BoltAdapterTest
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @BeforeAll
-    static void setUpServer()
+    static void setUpServer() throws UnavailableException
     {
         PortUtils.Ports ports = PortUtils.findFreePorts();
 
@@ -82,17 +84,26 @@ class BoltAdapterTest
         );
 
         var config = org.neo4j.configuration.Config.newBuilder()
-                .set( configProperties )
+                .setRaw( configProperties )
                 .build();
 
         testServer = new TestServer( config );
 
         fabricConfig = mock( FabricConfig.class );
         FabricDatabaseManager databaseManager = mock( FabricDatabaseManager.class );
+        
+        var databaseId = mock( DatabaseId.class);
+        when(databaseId.name()).thenReturn( "mega" );
+        var graphDatabaseFacade = mock( GraphDatabaseFacade.class );
+        when( graphDatabaseFacade.databaseId() ).thenReturn( databaseId );
+        when( databaseManager.getDatabase( "mega" ) ).thenReturn( graphDatabaseFacade );
         var databaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, fabricConfig, transactionManager, databaseManager );
         testServer.addMocks( databaseManagementService, databaseManager );
         testServer.start();
-        driver = GraphDatabase.driver( "bolt://localhost:" +  ports.bolt, AuthTokens.none(), Config.builder().withMaxConnectionPoolSize( 3 ).build() );
+        driver = GraphDatabase.driver( "bolt://localhost:" +  ports.bolt, AuthTokens.none(), Config.builder()
+                .withMaxConnectionPoolSize( 3 )
+                .withoutEncryption()
+                .build() );
     }
 
     @BeforeEach
@@ -129,7 +140,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
             {
                 try ( Transaction transaction = session.beginTransaction() )
                 {

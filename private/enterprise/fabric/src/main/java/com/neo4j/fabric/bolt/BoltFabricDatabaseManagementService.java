@@ -34,8 +34,7 @@ public class BoltFabricDatabaseManagementService implements BoltGraphDatabaseMan
     @Override
     public BoltGraphDatabaseServiceSPI database( String databaseName ) throws UnavailableException, DatabaseNotFoundException
     {
-        // we are not interested in getting the database representation, but validating, that the database exists and is active
-        fabricDatabaseManager.getDatabase( databaseName );
-        return new BoltFabricDatabaseService( databaseName, fabricExecutor, config, transactionManager );
+        var  database = fabricDatabaseManager.getDatabase( databaseName );
+        return new BoltFabricDatabaseService( database.databaseId(), fabricExecutor, config, transactionManager );
     }
 }

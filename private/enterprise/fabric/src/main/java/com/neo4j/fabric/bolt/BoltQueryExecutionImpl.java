@@ -42,7 +42,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
     }
 
     @Override
-    public void close( boolean success )
+    public void close()
     {
         queryExecution.cancel();
     }
@@ -142,7 +142,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         {
             for ( int i = 0; i < columns.size(); i++ )
             {
-                subscriber.onField( i, record.getValue( i ) );
+                subscriber.onField( record.getValue( i ) );
             }
         }
 

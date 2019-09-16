@@ -57,7 +57,7 @@ class LocalQueryEndToEndTest
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true");
-        var config = Config.newBuilder().set( configProperties ).build();
+        var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config );
 
         testServer.start();
@@ -70,6 +70,7 @@ class LocalQueryEndToEndTest
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )
+                        .withoutEncryption()
                         .build() );
     }
 

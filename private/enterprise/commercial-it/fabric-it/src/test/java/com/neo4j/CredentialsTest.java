@@ -65,7 +65,7 @@ class CredentialsTest
         );
 
         var config = org.neo4j.configuration.Config.newBuilder()
-                .set( configProperties )
+                .setRaw( configProperties )
                 .build();
 
         testServer = new TestServer( config );

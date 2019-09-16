@@ -65,18 +65,6 @@ public class FabricAuthManagerWrapper implements CommercialAuthManager
     }
 
     @Override
-    public void clearCacheForRole( String role )
-    {
-        wrappedAuthManager.clearCacheForRole( role );
-    }
-
-    @Override
-    public void clearCacheForRoles()
-    {
-        wrappedAuthManager.clearCacheForRoles();
-    }
-
-    @Override
     public Credential createCredentialForPassword( byte[] password )
     {
         return wrappedAuthManager.createCredentialForPassword( password );

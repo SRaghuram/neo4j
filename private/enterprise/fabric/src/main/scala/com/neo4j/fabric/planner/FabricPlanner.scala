@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
-import org.neo4j.cypher.internal.{AstInputQuery, CypherPreParser, PeriodicCommitHint, QueryOptions}
-import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption, exceptionHandler}
+import org.neo4j.cypher.internal.{FullyParsedQuery, CypherPreParser, PeriodicCommitHint, QueryOptions}
+import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption}
 import org.neo4j.values.virtual.MapValue
 
 
@@ -122,8 +122,12 @@ case class FabricPlanner(config: FabricConfig) {
       def segments: Seq[Segment] =
         clauses
           .foldLeft(Seq[Segment]()) {
-            case (segs, sub: SubQuery)        =>
-              Sub(sub.sq.clauses) +: segs
+            case (segs, sub: SubQuery) =>
+              sub.query.part match {
+                case singleQuery: SingleQuery => Sub(singleQuery.clauses) +: segs
+                // TODO fix this  
+                case _ => throw new IllegalStateException("Only single query is supported for subqueries")
+              }
             case (Seq(Seg(cs), rest @ _*), c) =>
               Seg(cs :+ c) +: rest
             case (segs, c)                    =>
@@ -141,7 +145,7 @@ case class FabricPlanner(config: FabricConfig) {
         }
 
       def produced: Seq[String] =
-        clauses.last.returnColumns
+        clauses.last.returnColumns.map(variable => variable.name)
 
       def output(input: Seq[String]): Seq[String] =
         input.filterNot(produced.contains) ++ produced
@@ -218,7 +222,7 @@ case class FabricPlanner(config: FabricConfig) {
 
         case _ =>
           LocalQuery(
-            query = AstInputQuery(
+            query = FullyParsedQuery(
               state = PartialState(query),
               // Other runtimes can fail when we don't have READ access
               // even for "calculator queries"
@@ -226,7 +230,7 @@ case class FabricPlanner(config: FabricConfig) {
               options = QueryOptions.default.copy(
                 runtime = CypherRuntimeOption.slotted,
                 expressionEngine = CypherExpressionEngineOption.interpreted,
-                noDatabaseAccess = true
+                materializedEntitiesMode = true
               )
             ),
             input = input,
@@ -263,13 +267,17 @@ case class FabricPlanner(config: FabricConfig) {
       override def withSemanticState(s: SemanticState): BaseState = fail("withSemanticState")
 
       override def withParams(p: Map[String, Any]): BaseState = fail("withParams")
+
+      override def maybeReturnColumns: Option[Seq[String]] = fail("maybeReturnColumns")
+
+      override def withReturnColumns(cols: Seq[String]): BaseState = fail("withReturnColumns")
     }
 
   }
 
   /** Extracted from PreParser */
   def isPeriodicCommit(query: String): Boolean = {
-    val preParsedStatement = exceptionHandler.runSafely(CypherPreParser(query))
+    val preParsedStatement = CypherPreParser(query)
     PeriodicCommitHint.r.findFirstIn(preParsedStatement.statement.toUpperCase).nonEmpty
   }
 

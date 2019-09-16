@@ -10,16 +10,15 @@ import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSystemGraphIni
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 
 public class FabricSystemGraphInitializer extends EnterpriseSystemGraphInitializer
 {
     private final FabricDatabaseManager fabricDatabaseManager;
 
-    public FabricSystemGraphInitializer( DatabaseManager<?> databaseManager, DatabaseIdRepository databaseIdRepository, Config config,
+    public FabricSystemGraphInitializer( DatabaseManager<?> databaseManager, Config config,
             FabricDatabaseManager fabricDatabaseManager )
     {
-        super( databaseManager, databaseIdRepository, config );
+        super( databaseManager, config );
         this.fabricDatabaseManager = fabricDatabaseManager;
     }
 

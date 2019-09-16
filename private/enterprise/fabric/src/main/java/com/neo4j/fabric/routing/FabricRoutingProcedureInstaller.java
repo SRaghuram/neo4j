@@ -14,34 +14,34 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
-import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 
 public class FabricRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
 {
-
-    private final DatabaseIdRepository databaseIdRepository;
+    
     private final DatabaseManager<?> databaseManager;
     private final ConnectorPortRegister portRegister;
     private final Config config;
     private final FabricDatabaseManager fabricDatabaseManager;
     private final FabricConfig fabricConfig;
+    private final LogProvider logProvider;
 
-    public FabricRoutingProcedureInstaller( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister,
-            DatabaseIdRepository databaseIdRepository, Config config, FabricDatabaseManager fabricDatabaseManager, FabricConfig fabricConfig )
+    public FabricRoutingProcedureInstaller( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister, Config config,
+            FabricDatabaseManager fabricDatabaseManager, FabricConfig fabricConfig,  LogProvider logProvider )
     {
-        this.databaseIdRepository = databaseIdRepository;
         this.databaseManager = databaseManager;
         this.portRegister = portRegister;
         this.config = config;
         this.fabricDatabaseManager = fabricDatabaseManager;
         this.fabricConfig = fabricConfig;
+        this.logProvider = logProvider;
     }
 
     @Override
     protected CallableProcedure createProcedure( List<String> namespace )
     {
-        return new FabricSingleInstanceGetRoutingTableProcedure( namespace, databaseManager, portRegister, databaseIdRepository, config, fabricDatabaseManager,
-                fabricConfig );
+        return new FabricSingleInstanceGetRoutingTableProcedure( namespace, databaseManager, portRegister, config, fabricDatabaseManager,
+                fabricConfig, logProvider );
     }
 }

@@ -14,13 +14,15 @@ import com.neo4j.fabric.config.FabricConfig.{Database, Graph, RemoteGraphDriver}
 import com.neo4j.fabric.planner.Errors.InvalidQueryException
 import com.neo4j.fabric.planner.FabricQuery.{ChainedQuery, LocalQuery, ShardQuery, UnionQuery}
 import com.neo4j.fabric.{AstHelp, Test}
-import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionHelp, Query, SingleQuery}
+import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Query, SingleQuery}
+import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, NodePattern, Variable}
+import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
 
 import scala.reflect.ClassTag
 
-class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
+class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSupport {
 
   private val shardFoo0 = new Graph(0, URI.create("bolt://foo"), "s0", "shard-name-0")
   private val shardFoo1 = new Graph(1, URI.create("bolt://foo"), "s1", "shard-name-1")
@@ -79,7 +81,7 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
 
         planner
           .plan(q, params)
-          .asLocalSingleQuery.clauses.shouldEqual(Seq(match_(node("y")), return_(v("y") -> v("y"))))
+          .asLocalSingleQuery.clauses.shouldEqual(Seq(match_(node("y")), return_(varFor("y").aliased)))
       }
 
       "a plain shard query" in {
@@ -92,9 +94,9 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
         planner
           .plan(q, params)
           .as[ShardQuery]
-          .check(_.from.expression.shouldEqual(prop(v("mega"), "shard0")))
+          .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
           .check(_.query.part
-            .as[SingleQuery].clauses.shouldEqual(Seq(match_(node("y")), return_(v("y") -> v("y"))))
+            .as[SingleQuery].clauses.shouldEqual(Seq(match_(node("y")), return_(varFor("y").aliased)))
           )
       }
 
@@ -113,12 +115,12 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
           .as[ChainedQuery]
           .check(_.lhs
             .as[ShardQuery]
-            .check(_.from.expression.shouldEqual(prop(v("mega"), "shard0")))
-            .check(_.query.part.as[SingleQuery].clauses.shouldEqual(Seq(match_(node("y")), return_(v("y") -> v("y"))))
+            .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+            .check(_.query.part.as[SingleQuery].clauses.shouldEqual(Seq(match_(node("y")), return_(varFor("y").aliased)))
             )
           )
           .check(_.rhs
-            .asLocalSingleQuery.clauses.shouldEqual(Seq(input(v("y")), return_(v("y") -> v("y"))))
+            .asLocalSingleQuery.clauses.shouldEqual(Seq(input(varFor("y")), return_(varFor("y").aliased)))
           )
       }
 
@@ -143,28 +145,27 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
           .check(_.lhs.as[ChainedQuery]
             .check(_.lhs.as[ChainedQuery]
               .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-                unwind(list(i("1"), i("2")), v("x")),
-                return_(v("x") -> v("x"))
+                unwind(listOf(literalInt(1), literalInt(2)), varFor("x")),
+                return_(varFor("x").aliased))
               )))
               .check(_.rhs.as[ShardQuery]
-                .check(_.from.expression.shouldEqual(f(Seq("mega", "shard"), v("x"))))
+                .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
                 .check(_.query.part.as[SingleQuery].clauses.shouldEqual(Seq(
                   match_(node("y")),
-                  return_(v("y") -> v("y"))
+                  return_(varFor("y").aliased)
                 )))
               )
             )
             .check(_.rhs
               .as[ShardQuery]
-              .check(_.from.expression.shouldEqual(f(Seq("mega", "shard"), v("y"))))
+              .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
               .check(_.query.part.as[SingleQuery].clauses.shouldEqual(Seq(
-                return_(i("1") -> v("z"), i("2") -> v("w"))
+                return_(literalInt(1).as("z"), literal(2).as("w"))
               )))
             )
-          )
           .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-            input(v("x"), v("y"), v("z"), v("w")),
-            return_(v("x") -> v("x"), v("y") -> v("y"), v("z") -> v("z"), v("w") -> v("w"))
+            input(varFor("x"), varFor("y"), varFor("z"), varFor("w")),
+            return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased, varFor("w").aliased)
           )))
       }
 
@@ -188,25 +189,25 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
             .check(_.lhs.as[ChainedQuery]
               .check(_.lhs.as[ChainedQuery]
                 .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-                  with_(i("1") -> v("x")),
-                  return_(v("x") -> v("x")))))
+                  with_(literalInt(1).as("x")),
+                  return_(varFor("x").aliased))))
                 .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-                  input(v("x")),
-                  return_(v("x") -> v("x"), i("2") -> v("y")))))
+                  input(varFor("x")),
+                  return_(varFor("x").aliased, literalInt(2).as("y")))))
               )
               .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-                input(v("x"), v("y")),
-                with_(i("3") -> v("z"), v("y") -> v("y")),
-                return_(v("y") -> v("y"), v("z") -> v("z")))))
+                input(varFor("x"), varFor("y")),
+                with_(literalInt(3).as("z"), varFor("y").aliased),
+                return_(varFor("y").aliased, varFor("z").aliased))))
             )
             .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-              input(v("y"), v("z")),
-              with_(v("y") -> v("y"), v("z") -> v("z"), i("0") -> v("a")),
-              return_(v("y") -> v("y"), v("z") -> v("z"), i("4") -> v("w")))))
+              input(varFor("y"), varFor("z")),
+              with_(varFor("y").aliased, varFor("z").aliased, literalInt(0).as("a")),
+              return_(varFor("y").aliased, varFor("z").aliased, literalInt(4).as("w")))))
           )
           .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
-            input(v("y"), v("z"), v("w")),
-            return_(v("w") -> v("w"), v("y") -> v("y")))))
+            input(varFor("y"), varFor("z"), varFor("w")),
+            return_(varFor("w").aliased, varFor("y").aliased))))
       }
 
       "a nested composite query" ignore {
@@ -226,16 +227,16 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
         planner
           .plan(q, params).as[ChainedQuery]
           .check(_.lhs.as[ChainedQuery]
-            .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(with_(i("1") -> v("x")), return_(v("x") -> v("x")))))
+            .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(with_(literalInt(1).as("x")), return_(varFor("x").aliased))))
             .check(_.rhs.as[ChainedQuery]
               .check(_.lhs.as[ChainedQuery]
-                .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(with_(i("2") -> v("y")), return_(v("y") -> v("y")))))
-                .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(input(v("y")), return_(i("3") -> v("z")))))
+                .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(with_(literalInt(2).as("y")), return_(varFor("y").aliased))))
+                .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(input(varFor("y")), return_(literalInt(3).as("z")))))
               )
-              .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(input(v("y"), v("z")), return_(v("y") -> v("y"), v("z") -> v("z")))))
+              .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(input(varFor("y"), varFor("z")), return_(varFor("y").aliased, varFor("z").aliased))))
             )
           )
-          .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(input(v("x"), v("y"), v("z")), return_(v("x") -> v("x"), v("y") -> v("y"), v("z") -> v("z")))))
+          .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(input(varFor("x"), varFor("y"), varFor("z")), return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased))))
       }
 
       "a write query" in {
@@ -249,10 +250,10 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
           .plan(q, params)
           .as[ShardQuery]
           .check(
-            _.from.expression.shouldEqual(prop(v("mega"), "shard0")
+            _.from.expression.shouldEqual(prop(varFor("mega"), "shard0")
             ))
           .check(_.query.part
-            .as[SingleQuery].clauses.shouldEqual(Seq(create(node("y", "Foo"))))
+            .as[SingleQuery].clauses.shouldEqual(Seq(create(node("y", "Foo")(pos))))
           )
       }
 
@@ -268,10 +269,10 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
           .as[UnionQuery]
           .check(_.distinct.shouldEqual(true))
           .check(_.lhs
-            .asLocalSingleQuery.clauses.shouldEqual(Seq(return_(i("1") -> v("x"))))
+            .asLocalSingleQuery.clauses.shouldEqual(Seq(return_(literalInt(1).as("x"))))
           )
           .check(_.rhs
-            .asLocalSingleQuery.clauses.shouldEqual(Seq(return_(i("2") -> v("x"))))
+            .asLocalSingleQuery.clauses.shouldEqual(Seq(return_(literalInt(2).as("x"))))
           )
       }
 
@@ -297,7 +298,7 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
           .check(_.as[ChainedQuery]
             .check(_.lhs.as[ChainedQuery]
               .check(_.lhs.as[ChainedQuery]
-                .rhs.asLocalSingleQuery.clauses.last.shouldEqual(return_(v("gid"), v("cid"))))
+                .rhs.asLocalSingleQuery.clauses.last.shouldEqual(return_(varFor("gid").aliased, varFor("cid").aliased)))
               .check(_.rhs.as[ShardQuery].input.shouldEqual(Seq("gid", "cid")))
             )
           )
@@ -322,7 +323,7 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
           .check(_.as[ChainedQuery]
             .check(_.lhs.as[ChainedQuery]
               .check(_.lhs.as[ChainedQuery]
-                .rhs.asLocalSingleQuery.clauses.last.shouldEqual(return_(v("x"), v("y")))
+                .rhs.asLocalSingleQuery.clauses.last.shouldEqual(return_(varFor("x").aliased, varFor("y").aliased))
               )
               .check(_.rhs.as[ShardQuery].input.shouldEqual(Seq("x", "y"))
               )
@@ -395,5 +396,11 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionHelp {
     }
 
   }
+
+  def node(name: String): NodePattern =
+    NodePattern(Some(Variable(name)(pos)), Seq(), None)(pos)
+
+  def node(name: String, labels: String*)(implicit p: InputPosition): NodePattern =
+    NodePattern(Some(Variable(name)(p)), labels.map(LabelName(_)(p)), None)(p)
 
 }

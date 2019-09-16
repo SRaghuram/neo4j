@@ -5,8 +5,10 @@
  */
 package com.neo4j.fabric.planner
 
+import java.lang
 import java.net.URL
 import java.time.Clock
+import java.util.Optional
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.common.DependencyResolver
@@ -17,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.graphdb.{Path, PropertyContainer}
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{QueryContext => _, _}
 import org.neo4j.internal.schema.IndexDescriptor
@@ -42,7 +44,8 @@ object StaticEvaluation {
       cursors = null,
       queryIndexes = Array.empty,
       expressionVariables = new Array(nExpressionSlots),
-      subscriber = QuerySubscriber.DO_NOTHING_SUBSCRIBER
+      subscriber = QuerySubscriber.DO_NOTHING_SUBSCRIBER,
+      memoryTracker = null
     )
   }
 
@@ -76,6 +79,8 @@ object StaticEvaluation {
     override def statementClock(): Clock = notAvailable()
 
     override def transactionClock(): Clock = notAvailable()
+    
+    override def procedureCallContext(): ProcedureCallContext = notAvailable()
   }
 
   private trait EmptyQueryContext extends QueryContext {
@@ -101,10 +106,6 @@ object StaticEvaluation {
     override def getRelationshipsForIds(node: Long, dir: SemanticDirection, types: Array[Int]): Iterator[RelationshipValue] = notAvailable()
 
     override def getRelationshipsForIdsPrimitive(node: Long, dir: SemanticDirection, types: Array[Int]): RelationshipIterator = notAvailable()
-
-    override def getRelationshipsCursor(node: Long, dir: SemanticDirection, types: Array[Int]): RelationshipSelectionCursor = notAvailable()
-
-    override def getRelationshipFor(relationshipId: Long, typeId: Int, startNodeId: Long, endNodeId: Long): RelationshipValue = notAvailable()
 
     override def getOrCreateLabelId(labelName: String): Int = notAvailable()
 
@@ -171,14 +172,6 @@ object StaticEvaluation {
     override def lockNodes(nodeIds: Long*): Unit = notAvailable()
 
     override def lockRelationships(relIds: Long*): Unit = notAvailable()
-
-    override def callReadOnlyProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String]): Iterator[Array[AnyValue]] = notAvailable()
-
-    override def callReadWriteProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String]): Iterator[Array[AnyValue]] = notAvailable()
-
-    override def callSchemaWriteProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String]): Iterator[Array[AnyValue]] = notAvailable()
-
-    override def callDbmsProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String]): Iterator[Array[AnyValue]] = notAvailable()
 
     override def aggregateFunction(id: Int, allowed: Array[String]): UserDefinedAggregator = notAvailable()
 
@@ -249,6 +242,32 @@ object StaticEvaluation {
     override def getTxStateNodePropertyOrNull(nodeId: Long, propertyKey: Int): Value = notAvailable()
 
     override def getTxStateRelationshipPropertyOrNull(relId: Long, propertyKey: Int): Value = notAvailable()
+
+    override def getOptStatistics: Option[QueryStatistics] = notAvailable()
+
+    override def nodeGetDegree(node: Long, dir: SemanticDirection, nodeCursor: NodeCursor): Int = notAvailable()
+
+    override def nodeGetDegree(node: Long, dir: SemanticDirection, relTypeId: Int, nodeCursor: NodeCursor): Int = notAvailable()
+
+    override def nodeProperty(node: Long, property: Int, nodeCursor: NodeCursor, propertyCursor: PropertyCursor, throwOnDeleted: Boolean): Value = notAvailable()
+
+    override def relationshipProperty(relationship: Long, property: Int, relationshipScanCursor: RelationshipScanCursor, propertyCursor: PropertyCursor, throwOnDeleted: Boolean): Value = notAvailable()
+
+    override def hasTxStatePropertyForCachedNodeProperty(nodeId: Long, propertyKeyId: Int): Optional[lang.Boolean] = notAvailable()
+
+    override def hasTxStatePropertyForCachedRelationshipProperty(relId: Long, propertyKeyId: Int): Optional[lang.Boolean] = notAvailable()
+
+    override def callReadOnlyProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String], context: ProcedureCallContext): Iterator[Array[AnyValue]] = notAvailable()
+
+    override def callReadWriteProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String], context: ProcedureCallContext): Iterator[Array[AnyValue]] = notAvailable()
+
+    override def callSchemaWriteProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String], context: ProcedureCallContext): Iterator[Array[AnyValue]] = notAvailable()
+
+    override def callDbmsProcedure(id: Int, args: Seq[AnyValue], allowed: Array[String], context: ProcedureCallContext): Iterator[Array[AnyValue]] = notAvailable()
+
+    override def getTypeForRelationship(id: Long, relationshipCursor: RelationshipScanCursor): TextValue = notAvailable()
+
+    override def relationshipById(id: Long, startNode: Long, endNode: Long, `type`: Int): RelationshipValue = notAvailable()
   }
 
 }

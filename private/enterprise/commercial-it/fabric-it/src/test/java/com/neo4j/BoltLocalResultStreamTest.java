@@ -48,7 +48,7 @@ class BoltLocalResultStreamTest
                 "dbms.connector.bolt.enabled", "true"
         );
 
-        Config config = Config.newBuilder().set( configProperties ).build();
+        Config config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config );
 
         testServer.start();

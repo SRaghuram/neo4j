@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EndToEndTest
 {
+    
     private Driver clientDriver;
     private TestServer testServer;
     private InProcessNeo4j shard0;
@@ -72,7 +73,7 @@ class EndToEndTest
         );
 
         var config = Config.newBuilder()
-                .set( configProperties )
+                .setRaw( configProperties )
                 .build();
         testServer = new TestServer( config );
 
@@ -85,6 +86,7 @@ class EndToEndTest
                 "neo4j://localhost:" + ports.bolt,
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
+                        .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
     }

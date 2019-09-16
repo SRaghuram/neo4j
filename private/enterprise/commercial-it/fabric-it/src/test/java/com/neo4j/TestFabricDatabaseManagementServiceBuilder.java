@@ -21,6 +21,8 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.logging.internal.LogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.SystemNanoClock;
 
 public class TestFabricDatabaseManagementServiceBuilder extends TestCommercialDatabaseManagementServiceBuilder
@@ -42,15 +44,14 @@ public class TestFabricDatabaseManagementServiceBuilder extends TestCommercialDa
             dependencies = createDependencyResolver( globalModule.getGlobalDependencies() );
             return new CommercialEditionModule( globalModule, dependencies )
             {
-
-                public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependenciesWithoutMocks,
-                        DatabaseManagementService managementService, SystemNanoClock clock )
+                @Override
+                public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
+                        DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
                 {
-
                     return (BoltGraphDatabaseManagementServiceSPI) mocks.stream()
                             .filter( mock -> mock instanceof BoltGraphDatabaseManagementServiceSPI )
                             .findAny()
-                            .orElseGet( () -> super.createBoltDatabaseManagementServiceProvider( dependencies, managementService, clock ) );
+                            .orElseGet( () -> super.createBoltDatabaseManagementServiceProvider( dependencies, managementService, monitors, clock, logService ) );
                 }
             };
         };

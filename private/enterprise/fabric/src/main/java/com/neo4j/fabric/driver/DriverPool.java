@@ -67,7 +67,7 @@ public class DriverPool extends LifecycleAdapter
             }
             else
             {
-                Driver driver = GraphDatabase.driver( key.uri, key.auth );
+                Driver driver = GraphDatabase.driver( key.uri, key.auth, org.neo4j.driver.Config.builder().withoutEncryption().build() );
                 pooledDriver = new PooledDriver( driver, pd -> release( key, pd ) );
             }
 

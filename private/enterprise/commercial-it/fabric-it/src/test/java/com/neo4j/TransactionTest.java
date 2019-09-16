@@ -105,7 +105,7 @@ class TransactionTest
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true"
         );
-        var config = Config.newBuilder().set( configProperties ).build();
+        var config = Config.newBuilder().setRaw( configProperties ).build();
 
         testServer = new TestServer( config );
         testServer.addMocks( driverPool, jobScheduler, databaseManagementService, fabricDatabaseManager );
@@ -165,7 +165,7 @@ class TransactionTest
         when( graphDatabaseFacade.getDependencyResolver() ).thenReturn( dr );
 
         ThreadToStatementContextBridge txBridge = mock( ThreadToStatementContextBridge.class );
-        when( txBridge.getKernelTransactionBoundToThisThread( anyBoolean() ) ).thenReturn( kernelTransaction );
+        when( txBridge.getKernelTransactionBoundToThisThread( anyBoolean(), any() ) ).thenReturn( kernelTransaction );
 
         when( dr.resolveDependency( ThreadToStatementContextBridge.class ) ).thenReturn( txBridge );
     }
@@ -484,15 +484,14 @@ class TransactionTest
 
     private void verifyCommitted( KernelTransaction kernelTransaction ) throws Exception
     {
-        verify( kernelTransaction ).success();
-        verify( kernelTransaction, never() ).failure();
-        verify( kernelTransaction ).close();
+        verify( kernelTransaction ).commit();
+        verify( kernelTransaction, never() ).rollback();
     }
 
     private void verifyRolledBack( KernelTransaction kernelTransaction ) throws Exception
     {
-        verify( kernelTransaction ).failure();
-        verify( kernelTransaction, never() ).success();
+        verify( kernelTransaction ).rollback();
+        verify( kernelTransaction, never() ).commit();
         verify( kernelTransaction ).close();
     }
 

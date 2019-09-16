@@ -7,10 +7,11 @@ package com.neo4j.fabric.localdb;
 
 import com.neo4j.fabric.config.FabricConfig;
 
+import java.util.UUID;
 import java.util.function.Function;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -21,23 +22,27 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.PlaceholderDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_DEFAULT_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_NAME_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_STATUS_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_UUID_PROPERTY;
 
 public class FabricDatabaseManager extends LifecycleAdapter
 {
     private final Label databaseLabel = Label.label( "Database" );
-    private final DatabaseIdRepository databaseIdRepository;
     private final FabricConfig fabricConfig;
     private final DependencyResolver dependencyResolver;
     private DatabaseManager<DatabaseContext> databaseManager;
+    private DatabaseIdRepository databaseIdRepository;
+    private DatabaseManagementService managementService;
 
-    public FabricDatabaseManager( FabricConfig fabricConfig, Config config, DependencyResolver dependencyResolver )
+    public FabricDatabaseManager( FabricConfig fabricConfig, DependencyResolver dependencyResolver )
     {
-        databaseIdRepository = new PlaceholderDatabaseIdRepository( config );
         this.dependencyResolver = dependencyResolver;
         this.fabricConfig = fabricConfig;
     }
@@ -46,6 +51,7 @@ public class FabricDatabaseManager extends LifecycleAdapter
     public void start()
     {
         databaseManager = (DatabaseManager<DatabaseContext>) dependencyResolver.resolveDependency( DatabaseManager.class );
+        databaseIdRepository = databaseManager.databaseIdRepository();
     }
 
     public void manageFabricDatabases( GraphDatabaseService system, boolean update )
@@ -56,14 +62,14 @@ public class FabricDatabaseManager extends LifecycleAdapter
             boolean exists = false;
             if ( update )
             {
-                exists = checkExisting( system );
+                exists = checkExisting( tx );
             }
 
             if ( !exists && fabricConfig.isEnabled() )
             {
-                newFabricDb( system, fabricConfig.getDatabase().getName() );
+                newFabricDb( tx, fabricConfig.getDatabase().getName() );
             }
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -74,9 +80,10 @@ public class FabricDatabaseManager extends LifecycleAdapter
 
     public GraphDatabaseFacade getDatabase( String databaseName ) throws UnavailableException
     {
-        DatabaseId databaseId = databaseIdRepository.get( databaseName );
-        GraphDatabaseFacade graphDatabaseFacade = databaseManager.getDatabaseContext( databaseId ).orElseThrow(
-                () -> new DatabaseNotFoundException( "Database " + databaseName + " not found" ) ).databaseFacade();
+        var graphDatabaseFacade = databaseIdRepository.getByName( databaseName )
+                .flatMap( databaseId -> databaseManager.getDatabaseContext( databaseId ) )
+                .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseName + " not found" ) )
+                .databaseFacade();
         if ( !graphDatabaseFacade.isAvailable( 0 ) )
         {
             throw new UnavailableException( "Database %s not available " + databaseName );
@@ -85,7 +92,7 @@ public class FabricDatabaseManager extends LifecycleAdapter
         return graphDatabaseFacade;
     }
 
-    private boolean checkExisting( GraphDatabaseService system )
+    private boolean checkExisting( Transaction tx )
     {
         Function<ResourceIterator<Node>,Boolean> iterator = nodes ->
         {
@@ -108,17 +115,18 @@ public class FabricDatabaseManager extends LifecycleAdapter
             return found;
         };
 
-        return iterator.apply( system.findNodes( databaseLabel, "fabric", true ) );
+        return iterator.apply( tx.findNodes( databaseLabel, "fabric", true ) );
     }
 
-    private void newFabricDb( GraphDatabaseService system, String dbName )
+    private void newFabricDb( Transaction tx, String dbName )
     {
         try
         {
-            Node node = system.createNode( databaseLabel );
-            node.setProperty( "name", dbName );
-            node.setProperty( "status", "online" );
-            node.setProperty( "default", false );
+            Node node = tx.createNode( DATABASE_LABEL );
+            node.setProperty( DATABASE_NAME_PROPERTY, dbName );
+            node.setProperty( DATABASE_UUID_PROPERTY, UUID.randomUUID().toString() );
+            node.setProperty( DATABASE_STATUS_PROPERTY, "online" );
+            node.setProperty( DATABASE_DEFAULT_PROPERTY, false );
             node.setProperty( "fabric", true );
         }
         catch ( ConstraintViolationException e )

@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.planner
 
-import org.neo4j.cypher.internal.AstInputQuery
+import org.neo4j.cypher.internal.{FullyParsedQuery}
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{FromGraph, Query}
 
@@ -21,7 +21,7 @@ object FabricQuery {
     extends FabricQuery
 
   case class LocalQuery(
-    query: AstInputQuery,
+    query: FullyParsedQuery,
     input: Seq[String],
     output: Seq[String],
     subquery: Boolean

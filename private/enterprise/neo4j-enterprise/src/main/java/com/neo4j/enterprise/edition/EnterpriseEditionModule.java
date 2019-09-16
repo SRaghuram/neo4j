@@ -14,7 +14,11 @@ import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
+import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
+import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
 import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
@@ -35,6 +39,7 @@ import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -51,6 +56,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
@@ -80,6 +86,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final GlobalModule globalModule;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final FabricDatabaseManager fabricDatabaseManager;
+    private FabricServicesBootstrap fabricServicesBootstrap;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
     {
@@ -93,7 +100,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         satisfyEnterpriseOnlyDependencies( this.globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
-        new FabricServicesBootstrap( globalModule.getGlobalLife(), dependencies );
+        fabricServicesBootstrap = new FabricServicesBootstrap( globalModule.getGlobalLife(), dependencies );
         fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
     }
 
@@ -109,6 +116,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         super.registerEditionSpecificProcedures( globalProcedures, databaseManager );
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+        fabricServicesBootstrap.registerProcedures( globalProcedures );
     }
 
     @Override
@@ -211,22 +219,50 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager, logProvider );
+        FabricConfig fabricConfig = globalModule.getGlobalDependencies().resolveDependency( FabricConfig.class );
+        return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager, fabricConfig, logProvider );
+    }
+
+    @Override
+    public AuthManager getBoltAuthManager( DependencyResolver dependencyResolver )
+    {
+        AuthManager authManager = super.getBoltAuthManager( dependencyResolver );
+        var fabricConfig = dependencyResolver.resolveDependency( FabricConfig.class );
+        
+        if (!fabricConfig.isEnabled()) {
+            return authManager;
+        }
+
+        if ( !(authManager instanceof CommercialAuthManager) )
+        {
+            throw new IllegalStateException( "Unexpected type of Auth manager: " + authManager.getClass() );
+        }
+
+        return new FabricAuthManagerWrapper( (CommercialAuthManager) authManager );
     }
 
     @Override
     public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
             DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
     {
+        FabricConfig config = dependencies.resolveDependency( FabricConfig.class );
         var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+        if ( !config.isEnabled() )
+        {
+            return kernelDatabaseManagementService;
+        }
+
+        FabricExecutor fabricExecutor = dependencies.resolveDependency( FabricExecutor.class );
+        TransactionManager transactionManager = dependencies.resolveDependency( TransactionManager.class );
+        FabricDatabaseManager fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
+
+        var fabricDatabaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, config, transactionManager, fabricDatabaseManager );
 
         return databaseName ->
         {
             if ( fabricDatabaseManager.isFabricDatabase( databaseName ) )
             {
-                // TODO: this is where Fabric logic gets plugged in
-                // return fabricDatabaseManagementService.database( databaseName );
-                throw new IllegalStateException( "Fabric is not here yet" );
+                return fabricDatabaseManagementService.database( databaseName );
             }
 
             return kernelDatabaseManagementService.database( databaseName );

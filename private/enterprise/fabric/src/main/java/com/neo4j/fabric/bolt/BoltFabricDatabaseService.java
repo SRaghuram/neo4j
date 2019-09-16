@@ -24,6 +24,7 @@ import org.neo4j.bolt.dbapi.BoltQueryExecutor;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.Bookmark;
+import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -43,16 +44,16 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
 {
 
     private final FabricExecutor fabricExecutor;
-    private final String databaseName;
+    private final DatabaseId databaseId;
     private final FabricConfig config;
     private final TransactionManager transactionManager;
 
-    public BoltFabricDatabaseService( String databaseName,
+    public BoltFabricDatabaseService( DatabaseId databaseId,
             FabricExecutor fabricExecutor,
             FabricConfig config,
             TransactionManager transactionManager )
     {
-        this.databaseName = databaseName;
+        this.databaseId = databaseId;
         this.config = config;
         this.transactionManager = transactionManager;
         this.fabricExecutor = fabricExecutor;
@@ -62,6 +63,10 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     public BoltTransaction beginTransaction( KernelTransaction.Type type, LoginContext loginContext, ClientConnectionInfo clientInfo, Duration txTimeout,
             AccessMode accessMode, Map<String,Object> txMetadata )
     {
+        // for transactions started by Bolt it holds that implicit transaction = periodic commit
+        if (type == Transaction.Type.implicit) {
+            throw new FabricException( SemanticError, "Periodic commit is not supported in Fabric" );
+        }
         if ( txTimeout == null )
         {
             txTimeout = config.getTransactionTimeout();
@@ -71,7 +76,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
                 accessMode,
                 loginContext,
                 clientInfo,
-                databaseName,
+                databaseId.name(),
                 type == implicit,
                 txTimeout,
                 txMetadata
@@ -81,20 +86,13 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     }
 
     @Override
-    public BoltQueryExecutor getPeriodicCommitExecutor( LoginContext loginContext, ClientConnectionInfo clientInfo, Duration txTimeout, AccessMode accessMode,
-            Map<String,Object> txMetadata )
-    {
-        throw new FabricException( SemanticError, "Periodic commit is not supported in Fabric" );
-    }
-
-    @Override
     public boolean isPeriodicCommit( String query )
     {
         return fabricExecutor.isPeriodicCommit( query );
     }
 
     @Override
-    public void awaitUpToDate( List<Bookmark> bookmarks, Duration perBookmarkTimeout ) throws TransactionFailureException
+    public void awaitUpToDate( List<Bookmark> bookmarks, Duration perBookmarkTimeout )
     {
         if ( bookmarks.isEmpty() )
         {
@@ -113,7 +111,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     @Override
     public DatabaseId getDatabaseId()
     {
-        return new DatabaseId( databaseName );
+        return databaseId;
     }
 
     private class BoltTransactionImpl implements BoltTransaction

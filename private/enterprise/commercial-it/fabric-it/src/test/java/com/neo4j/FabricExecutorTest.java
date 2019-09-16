@@ -56,7 +56,7 @@ class FabricExecutorTest
     );
 
     private final Config config = Config.newBuilder()
-            .set(configProperties)
+            .setRaw(configProperties)
             .build();
 
     private TestServer testServer;

@@ -33,7 +33,7 @@ class FabricConfigTest
         );
 
         var config = Config.newBuilder()
-                .set( properties )
+                .setRaw( properties )
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
@@ -57,7 +57,7 @@ class FabricConfigTest
         );
 
         var config = Config.newBuilder()
-                .set( properties )
+                .setRaw( properties )
                 .build();
 
         assertThrows( IllegalArgumentException.class,
@@ -73,7 +73,7 @@ class FabricConfigTest
         );
 
         var config = Config.newBuilder()
-                .set( properties )
+                .setRaw( properties )
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
@@ -90,7 +90,7 @@ class FabricConfigTest
         );
 
         var config = Config.newBuilder()
-                .set( properties )
+                .setRaw( properties )
                 .build();
 
         assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ));

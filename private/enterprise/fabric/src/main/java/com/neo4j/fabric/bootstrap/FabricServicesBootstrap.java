@@ -39,7 +39,7 @@ public class FabricServicesBootstrap
         var config = dependencies.resolveDependency( Config.class );
         fabricConfig = serviceBootstrapper.registerService( FabricConfig.from( config ), FabricConfig.class );
         var fabricDatabaseManager = serviceBootstrapper.registerService(
-                new FabricDatabaseManager( fabricConfig, config, dependencies ),
+                new FabricDatabaseManager( fabricConfig, dependencies ),
                 FabricDatabaseManager.class );
 
         if ( fabricConfig.isEnabled() )

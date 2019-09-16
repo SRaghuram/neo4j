@@ -206,6 +206,7 @@ public class StatementResults
     {
         private int numberOfFields;
         private AnyValue[] fields;
+        private int fieldIndex = 0;
 
         @Override
         public void onResult( int numberOfFields )
@@ -217,12 +218,14 @@ public class StatementResults
         public void onRecord()
         {
             fields = new AnyValue[numberOfFields];
+            fieldIndex = 0;
         }
 
         @Override
-        public void onField( int offset, AnyValue value )
+        public void onField( AnyValue value ) throws Exception
         {
-            fields[offset] = value;
+            fields[fieldIndex] = value;
+            fieldIndex++;
         }
 
         @Override

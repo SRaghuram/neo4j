@@ -17,10 +17,7 @@ import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
-import org.neo4j.common.DependencyResolver;
-import org.neo4j.cypher.internal.AstInputQuery;
+import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.cypher.internal.runtime.InputDataStream;
 import org.neo4j.exceptions.KernelException;
@@ -39,7 +36,6 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
-import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.values.virtual.MapValue;
 
@@ -67,18 +63,17 @@ public class FabricLocalExecutor
             throw new FabricException( Status.General.DatabaseUnavailable, e );
         }
 
-        DependencyResolver dr = databaseFacade.getDependencyResolver();
-        ExecutionEngine executionEngine = dr.resolveDependency( ExecutionEngine.class );
-        ThreadToStatementContextBridge txBridge = dr.resolveDependency( ThreadToStatementContextBridge.class );
+        var dependencyResolver = databaseFacade.getDependencyResolver();
+        var executionEngine = dependencyResolver.resolveDependency( ExecutionEngine.class );
+        var txBridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
 
-        Supplier<InternalTransaction> internalTransactionSupplier = () -> beginInternalTransaction( databaseFacade, transactionInfo );
-        beginInternalTransaction( databaseFacade, transactionInfo );
-        KernelTransaction kernelTransaction = txBridge.getKernelTransactionBoundToThisThread( false );
+        var internalTransaction = beginInternalTransaction( databaseFacade, transactionInfo );
+        var kernelTransaction = txBridge.getKernelTransactionBoundToThisThread( false, databaseFacade.databaseId() );
 
-        TransactionalContextFactory transactionalContextFactory =
-                Neo4jTransactionalContextFactory.create( databaseFacade, () -> dr.resolveDependency( GraphDatabaseQueryService.class ), txBridge );
+        var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
+        var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
 
-        return new FabricLocalTransaction( txBridge, executionEngine, transactionalContextFactory, kernelTransaction, internalTransactionSupplier );
+        return new FabricLocalTransaction( txBridge, executionEngine, transactionalContextFactory, kernelTransaction, internalTransaction );
     }
 
     private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
@@ -119,33 +114,31 @@ public class FabricLocalExecutor
         private final ExecutionEngine queryExecutionEngine;
         private final TransactionalContextFactory transactionalContextFactory;
         private final KernelTransaction kernelTransaction;
-        private final Supplier<InternalTransaction> placeboTransactionFactory;
+        private final InternalTransaction internalTransaction;
         private final ThreadToStatementContextBridge txBridge;
-        private TransactionalContext currentExecutionContext;
 
         FabricLocalTransaction( ThreadToStatementContextBridge txBridge, ExecutionEngine queryExecutionEngine,
                 TransactionalContextFactory transactionalContextFactory, KernelTransaction kernelTransaction,
-                Supplier<InternalTransaction> placeboTransactionFactory )
+                InternalTransaction internalTransaction )
         {
             this.txBridge = txBridge;
             this.queryExecutionEngine = queryExecutionEngine;
             this.transactionalContextFactory = transactionalContextFactory;
             this.kernelTransaction = kernelTransaction;
-            this.placeboTransactionFactory = placeboTransactionFactory;
+            this.internalTransaction = internalTransaction;
         }
 
-        public StatementResult run( AstInputQuery query, MapValue params, StatementResult input )
+        public StatementResult run( FullyParsedQuery query, MapValue params, StatementResult input )
         {
-            InternalTransaction internalTransaction = placeboTransactionFactory.get();
-            currentExecutionContext = transactionalContextFactory.newContext( internalTransaction, "", params );
 
             return StatementResults.create( subscriber -> execute( query, params, convert( input ), subscriber ) );
         }
 
-        private QueryExecution execute( AstInputQuery query, MapValue params, InputDataStream input, QuerySubscriber subscriber )
+        private QueryExecution execute( FullyParsedQuery query, MapValue params, InputDataStream input, QuerySubscriber subscriber )
         {
             try
             {
+                var currentExecutionContext = transactionalContextFactory.newContext( internalTransaction, "", params );
                 return queryExecutionEngine.executeQuery( query, params, currentExecutionContext, true, input, subscriber );
             }
             catch ( Exception e )
@@ -167,19 +160,17 @@ public class FabricLocalExecutor
 
         public void commit() throws TransactionFailureException
         {
-            kernelTransaction.success();
             if ( kernelTransaction.isOpen() )
             {
-                kernelTransaction.close();
+                kernelTransaction.commit();
             }
         }
 
         public void rollback() throws TransactionFailureException
         {
-            kernelTransaction.failure();
             if ( kernelTransaction.isOpen() )
             {
-                kernelTransaction.close();
+                kernelTransaction.rollback();
             }
         }
 
