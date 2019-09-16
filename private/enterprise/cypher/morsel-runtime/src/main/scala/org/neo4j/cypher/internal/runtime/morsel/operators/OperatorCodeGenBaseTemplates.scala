@@ -41,7 +41,7 @@ trait CompiledStreamingOperator extends StreamingOperator {
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    IndexedSeq(compiledNextTask(context.transactionalContext.dataRead, inputMorsel.nextCopy, argumentStateMaps))
+    Array(compiledNextTask(context.transactionalContext.dataRead, inputMorsel.nextCopy, argumentStateMaps))
   }
 
   protected def compiledNextTask(dataRead: Read,
