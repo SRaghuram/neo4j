@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.apache.commons.lang.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,14 +20,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.testing.TransportTestUtil;
-import org.neo4j.bolt.testing.client.SocketConnection;
-import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -41,10 +36,7 @@ import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.graphdb.spatial.Point;
-import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.net.NetworkConnectionTracker;
-import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
@@ -72,24 +64,18 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static java.lang.String.format;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.counting;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
+import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
@@ -135,11 +121,6 @@ public abstract class ProcedureInteractionTestBase<S>
 
     @Inject
     public ThreadingRule threading;
-
-    private ThreadingRule threading()
-    {
-        return threading;
-    }
 
     protected EnterpriseUserManager userManager;
 
@@ -404,9 +385,9 @@ public abstract class ProcedureInteractionTestBase<S>
     void assertFail( S subject, String call, String partOfErrorMsg )
     {
         String err = assertCallEmpty( subject, DEFAULT_DATABASE_NAME, call, null );
-        if ( StringUtils.isEmpty( partOfErrorMsg ) )
+        if ( StringUtils.isEmpty( err ) )
         {
-            assertThat( "Should have failed with an error message", err, not( equalTo( "" ) ) );
+            fail( String.format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
         }
         else
         {
@@ -435,9 +416,9 @@ public abstract class ProcedureInteractionTestBase<S>
     void assertSystemCommandFail( S subject, String call, String partOfErrorMsg )
     {
         String err = assertCallEmpty( subject, SYSTEM_DATABASE_NAME, call, null );
-        if ( StringUtils.isEmpty( partOfErrorMsg ) )
+        if ( StringUtils.isEmpty( err ) )
         {
-            assertThat( "Should have failed with an error message", err, not( equalTo( "" ) ) );
+            fail( String.format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
         }
         else
         {
@@ -583,17 +564,6 @@ public abstract class ProcedureInteractionTestBase<S>
 
     // --------------------- helpers -----------------------
 
-    private Map<String,Long> countTransactionsByUsername()
-    {
-        return EnterpriseBuiltInDbmsProcedures.countTransactionByUsername(
-                EnterpriseBuiltInDbmsProcedures.getActiveTransactions(
-                        neo.getLocalGraph().getDependencyResolver()
-                ).stream()
-                        .filter( tx -> tx.terminationReason().isEmpty() )
-                        .map( tx -> tx.subject().username() )
-        ).collect( Collectors.toMap( r -> r.username, r -> r.activeTransactions ) );
-    }
-
     Object toRawValue( Object value )
     {
         if ( value instanceof AnyValue )
@@ -606,30 +576,6 @@ public abstract class ProcedureInteractionTestBase<S>
         {
             return value;
         }
-    }
-
-    Map<String,Long> countBoltConnectionsByUsername()
-    {
-        NetworkConnectionTracker connectionTracker = neo.getLocalGraph().getDependencyResolver().resolveDependency( NetworkConnectionTracker.class );
-        return connectionTracker.activeConnections()
-                .stream()
-                .map( TrackedNetworkConnection::username )
-                .collect( groupingBy( identity(), counting() ) );
-    }
-
-    @SuppressWarnings( "SameParameterValue" )
-    TransportConnection startBoltSession( String username, String password ) throws Exception
-    {
-        TransportConnection connection = new SocketConnection();
-        HostnamePort address = neo.lookupConnector( BoltConnector.NAME );
-        Map<String,Object> authToken = map( "principal", username, "credentials", password, "scheme", "basic" );
-
-        connection.connect( address ).send( util.defaultAcceptedVersions() )
-                .send( util.defaultAuth( authToken ) );
-
-        assertThat( connection, util.eventuallyReceivesSelectedProtocolVersion() );
-        assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
-        return connection;
     }
 
     public static class CountResult
@@ -647,9 +593,6 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         @Context
         public GraphDatabaseService db;
-
-//        @Context
-//        public Transaction transaction;
 
         @Context
         public Log log;
@@ -718,6 +661,7 @@ public abstract class ProcedureInteractionTestBase<S>
             doubleLatch.finishAndWaitForAllToFinish();
         }
 
+        @SuppressWarnings( "AccessStaticViaInstance" )
         @Procedure( name = "test.numNodes" )
         public Stream<CountResult> numNodes()
         {

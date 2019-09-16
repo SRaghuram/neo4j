@@ -49,7 +49,8 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
         init( builder, config );
     }
 
-    private void init( DatabaseManagementServiceBuilder builder, Map<Setting<?>,String> config ) throws Throwable
+    @SuppressWarnings( "unchecked" )
+    private void init( DatabaseManagementServiceBuilder builder, Map<Setting<?>,String> config )
     {
         builder.setConfig( BoltConnector.enabled, true );
         builder.setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) );
@@ -80,7 +81,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     @Override
     public GraphDatabaseFacade getLocalGraph()
     {
-        return (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
+        return db;
     }
 
     @Override

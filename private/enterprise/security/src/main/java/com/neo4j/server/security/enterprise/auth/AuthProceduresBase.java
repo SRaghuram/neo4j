@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.Context;
 
@@ -49,7 +50,8 @@ public class AuthProceduresBase
     protected UserResult userResultForSubject()
     {
         String username = securityContext.subject().username();
-        return new UserResult( username, securityContext.roles(), false, false );
+        boolean changeReq = securityContext.subject().getAuthenticationResult().equals( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
+        return new UserResult( username, securityContext.roles(), changeReq, false );
     }
 
     public static class UserResult

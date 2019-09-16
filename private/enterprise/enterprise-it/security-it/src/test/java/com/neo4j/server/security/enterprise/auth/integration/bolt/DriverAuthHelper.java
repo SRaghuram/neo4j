@@ -31,26 +31,26 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.fail;
 
-public class DriverAuthHelper
+class DriverAuthHelper
 {
-    public static final Config config = Config.build()
+    private static final Config config = Config.build()
             .withLogging( Logging.none() )
             .withoutEncryption()
             .withConnectionTimeout( 10, TimeUnit.SECONDS )
             .build();
 
-    public static String boltUri( DbmsRule dbmsRule )
+    static String boltUri( DbmsRule dbmsRule )
     {
         var localAddress = dbmsRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
         return "bolt://" + localAddress.toString();
     }
 
-    public static void assertAuth( String uri, String username, String password )
+    static void assertAuth( String uri, String username, String password )
     {
         assertAuth( uri, username, password, null );
     }
 
-    public static void assertAuth( String uri, String username, String password, String realm )
+    static void assertAuth( String uri, String username, String password, String realm )
     {
         try ( Driver driver = connectDriver( uri, username, password, realm );
                 Session session = driver.session() )
@@ -60,7 +60,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertAuth( String uri, AuthToken authToken )
+    static void assertAuth( String uri, AuthToken authToken )
     {
         try ( Driver driver = connectDriver( uri, authToken );
                 Session session = driver.session() )
@@ -70,12 +70,12 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertAuthFail( String uri, String username, String password )
+    static void assertAuthFail( String uri, String username, String password )
     {
         assertAuthFail( uri, username, password, null );
     }
 
-    public static void assertAuthFail( String uri, String username, String password, String realm )
+    static void assertAuthFail( String uri, String username, String password, String realm )
     {
         try ( Driver ignored = connectDriver( uri, username, password, realm ) )
         {
@@ -87,7 +87,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertReadSucceeds( Driver driver )
+    static void assertReadSucceeds( Driver driver )
     {
         try ( Session session = driver.session() )
         {
@@ -96,7 +96,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertReadFails( String uri, String username, String password )
+    static void assertReadFails( String uri, String username, String password )
     {
         try ( Driver driver = connectDriver( uri, username, password ) )
         {
@@ -104,7 +104,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertReadFails( Driver driver )
+    static void assertReadFails( Driver driver )
     {
         try ( Session session = driver.session() )
         {
@@ -117,7 +117,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertWriteSucceeds( Driver driver )
+    static void assertWriteSucceeds( Driver driver )
     {
         try ( Session session = driver.session() )
         {
@@ -126,7 +126,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertWriteFails( Driver driver )
+    static void assertWriteFails( Driver driver )
     {
         try ( Session session = driver.session() )
         {
@@ -139,7 +139,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertProcSucceeds( Driver driver )
+    static void assertProcSucceeds( Driver driver )
     {
         try ( Session session = driver.session() )
         {
@@ -148,7 +148,7 @@ public class DriverAuthHelper
         }
     }
 
-    public static void assertAuthorizationExpired( Driver driver, String pluginName )
+    static void assertAuthorizationExpired( Driver driver, String pluginName )
     {
         try ( Session session = driver.session() )
         {
@@ -161,12 +161,12 @@ public class DriverAuthHelper
         }
     }
 
-    public static void clearAuthCacheFromDifferentConnection( String uri )
+    static void clearAuthCacheFromDifferentConnection( String uri )
     {
         clearAuthCacheFromDifferentConnection( uri, "neo4j", "abc123", null );
     }
 
-    public static void clearAuthCacheFromDifferentConnection( String uri, String username, String password, String realm )
+    static void clearAuthCacheFromDifferentConnection( String uri, String username, String password, String realm )
     {
         try ( Driver driver = connectDriver( uri, username, password, realm );
                 Session session = driver.session() )
@@ -175,12 +175,12 @@ public class DriverAuthHelper
         }
     }
 
-    public static Driver connectDriver( String uri, String username, String password )
+    static Driver connectDriver( String uri, String username, String password )
     {
         return connectDriver( uri, username, password, null );
     }
 
-    public static Driver connectDriver( String uri, String username, String password, String realm )
+    static Driver connectDriver( String uri, String username, String password, String realm )
     {
         AuthToken token;
         if ( realm == null || realm.isEmpty() )
@@ -194,7 +194,7 @@ public class DriverAuthHelper
         return connectDriver( uri, token, username, password );
     }
 
-    public static Driver connectDriverWithParameters( String uri, String username, String password, Map<String,Object> parameterMap )
+    static Driver connectDriverWithParameters( String uri, String username, String password, Map<String,Object> parameterMap )
     {
         AuthToken token = AuthTokens.custom( username, password, null, "basic", parameterMap );
         return connectDriver( uri, token, username, password );

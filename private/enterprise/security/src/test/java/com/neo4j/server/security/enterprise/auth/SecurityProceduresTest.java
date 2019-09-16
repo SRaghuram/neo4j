@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -33,6 +34,7 @@ public class SecurityProceduresTest
     {
         AuthSubject subject = mock( AuthSubject.class );
         when( subject.username() ).thenReturn( "pearl" );
+        when( subject.getAuthenticationResult() ).thenReturn( AuthenticationResult.SUCCESS );
 
         EnterpriseSecurityContext ctx = mock( EnterpriseSecurityContext.class );
         when( ctx.subject() ).thenReturn( subject );

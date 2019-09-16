@@ -429,7 +429,7 @@ class ConnectionTrackingIT
 
     private void createNewUser( String username, String password )
     {
-        var uri = neo4j.httpURI().resolve( "db/system/transaction/commit" ).toString();
+        var uri = neo4j.httpURI().resolve( "db/system/tx/commit" ).toString();
 
         Response response1 = withBasicAuth( "neo4j", NEO4J_USER_PWD )
                 .POST( uri, query( "CALL dbms.security.createUser(\\\"" + username + "\\\", \\\"" + password + "\\\", false)" ) );

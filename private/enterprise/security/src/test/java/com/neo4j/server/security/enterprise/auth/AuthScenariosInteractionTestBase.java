@@ -99,9 +99,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         log.assertHasLine( "adminSubject", "DROP ROLE role1" );
         log.assertHasLine( "mats", "logged in" );
         log.assertHasLine( "adminSubject", "GRANT ROLE reader TO mats" );
-        // TODO should we log failed attempts?
-//        log.assertHasLine( "mats", "tried to change password for user `neo4j`: " + PERMISSION_DENIED);
-//        log.assertHasLine( "mats", "tried to change password: A password cannot be empty.");
         log.assertHasLine( "mats", "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'" );
         log.assertHasLine( "adminSubject", "REVOKE ROLE reader FROM mats");
         log.assertHasLine( "adminSubject", "DROP USER mats");
