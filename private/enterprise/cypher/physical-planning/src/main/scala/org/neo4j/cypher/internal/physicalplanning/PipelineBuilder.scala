@@ -45,8 +45,8 @@ object PipelineBuilder {
     val variant = bufferDefinition match {
       case b: ApplyBufferDefinitionBuild =>
         ApplyBufferVariant(b.argumentSlotOffset,
-                           b.reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse,
-                           b.delegates)
+                           b.reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse.toArray,
+                           b.delegates.toArray)
 
       case b: ArgumentStateBufferDefinitionBuild =>
         ArgumentStateBufferVariant(b.argumentStateMapId)
@@ -66,7 +66,12 @@ object PipelineBuilder {
       case _ =>
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
     }
-    BufferDefinition(bufferDefinition.id, downstreamReducers, workCancellerIDs, downstreamStateIDs, variant)(bufferDefinition.bufferConfiguration)
+    BufferDefinition(bufferDefinition.id,
+                     downstreamReducers.toArray,
+                     workCancellerIDs.toArray,
+                     downstreamStateIDs.toArray,
+                     variant
+                    )(bufferDefinition.bufferConfiguration)
   }
 
   private def mapArgumentStateDefinition(build: ArgumentStateDefinitionBuild): ArgumentStateDefinition =

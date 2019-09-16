@@ -55,13 +55,15 @@ case class BufferDefinition(id: BufferId,
                             // We need multiple reducers because a buffer might need to
                             // reference count for multiple downstream reduce operators,
                             // at potentially different argument depths
-                            reducers: IndexedSeq[ArgumentStateMapId],
-                            workCancellers: IndexedSeq[ArgumentStateMapId],
-                            downstreamStates: IndexedSeq[ArgumentStateMapId],
+                            reducers: Array[ArgumentStateMapId],
+                            workCancellers: Array[ArgumentStateMapId],
+                            downstreamStates: Array[ArgumentStateMapId],
                             variant: BufferVariant)(val bufferSlotConfiguration: SlotConfiguration) {
-  def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(reducers = reducers)(bufferSlotConfiguration)
+  def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
+    copy(reducers = reducers.toArray)(bufferSlotConfiguration)
 
-  def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition = copy(workCancellers = workCancellers)(bufferSlotConfiguration)
+  def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
+    copy(workCancellers = workCancellers.toArray)(bufferSlotConfiguration)
 }
 
 /**
@@ -88,8 +90,8 @@ case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends
   *                              their downstreams, which have to be initialized first in order to do that.
   */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
-                              reducersOnRHSReversed: IndexedSeq[ArgumentStateMapId],
-                              delegates: IndexedSeq[BufferId]) extends BufferVariant
+                              reducersOnRHSReversed: Array[ArgumentStateMapId],
+                              delegates: Array[BufferId]) extends BufferVariant
 
 /**
   * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
@@ -124,4 +126,9 @@ case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,
       throw new IllegalStateException("Requested an ArgumentStateMap for an operator which does not have any.")
     }
   }
+}
+
+object ExecutionGraphDefinition {
+  val NO_ARGUMENT_STATE_MAPS = new Array[ArgumentStateMapId](0)
+  val NO_BUFFERS = new Array[BufferId](0)
 }

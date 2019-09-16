@@ -30,7 +30,7 @@ class Buffers(numBuffers: Int,
 
   // Constructor code
 
-  private def findRHSAccumulatingStateBuffers(initialIndex: Int, argumentStateMapIds: IndexedSeq[ArgumentStateMapId]): Array[AccumulatingBuffer] = {
+  private def findRHSAccumulatingStateBuffers(initialIndex: Int, argumentStateMapIds: Array[ArgumentStateMapId]): Array[AccumulatingBuffer] = {
     var j = 0
     val reducersBuilder = Array.newBuilder[Buffers.AccumulatingBuffer]
     while (j < argumentStateMapIds.length) {
@@ -87,7 +87,7 @@ class Buffers(numBuffers: Int,
     buffers(i) =
       bufferDefinition.variant match {
         case x: ApplyBufferVariant =>
-          val argumentStatesToInitiate = workCancellers ++ downstreamStates
+          val argumentStatesToInitiate = concatWithoutCopy(workCancellers, downstreamStates)
           val reducersOnRHS = findRHSAccumulatingStateBuffers(i, x.reducersOnRHSReversed)
           new MorselApplyBuffer(bufferDefinition.id,
                                 argumentStatesToInitiate,
@@ -96,7 +96,7 @@ class Buffers(numBuffers: Int,
                                 argumentStateMaps,
                                 x.argumentSlotOffset,
                                 stateFactory.newIdAllocator(),
-                                x.delegates.map(bufferId => morselBuffer(bufferId)))
+                                morselBuffers(x.delegates))
 
         case x: ArgumentStateBufferVariant =>
           new MorselArgumentStateBuffer(tracker,
@@ -210,6 +210,38 @@ class Buffers(numBuffers: Int,
       }
       i += 1
     }
+  }
+
+  // Specialization to remove overheads from scala collection `++`
+  private def concatWithoutCopy[T <: AnyVal](a: Array[T], b: Array[T]): Array[T] = {
+    if (a.length == 0) return b
+    if (b.length == 0) return a
+
+    val result = new Array[AnyVal](a.length + b.length)
+    var i = 0
+    while (i < a.length) {
+      result(i) = a(i)
+      i += 1
+    }
+
+    i = 0
+    while (i < b.length) {
+      result(a.length + i) = b(i)
+      i += 1
+    }
+
+    result.asInstanceOf[Array[T]]
+  }
+
+  // Specialization to remove overheads from scala collection `map`
+  private def morselBuffers(bufferIds: Array[BufferId]): Array[MorselBuffer] = {
+    val result = new Array[MorselBuffer](bufferIds.length)
+    var i = 0
+    while (i < result.length) {
+      result(i) = morselBuffer(bufferIds(i))
+      i += 1
+    }
+    result
   }
 }
 
