@@ -156,7 +156,7 @@ class ParallelRuntimeTopNoFusingTest extends TopTestBase(ENTERPRISE.NO_FUSING, P
 
 // AGGREGATION
 class ParallelRuntimeAggregationTest extends AggregationTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
-class ParallelRuntimeAggregationNoFusingTest extends AggregationTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeAggregationNoFusingTest extends AggregationTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)
 class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
 
 // NODE HASH JOIN

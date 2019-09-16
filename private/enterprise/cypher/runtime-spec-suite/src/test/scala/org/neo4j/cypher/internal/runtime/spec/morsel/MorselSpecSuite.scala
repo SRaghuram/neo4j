@@ -115,7 +115,7 @@ class MorselUnwindNoFusingTest extends UnwindTestBase(NO_FUSING, MORSEL, SIZE_HI
 
 // SORT
 class MorselSortTest extends SortTestBase(FUSING, MORSEL, SIZE_HINT)
-class MorselSortNoFusingTest extends SortTestBase(SINGLE_THREADED_NO_FUSING, MORSEL, SIZE_HINT)
+class MorselSortNoFusingTest extends SortTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // TOP
 class MorselTopTest extends TopTestBase(FUSING, MORSEL, SIZE_HINT)
