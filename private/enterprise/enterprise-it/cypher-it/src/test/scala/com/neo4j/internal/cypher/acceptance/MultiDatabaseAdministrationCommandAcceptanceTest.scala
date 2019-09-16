@@ -46,10 +46,10 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       "CREATE DATABASE foo2 IF NOT EXISTS" -> 1,
       "CREATE OR REPLACE DATABASE foo" -> 2,
       "CREATE OR REPLACE DATABASE foo3" -> 1,
-      "STOP DATABASE foo" -> 2,
+      "STOP DATABASE foo" -> 1,
       "START DATABASE foo" -> 1,
-      "DROP DATABASE foo" -> 2,
-      "DROP DATABASE foo2 IF EXISTS" -> 3
+      "DROP DATABASE foo" -> 1,
+      "DROP DATABASE foo2 IF EXISTS" -> 2
     ))
   }
 

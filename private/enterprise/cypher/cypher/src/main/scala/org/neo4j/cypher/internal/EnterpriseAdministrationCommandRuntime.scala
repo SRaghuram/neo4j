@@ -209,7 +209,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RequireRole(source, roleName) => (context, parameterMapping, securityContext) =>
       UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name})
-          |SET role.ignore = 0 // need to be a write query to trigger error on follower in a cluster
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
@@ -568,7 +567,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
       UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
-          |SET db.ignore = 0 // need to be a write query to trigger error on follower in a cluster
           |RETURN db.name AS name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
         QueryHandler
