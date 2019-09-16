@@ -139,15 +139,14 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSuppor
             |RETURN x, y, z, w
           """.stripMargin
 
-        planner
-          .plan(q, params)
+        planner.plan(q, params)
           .as[ChainedQuery]
           .check(_.lhs.as[ChainedQuery]
             .check(_.lhs.as[ChainedQuery]
               .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
                 unwind(listOf(literalInt(1), literalInt(2)), varFor("x")),
                 return_(varFor("x").aliased))
-              )))
+              ))
               .check(_.rhs.as[ShardQuery]
                 .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
                 .check(_.query.part.as[SingleQuery].clauses.shouldEqual(Seq(
@@ -156,13 +155,13 @@ class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSuppor
                 )))
               )
             )
-            .check(_.rhs
-              .as[ShardQuery]
+            .check(_.rhs.as[ShardQuery]
               .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
               .check(_.query.part.as[SingleQuery].clauses.shouldEqual(Seq(
                 return_(literalInt(1).as("z"), literal(2).as("w"))
               )))
             )
+          )
           .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
             input(varFor("x"), varFor("y"), varFor("z"), varFor("w")),
             return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased, varFor("w").aliased)
