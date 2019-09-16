@@ -215,8 +215,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          threadExecutingTheQuery.getName,
                          Clocks.nanoClock(),
                          CpuClock.CPU_CLOCK),
-      new DefaultValueMapper(proxySpi),
-      transactionFactory) {
+                         proxySpi,
+                         transactionFactory) {
 
       override def close(): Unit = ()
     }
