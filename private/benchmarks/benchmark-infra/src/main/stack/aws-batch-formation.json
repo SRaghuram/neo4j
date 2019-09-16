@@ -135,7 +135,6 @@
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
             "run-worker",
-
             "--workload",
             "Ref::--workload",
             "--db-edition",
@@ -172,7 +171,6 @@
             "Ref::--recreate-schema",
             "--skip-flamegraphs",
             "Ref::--skip-flamegraphs",
-
             "--neo4j-commit",
             "Ref::--neo4j-commit",
             "--neo4j-version",
@@ -193,7 +191,6 @@
             "Ref::--parent-teamcity-build",
             "--triggered-by",
             "Ref::--triggered-by",
-
             "--workspace-dir",
             "Ref::--workspace-dir",
             "--aws-secret",
@@ -204,11 +201,12 @@
             "Ref::--aws-region",
             "--db-name",
             "Ref::--db-name",
-
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -249,7 +247,6 @@
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
             "run-worker",
-
             "--workload",
             "Ref::--workload",
             "--db-edition",
@@ -286,7 +283,6 @@
             "Ref::--recreate-schema",
             "--skip-flamegraphs",
             "Ref::--skip-flamegraphs",
-
             "--neo4j-commit",
             "Ref::--neo4j-commit",
             "--neo4j-version",
@@ -307,7 +303,6 @@
             "Ref::--parent-teamcity-build",
             "--triggered-by",
             "Ref::--triggered-by",
-
             "--workspace-dir",
             "Ref::--workspace-dir",
             "--aws-secret",
@@ -318,11 +313,12 @@
             "Ref::--aws-region",
             "--db-name",
             "Ref::--db-name",
-
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -363,7 +359,6 @@
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
             "run-worker",
-
             "--workload",
             "Ref::--workload",
             "--db-edition",
@@ -400,7 +395,6 @@
             "Ref::--recreate-schema",
             "--skip-flamegraphs",
             "Ref::--skip-flamegraphs",
-
             "--neo4j-commit",
             "Ref::--neo4j-commit",
             "--neo4j-version",
@@ -421,7 +415,6 @@
             "Ref::--parent-teamcity-build",
             "--triggered-by",
             "Ref::--triggered-by",
-
             "--workspace-dir",
             "Ref::--workspace-dir",
             "--aws-secret",
@@ -432,11 +425,12 @@
             "Ref::--aws-region",
             "--db-name",
             "Ref::--db-name",
-
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -477,7 +471,6 @@
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
             "run-worker",
-
             "--workload",
             "Ref::--workload",
             "--db-edition",
@@ -514,7 +507,6 @@
             "Ref::--recreate-schema",
             "--skip-flamegraphs",
             "Ref::--skip-flamegraphs",
-
             "--neo4j-commit",
             "Ref::--neo4j-commit",
             "--neo4j-version",
@@ -535,7 +527,6 @@
             "Ref::--parent-teamcity-build",
             "--triggered-by",
             "Ref::--triggered-by",
-
             "--workspace-dir",
             "Ref::--workspace-dir",
             "--aws-secret",
@@ -546,11 +537,12 @@
             "Ref::--aws-region",
             "--db-name",
             "Ref::--db-name",
-
             "--results_store_user",
             "Ref::--results_store_user",
             "--results_store_pass",
-            "{{resolve:secretsmanager:ResultStoreSecret}}",
+            {
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+            },
             "--results_store_uri",
             "Ref::--results_store_uri"
           ],
@@ -573,16 +565,6 @@
           "Vcpus": 4,
           "Memory": 8384
         }
-      }
-    },
-    "ResultStoreSecret": {
-      "Type": "AWS::SecretsManager::Secret",
-      "Properties": {
-        "Description": "Secret to submit results to the result store",
-        "Name": {
-          "Fn::Sub": "ResultStoreSecret-${STAGE}"
-        },
-        "SecretString": "${RESULTSTORESECRET}"
       }
     }
   },
