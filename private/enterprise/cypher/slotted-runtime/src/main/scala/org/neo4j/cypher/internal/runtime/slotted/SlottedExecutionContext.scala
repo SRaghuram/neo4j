@@ -169,7 +169,10 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     var usage = longs.length * 8L
     var i = 0
     while (i < refs.length) {
-      usage += refs(i).estimatedHeapUsage()
+      val ref = refs(i)
+      if (ref != null) {
+        usage += ref.estimatedHeapUsage()
+      }
       i += 1
     }
     usage

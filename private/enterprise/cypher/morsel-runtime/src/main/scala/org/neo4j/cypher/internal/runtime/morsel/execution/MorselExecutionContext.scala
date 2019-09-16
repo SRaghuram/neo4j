@@ -298,7 +298,10 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     var usage = longsPerRow * maxNumberOfRows * 8L
     var i = startRow * refsPerRow
     while (i < ((startRow + maxNumberOfRows) * refsPerRow)) {
-      usage += morsel.refs(i).estimatedHeapUsage()
+      val ref = morsel.refs(i)
+      if (ref != null) {
+        usage += morsel.refs(i).estimatedHeapUsage()
+      }
       i += 1
     }
     usage

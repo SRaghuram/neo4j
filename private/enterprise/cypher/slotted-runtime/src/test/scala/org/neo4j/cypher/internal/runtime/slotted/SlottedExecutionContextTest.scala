@@ -122,6 +122,11 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     cachedPropAt(prop("c", "age")) should be(stringValue("arg"))
   }
 
+  test("should ignore null refs on estimateHeapUsage") {
+    val ctx = SlottedExecutionContext(slots(0, 1))
+    ctx.estimatedHeapUsage shouldBe 0L
+  }
+
   private def prop(node: String, prop: String) =
     CachedProperty(node, Variable(node)(InputPosition.NONE), PropertyKeyName(prop)(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE)
 
