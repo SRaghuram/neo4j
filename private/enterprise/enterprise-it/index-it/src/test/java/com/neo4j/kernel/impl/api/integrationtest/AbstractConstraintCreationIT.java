@@ -36,8 +36,8 @@ import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
+import org.neo4j.kernel.api.exceptions.schema.EquivalentSchemaRuleAlreadyExistsException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -232,7 +232,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         }
 
         SchemaWrite statement = schemaWriteInNewTransaction();
-        assertThrows( AlreadyConstrainedException.class, () -> createConstraint( statement, descriptor ) );
+        assertThrows( EquivalentSchemaRuleAlreadyExistsException.class, () -> createConstraint( statement, descriptor ) );
         commit();
     }
 
