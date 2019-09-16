@@ -6,7 +6,7 @@
 package com.neo4j.consistency;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -45,7 +45,7 @@ class ConsistencyCheckServiceRecordFormatIT
     void checkTinyConsistentStore( String recordFormat ) throws Exception
     {
         testDirectory.databaseLayout();
-        var managementService = new TestCommercialDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        var managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setConfig( record_format, recordFormat ).build();
         try
         {
