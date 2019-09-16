@@ -31,7 +31,7 @@ import scala.collection.JavaConverters._
 class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(Interpreted.NAME, Slotted.NAME))
+    base = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var StringPrefixIndexSeek_runtime: String = _
 

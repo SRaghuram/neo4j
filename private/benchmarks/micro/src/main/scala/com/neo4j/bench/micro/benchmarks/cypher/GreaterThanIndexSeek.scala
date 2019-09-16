@@ -24,7 +24,7 @@ import org.openjdk.jmh.infra.Blackhole
 class GreaterThanIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(Interpreted.NAME, Slotted.NAME))
+    base = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var GreaterThanIndexSeek_runtime: String = _
 
