@@ -49,7 +49,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       "STOP DATABASE foo" -> 1,
       "START DATABASE foo" -> 1,
       "DROP DATABASE foo" -> 1,
-      "DROP DATABASE foo2 IF EXISTS" -> 2
+      "DROP DATABASE foo2 IF EXISTS" -> 1
     ))
   }
 
@@ -598,7 +598,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should do nothing when creating an already existing database using if not exists with max number of databases reached") {
     // GIVEN
     val config = Config.defaults()
-    config.set(CommercialEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
+    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
     setup(config)
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")

@@ -48,7 +48,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 @TestInstance( PER_CLASS )
 @ClusterExtension
 @TestDirectoryExtension
-class SystemGraphOnFollowerInClusterIT
+class AdministrationCommandsOnClusterIT
 {
 
     @Inject

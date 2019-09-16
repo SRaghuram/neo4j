@@ -42,8 +42,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "CREATE OR REPLACE USER Bar SET PASSWORD 'neo'" -> 2,
       "CREATE OR REPLACE USER Bao SET PASSWORD 'neo'" -> 1,
       "ALTER USER Bar SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" -> 1,
-      "DROP USER Bar" -> 2,
-      "DROP USER Baz IF EXISTS" -> 2
+      "DROP USER Bar" -> 1,
+      "DROP USER Baz IF EXISTS" -> 1
     ))
   }
 

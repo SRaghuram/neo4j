@@ -37,14 +37,14 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "CREATE ROLE foo2 IF NOT EXISTS" -> 1,
       "CREATE OR REPLACE ROLE foo" -> 2,
       "CREATE OR REPLACE ROLE foo3" -> 1,
-      "CREATE ROLE bar AS COPY OF foo" -> 2,
-      "CREATE ROLE bar2 IF NOT EXISTS AS COPY OF foo" -> 2,
-      "CREATE OR REPLACE ROLE bar AS COPY OF foo" -> 3,
-      "CREATE OR REPLACE ROLE bar3 AS COPY OF foo" -> 2,
+      "CREATE ROLE bar AS COPY OF foo" -> 1,
+      "CREATE ROLE bar2 IF NOT EXISTS AS COPY OF foo" -> 1,
+      "CREATE OR REPLACE ROLE bar AS COPY OF foo" -> 2,
+      "CREATE OR REPLACE ROLE bar3 AS COPY OF foo" -> 1,
       "GRANT ROLE foo TO Bar" -> 1,
       "REVOKE ROLE foo FROM Bar" -> 1,
-      "DROP ROLE foo" -> 2,
-      "DROP ROLE foo2 IF EXISTS" -> 2,
+      "DROP ROLE foo" -> 1,
+      "DROP ROLE foo2 IF EXISTS" -> 1,
       "GRANT ROLE a,b,c TO x,y,z" -> 9
     ))
   }
