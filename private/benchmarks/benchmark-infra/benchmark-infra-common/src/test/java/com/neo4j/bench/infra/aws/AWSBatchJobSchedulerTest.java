@@ -15,6 +15,7 @@ import com.google.common.collect.Sets;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -80,7 +81,7 @@ public class AWSBatchJobSchedulerTest
                 Planner.DEFAULT,
                 ExecutionMode.EXECUTE,
                 ErrorReporter.ErrorPolicy.FAIL,
-                Lists.newArrayList( "-Xms4g", "-Xmx4g" ),
+                JvmArgs.from( "-Xms4g", "-Xmx4g" ),
                 false,// recreate schema
                 false, // skip flame graphs
                 Deployment.embedded(),

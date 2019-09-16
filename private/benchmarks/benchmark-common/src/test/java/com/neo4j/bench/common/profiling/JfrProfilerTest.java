@@ -8,6 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -18,7 +19,6 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.List;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -58,8 +58,8 @@ class JfrProfilerTest
     {
         JvmVersion jvmVersion = JvmVersion.create( 8, JvmVersion.JAVA_TM_SE_RUNTIME_ENVIRONMENT );
         JfrProfiler profiler = new JfrProfiler();
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.SERVER );
-        assertThat( jvmArgs, hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) );
+        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.SERVER, null );
+        assertThat( jvmArgs.toArgs(), hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) );
     }
 
     @Test
@@ -67,7 +67,7 @@ class JfrProfilerTest
     {
         JvmVersion jvmVersion = JvmVersion.create( 11, "" );
         JfrProfiler profiler = new JfrProfiler();
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
-        assertThat( jvmArgs, not( hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) ) );
+        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, null );
+        assertThat( jvmArgs.toArgs(), not( hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) ) );
     }
 }

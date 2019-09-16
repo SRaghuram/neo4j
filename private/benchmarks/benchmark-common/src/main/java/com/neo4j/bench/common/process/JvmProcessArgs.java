@@ -16,7 +16,7 @@ public class JvmProcessArgs
 {
     private final List<String> jvmInvokeArg;
     private final Jvm jvm;
-    private final List<String> jvmArgs;
+    private final JvmArgs jvmArgs;
     private final List<String> toolCommandArgs;
     private final String classPath;
     private final Class<?> mainClass;
@@ -33,7 +33,7 @@ public class JvmProcessArgs
      */
     public static JvmProcessArgs argsForJvmProcess( List<String> jvmInvokeArgs,
                                                     Jvm jvm,
-                                                    List<String> jvmArgs,
+                                                    JvmArgs jvmArgs,
                                                     List<String> toolCommandArgs,
                                                     Class<?> mainClass )
     {
@@ -42,7 +42,7 @@ public class JvmProcessArgs
 
     private JvmProcessArgs( List<String> jvmInvokeArgs,
                             Jvm jvm,
-                            List<String> jvmArgs,
+                            JvmArgs jvmArgs,
                             List<String> toolCommandArgs,
                             String classPath,
                             Class<?> mainClass )
@@ -50,9 +50,9 @@ public class JvmProcessArgs
         this.processName = BenchmarkUtil.sanitize( UUID.randomUUID().toString() );
         this.jvmInvokeArg = jvmInvokeArgs;
         this.jvm = jvm;
-        this.jvmArgs = new ArrayList<>();
-        this.jvmArgs.add( "-Dname=" + processName );
-        this.jvmArgs.addAll( jvmArgs );
+        this.jvmArgs = JvmArgs
+                .from( "-Dname=" + processName )
+                .merge( jvmArgs );
         this.toolCommandArgs = toolCommandArgs;
         this.classPath = classPath;
         this.mainClass = mainClass;
@@ -73,7 +73,7 @@ public class JvmProcessArgs
         List<String> commands = new ArrayList<>();
         commands.addAll( jvmInvokeArg );
         commands.add( jvm.launchJava() );
-        commands.addAll( jvmArgs );
+        commands.addAll( jvmArgs.toArgs() );
         commands.add( "-cp" );
         commands.add( classPath );
         commands.add( mainClass.getName() );

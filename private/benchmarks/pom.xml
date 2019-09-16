@@ -17,13 +17,13 @@
     <name>Neo4j - Benchmarks</name>
 
     <properties>
-        <moduleName>com.neo4j.bench.micro</moduleName>
+        <moduleName>com.neo4j.bench</moduleName>
         <license-text.header>build/license-header.txt</license-text.header>
         <neo4j-java-driver.version>1.7.3</neo4j-java-driver.version>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <airline.version>2.7.1</airline.version>
-		<neo4j.version>${project.version}</neo4j.version>
+		    <neo4j.version>${project.version}</neo4j.version>
     </properties>
 
     <licenses>
@@ -54,7 +54,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
-
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>

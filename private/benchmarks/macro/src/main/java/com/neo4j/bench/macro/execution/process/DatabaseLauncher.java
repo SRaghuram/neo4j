@@ -8,6 +8,7 @@ package com.neo4j.bench.macro.execution.process;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
@@ -114,6 +115,13 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                            Path neo4jConfigFile,
                                            Resources resources );
 
+    /**
+     * A hook for launcher to modify benchmark tool JVM arguments, if needed.
+     *
+     * @return returns modified JVM arguments or the same list
+     */
+    public abstract JvmArgs toolJvmArgs( JvmArgs clientJvmArgs );
+
     public static class EmbeddedLauncher extends DatabaseLauncher<EmbeddedLauncher.Connection>
     {
         private final Edition edition;
@@ -168,6 +176,12 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                                      resources.workDir() );
         }
 
+        @Override
+        public JvmArgs toolJvmArgs( JvmArgs jvmArgs )
+        {
+            return jvmArgs;
+        }
+
         private static class Connection implements AutoCloseable
         {
             private final Store store;
@@ -183,6 +197,7 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                 // do nothing
             }
         }
+
     }
 
     public static class ServerLauncher extends DatabaseLauncher<ServerDatabase>
@@ -245,5 +260,15 @@ public abstract class DatabaseLauncher<CONNECTION extends AutoCloseable>
                                                    jvm,
                                                    resources.workDir() );
         }
+
+        @Override
+        public JvmArgs toolJvmArgs( JvmArgs jvmArgs )
+        {
+            // for now we have hardcoded JVM memory sizes for client fork
+            return jvmArgs
+                    .set( "-Xmx2g" )
+                    .set( "-Xms2g" );
+        }
     }
+
 }

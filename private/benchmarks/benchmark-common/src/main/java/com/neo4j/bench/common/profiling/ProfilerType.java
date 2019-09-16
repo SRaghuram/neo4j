@@ -76,6 +76,12 @@ public enum ProfilerType
             RecordingType.NMT_SUMMARY,
             // requires no environment variables
             Sets.newHashSet(),
+            SecondaryRecordingCreator.NONE ),
+    OOM(
+            OOMProfiler.class,
+            RecordingType.HEAP_DUMP,
+            // requires no environment variables
+            Sets.newHashSet(),
             SecondaryRecordingCreator.NONE );
 
     private final Class<? extends Profiler> profiler;

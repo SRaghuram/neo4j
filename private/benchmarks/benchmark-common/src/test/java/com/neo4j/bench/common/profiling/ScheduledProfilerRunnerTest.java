@@ -10,12 +10,14 @@ import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.Benchmark.Mode;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -113,10 +115,10 @@ public class ScheduledProfilerRunnerTest
         }
 
         @Override
-        public List<String> jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup,
-                Benchmark benchmark, Parameters additionalParameters )
+        public JvmArgs jvmArgs( JvmVersion jvmVersion, ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup,
+                Benchmark benchmark, Parameters additionalParameters, Resources resources )
         {
-            return Collections.emptyList();
+            return JvmArgs.empty();
         }
 
         @Override
@@ -127,6 +129,12 @@ public class ScheduledProfilerRunnerTest
 
         @Override
         public void afterProcess( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                Parameters additionalParameters )
+        {
+        }
+
+        @Override
+        public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
                 Parameters additionalParameters )
         {
         }

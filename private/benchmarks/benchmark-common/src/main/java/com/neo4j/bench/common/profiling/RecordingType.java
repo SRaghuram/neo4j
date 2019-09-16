@@ -24,7 +24,8 @@ public enum RecordingType
     TRACE_VMSTAT( "vmstat", ".vmstat.log" ),
     TRACE_IOSTAT( "iostat", ".iostat.log" ),
     TRACE_JVM( "jvm_log", ".jvm.log" ),
-    NMT_SUMMARY( "nmt_summary", ".nmt.summary.csv" );
+    NMT_SUMMARY( "nmt_summary", ".nmt.summary.csv" ),
+    HEAP_DUMP( "heap_dump", ".hprof" );
 
     private final String propertyKey;
     private final String defaultExtension;

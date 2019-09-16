@@ -87,12 +87,6 @@ public abstract class PidStrategy
     {
     }
 
-    private PidStrategy( long pid, String output )
-    {
-        this.pid = pid;
-        this.output = output;
-    }
-
     private boolean found()
     {
         return -1 != pid;

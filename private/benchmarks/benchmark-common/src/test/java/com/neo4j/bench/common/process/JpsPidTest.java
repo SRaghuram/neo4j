@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.common.process;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import org.junit.Rule;
@@ -17,7 +16,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,7 +41,7 @@ public class JpsPidTest
         Jvm jvm = Jvm.defaultJvm();
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
                                                                           jvm,
-                                                                          Collections.emptyList(),
+                                                                          JvmArgs.empty(),
                                                                           Collections.emptyList(),
                                                                           JustForMain.class );
         BenchmarkUtil.assertException( RuntimeException.class,
@@ -55,7 +53,7 @@ public class JpsPidTest
     public void shouldFindPidWithJPSAndPgrepAndPS() throws Exception
     {
         Jvm jvm = Jvm.defaultJvm();
-        List<String> jvmArgs = Lists.newArrayList( "-Xmx4g" );
+        JvmArgs jvmArgs = JvmArgs.from(  "-Xmx4g" );
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
                                                                           jvm,
                                                                           jvmArgs,

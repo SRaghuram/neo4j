@@ -11,6 +11,7 @@ import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.process.JpsPid;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.process.PgrepAndPsPid;
@@ -51,7 +52,7 @@ public class ForkRunner
                                                   int measurementForkCount,
                                                   TimeUnit unit,
                                                   BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
-                                                  List<String> jvmArgs,
+                                                  JvmArgs jvmArgs,
                                                   Resources resources ) throws ForkFailureException
     {
         BenchmarkDirectory benchmarkDir = groupDir.findOrCreate( query.benchmark() );
@@ -141,7 +142,7 @@ public class ForkRunner
                                       List<ProfilerType> profilers,
                                       Jvm jvm,
                                       boolean doFork,
-                                      List<String> jvmArgs,
+                                      JvmArgs jvmArgs,
                                       Resources resources )
     {
         return doFork
@@ -172,7 +173,7 @@ public class ForkRunner
                                            ForkDirectory forkDirectory,
                                            Resources resources,
                                            Jvm jvm,
-                                           List<String> jvmArgs,
+                                           JvmArgs jvmArgs,
                                            boolean doFork )
     {
         List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, resources.workDir() );

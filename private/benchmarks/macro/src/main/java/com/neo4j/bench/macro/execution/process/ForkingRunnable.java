@@ -39,7 +39,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                      Store originalStore,
                      Path neo4jConfigFile,
                      Jvm jvm,
-                     List<String> jvmArgs,
+                     JvmArgs jvmArgs,
                      Resources resources )
     {
         super( launcher,
@@ -61,7 +61,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                List<ProfilerType> profilerTypes,
                                Jvm jvm,
                                Path neo4jConfigFile,
-                               List<String> jvmArgs,
+                               JvmArgs jvmArgs,
                                Parameters clientParameters,
                                Resources resources )
     {
@@ -85,17 +85,15 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                          .distinct()
                                                          .collect( toList() );
 
-        List<String> clientJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
+        JvmArgs clientJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
                                                                               jvm,
                                                                               forkDirectory,
                                                                               query,
                                                                               clientParameters,
-                                                                              jvmArgs );
+                                                                              jvmArgs,
+                                                                              resources );
 
-        List<String> enrichedClientJvmArgs = JvmArgs.from( clientJvmArgs )
-              .set( "-Xmx2g" )
-              .set( "-Xms2g" )
-              .toArgs();
+        JvmArgs enrichedClientJvmArgs = launcher.toolJvmArgs( clientJvmArgs );
 
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( clientInvokeArgs,
                                                                           jvm,
@@ -125,6 +123,16 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         try
         {
             jvmProcess.waitFor();
+        }
+        catch ( Exception e )
+        {
+            // make sure we clean up in profilers
+            externalProfilers.forEach( profiler -> profiler.processFailed( forkDirectory,
+                    query.benchmarkGroup(),
+                    query.benchmark(),
+                    clientParameters ) );
+            // re throw exception
+            throw e;
         }
         finally
         {

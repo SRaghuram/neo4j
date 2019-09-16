@@ -5,14 +5,12 @@
  */
 package com.neo4j.bench.common.process;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.results.ForkDirectory;
 import org.apache.commons.lang3.StringUtils;
 
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -50,13 +48,13 @@ public class JvmArgs
         //      -XX:+PrintClassHistogramBeforeFullGC : Prints class histogram before full GC
         //      -XX:+PrintClassHistogramAfterFullGC  : Prints class histogram after full GC
         //      -XX:+PrintGCTimeStamps               : Print timestamps for each GC event (seconds count from start of JVM)  <-- use PrintGCDateStamps instead
-        return from( Lists.newArrayList(
-                "-XX:+HeapDumpOnOutOfMemoryError",                   // Creates heap dump in out-of-memory condition
-                "-XX:HeapDumpPath=" + forkDirectory.toAbsolutePath() // Specifies path to save heap dumps
-        ) );
+        return from(
+                    "-XX:+HeapDumpOnOutOfMemoryError",                   // Creates heap dump in out-of-memory condition
+                    "-XX:HeapDumpPath=" + forkDirectory.toAbsolutePath() // Specifies path to save heap dumps
+                );
     }
 
-    public static List<String> jvmArgsFromString( String jvmArgs )
+    public static JvmArgs parse( String jvmArgs )
     {
         List<String> args = new ArrayList<>();
         CharacterIterator characters = new StringCharacterIterator(  jvmArgs.trim() );
@@ -84,7 +82,27 @@ public class JvmArgs
         // if there is JVM argument left in a string builder
         // add it to JVM arguments
         addArgFromBuilder( args, builder );
-        return args;
+        return JvmArgs.from( args );
+    }
+
+    public static JvmArgs empty()
+    {
+        return new JvmArgs();
+    }
+
+    public static JvmArgs from( List<String> jvmArgs )
+    {
+        return new JvmArgs( jvmArgs );
+    }
+
+    public static JvmArgs from( String... rawJvmArgs )
+    {
+        JvmArgs jvmArgs = JvmArgs.empty();
+        for ( String jvmArg : rawJvmArgs )
+        {
+            jvmArgs = jvmArgs.set( jvmArg );
+        }
+        return jvmArgs;
     }
 
     private static StringBuilder addArgFromBuilder( List<String> args, StringBuilder builder )
@@ -96,21 +114,6 @@ public class JvmArgs
             builder = new StringBuilder();
         }
         return builder;
-    }
-
-    public static String jvmArgsToString( List<String> jvmArgs )
-    {
-        return String.join( " ", jvmArgs );
-    }
-
-    public static JvmArgs from( List<String> jvmArgs )
-    {
-        return new JvmArgs( jvmArgs );
-    }
-
-    public static JvmArgs from( String[] jvmArgs )
-    {
-        return new JvmArgs( Arrays.asList( jvmArgs ) );
     }
 
     private final List<String> jvmArgs;
@@ -147,6 +150,24 @@ public class JvmArgs
         return new JvmArgs( args );
     }
 
+    public JvmArgs addAll( List<String> newJvmArgs )
+    {
+        Objects.requireNonNull( newJvmArgs );
+
+        JvmArgs allJvmArgs = this;
+        for ( String jvmArg : newJvmArgs )
+        {
+            allJvmArgs = allJvmArgs.set( jvmArg );
+        }
+
+        return allJvmArgs;
+    }
+
+    public JvmArgs merge( JvmArgs with )
+    {
+        return this.addAll( with.toArgs() );
+    }
+
     public List<String> toArgs()
     {
         return new ArrayList<>( jvmArgs );
@@ -155,6 +176,11 @@ public class JvmArgs
     public String[] asArray()
     {
         return toArgs().toArray( new String[] {} );
+    }
+
+    public String toArgsString()
+    {
+        return String.join( " ", jvmArgs );
     }
 
     @Override
@@ -221,19 +247,6 @@ public class JvmArgs
                 .map( m -> m.group( ARGNAME_CAPTURING_GROUP) )
                 .findFirst()
                 .orElseThrow( () -> new IllegalArgumentException( format( "Don't know how to handle JVM argument: '%s'", jvmArg ) ) );
-    }
-
-    public JvmArgs addAll( List<String> newJvmArgs )
-    {
-        Objects.requireNonNull( newJvmArgs );
-
-        JvmArgs allJvmArgs = this;
-        for ( String jvmArg : newJvmArgs )
-        {
-            allJvmArgs = allJvmArgs.set( jvmArg );
-        }
-
-        return allJvmArgs;
     }
 
 }

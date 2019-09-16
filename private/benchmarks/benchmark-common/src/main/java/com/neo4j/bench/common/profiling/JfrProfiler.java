@@ -9,15 +9,16 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -70,25 +71,24 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion,
-                                 ForkDirectory forkDirectory,
-                                 BenchmarkGroup benchmarkGroup,
-                                 Benchmark benchmark,
-                                 Parameters additionalParameters )
+    public JvmArgs jvmArgs( JvmVersion jvmVersion,
+                            ForkDirectory forkDirectory,
+                            BenchmarkGroup benchmarkGroup,
+                            Benchmark benchmark,
+                            Parameters additionalParameters,
+                            Resources resources )
     {
-        ArrayList<String> argsTail = Lists.newArrayList(
+        JvmArgs jvmArgs = JvmArgs.empty();
+        if ( jvmVersion.hasCommercialFeatures() )
+        {
+            jvmArgs = jvmArgs.set( "-XX:+UnlockCommercialFeatures" );
+        }
+        jvmArgs = jvmArgs.addAll( Lists.newArrayList(
                 "-XX:+UnlockDiagnosticVMOptions",
                 "-XX:+FlightRecorder",
                 "-XX:+DebugNonSafepoints",
                 "-XX:+PreserveFramePointer",
-                "-XX:FlightRecorderOptions=stackdepth=256" );
-        List<String> jvmArgs = Lists.newArrayList();
-
-        if ( jvmVersion.hasCommercialFeatures() )
-        {
-            jvmArgs = Lists.newArrayList( "-XX:+UnlockCommercialFeatures" );
-        }
-        jvmArgs.addAll( argsTail );
+                "-XX:FlightRecorderOptions=stackdepth=256" ) );
         return jvmArgs;
     }
 
@@ -166,6 +166,13 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                               BenchmarkGroup benchmarkGroup,
                               Benchmark benchmark,
                               Parameters additionalParameters )
+    {
+        // do nothing
+    }
+
+    @Override
+    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                               Parameters additionalParameters )
     {
         // do nothing
     }

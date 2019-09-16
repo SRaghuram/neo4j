@@ -8,8 +8,10 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.util.List;
 
@@ -38,13 +40,15 @@ public interface ExternalProfiler extends Profiler
      * @param benchmarkGroup benchmark group
      * @param benchmark benchmark
      * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     * @param resources from JAR files
      * @return additional JVM arguments
      */
-    List<String> jvmArgs( JvmVersion jvmVersion,
-                          ForkDirectory forkDirectory,
-                          BenchmarkGroup benchmarkGroup,
-                          Benchmark benchmark,
-                          Parameters additionalParameters );
+    JvmArgs jvmArgs( JvmVersion jvmVersion,
+                     ForkDirectory forkDirectory,
+                     BenchmarkGroup benchmarkGroup,
+                     Benchmark benchmark,
+                     Parameters additionalParameters,
+                     Resources resources );
 
     /**
      * Will be called before benchmark process is launched.
@@ -74,4 +78,18 @@ public interface ExternalProfiler extends Profiler
                        BenchmarkGroup benchmarkGroup,
                        Benchmark benchmark,
                        Parameters additionalParameters );
+
+    /**
+     * Will be called after benchmark process terminates, if the process fails.
+     * Any stopping/dumping related to the profiler should be done here before returning.
+     *
+     * @param forkDirectory directory to write files into
+     * @param benchmarkGroup benchmark group
+     * @param benchmark benchmark
+     * @param additionalParameters additional parameters, used to distinguish processes when multiple processes are involved in executing the same benchmark
+     */
+    void processFailed( ForkDirectory forkDirectory,
+                        BenchmarkGroup benchmarkGroup,
+                        Benchmark benchmark,
+                        Parameters additionalParameters );
 }

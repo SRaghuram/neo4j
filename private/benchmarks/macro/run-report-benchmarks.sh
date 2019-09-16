@@ -72,12 +72,10 @@ mkdir "${profiler_recording_output_dir}"
 basedir=$(dirname "$(realpath "$0")")
 out_of_memory_script="$basedir/on-out-of-memory.sh"
 out_of_memory_base_dir="$basedir/out-of-memory"
-# path to benchmark process out of memory output directory
+# path to benchmark process out of memory output directory,
+# WARNING: benchmark process will do heap dump outside of forks directories
 out_of_memory_dir="$out_of_memory_base_dir/benchmark"
 mkdir -p "$out_of_memory_dir"
-# path to forked process out of memory output directory
-out_of_memory_fork_dir="$out_of_memory_base_dir/fork"
-mkdir -p "$out_of_memory_fork_dir"
 
 echo "JSON file containing definition of workload                    : ${workload}"
 echo "Store directory                                                : ${db}"
@@ -141,7 +139,7 @@ function runExport {
             --teamcity-build "${teamcity_build}" \
             --parent-teamcity-build "${parent_teamcity_build}" \
             --execution-mode "${execution_mode}" \
-            --jvm-args "-XX:OnOutOfMemoryError=\"$out_of_memory_script --jvm-pid %p --output-dir $out_of_memory_fork_dir\"  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=\"$out_of_memory_fork_dir\" ${jvm_args}" \
+            --jvm-args "${jvm_args}" \
             --planner "${planner}" \
             --runtime "${runtime}" \
             --profiler-recordings-dir "${profiler_recording_output_dir}" \

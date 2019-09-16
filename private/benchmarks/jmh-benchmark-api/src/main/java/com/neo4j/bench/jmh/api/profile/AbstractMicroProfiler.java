@@ -17,6 +17,7 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
 import com.neo4j.bench.jmh.api.config.RunnerParams;
+import com.neo4j.bench.common.util.Resources;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.ExternalProfiler;
@@ -110,22 +111,30 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
     @Override
     public Collection<String> addJVMOptions( BenchmarkParams params )
     {
-        if ( profilerType.isExternal() )
+        RunnerParams runnerParams = RunnerParams.extractFrom( params );
+        try ( Resources resources = new Resources( runnerParams.workDir() ) )
         {
-            BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = extractBenchmark( params );
-            ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
-            Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
-            JvmVersion jvmVersion = jvm.version();
-            return ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).jvmArgs( jvmVersion,
-                                                                                                forkDir,
-                                                                                                benchmarkGroup,
-                                                                                                benchmark,
-                                                                                                Parameters.NONE );
-        }
-        else
-        {
-            return Collections.emptyList();
+            if ( profilerType.isExternal() )
+            {
+                BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
+                Benchmark benchmark = toBenchmarks( params, runnerParams ).parentBenchmark();
+                ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
+                Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
+                JvmVersion jvmVersion = jvm.version();
+                return ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler)
+                        .jvmArgs(
+                                jvmVersion,
+                                forkDir,
+                                benchmarkGroup,
+                                benchmark,
+                                Parameters.NONE,
+                                resources)
+                        .toArgs();
+            }
+            else
+            {
+                return Collections.emptyList();
+            }
         }
     }
 

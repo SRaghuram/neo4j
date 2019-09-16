@@ -5,12 +5,13 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -31,11 +32,12 @@ public class JvmTracer implements ExternalProfiler
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion,
-                                 ForkDirectory forkDirectory,
-                                 BenchmarkGroup benchmarkGroup,
-                                 Benchmark benchmark,
-                                 Parameters additionalParameters )
+    public JvmArgs jvmArgs( JvmVersion jvmVersion,
+                            ForkDirectory forkDirectory,
+                            BenchmarkGroup benchmarkGroup,
+                            Benchmark benchmark,
+                            Parameters additionalParameters,
+                            Resources resources )
     {
         ProfilerRecordingDescriptor recordingDescriptor = ProfilerRecordingDescriptor.create( benchmarkGroup,
                                                                                               benchmark,
@@ -45,7 +47,7 @@ public class JvmTracer implements ExternalProfiler
 
         Path heapDump = forkDirectory.create( recordingDescriptor.sanitizedName() + ".hprof" );
         Path vmLog = forkDirectory.pathFor( recordingDescriptor );
-        return Lists.newArrayList(
+        return JvmArgs.from(
                 "-XX:+UnlockDiagnosticVMOptions",
                 "-XX:+HeapDumpOnOutOfMemoryError",
                 "-XX:HeapDumpPath=" + sanitize( heapDump.toAbsolutePath().toString() ),
@@ -72,6 +74,13 @@ public class JvmTracer implements ExternalProfiler
                               BenchmarkGroup benchmarkGroup,
                               Benchmark benchmark,
                               Parameters additionalParameters )
+    {
+        // do nothing
+    }
+
+    @Override
+    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                               Parameters additionalParameters )
     {
         // do nothing
     }
