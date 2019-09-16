@@ -27,7 +27,7 @@ import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.JavaConverters._
 
-@BenchmarkEnabled(false)
+@BenchmarkEnabled(true)
 class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
