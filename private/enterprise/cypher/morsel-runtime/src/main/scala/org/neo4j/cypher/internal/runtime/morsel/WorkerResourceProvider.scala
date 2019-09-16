@@ -39,6 +39,10 @@ class WorkerResourceProvider(numberOfWorkers: Int,
 
   // This is called on database.stop()
   override def shutdown(): Unit = {
-    queryResourcesForWorkers.foreach(_.close())
+    var i = 0
+    while (i < queryResourcesForWorkers.length) {
+      queryResourcesForWorkers(i).close()
+      i += 1
+    }
   }
 }

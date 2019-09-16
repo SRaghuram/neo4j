@@ -42,7 +42,7 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
       executionState.cancelQuery(workerResources)
     }
     try {
-      AssertionRunner.runUnderAssertion { () =>
+      if (AssertionRunner.isAssertionsEnabled) {
         worker.assertIsNotActive()
         workerResourceProvider.assertAllReleased()
       }
@@ -54,7 +54,7 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   override def await(): Boolean = {
     if (executionState.hasEnded) {
       try {
-        AssertionRunner.runUnderAssertion { () =>
+        if (AssertionRunner.isAssertionsEnabled) {
           worker.assertIsNotActive()
           workerResourceProvider.assertAllReleased()
         }

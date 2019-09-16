@@ -38,7 +38,7 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     IOUtils.closeAll(nodeCursorPool,
                      relationshipGroupCursorPool,
                      relationshipTraversalCursorPool,
-                      relationshipScanCursorPool,
+                     relationshipScanCursorPool,
                      nodeValueIndexCursorPool,
                      nodeLabelIndexCursorPool)
   }
