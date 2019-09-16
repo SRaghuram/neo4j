@@ -8,13 +8,13 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 
-import org.neo4j.common.DependencyResolver
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.NO_TRACKING_CONTROLLER
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
+import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
 import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, NoSchedulerTracing, RuntimeEnvironment}
@@ -31,15 +31,15 @@ object ContextHelper extends MockitoSugar {
 
   private val runtimeConfig = CypherRuntimeConfiguration(
     workers = Runtime.getRuntime.availableProcessors(),
-    morselSizeSmall = 10000,
-    morselSizeBig = 10000,
+    morselSizeSmall = GraphDatabaseSettings.cypher_morsel_size_small.defaultValue(),
+    morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     waitTimeout = Duration(3000, TimeUnit.MILLISECONDS),
     scheduler = CypherMorselRuntimeSchedulerOption.default,
     lenientCreateRelationship = false,
     fuseOperators = true,
     memoryTrackingController = NO_TRACKING_CONTROLLER
-  )
+    )
 
   def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,
              tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING,
