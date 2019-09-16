@@ -122,11 +122,11 @@ case class FabricPlanner(config: FabricConfig) {
       def segments: Seq[Segment] =
         clauses
           .foldLeft(Seq[Segment]()) {
-            case (segs, sub: SubQuery) =>
+            case (segs, sub: SubQuery)        =>
               sub.query.part match {
                 case singleQuery: SingleQuery => Sub(singleQuery.clauses) +: segs
-                // TODO fix this  
-                case _ => throw new IllegalStateException("Only single query is supported for subqueries")
+                // TODO fix this
+                case u => Errors.unimplemented("Union queries in subqueries", u.productPrefix)
               }
             case (Seq(Seg(cs), rest @ _*), c) =>
               Seg(cs :+ c) +: rest
