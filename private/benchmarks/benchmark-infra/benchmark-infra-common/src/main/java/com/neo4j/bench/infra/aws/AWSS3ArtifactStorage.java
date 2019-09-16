@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -107,7 +108,9 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 // as AWS S3 client tries to cache whole stream in memory
                 // if size is unknown
                 objectMetadata.setContentLength( Files.size( artifact ) );
-                LOG.info( "upload artifact {} to path {}", artifact.toString(), s3key );
+                LOG.info( "upload artifact {} to path {}",
+                          artifact.toString(),
+                          new URI( artifactBaseURI.getScheme(), artifactBaseURI.getHost(), s3key, null ) );
                 PutObjectResult result = amazonS3.putObject( bucketName,  s3key,
                                                              Files.newInputStream( artifact ), objectMetadata );
                 // TODO this fails under tests, and works with real implementation
@@ -115,7 +118,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             }
             return artifactBaseURI;
         }
-        catch ( IOException e )
+        catch ( IOException | URISyntaxException e )
         {
             throw new ArtifactStoreException( e );
         }
