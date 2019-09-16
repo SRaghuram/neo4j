@@ -81,20 +81,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public void suspendUser( String username ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.suspendUser( username );
-        clearCacheForUser( username );
-    }
-
-    @Override
-    public void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.activateUser( username, requirePasswordChange );
-        clearCacheForUser( username );
-    }
-
-    @Override
     public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
     {
         assertValidRoleName( roleName );

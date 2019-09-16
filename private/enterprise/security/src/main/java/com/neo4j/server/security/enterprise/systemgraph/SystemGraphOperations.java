@@ -128,24 +128,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         return new SimpleAuthorizationInfo( roleNames );
     }
 
-    void suspendUser( String username ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (u:User {name: $name}) SET u.suspended = true RETURN 0";
-        Map<String,Object> params = map( "name", username );
-        String errorMsg = "User '" + username + "' does not exist.";
-
-        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
-    void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (u:User {name: $name}) SET u.suspended = false, u.passwordChangeRequired = $passwordChangeRequired RETURN 0";
-        Map<String,Object> params = map( "name", username, "passwordChangeRequired", requirePasswordChange );
-        String errorMsg = "User '" + username + "' does not exist.";
-
-        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
     void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
     {
         String query = "CREATE (r:Role {name: $name})";

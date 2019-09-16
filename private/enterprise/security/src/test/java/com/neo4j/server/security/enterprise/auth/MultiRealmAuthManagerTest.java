@@ -211,22 +211,6 @@ class MultiRealmAuthManagerTest
     }
 
     @Test
-    void shouldSuspendExistingUser() throws Throwable
-    {
-        // Given
-        realm.newUser( "jake", password( "abc123" ), true );
-        realm.suspendUser( "jake" );
-        manager.start();
-        setMockAuthenticationStrategyResult( "jake", "abc123", AuthenticationResult.SUCCESS );
-
-        // When
-        AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
-
-        // Then
-        assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
-    }
-
-    @Test
     void shouldNotRequestPasswordChangeWithInvalidCredentials() throws Throwable
     {
         // Given

@@ -68,30 +68,6 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void suspendUser( String username ) throws InvalidArgumentsException
-    {
-        User user = basic.users.get( username );
-        if ( user == null )
-        {
-            throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
-        }
-        User augmented = user.augment().withFlag( IS_SUSPENDED ).build();
-        basic.users.put( username, augmented );
-    }
-
-    @Override
-    void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
-    {
-        User user = basic.users.get( username );
-        if ( user == null )
-        {
-            throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
-        }
-        User augmented = user.augment().withoutFlag( IS_SUSPENDED ).build();
-        basic.users.put( username, augmented );
-    }
-
-    @Override
     void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
     {
         if ( roles.containsKey( roleName ) )

@@ -338,7 +338,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldActivateUserAndRequirePasswordChangeByDefault() throws Exception
     {
-        userManager.suspendUser( "readSubject" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.activateUser('readSubject')" );
         neo.assertUnauthenticated( neo.login( "readSubject", "321" ) );
         neo.assertPasswordChangeRequired( neo.login( "readSubject", "123" ) );
@@ -348,7 +348,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldActivateUserAndRequirePasswordChangeIfRequested() throws Exception
     {
-        userManager.suspendUser( "readSubject" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.activateUser('readSubject', true)" );
         neo.assertUnauthenticated( neo.login( "readSubject", "321" ) );
         neo.assertPasswordChangeRequired( neo.login( "readSubject", "123" ) );
@@ -358,7 +358,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldActivateUserAndRequireNoPasswordChangeIfRequested() throws Exception
     {
-        userManager.suspendUser( "readSubject" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.activateUser('readSubject', false)" );
         assertFalse( userManager.getUser( "readSubject" ).hasFlag( IS_SUSPENDED ) );
     }
@@ -366,7 +366,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldActivateActiveUser() throws Exception
     {
-        userManager.suspendUser( "readSubject" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.activateUser('readSubject')" );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.activateUser('readSubject')" );
         assertFalse( userManager.getUser( "readSubject" ).hasFlag( IS_SUSPENDED ) );
@@ -381,7 +381,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldFailToActivateIfNotAdmin() throws Exception
     {
-        userManager.suspendUser( "readSubject" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('readSubject')" );
         assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('readSubject')", PERMISSION_DENIED );
         assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('Craig')", PERMISSION_DENIED );
         assertSystemCommandFail( schemaSubject, "CALL dbms.security.activateUser('')", PERMISSION_DENIED );
@@ -643,8 +643,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
                 "noneSubject", listOf(),
                 "neo4j", listOf( PWD_CHANGE.toLowerCase() )
         );
-        userManager.suspendUser( "writeSubject" );
-        userManager.suspendUser( "pwdSubject" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('writeSubject')" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('pwdSubject')" );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listUsers()",
                 r -> assertKeyIsMap( r, "username", "flags", valueOf( expected ) ) );
     }

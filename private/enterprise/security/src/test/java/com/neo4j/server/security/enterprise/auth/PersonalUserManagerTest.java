@@ -141,54 +141,9 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "setUserRequirePasswordChangeException" );
-            }
-            delegate.setUserRequirePasswordChange( username, requirePasswordChange );
-        }
-
-        @Override
-        public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "setUserStatusException" );
-            }
-            delegate.setUserStatus( username, isSuspended );
-        }
-
-        @Override
         public Set<String> getAllUsernames()
         {
             return delegate.getAllUsernames();
-        }
-
-        @Override
-        public void suspendUser( String username ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "suspendUserException" );
-            }
-            delegate.suspendUser( username );
-        }
-
-        @Override
-        public void activateUser( String username, boolean requirePasswordChange )
-                throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "activateUserException" );
-            }
-            delegate.activateUser( username, requirePasswordChange );
         }
 
         @Override

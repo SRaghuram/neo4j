@@ -16,9 +16,6 @@ import static java.util.Collections.emptySet;
 
 public interface EnterpriseUserManager extends UserManager
 {
-    void suspendUser( String username ) throws InvalidArgumentsException;
-
-    void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException;
 
     void newRole( String roleName, String... usernames ) throws InvalidArgumentsException;
 
@@ -65,15 +62,6 @@ public interface EnterpriseUserManager extends UserManager
 
     EnterpriseUserManager NOOP = new EnterpriseUserManager()
     {
-        @Override
-        public void suspendUser( String username )
-        {
-        }
-
-        @Override
-        public void activateUser( String username, boolean requirePasswordChange )
-        {
-        }
 
         @Override
         public void newRole( String roleName, String... usernames )
@@ -182,16 +170,6 @@ public interface EnterpriseUserManager extends UserManager
             {
                 Arrays.fill( password, (byte) 0 );
             }
-        }
-
-        @Override
-        public void setUserRequirePasswordChange( String username, boolean requirePasswordChange )
-        {
-        }
-
-        @Override
-        public void setUserStatus( String username, boolean isSuspended )
-        {
         }
 
         @Override

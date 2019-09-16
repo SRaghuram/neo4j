@@ -52,27 +52,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void suspendUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            if ( subject.hasUsername( username ) )
-            {
-                throw new InvalidArgumentsException( "Suspending yourself (user '" + username +
-                        "') is not allowed." );
-            }
-            userManager.suspendUser( username );
-            securityLog.info( subject, "suspended user `%s`", username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to suspend user `%s`: %s", username, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public boolean deleteUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
@@ -89,26 +68,6 @@ class PersonalUserManager implements EnterpriseUserManager
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to delete user `%s`: %s", username, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public void activateUser( String username, boolean requirePasswordChange ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            if ( subject.hasUsername( username ) )
-            {
-                throw new InvalidArgumentsException( "Activating yourself (user '" + username + "') is not allowed." );
-            }
-            userManager.activateUser( username, requirePasswordChange );
-            securityLog.info( subject, "activated user `%s`", username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to activate user `%s`: %s", username, e.getMessage() );
             throw e;
         }
     }
@@ -207,38 +166,6 @@ class PersonalUserManager implements EnterpriseUserManager
                         e.getMessage() );
                 throw e;
             }
-        }
-    }
-
-    @Override
-    public void setUserRequirePasswordChange( String username, boolean requirePasswordChange ) throws InvalidArgumentsException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.setUserRequirePasswordChange( username, requirePasswordChange );
-            securityLog.info( subject, "changed 'password change required' for user `%s`", username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to change 'password change required' for user `%s`: %s", username, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public void setUserStatus( String username, boolean isSuspended ) throws InvalidArgumentsException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.setUserRequirePasswordChange( username, isSuspended );
-            securityLog.info( subject, "changed user status for user `%s`", username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to change user status for user `%s`: %s", username, e.getMessage() );
-            throw e;
         }
     }
 
