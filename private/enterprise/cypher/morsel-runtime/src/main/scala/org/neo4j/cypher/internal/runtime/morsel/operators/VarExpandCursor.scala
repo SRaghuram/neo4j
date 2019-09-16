@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import java.util
-
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution.CursorPools
@@ -141,23 +139,23 @@ class VarExpandCursor(fromNode: Long,
   }
 
   def relationships: ListValue = {
-    val r = new util.ArrayList[AnyValue]()
+    val r = new Array[AnyValue](pathLength)
     if (projectBackwards) {
       var i = pathLength - 1
       while (i >= 0) {
         val cursor = selectionCursors.get(i)
-        r.add(relationshipFromCursor(dbAccess, cursor))
+        r(pathLength - 1 - i) = relationshipFromCursor(dbAccess, cursor)
         i -= 1
       }
     } else {
       var i = 0
       while (i < pathLength) {
         val cursor = selectionCursors.get(i)
-        r.add(relationshipFromCursor(dbAccess, cursor))
+        r(i) = relationshipFromCursor(dbAccess, cursor)
         i += 1
       }
     }
-    VirtualValues.fromList(r)
+    VirtualValues.list(r:_*)
   }
 
   def setTracer(event: OperatorProfileEvent): Unit = {
