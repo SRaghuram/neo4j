@@ -66,10 +66,15 @@ trait QueryCompletionTracker extends FlowControl {
     }
   }
 
-  protected val assertions: ArrayBuffer[Thunk] = new ArrayBuffer[Thunk]()
+  protected val assertions: ArrayBuffer[Thunk] =
+    if (AssertionRunner.isAssertionsEnabled)
+      new ArrayBuffer[Thunk]()
+    else null
 
   protected def runAssertions(): Unit = {
-    assertions.foreach(AssertionRunner.runUnderAssertion)
+    if (AssertionRunner.isAssertionsEnabled) {
+      assertions.foreach(_.apply())
+    }
   }
 
   private val instanceName = if (DebugSupport.TRACKER.enabled) s"[${getClass.getSimpleName}@${System.identityHashCode(this)}] " else ""
