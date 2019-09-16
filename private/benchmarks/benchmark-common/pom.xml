@@ -15,7 +15,6 @@
         <hamcrest.version>1.3</hamcrest.version>
         <apache-commons-lang3.version>3.3.2</apache-commons-lang3.version>
         <metrics.version>3.1.2</metrics.version>
-        <jackson.version>2.9.7</jackson.version>
         <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
@@ -40,7 +39,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

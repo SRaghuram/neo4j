@@ -9,11 +9,12 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 
 import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
@@ -36,13 +37,14 @@ public class StraceTracer implements ExternalProfiler
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion,
-                                 ForkDirectory forkDirectory,
-                                 BenchmarkGroup benchmarkGroup,
-                                 Benchmark benchmark,
-                                 Parameters additionalParameters )
+    public JvmArgs jvmArgs( JvmVersion jvmVersion,
+                            ForkDirectory forkDirectory,
+                            BenchmarkGroup benchmarkGroup,
+                            Benchmark benchmark,
+                            Parameters additionalParameters,
+                            Resources resources )
     {
-        return Collections.emptyList();
+        return JvmArgs.empty();
     }
 
     @Override
@@ -59,6 +61,13 @@ public class StraceTracer implements ExternalProfiler
                               BenchmarkGroup benchmarkGroup,
                               Benchmark benchmark,
                               Parameters additionalParameters )
+    {
+        // do nothing
+    }
+
+    @Override
+    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                               Parameters additionalParameters )
     {
         // do nothing
     }

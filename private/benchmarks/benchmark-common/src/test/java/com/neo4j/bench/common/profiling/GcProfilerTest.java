@@ -8,6 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -19,7 +20,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.List;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode;
 import static org.hamcrest.Matchers.equalTo;
@@ -54,8 +54,8 @@ public class GcProfilerTest
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 8, "" );
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.CLIENT );
-        assertThat( jvmArgs, hasItem( equalTo( "-XX:+PrintGC" ) ) );
+        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.CLIENT, null );
+        assertThat( jvmArgs.toArgs(), hasItem( equalTo( "-XX:+PrintGC" ) ) );
     }
 
     @Test
@@ -63,8 +63,8 @@ public class GcProfilerTest
     {
         GcProfiler profiler = new GcProfiler();
         JvmVersion jvmVersion = JvmVersion.create( 9, "" );
-        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE );
+        JvmArgs jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, null );
         System.out.println( jvmArgs );
-        assertThat( jvmArgs, hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );
+        assertThat( jvmArgs.toArgs(), hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );
     }
 }

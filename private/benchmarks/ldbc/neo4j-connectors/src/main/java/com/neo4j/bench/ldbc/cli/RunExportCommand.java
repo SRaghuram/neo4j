@@ -57,6 +57,7 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
@@ -801,40 +802,41 @@ public class RunExportCommand implements Runnable
             String processName ) throws IOException
     {
         String[] ldbcRunArgs = RunCommand.buildArgs( ldbcRunConfig, Paths.get( forkDirectory.toAbsolutePath() ).toFile() );
-        List<String> jvmArgs = JvmArgs.jvmArgsFromString( jvmArgsString );
+        JvmArgs jvmArgs = JvmArgs.parse( jvmArgsString );
 
         JvmVersion jvmVersion = jvm.version();
 
-        for ( ExternalProfiler profiler : profilers )
+        try ( Resources resources = new Resources( Paths.get( forkDirectory.toAbsolutePath() ) ) )
         {
-            List<String> profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
-            profilerJvmArgs.stream()
-                           .filter( arg -> !jvmArgs.contains( arg ) )
-                           .forEach( jvmArgs::add );
-        }
-        File outputLog = forkDirectory.create( "ldbc-output.txt" ).toFile();
-        FileUtils.forceRecreateFile( outputLog );
-        List<String> jvmInvokeArgs = new ArrayList<>();
-        for ( ExternalProfiler profiler : profilers )
-        {
-            List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
-            jvmInvokeArgs.addAll( profilerJvmInvokeArgs );
-        }
+            for ( ExternalProfiler profiler : profilers )
+            {
+                JvmArgs profilerJvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE, resources );
+                jvmArgs = jvmArgs.merge( profilerJvmArgs );
+            }
+            File outputLog = forkDirectory.create( "ldbc-output.txt" ).toFile();
+            FileUtils.forceRecreateFile( outputLog );
+            List<String> jvmInvokeArgs = new ArrayList<>();
+            for ( ExternalProfiler profiler : profilers )
+            {
+                List<String> profilerJvmInvokeArgs = profiler.invokeArgs( forkDirectory, benchmarkGroup, summaryBenchmark, Parameters.NONE );
+                jvmInvokeArgs.addAll( profilerJvmInvokeArgs );
+            }
 
-        List<String> processArgs = buildCommandArgs(
-                jvm,
-                jvmInvokeArgs,
-                jvmArgs,
-                neo4jLdbcJar,
-                Lists.newArrayList( ldbcRunArgs ),
-                cliPrefix,
-                processName );
+            List<String> processArgs = buildCommandArgs(
+                    jvm,
+                    jvmInvokeArgs,
+                    jvmArgs,
+                    neo4jLdbcJar,
+                    Lists.newArrayList( ldbcRunArgs ),
+                    cliPrefix,
+                    processName );
 
-        System.out.println( "LDBC Command Args: " + String.join( " ", processArgs ) );
-        return new ProcessBuilder( processArgs )
-                .inheritIO()
-                .redirectOutput( outputLog )
-                .start();
+            System.out.println( "LDBC Command Args: " + String.join( " ", processArgs ) );
+            return new ProcessBuilder( processArgs )
+                    .inheritIO()
+                    .redirectOutput( outputLog )
+                    .start();
+        }
     }
 
     private TestRunReport packageResults(
@@ -936,7 +938,7 @@ public class RunExportCommand implements Runnable
     private static List<String> buildCommandArgs(
             Jvm jvm,
             List<String> jvmInvokeArgs,
-            List<String> jvmArgs,
+            JvmArgs jvmArgs,
             File ldbcJar,
             List<String> ldbcArgs,
             String cliPrefix,
@@ -946,7 +948,7 @@ public class RunExportCommand implements Runnable
         commandArgs.addAll( jvmInvokeArgs );
         commandArgs.add( jvm.launchJava() );
         commandArgs.add( "-Dname=" + processName );
-        commandArgs.addAll( jvmArgs );
+        commandArgs.addAll( jvmArgs.toArgs() );
         commandArgs.add( "-jar" );
         commandArgs.add( ldbcJar.getAbsolutePath() );
         commandArgs.addAll( ldbcArgs );
