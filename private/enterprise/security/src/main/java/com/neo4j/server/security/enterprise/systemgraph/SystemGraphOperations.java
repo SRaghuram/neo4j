@@ -143,17 +143,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         }
     }
 
-    void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (r:Role {name: $from}) RETURN 0";
-
-        Map<String,Object> params = Collections.singletonMap( "from", from );
-        String errorMsg = "Cannot create role '" + roleName + "' from non-existent role '" + from + "'.";
-
-        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-        newRole( roleName );
-    }
-
     boolean deleteRole( String roleName ) throws InvalidArgumentsException
     {
         String query = "MATCH (r:Role {name: $name}) DETACH DELETE r RETURN 0";
@@ -171,29 +160,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         String errorMsg = "Role '" + roleName + "' does not exist.";
 
         queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
-    @SuppressWarnings( "SameParameterValue" )
-    void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
-    {
-        assertValidRoleName( roleName );
-        assertValidUsername( username );
-
-        String query = "MATCH (u:User {name: $name})-[dbr:HAS_ROLE]->(r:Role {name: $role}) " +
-                "DELETE dbr " +
-                "RETURN 0 ";
-
-        Map<String,Object> params = map( "name", username, "role", roleName );
-
-        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
-
-        if ( !success )
-        {
-            // We need to decide the cause of this failure
-            getUser( username, false ); // This throws InvalidArgumentException if user does not exist
-            assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
-            // If the user didn't have the role for the specified db, we should silently fall through
-        }
     }
 
     void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
@@ -405,15 +371,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
     {
         String query = "MATCH (r:Role) RETURN r.name";
         return queryExecutor.executeQueryWithResultSet( query );
-    }
-
-    Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (u:User {name: $username}) OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role) RETURN r.name";
-        Map<String,Object> params = map( "username", username );
-        String errorMsg = "User '" + username + "' does not exist.";
-
-        return queryExecutor.executeQueryWithResultSetAndParamCheck( query, params, errorMsg );
     }
 
     Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException

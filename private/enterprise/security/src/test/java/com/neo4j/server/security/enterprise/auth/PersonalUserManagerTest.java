@@ -158,17 +158,6 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "newRoleFromCopyException" );
-            }
-            delegate.newCopyOfRole( roleName, from );
-        }
-
-        @Override
         public boolean deleteRole( String roleName ) throws InvalidArgumentsException
         {
             if ( failNextCall )
@@ -202,17 +191,6 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "removeRoleFromUserException" );
-            }
-            delegate.removeRoleFromUser( roleName, username );
-        }
-
-        @Override
         public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return delegate.getPrivilegesForRoles( roles );
@@ -228,23 +206,6 @@ class PersonalUserManagerTest
         public Set<String> getAllRoleNames()
         {
             return delegate.getAllRoleNames();
-        }
-
-        @Override
-        public Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "getRoleNamesForUserException" );
-            }
-            return delegate.getRoleNamesForUser( username );
-        }
-
-        @Override
-        public Set<String> silentlyGetRoleNamesForUser( String username )
-        {
-            return delegate.silentlyGetRoleNamesForUser( username );
         }
 
         @Override

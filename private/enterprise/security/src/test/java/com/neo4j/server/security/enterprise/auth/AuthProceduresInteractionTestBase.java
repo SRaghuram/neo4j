@@ -578,10 +578,10 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.createRole('%s')", "new_role" ) );
         assertSystemCommandSuccess( adminSubject,
                 format( "CALL dbms.security.addRoleToUser('%s', '%s')", "new_role", "adminSubject" ) );
-        assertThat( userManager.getRoleNamesForUser( "adminSubject" ), hasItem( "new_role" ) );
+        assertTrue(userHasRole( "adminSubject", "new_role" ));
 
         assertSystemCommandSuccess( this.adminSubject, format( "CALL dbms.security.deleteRole('%s')", "new_role" ) );
-        assertThat( userManager.getRoleNamesForUser( "adminSubject" ), not( hasItem( "new_role" ) ) );
+        assertFalse(userHasRole( "adminSubject", "new_role" ));
         assertThat( userManager.getAllRoleNames(), not( contains( "new_role" ) ) );
     }
 

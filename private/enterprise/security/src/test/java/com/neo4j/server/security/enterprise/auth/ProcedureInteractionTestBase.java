@@ -36,7 +36,6 @@ import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.graphdb.spatial.Point;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
 import org.neo4j.logging.Log;
@@ -119,7 +118,7 @@ public abstract class ProcedureInteractionTestBase<S>
     public TestDirectory testDirectory;
 
     @Inject
-    public ThreadingRule threading;
+    ThreadingRule threading;
 
     protected EnterpriseUserManager userManager;
 
@@ -431,7 +430,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertThat( err, equalTo( "" ) );
     }
 
-    protected void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         assertSuccess( subject, call, null, resultConsumer );
     }
@@ -462,9 +461,9 @@ public abstract class ProcedureInteractionTestBase<S>
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    boolean userHasRole( String user, String role ) throws InvalidArgumentsException
+    boolean userHasRole( String user, String role )
     {
-        return userManager.getRoleNamesForUser( user ).contains( role );
+        return userManager.silentlyGetUsernamesForRole( role ).contains( user );
     }
 
     List<Object> getObjectsAsList( ResourceIterator<Map<String,Object>> r, String key )
@@ -472,7 +471,7 @@ public abstract class ProcedureInteractionTestBase<S>
         return r.stream().map( s -> s.get( key ) ).collect( toList() );
     }
 
-    protected void assertKeyIs( ResourceIterator<Map<String,Object>> r, String key, Object... items )
+    void assertKeyIs( ResourceIterator<Map<String,Object>> r, String key, Object... items )
     {
         assertKeyIsArray( r, key, items );
     }

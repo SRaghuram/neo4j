@@ -19,8 +19,6 @@ public interface EnterpriseUserManager extends UserManager
 
     void newRole( String roleName, String... usernames ) throws InvalidArgumentsException;
 
-    void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException;
-
     boolean deleteRole( String roleName ) throws InvalidArgumentsException;
 
     void assertRoleExists( String roleName ) throws InvalidArgumentsException;
@@ -34,15 +32,6 @@ public interface EnterpriseUserManager extends UserManager
      */
     void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException;
 
-    /**
-     * Unassign a role from a user. The role and the user have to exist.
-     *
-     * @param roleName name of role
-     * @param username name of user
-     * @throws InvalidArgumentsException if the username or the role does not exist
-     */
-    void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException;
-
     Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles );
 
     /**
@@ -51,10 +40,6 @@ public interface EnterpriseUserManager extends UserManager
     void clearCacheForRoles();
 
     Set<String> getAllRoleNames();
-
-    Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException;
-
-    Set<String> silentlyGetRoleNamesForUser( String username );
 
     Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException;
 
@@ -65,11 +50,6 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public void newRole( String roleName, String... usernames )
-        {
-        }
-
-        @Override
-        public void newCopyOfRole( String roleName, String from )
         {
         }
 
@@ -90,11 +70,6 @@ public interface EnterpriseUserManager extends UserManager
         }
 
         @Override
-        public void removeRoleFromUser( String roleName, String username )
-        {
-        }
-
-        @Override
         public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return emptySet();
@@ -107,18 +82,6 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public Set<String> getAllRoleNames()
-        {
-            return emptySet();
-        }
-
-        @Override
-        public Set<String> getRoleNamesForUser( String username )
-        {
-            return emptySet();
-        }
-
-        @Override
-        public Set<String> silentlyGetRoleNamesForUser( String username )
         {
             return emptySet();
         }

@@ -88,13 +88,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException
-    {
-        assertValidRoleName( roleName );
-        systemGraphOperations.newCopyOfRole( roleName, from );
-    }
-
-    @Override
     public boolean deleteRole( String roleName ) throws InvalidArgumentsException
     {
         boolean success = systemGraphOperations.deleteRole( roleName );
@@ -116,13 +109,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.removeRoleFromUser( roleName, username );
-        clearCachedAuthorizationInfoForUser( username );
-    }
-
-    @Override
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );
@@ -138,25 +124,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     public Set<String> getAllRoleNames()
     {
         return systemGraphOperations.getAllRoleNames();
-    }
-
-    @Override
-    public Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException
-    {
-        return systemGraphOperations.getRoleNamesForUser( username );
-    }
-
-    @Override
-    public Set<String> silentlyGetRoleNamesForUser( String username )
-    {
-        try
-        {
-            return getRoleNamesForUser( username );
-        }
-        catch ( InvalidArgumentsException e )
-        {
-            return Collections.emptySet();
-        }
     }
 
     @Override

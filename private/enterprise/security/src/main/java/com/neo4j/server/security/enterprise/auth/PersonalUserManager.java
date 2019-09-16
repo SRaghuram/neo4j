@@ -101,22 +101,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void newCopyOfRole( String roleName, String from ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.newCopyOfRole( roleName, from );
-            securityLog.info( subject, "created role `%s` from role `%s`", roleName, from );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to create role `%s` from role `%s`: %s", roleName, from, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public boolean deleteRole( String roleName ) throws InvalidArgumentsException, AuthorizationViolationException
     {
         try
@@ -208,28 +192,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            if ( subject.hasUsername( username ) && roleName.equals( PredefinedRoles.ADMIN ) )
-            {
-                throw new InvalidArgumentsException(
-                        "Removing yourself (user '" + username + "') from the admin role is not allowed." );
-            }
-            userManager.removeRoleFromUser( roleName, username );
-            securityLog.info( subject, "removed role `%s` from user `%s`", roleName, username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to remove role `%s` from user `%s`: %s", roleName, username, e
-                    .getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         assertUserManager();
@@ -255,27 +217,6 @@ class PersonalUserManager implements EnterpriseUserManager
             securityLog.error( subject, "tried to list roles: %s", e.getMessage() );
             throw e;
         }
-    }
-
-    @Override
-    public Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertSelfOrUserManager( username );
-            return userManager.getRoleNamesForUser( username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to list roles for user `%s`: %s", username, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public Set<String> silentlyGetRoleNamesForUser( String username )
-    {
-        return userManager.silentlyGetRoleNamesForUser( username );
     }
 
     @Override

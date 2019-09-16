@@ -119,18 +119,6 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
-    {
-        assertValidRoleName( roleName );
-        assertValidUsername( username );
-        getUser( username, false ); // This throws InvalidArgumentException if user does not exist
-        assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
-        RoleRecord roleRecord = roles.get( roleName );
-        roles.put( roleName, roleRecord.augment().withoutUser( username ).build() );
-        removeRoleFromUsers( roleName, Collections.singleton( username ) );
-    }
-
-    @Override
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName );
@@ -157,13 +145,6 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     Set<String> getAllRoleNames()
     {
         return roles.keySet();
-    }
-
-    @Override
-    Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException
-    {
-        getUser( username, false );
-        return rolesForUsers.get( username );
     }
 
     @Override
