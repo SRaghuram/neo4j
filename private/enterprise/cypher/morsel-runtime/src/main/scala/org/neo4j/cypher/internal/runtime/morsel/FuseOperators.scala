@@ -139,7 +139,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
             innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
             innermostTemplate.shouldCheckDemand = false // No need to check subscription demand when not in final pipeline
             innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
-            val applyPlanId = physicalPlan.applyPlans(id)
+            val applyPlanId = physicalPlan.applyPlans(p.id)
             val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
 
             // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
