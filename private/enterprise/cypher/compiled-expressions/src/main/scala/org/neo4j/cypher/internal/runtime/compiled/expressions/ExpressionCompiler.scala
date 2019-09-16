@@ -57,7 +57,10 @@ class VariableNamer {
 /**
   * Compiles a Cypher Expression to a class or intermediate representation
   */
-abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, val namer: VariableNamer = new VariableNamer) {
+abstract class ExpressionCompiler(slots: SlotConfiguration,
+                                  readOnly: Boolean,
+                                  codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                                  val namer: VariableNamer = new VariableNamer) {
 
   import ExpressionCompiler._
   import IntermediateRepresentation._
@@ -93,7 +96,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                 }: _*),
                                 nullCheckIfRequired(expression)
                               ))))
-      compileAnonymousClass(classDeclaration).getDeclaredConstructor().newInstance()
+      compileAnonymousClass(classDeclaration, CodeGeneration.createGenerator(codeGenerationMode)).getDeclaredConstructor().newInstance()
     }
   }
 
@@ -128,7 +131,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                 }: _*),
                                 expression.ir
                               ))))
-      compileAnonymousClass(classDeclaration).getDeclaredConstructor().newInstance()
+      compileAnonymousClass(classDeclaration, CodeGeneration.createGenerator(codeGenerationMode)).getDeclaredConstructor().newInstance()
     })
   }
 
@@ -184,7 +187,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                 declarations(grouping.getKey),
                                 nullCheckIfRequired(grouping.getKey)))
           ))
-      Some(compileAnonymousClass(classDeclaration).getDeclaredConstructor().newInstance())
+      Some(compileAnonymousClass(classDeclaration, CodeGeneration.createGenerator(codeGenerationMode)).getDeclaredConstructor().newInstance())
     }
   }
 
@@ -2925,7 +2928,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
 }
 
 object ExpressionCompiler {
-  def defaultGenerator(slots: SlotConfiguration, readOnly: Boolean): ExpressionCompiler = new DefaultExpressionCompiler(slots, readOnly)
+  def defaultGenerator(slots: SlotConfiguration, readOnly: Boolean, codeGenerationMode: CodeGeneration.CodeGenerationMode): ExpressionCompiler = new DefaultExpressionCompiler(slots, readOnly, codeGenerationMode)
 
   private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
@@ -2974,7 +2977,7 @@ object ExpressionCompiler {
     if (expression.requireNullCheck) nullCheck(expression)(onNull)(expression.ir) else expression.ir
 }
 
-private class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean) extends ExpressionCompiler(slots, readOnly) {
+private class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, codeGenerationMode: CodeGeneration.CodeGenerationMode) extends ExpressionCompiler(slots, readOnly, codeGenerationMode) {
 
   override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
 

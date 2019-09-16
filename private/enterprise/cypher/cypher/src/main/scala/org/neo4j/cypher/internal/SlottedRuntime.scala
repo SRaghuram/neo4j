@@ -5,8 +5,11 @@
  */
 package org.neo4j.cypher.internal
 
+import org.neo4j.codegen.api.CodeGeneration
+import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
 import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
@@ -49,13 +52,15 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         printRewrittenPlanInfo(physicalPlan.logicalPlan)
       }
 
+      val codeGenerationMode = CodeGeneration.CodeGenerationMode.fromDebugOptions(context.debugOptions)
+
       val baseConverters = List(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(context.tokenContext))
 
       val allConverters =
         if (context.materializedEntitiesMode) {
           MaterializedEntitiesExpressionConverter(context.tokenContext) +: baseConverters
         } else if (context.compileExpressions) {
-          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly) +: baseConverters
+          new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode) +: baseConverters
         } else {
           baseConverters
         }
@@ -91,11 +96,15 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         printPipe(physicalPlan.slotConfigurations, pipe)
       }
 
+
+      val metadata: Seq[Argument] = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
+
       new InterpretedExecutionPlan(
         query.periodicCommitInfo,
         resultBuilderFactory,
         SlottedRuntimeName,
-        query.readOnly)
+        query.readOnly,
+        metadata)
     }
     catch {
       case e: CypherException =>

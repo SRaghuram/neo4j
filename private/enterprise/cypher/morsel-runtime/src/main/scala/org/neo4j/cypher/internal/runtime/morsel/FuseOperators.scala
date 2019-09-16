@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
@@ -29,7 +29,8 @@ import org.neo4j.internal.schema.IndexOrder
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     tokenContext: TokenContext,
-                    parallelExecution: Boolean) {
+                    parallelExecution: Boolean,
+                    codeGenerationMode: CodeGeneration.CodeGenerationMode) {
 
   private val physicalPlan = operatorFactory.executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -93,7 +94,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val slots = physicalPlan.slotConfigurations(headPlan.id) // getSlots
 
     val namer = new VariableNamer
-    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, operatorFactory.readOnly, namer) // NOTE: We assume slots is the same within an entire pipeline
+    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, operatorFactory.readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
 
     def compileExpression(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
       () => expressionCompiler.intermediateCompileExpression(astExpression)
@@ -581,7 +582,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
       try {
-        val compiledOperator = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, fusedPipeline.argumentStates)
+        val compiledOperator = ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, fusedPipeline.argumentStates, codeGenerationMode)
         (Some(compiledOperator), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
       } catch {
         case _: CantCompileQueryException =>

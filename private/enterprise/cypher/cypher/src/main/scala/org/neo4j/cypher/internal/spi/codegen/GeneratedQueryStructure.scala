@@ -11,13 +11,16 @@ import java.util.stream.{DoubleStream, IntStream, LongStream}
 import org.neo4j.codegen.Expression.{constant, invoke, newInitializedArray, newInstance}
 import org.neo4j.codegen.MethodReference.{constructorReference, methodReference}
 import org.neo4j.codegen.TypeReference._
+import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.codegen.bytecode.ByteCode.{BYTECODE, VERIFY_GENERATED_BYTECODE}
 import org.neo4j.codegen.source.SourceCode.SOURCECODE
 import org.neo4j.codegen.source.{SourceCode, SourceVisitor}
 import org.neo4j.codegen.{CodeGenerator, Parameter, TypeReference, _}
+import org.neo4j.cypher.internal.CodeGenPlanDescriptionHelper
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.javacompat.ResultRecord
+import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
@@ -36,8 +39,7 @@ import scala.collection.mutable
 
 object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
-  case class GeneratedQueryStructureResult(query: GeneratedQuery, source: Seq[(String, String)], bytecode: Seq[(String, String)])
-    extends CodeStructureResult[GeneratedQuery]
+  case class GeneratedQueryStructureResult(query: GeneratedQuery, code: Seq[Argument]) extends CodeStructureResult[GeneratedQuery]
 
   private def createGenerator(conf: CodeGenConfiguration, code: CodeSaver) = {
     val mode = conf.mode match {
@@ -45,12 +47,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
       case ByteCodeMode => BYTECODE
     }
     val options = mutable.ListBuffer.empty[CodeGeneratorOption]
-    if(conf.showSource) {
-      options += code.saveSourceCode
-    }
-    if(conf.showByteCode) {
-      options += code.saveByteCode
-    }
+
     if(getClass.desiredAssertionStatus()) {
       options += VERIFY_GENERATED_BYTECODE
     }
@@ -58,25 +55,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
       options += SourceCode.sourceLocation(path)
     })
 
-    CodeGenerator.generateCode(classOf[CodeStructure[_]].getClassLoader, mode, options:_*)
-  }
-
-  class CodeSaver {
-    private var _source: Seq[(String, String)] = Seq.empty
-    private var _bytecode: Seq[(String, String)] = Seq.empty
-
-    def saveSourceCode = new SourceVisitor {
-      override protected def visitSource(reference: TypeReference, sourceCode: CharSequence): Unit =
-        _source = _source :+ (reference.name() -> sourceCode.toString)
-    }
-
-    def saveByteCode = new DisassemblyVisitor {
-      override protected def visitDisassembly(className: String, disassembly: CharSequence): Unit =
-        _bytecode = _bytecode :+ (className -> disassembly.toString)
-    }
-
-    def sourceCode: Seq[(String, String)] = _source
-    def bytecode: Seq[(String, String)] = _bytecode
+    CodeGenerator.generateCode(classOf[CodeStructure[_]].getClassLoader, mode, options ++ code.options:_*)
   }
 
   override def generateQuery(className: String,
@@ -86,8 +65,8 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
                             (methodStructure: MethodStructure[_] => Unit)
                             (implicit codeGenContext: CodeGenContext): GeneratedQueryStructureResult = {
 
-    val sourceSaver = new CodeSaver
-    val generator = createGenerator(conf, sourceSaver)
+    val saver = new CodeSaver(conf.showSource, conf.showByteCode)
+    val generator = createGenerator(conf, saver)
     val execution = using(
       generator.generateClass(conf.packageName, className + "Execution", typeRef[GeneratedQueryExecution])) { clazz =>
       val fields: Fields = createFields(columns, clazz)
@@ -121,7 +100,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
         val anyRefId = id.asInstanceOf[AnyRef]
         setStaticField(clazz, key, anyRefId)
     }
-    GeneratedQueryStructureResult(query, sourceSaver.sourceCode, sourceSaver.bytecode)
+    GeneratedQueryStructureResult(query, CodeGenPlanDescriptionHelper.metadata(saver))
   }
 
   private def addAccept(methodStructure: MethodStructure[_] => Unit,

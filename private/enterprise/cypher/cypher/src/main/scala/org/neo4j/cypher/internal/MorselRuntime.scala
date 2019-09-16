@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal
 import java.lang
 import java.util.Optional
 
+import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -72,9 +73,12 @@ class MorselRuntime(parallelExecution: Boolean,
                                             query.semanticTable,
                                             breakingPolicy,
                                             allocateArgumentSlots = true)
+
+    val codeGenerationMode = CodeGeneration.CodeGenerationMode.fromDebugOptions(context.debugOptions)
+
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
-        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly),
+        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode),
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     } else {
@@ -93,7 +97,8 @@ class MorselRuntime(parallelExecution: Boolean,
                                               query.semanticTable)
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
-    val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution)
+    val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution,
+      codeGenerationMode)
 
     try {
       val executablePipelines: IndexedSeq[ExecutablePipeline] = fuseOperators.compilePipelines(executionGraphDefinition)
@@ -104,8 +109,11 @@ class MorselRuntime(parallelExecution: Boolean,
 
       val morselSize = selectMorselSize(query, context)
 
-      val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
-      MorselExecutionPlan(executablePipelines,
+    val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
+
+    val metadata: Seq[Argument] = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
+
+    new MorselExecutionPlan(executablePipelines,
                           executionGraphDefinition,
                           queryIndexRegistrator.result(),
                           physicalPlan.nExpressionSlots,
@@ -116,7 +124,8 @@ class MorselRuntime(parallelExecution: Boolean,
                           context.runtimeEnvironment.tracer,
                           morselSize,
                           context.config.memoryTrackingController,
-                          maybeThreadSafeCursors)
+                          maybeThreadSafeCursors,
+                        metadata: Seq[Argument])
     } catch {
       case e: CantCompileQueryException if shouldFuseOperators =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -126,7 +135,7 @@ class MorselRuntime(parallelExecution: Boolean,
     }
   }
 
-  case class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
+  class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
                                  executionGraphDefinition: ExecutionGraphDefinition,
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
@@ -137,7 +146,8 @@ class MorselRuntime(parallelExecution: Boolean,
                                  schedulerTracer: SchedulerTracer,
                                  morselSize: Int,
                                  memoryTrackingController: MemoryTrackingController,
-                                 maybeThreadSafeCursors: Option[CursorFactory]) extends ExecutionPlan {
+                                 maybeThreadSafeCursors: Option[CursorFactory],
+                                 override val metadata: Seq[Argument]) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -165,8 +175,6 @@ class MorselRuntime(parallelExecution: Boolean,
     }
 
     override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName
-
-    override def metadata: Seq[Argument] = Nil
 
     override def notifications: Set[InternalNotification] =
       if (parallelExecution)

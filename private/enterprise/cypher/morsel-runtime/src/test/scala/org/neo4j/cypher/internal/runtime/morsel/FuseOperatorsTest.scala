@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
+import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
 import org.neo4j.cypher.internal.ir.{LazyMode, StrictnessMode}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
@@ -216,8 +217,13 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
     physicalPlan.slotConfigurations.set(theId, pipelineBuilder.slotConfiguration)
     physicalPlan.argumentSizes.set(theId, Size.zero)
-    val converter = new CompiledExpressionConverter(NullLog.getInstance(), physicalPlan,
-                                                    TokenContext.EMPTY, readOnly = false, neverFail = false)
+    val converter = new CompiledExpressionConverter(
+      NullLog.getInstance(),
+      physicalPlan,
+      TokenContext.EMPTY,
+      readOnly = false,
+      codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)),
+      neverFail = false)
 
     val expressionConverters = new ExpressionConverters(converter)
 
@@ -225,7 +231,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     val operatorFactory = new DummyOperatorFactory(executionGraphDefinition, expressionConverters)
     val fuser = new FuseOperators(operatorFactory,
                                   tokenContext = TokenContext.EMPTY,
-                                  parallelExecution = true)
+                                  parallelExecution = true,
+                                  codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)))
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
                                       pipelineBuilder.pipeline.headPlan,
                                       pipelineBuilder.pipeline.fusedPlans,

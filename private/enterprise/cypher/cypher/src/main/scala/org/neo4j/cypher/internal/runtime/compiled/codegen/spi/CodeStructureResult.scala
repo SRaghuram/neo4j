@@ -6,17 +6,8 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen.spi
 
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.plandescription.Arguments.{ByteCode, SourceCode}
 
 trait CodeStructureResult[T] {
   def query: T
-  def code: Seq[Argument] = {
-    source.map {
-      case (className, sourceCode) => SourceCode(className, sourceCode)
-    } ++ bytecode.map {
-      case (className, byteCode) => ByteCode(className, byteCode)
-    }
-  }
-  def source: Seq[(String, String)]
-  def bytecode: Seq[(String, String)]
+  def code: Seq[Argument]
 }

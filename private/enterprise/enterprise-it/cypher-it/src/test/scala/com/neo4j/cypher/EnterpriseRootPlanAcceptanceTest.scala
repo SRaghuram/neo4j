@@ -67,27 +67,126 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     }
   }
 
-  test("should show_java_source") {
+  test("should show_java_source for compiled runtime") {
     graph.withTx { tx =>
-      val res = executeOfficial( tx, "CYPHER runtime=compiled debug=generate_java_source debug=show_java_source MATCH (n) RETURN n")
+      val res = executeOfficial( tx,
+        """CYPHER runtime=compiled debug=generate_java_source debug=show_java_source
+          |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
     }
   }
 
-  test("should show_bytecode") {
+  test("should show_java_source for morsel fused operators") {
     graph.withTx { tx =>
-      val res = executeOfficial( tx, "CYPHER runtime=compiled debug=show_bytecode MATCH (n) RETURN n")
+      val res = executeOfficial( tx,
+        """CYPHER runtime=morsel operatorEngine=compiled debug=generate_java_source debug=show_java_source
+          |MATCH (n) RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainSourceCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_java_source for morsel compiled expressions") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=morsel operatorEngine=interpreted expressionEngine=compiled debug=generate_java_source debug=show_java_source
+          |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainSourceCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_java_source for slotted compiled expressions") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=slotted expressionEngine=compiled debug=generate_java_source debug=show_java_source
+          |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainSourceCode(res.getExecutionPlanDescription)
+    }
+  }
+
+
+  test("should show_bytecode for compiled runtime") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=compiled debug=show_bytecode
+          |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
     }
   }
 
-  test("should show_java_source and show_bytecode") {
+  test("should show_bytecode for morsel fused operators") {
     graph.withTx { tx =>
-      val res = executeOfficial( tx, "CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode MATCH (n) RETURN n")
+      val res = executeOfficial( tx,
+        """CYPHER runtime=morsel operatorEngine=compiled debug=show_bytecode
+          |MATCH (n) RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_bytecode for morsel compiled expressions") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=morsel operatorEngine=interpreted expressionEngine=compiled debug=show_bytecode
+          |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_bytecode for slotted compiled expressions") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=slotted expressionEngine=compiled debug=show_bytecode
+          |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_java_source and show_bytecode for compiled runtime") {
+    graph.withTx { tx =>
+      val res = {
+        executeOfficial(tx,
+          """CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+            |MATCH (n) RETURN n""".stripMargin)
+      }
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_java_source and show_bytecode for morsel fused operators") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=morsel operatorEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+          |MATCH (n) RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_java_source and show_bytecode for morsel compiled expressions") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=morsel operatorEngine=interpreted expressionEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+          |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
+      res.resultAsString()
+      shouldContainByteCode(res.getExecutionPlanDescription)
+    }
+  }
+
+  test("should show_java_source and show_bytecode for slotted compiled expressions") {
+    graph.withTx { tx =>
+      val res = executeOfficial( tx,
+        """CYPHER runtime=slotted expressionEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+          |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
+      res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
     }
   }

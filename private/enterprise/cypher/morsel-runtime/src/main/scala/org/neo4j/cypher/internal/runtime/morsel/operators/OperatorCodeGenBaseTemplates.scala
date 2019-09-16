@@ -9,7 +9,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.codegen.TypeReference
-import org.neo4j.codegen.api.CodeGeneration.compileClass
+import org.neo4j.codegen.api.CodeGeneration.{CodeGenerationMode, compileClass}
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
@@ -133,10 +133,11 @@ object ContinuableOperatorTaskWithMorselGenerator {
     */
   def compileOperator(template: ContinuableOperatorTaskWithMorselTemplate,
                       workIdentity: WorkIdentity,
-                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): CompiledStreamingOperator = {
+                      argumentStates: Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])],
+                      codeGenerationMode: CodeGenerationMode): CompiledStreamingOperator = {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
     val operatorId = COUNTER.getAndIncrement()
-    val generator = CodeGeneration.createGenerator
+    val generator = CodeGeneration.createGenerator(codeGenerationMode)
     val taskClazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, "OperatorTask"+operatorId, Seq(staticWorkIdentity)), generator)
     val operatorClazz = compileClass(CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator"+operatorId, taskClazz, staticWorkIdentity, argumentStates), generator)
 

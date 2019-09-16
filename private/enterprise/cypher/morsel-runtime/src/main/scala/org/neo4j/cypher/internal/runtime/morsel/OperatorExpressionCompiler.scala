@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
@@ -67,8 +67,12 @@ object OperatorExpressionCompiler {
   }
 }
 
-class OperatorExpressionCompiler(slots: SlotConfiguration, inputSlotConfiguration: SlotConfiguration, readOnly: Boolean, namer: VariableNamer)
-  extends ExpressionCompiler(slots, readOnly, namer) {
+class OperatorExpressionCompiler(slots: SlotConfiguration,
+                                 inputSlotConfiguration: SlotConfiguration,
+                                 readOnly: Boolean,
+                                 codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                                 namer: VariableNamer)
+  extends ExpressionCompiler(slots, readOnly, codeGenerationMode, namer) {
 
   import org.neo4j.codegen.api.IntermediateRepresentation._
 

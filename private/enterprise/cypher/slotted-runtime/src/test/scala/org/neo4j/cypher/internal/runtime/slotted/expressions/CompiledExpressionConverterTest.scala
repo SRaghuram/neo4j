@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
+import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver, SourceCodeGeneration}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -20,7 +21,6 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
 
   test("should log unexpected errors") {
     // Given
-    val log = new BufferingLog
     val physicalPlan = PhysicalPlan(null,
                                     0,
                                     new SlotConfigurations,
@@ -30,7 +30,21 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
                                     new AvailableExpressionVariables,
                                     ParameterMapping.empty)
 
-    val converter = new CompiledExpressionConverter(log, physicalPlan, TokenContext.EMPTY, readOnly = false, neverFail = true)
+
+    val logByteCode = new BufferingLog
+    val converterByteCode = new CompiledExpressionConverter(logByteCode,
+      physicalPlan,
+      TokenContext.EMPTY,
+      readOnly = false,
+      codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)),
+      neverFail = true)
+    val logSourceCode = new BufferingLog
+    val converterSourceCode = new CompiledExpressionConverter(logSourceCode,
+      physicalPlan,
+      TokenContext.EMPTY,
+      readOnly = false,
+      codeGenerationMode = SourceCodeGeneration(new CodeSaver(false, false)),
+      neverFail = true)
 
     // When
     //There is a limit of 65535 on the length of a String literal, so by exceeding that limit
@@ -38,7 +52,9 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
     val e = add(literalString("*" * (65535 + 1)), literalString("*"))
 
     // Then
-    converter.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
-    log.toString should include(s"Failed to compile expression: $e")
+    converterByteCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
+    logByteCode.toString should include(s"Failed to compile expression: $e")
+    converterSourceCode.toCommandExpression(Id.INVALID_ID, e, mock[ExpressionConverters]) should equal(None)
+    logSourceCode.toString should include(s"Failed to compile expression: $e")
   }
 }

@@ -9,6 +9,7 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
+import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
@@ -3890,29 +3891,35 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   private def parameters(kvs: (String, AnyValue)*) = params(kvs.map(_._2).toArray: _*)
 
-  private def types() = Map(longValue(42) -> symbols.CTNumber, stringValue("hello") -> symbols.CTString,
-                          Values.TRUE -> symbols.CTBoolean, nodeValue() -> symbols.CTNode,
-                          relationshipValue() -> symbols.CTRelationship, path(13) -> symbols.CTPath,
-                          pointValue(Cartesian, 1.0, 3.6) -> symbols.CTPoint,
-                          DateTimeValue.now(Clock.systemUTC()) -> symbols.CTDateTime,
-                          LocalDateTimeValue.now(Clock.systemUTC()) -> symbols.CTLocalDateTime,
-                          TimeValue.now(Clock.systemUTC()) -> symbols.CTTime,
-                          LocalTimeValue.now(Clock.systemUTC()) -> symbols.CTLocalTime,
-                          DateValue.now(Clock.systemUTC()) -> symbols.CTDate,
-                          durationValue(Duration.ofHours(3)) -> symbols.CTDuration)
+  private def types() = Map(
+    longValue(42) -> symbols.CTNumber,
+    stringValue("hello") -> symbols.CTString,
+    Values.TRUE -> symbols.CTBoolean,
+    nodeValue() -> symbols.CTNode,
+    relationshipValue() -> symbols.CTRelationship,
+    path(13) -> symbols.CTPath,
+    pointValue(Cartesian, 1.0, 3.6) -> symbols.CTPoint,
+    DateTimeValue.now(Clock.systemUTC()) -> symbols.CTDateTime,
+    LocalDateTimeValue.now(Clock.systemUTC()) -> symbols.CTLocalDateTime,
+    TimeValue.now(Clock.systemUTC()) -> symbols.CTTime,
+    LocalTimeValue.now(Clock.systemUTC()) -> symbols.CTLocalTime,
+    DateValue.now(Clock.systemUTC()) -> symbols.CTDate,
+    durationValue(Duration.ofHours(3)) -> symbols.CTDuration)
 
 }
 
 class CompiledExpressionsIT extends ExpressionsIT {
 
+  private val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
+
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-       defaultGenerator(slots, readOnly = false).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+       defaultGenerator(slots, readOnly = false, codeGenerationMode).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-       defaultGenerator(slots, readOnly = false).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+       defaultGenerator(slots, readOnly = false, codeGenerationMode).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    defaultGenerator(slots, readOnly = false).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+    defaultGenerator(slots, readOnly = false, codeGenerationMode).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 
