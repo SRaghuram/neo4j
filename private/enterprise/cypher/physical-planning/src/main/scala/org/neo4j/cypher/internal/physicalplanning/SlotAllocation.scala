@@ -218,6 +218,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         _: Accumulator =>
           (Accumulator(doNotTraverseExpression = Some(lhsExpression)), TRAVERSE_INTO_CHILDREN) // Only look at rhsExpression
 
+      case FindShortestPaths(_, shortestPathPattern, predicates, _, _) =>
+        acc: Accumulator => {
+          allocateShortestPathPattern(shortestPathPattern, slots, nullable)
+          (acc, TRAVERSE_INTO_CHILDREN)
+        }
+
       // Only allocate expression on the LHS for these other two-child plans (which have expressions)
       case _: ApplyPlan if !shouldAllocateLhs =>
         acc: Accumulator =>
@@ -454,8 +460,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             slots.newReference(variable.name, true, CTAny)
         }
 
-      case FindShortestPaths(_, shortestPathPattern, _, _, _) =>
-        allocateShortestPathPattern(shortestPathPattern, slots, nullable)
+      case _: FindShortestPaths =>
+        // Because of the way the interpreted pipe works, we already have to do the necessary allocations in allocateExpressions(),
+        // before the pipeline breaking
 
       case p =>
         throw new SlotAllocationFailed(s"Don't know how to handle $p")

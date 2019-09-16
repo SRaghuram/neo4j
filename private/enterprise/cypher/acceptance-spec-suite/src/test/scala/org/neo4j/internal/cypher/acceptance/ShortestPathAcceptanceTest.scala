@@ -354,13 +354,14 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result should be(empty)
   }
 
+  // TODO: FIXME Failing in slotted
   test("finds no shortest path due to start node being null") {
     // a-b-c-d
     relate(nodeA, nodeB)
     relate(nodeB, nodeC)
     relate(nodeC, nodeD)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "OPTIONAL MATCH (src:Y) WITH src MATCH p = shortestPath((src)-[*..1]->(dst)) RETURN nodes(p) AS nodes").columnAs[List[Node]]("nodes").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "OPTIONAL MATCH (src:Y) WITH src MATCH p = shortestPath((src)-[*..1]->(dst)) RETURN nodes(p) AS nodes").columnAs[List[Node]]("nodes").toList
 
     result should equal(List())
   }

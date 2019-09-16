@@ -26,6 +26,7 @@ class SlottedAggregationTest extends AggregationTestBase(ENTERPRISE.DEFAULT, Slo
 class SlottedOrderedAggregationTest extends OrderedAggregationTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedExpandAllTest extends ExpandAllTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+class SlottedExpandIntoTest extends ExpandIntoTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedVarExpandAllTest extends VarLengthExpandTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLabelScanTest extends LabelScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

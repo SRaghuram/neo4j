@@ -64,8 +64,48 @@ case class MorselPipelineBreakingPolicy(config: CypherRuntimeConfiguration, fusi
       => true
 
       case plan =>
-        if (config.useInterpretedPipes == CypherMorselUseInterpretedPipes.ALL_POSSIBLE_PLANS)
-          true
+        if (config.useInterpretedPipes == CypherMorselUseInterpretedPipes.ALL_POSSIBLE_PLANS) {
+          plan match {
+            // Blacklisted non-eager plans
+            case _: Skip =>
+              // TODO: LoadCSV if parallelExecution
+              throw unsupported(plan.getClass.getSimpleName)
+
+            // We do not support any eager plans
+            case _: EagerLogicalPlan |
+                 _: EmptyResult =>
+              throw unsupported(plan.getClass.getSimpleName)
+
+// The old morsel blacklist, for context:
+// * Now implemented
+// *          case _: plans.Limit | // Limit keeps state (remaining counter) between iterator.next() calls, so we cannot re-create iterator
+// *               _: plans.Optional | // Optional pipe relies on a pull-based dataflow and needs a different solution for push
+//                 _: plans.Skip | // Skip pipe eagerly drops n rows upfront which does not work with feed pipe
+//                 _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
+//                 _: plans.PartialSort | // same as above
+//                 _: plans.PartialTop | // same as above
+//                 _: plans.EmptyResult | // Eagerly exhausts the source iterator
+// *               _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
+//                 _: plans.LoadCSV | // Not verified to be thread safe
+//                 _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
+//                                              transaction via Core API reads, which is not thread safe because of the transaction
+//                                              bound CursorFactory.
+
+            // Cardinality increasing plans need to break
+            case e: Expand if e.mode == ExpandInto =>
+              true
+
+            case _: OptionalExpand |
+                 _: FindShortestPaths =>
+              true
+
+            case p: ProjectEndpoints if !p.directed => // Undirected is cardinality increasing
+              true
+
+            case _ =>
+              false
+          }
+        }
         else
           throw unsupported(plan.getClass.getSimpleName)
     }

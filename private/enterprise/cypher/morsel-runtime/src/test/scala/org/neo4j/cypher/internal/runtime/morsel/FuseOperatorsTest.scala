@@ -318,8 +318,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                         inputBuffer: BufferDefinition): Operator =
       mock[Operator](RETURNS_DEEP_STUBS)
 
-    override def createMiddle(plan: LogicalPlan): Option[MiddleOperator] =
-      Some(mock[MiddleOperator](RETURNS_DEEP_STUBS))
+    override def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] =
+      mock[Array[MiddleOperator]](RETURNS_DEEP_STUBS)
 
     override def createProduceResults(plan: ProduceResult): ProduceResultOperator =
       mock[ProduceResultOperator](RETURNS_DEEP_STUBS)

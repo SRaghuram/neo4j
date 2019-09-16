@@ -26,6 +26,8 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * Responsible for a mapping from LogicalPlans to Operators.
   */
@@ -328,47 +330,66 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),
                              physicalPlan.argumentSizes(id))
-
-      case _ if plan.isInstanceOf[LazyLogicalPlan] && slottedPipeBuilder.isDefined =>
-        createSlottedPipeOperator(plan)
+      case _ if slottedPipeBuilder.isDefined =>
+        createSlottedPipeHeadOperator(plan)
 
       case _ =>
         throw new CantCompileQueryException(s"Morsel does not yet support the plans including `$plan`, use another runtime.")
     }
   }
 
-  def createMiddle(plan: LogicalPlan): Option[MiddleOperator] = {
+  def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] = {
+    val maybeSlottedPipeOperator =
+      if (headOperator.isInstanceOf[SlottedPipeOperator])
+        Some(headOperator.asInstanceOf[SlottedPipeOperator])
+      else
+        None
+
+    val middleOperatorBuilder = new ArrayBuffer[MiddleOperator]
+    middlePlans.foldLeft(middleOperatorBuilder, maybeSlottedPipeOperator)(createMiddle)
+    val middleOperators = middleOperatorBuilder.result.toArray
+    middleOperators
+  }
+
+  private def createMiddle(acc: (ArrayBuffer[MiddleOperator], Option[SlottedPipeOperator]), plan: LogicalPlan): (ArrayBuffer[MiddleOperator], Option[SlottedPipeOperator]) = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
     generateSlotAccessorFunctions(slots)
+    val (middleOperators, maybeSlottedPipeOperator) = acc
 
-    plan match {
-      case plans.Selection(predicate, _) =>
-        Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
+    val maybeOperator =
+      plan match {
+        case plans.Selection(predicate, _) =>
+          Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
 
-      case plans.Limit(_, count, DoNotIncludeTies) =>
-        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
+        case plans.Limit(_, count, DoNotIncludeTies) =>
+          val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+          Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
-      case plans.Distinct(_, groupingExpressions) =>
-        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
-        Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings))
+        case plans.Distinct(_, groupingExpressions) =>
+          val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+          val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
+          Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings))
 
-      case plans.Projection(_, expressions) =>
-        val projectionOps: CommandProjection = converters.toCommandProjection(id, expressions)
-        Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
+        case plans.Projection(_, expressions) =>
+          val projectionOps: CommandProjection = converters.toCommandProjection(id, expressions)
+          Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
 
-      case plans.CacheProperties(_, properties) =>
-        val propertyOps = properties.toArray.map(converters.toCommandExpression(id, _))
-        Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
+        case plans.CacheProperties(_, properties) =>
+          val propertyOps = properties.toArray.map(converters.toCommandExpression(id, _))
+          Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
 
-      case _: plans.Argument => None
+        case _: plans.Argument => None
 
-      case _ =>
-        // TODO: SlottedPipeMiddleOperator
-        throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a middle plan, use another runtime.")
-    }
+        case _ if slottedPipeBuilder.isDefined =>
+          createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperator)
+
+        case _ =>
+          // TODO: SlottedPipeMiddleOperator
+          throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a middle plan, use another runtime.")
+      }
+    middleOperators ++= maybeOperator
+    acc
   }
 
   def createProduceResults(plan: plans.ProduceResult): ProduceResultOperator = {
@@ -439,11 +460,28 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  def createSlottedPipeOperator(plan: LogicalPlan): Operator = {
+  def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
     val workIdentity = WorkIdentity.fromPlan(plan)
-    val inputMorselPipe = InputMorselPipe()(Id.INVALID_ID)
-    val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, inputMorselPipe)
-    new SlottedPipeOperator(workIdentity, pipe)
+    val feedPipe = InputMorselFeedPipe()(Id.INVALID_ID)
+    val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
+    new SlottedPipeHeadOperator(workIdentity, pipe)
+  }
+
+  def createSlottedPipeMiddleOperator(plan: LogicalPlan, maybeSlottedPipeOperator: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
+    val workIdentity = WorkIdentity.fromPlan(plan)
+    maybeSlottedPipeOperator match {
+      case Some(slottedPipeOperator) =>
+        // We chain the new pipe to the existing pipe in the previous operator
+        val chainedPipe = slottedPipeBuilder.get.onOneChildPlan(plan, slottedPipeOperator.pipe)
+        slottedPipeOperator.setPipe(chainedPipe)
+        println(s"CHAINED PIPE $chainedPipe")
+        None
+
+      case None =>
+        val feedPipe = MiddleFeedPipe()(Id.INVALID_ID)
+        val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
+        Some(new SlottedPipeMiddleOperator(workIdentity, pipe))
+    }
   }
 
 }
