@@ -101,6 +101,9 @@ public class PointGeneratorIT
                     minY,
                     maxY );
 
+            // Why this is needed: Values for latitude should always lie in the interval [-90, 90], any other value outside this range will throw an exception.
+            // Values for longitude should always lie in the interval [-180, 180],
+            // any other value outside this range will now be wrapped around to fit in this range.
             double[] newMinYAndMaxY = restrictYCoordinateWithWGS84BoundingBox( minY, maxY );
             doShouldGenerateLargeAsymmetricGrid(
                     new WGS84(),
@@ -115,7 +118,7 @@ public class PointGeneratorIT
     {
         double a = wgsBoundingBoxForY( min );
         double b = wgsBoundingBoxForY( max );
-        if ( a < b )
+        if ( a <= b )
         {
             return new double[]{a, b};
         }
@@ -125,6 +128,8 @@ public class PointGeneratorIT
         }
     }
 
+    // Values for longitude (Y) should always lie in the interval [-180, 180],
+    // any other value outside this range will be wrapped around to fit in this range by this function
     private double wgsBoundingBoxForY( double value )
     {
         if ( value > 0 )

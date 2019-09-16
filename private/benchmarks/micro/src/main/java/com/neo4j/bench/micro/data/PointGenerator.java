@@ -477,117 +477,14 @@ public abstract class PointGenerator
             CoordinateReferenceSystem coordinateReferenceSystem = CRS.from( crsString ).crs();
             if ( coordinateReferenceSystem.isGeographic() )
             {
+                // Cartesian is infinite in all directions, no restrictions required, but geographic has singularities at the poles,
+                // hence the need for restrictions on Y.
                 PointValue wrappedMinPoint = pointValue( coordinateReferenceSystem, minX, minY );
-                return new ValueGeneratorFun<>()
-                {
-                    private final CoordinateReferenceSystem crs = coordinateReferenceSystem;
-                    private final double wrappedMinX = wrappedMinPoint.coordinate()[0];
-                    private double x = wrappedMinX;
-                    private double y = minY;
-                    private long currentCount;
-
-                    @Override
-                    public boolean wrapped()
-                    {
-                        return currentCount > 0 && x == wrappedMinX && y == minY;
-                    }
-
-                    private boolean hasFilledX()
-                    {
-                        return currentCount % xStepCount == 0;
-                    }
-
-                    private boolean hasFilledY()
-                    {
-                        return currentCount % totalStepCount == 0;
-                    }
-
-                    @Override
-                    public PointValue next( SplittableRandom rng )
-                    {
-                        PointValue point = pointValue( crs, x, y );
-                        currentCount++;
-                        if ( hasFilledX() )
-                        {
-                            x = minX;
-                            if ( hasFilledY() )
-                            {
-                                y = minY;
-                            }
-                            else
-                            {
-                                y += yStep;
-                            }
-                        }
-                        else
-                        {
-                            x += xStep;
-                        }
-                        return point;
-                    }
-
-                    @Override
-                    public Value nextValue( SplittableRandom rng )
-                    {
-                        return next( rng );
-                    }
-                };
+                return new GeographicPointValueGenerator( coordinateReferenceSystem, wrappedMinPoint, xStep, yStep, xStepCount, totalStepCount );
             }
             else
             {
-                return new ValueGeneratorFun<>()
-                {
-                    private final CoordinateReferenceSystem crs = coordinateReferenceSystem;
-                    private double x = minX ;
-                    private double y = minY;
-                    private long currentCount;
-
-                    @Override
-                    public boolean wrapped()
-                    {
-                        return currentCount > 0 && x == minX && y == minY;
-                    }
-
-                    private boolean hasFilledX()
-                    {
-                        return currentCount % xStepCount == 0;
-                    }
-
-                    private boolean hasFilledY()
-                    {
-                        return currentCount % totalStepCount == 0;
-                    }
-
-                    @Override
-                    public PointValue next( SplittableRandom rng )
-                    {
-                        PointValue point = pointValue( crs, x, y );
-                        currentCount++;
-                        if ( hasFilledX() )
-                        {
-                            x = minX;
-                            if ( hasFilledY() )
-                            {
-                                y = minY;
-                            }
-                            else
-                            {
-                                y += yStep;
-                            }
-                        }
-                        else
-                        {
-                            x += xStep;
-                        }
-                        return point;
-                    }
-
-                    @Override
-                    public Value nextValue( SplittableRandom rng )
-                    {
-                        return next( rng );
-                    }
-                };
+                return new GeometricPointValueGenerator( coordinateReferenceSystem, minX, minY, xStep, yStep, xStepCount, totalStepCount );
             }
         }
 
