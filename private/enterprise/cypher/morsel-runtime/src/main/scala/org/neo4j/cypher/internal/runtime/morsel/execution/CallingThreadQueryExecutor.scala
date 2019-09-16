@@ -65,6 +65,7 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
                                 numberOfWorkers = 1,
                                 nExpressionSlots,
                                 prePopulateResults,
+                                doProfile,
                                 inputDataStream)
 
     val executionState = new TheExecutionState(executionGraphDefinition,

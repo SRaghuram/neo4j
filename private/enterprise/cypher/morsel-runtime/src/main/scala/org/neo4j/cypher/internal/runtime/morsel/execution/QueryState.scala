@@ -22,4 +22,5 @@ case class QueryState(params: Array[AnyValue],
                       numberOfWorkers: Int,
                       nExpressionSlots: Int,
                       prepopulateResults: Boolean,
+                      doProfile: Boolean,
                       input: InputDataStream)

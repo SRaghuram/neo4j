@@ -66,6 +66,7 @@ class FixedWorkersQueryExecutor(transactionBinder: TransactionBinder,
                                 workerManager.numberOfWorkers,
                                 nExpressionSlots,
                                 prePopulateResults,
+                                doProfile,
                                 inputDataStream)
 
     val initializationResources = workerResourceProvider.resourcesForWorker(0)

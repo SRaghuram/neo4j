@@ -10,9 +10,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InChec
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, InputDataStream, NoInput, QueryContext, QueryMemoryTracker}
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, pipes}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExternalCSVResource, NullPipeDecorator, Pipe, PipeDecorator}
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.{InterpretedProfileInformation, Profiler}
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.SlottedPipeOperator.createFeedPipeQueryState
+import org.neo4j.cypher.internal.runtime.morsel.operators.SlottedPipeOperator.{createFeedPipeQueryState, updateProfileEvent}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -68,6 +69,7 @@ class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
   class OTask(val inputMorsel: MorselExecutionContext, val feedPipeQueryState: FeedPipeQueryState) extends ContinuableOperatorTaskWithMorsel {
 
     private var resultIterator: Iterator[ExecutionContext] = _
+    private var profileEvent: OperatorProfileEvent = _
 
     override def workIdentity: WorkIdentity = SlottedPipeHeadOperator.this.workIdentity
 
@@ -91,12 +93,18 @@ class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
         //println(s"SlottedPipeOperator OUTPUT: $outputRow")
         outputRow.moveToNextRow()
       }
+      if (profileEvent != null && feedPipeQueryState.profileInformation != null) {
+        updateProfileEvent(profileEvent, feedPipeQueryState.profileInformation)
+      }
       outputRow.finishedWriting()
     }
 
     override def canContinue: Boolean = resultIterator.hasNext
 
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+      profileEvent = event
+    }
+
     override protected def closeCursors(resources: QueryResources): Unit = {}
   }
 }
@@ -118,6 +126,7 @@ class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
   class OMiddleTask(val feedPipeQueryState: FeedPipeQueryState) extends OperatorTask {
 
     private var resultIterator: Iterator[ExecutionContext] = _
+    private var profileEvent: OperatorProfileEvent = _
 
     override def workIdentity: WorkIdentity = SlottedPipeMiddleOperator.this.workIdentity
 
@@ -144,21 +153,33 @@ class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
         //println(s"SlottedPipeOperator OUTPUT: $outputRow")
         outputRow.moveToNextRow()
       }
+      if (profileEvent != null && feedPipeQueryState.profileInformation != null) {
+        updateProfileEvent(profileEvent, feedPipeQueryState.profileInformation)
+      }
       outputRow.finishedWriting()
     }
 
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+      profileEvent = event
+    }
   }
 }
 
 object SlottedPipeOperator {
-  private val pipeDecorator: PipeDecorator = NullPipeDecorator // TODO: Support monitoring etc.
-
   def createFeedPipeQueryState(inputMorsel: MorselExecutionContext,
                                queryContext: QueryContext,
                                morselQueryState: QueryState,
                                resources: QueryResources,
                                memoryTracker: QueryMemoryTracker): FeedPipeQueryState = {
+
+    val (pipeDecorator, profileInformation) =
+      if (morselQueryState.doProfile) {
+        val profileInformation = new InterpretedProfileInformation
+        (new Profiler(queryContext.transactionalContext.databaseInfo, profileInformation), profileInformation)
+      } else {
+        (NullPipeDecorator, null)
+      }
+
     val externalResource: ExternalCSVResource = new CSVResources(queryContext.resources)
     new FeedPipeQueryState(queryContext,
                            externalResource,
@@ -169,7 +190,13 @@ object SlottedPipeOperator {
                            morselQueryState.subscriber,
                            memoryTracker,
                            pipeDecorator,
+                           profileInformation = profileInformation,
                            inputMorsel = inputMorsel)
+  }
+
+  def updateProfileEvent(profileEvent: OperatorProfileEvent, profileInformation: InterpretedProfileInformation): Unit = {
+    val dbHits = profileInformation.dbHitsMap.values.map(_.count).sum
+    profileEvent.dbHits(dbHits.toInt)
   }
 }
 
@@ -187,14 +214,26 @@ class FeedPipeQueryState(query: QueryContext,
                          lenientCreateRelationship: Boolean = false,
                          prePopulateResults: Boolean = false,
                          input: InputDataStream = NoInput,
+                         val profileInformation: InterpretedProfileInformation = null,
                          var inputMorsel: MorselExecutionContext = null,
                          var outputRow: MorselExecutionContext = null)
   extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, initialContext,
                             cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
+  override def withDecorator(decorator: PipeDecorator) = {
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
+                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, inputMorsel, outputRow)
+  }
+
   override def withInitialContext(initialContext: ExecutionContext): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, Some(initialContext),
-                                  cachedIn, lenientCreateRelationship, prePopulateResults, input, inputMorsel)
+                           cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, inputMorsel, outputRow)
+  }
+
+
+  override def withQueryContext(query: QueryContext) = {
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
+                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, inputMorsel, outputRow)
   }
 }
 
