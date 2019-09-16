@@ -7,7 +7,7 @@ package cypher.features
 
 import java.util
 
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
@@ -18,13 +18,13 @@ class CompiledTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostCompiled(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostCompiledTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
+    createTests(scenarios, CostCompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled
   @Test
   def generateBlacklistCostCompiled(): Unit = {
-    printComputedBlacklist(scenarios, CostCompiledTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, CostCompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

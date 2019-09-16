@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -53,7 +53,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, Mode.SINGLE )
+                .set( EnterpriseEditionSettings.mode, Mode.SINGLE )
                 .set( initial_discovery_members, Collections.emptyList() )
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
@@ -68,7 +68,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -85,7 +85,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( kubernetes_service_port_name, "default" )
@@ -104,7 +104,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, Collections.emptyList() )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
@@ -121,7 +121,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.DNS )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
     }
@@ -136,7 +136,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.LIST )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
     }
@@ -151,7 +151,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.SRV )
                 .addValidator( CausalClusterConfigurationValidator.class ).build();
     }
@@ -167,7 +167,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_service_port_name, "default" )
                 .set( BoltConnector.enabled, true )
@@ -185,7 +185,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( BoltConnector.enabled, true )
@@ -203,7 +203,7 @@ public class CausalClusterConfigurationValidatorTest
         // when
         Config.newBuilder()
                 .set( middleware_akka_external_config, Path.of( "/this isnt a real file" ) )
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -221,7 +221,7 @@ public class CausalClusterConfigurationValidatorTest
         // when
         Config.newBuilder()
                 .set( middleware_akka_external_config, Path.of( "/" ) )
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -238,7 +238,7 @@ public class CausalClusterConfigurationValidatorTest
         // when
         Config.newBuilder()
                 .set( middleware_akka_external_config, conf.toPath() )
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -253,7 +253,7 @@ public class CausalClusterConfigurationValidatorTest
         // when
         Config.newBuilder()
                 .set( middleware_akka_external_config, conf.toPath() )
-                .set( CommercialEditionSettings.mode, mode )
+                .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )

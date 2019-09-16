@@ -43,7 +43,7 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         this.databaseIdRepository = databaseManager.databaseIdRepository();
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
-        CommercialSystemGraphDbmsModel dbmsModel = new CommercialSystemGraphDbmsModel( () -> getSystemDatabase( databaseManager ) );
+        EnterpriseSystemGraphDbmsModel dbmsModel = new EnterpriseSystemGraphDbmsModel( () -> getSystemDatabase( databaseManager ) );
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, txBridge, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );

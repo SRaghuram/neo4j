@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import java.lang.Boolean.{FALSE, TRUE}
 
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselRuntimeScheduler
-import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerManager}
+import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel
@@ -21,7 +21,7 @@ import org.neo4j.scheduler.JobScheduler
 //noinspection TypeAnnotation
 object ENTERPRISE {
   private val edition = new Edition[EnterpriseRuntimeContext](
-    () => new TestCommercialDatabaseManagementServiceBuilder(),
+    () => new TestEnterpriseDatabaseManagementServiceBuilder(),
     (runtimeConfig, resolver, lifeSupport) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])

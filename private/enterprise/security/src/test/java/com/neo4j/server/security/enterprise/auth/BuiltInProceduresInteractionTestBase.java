@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.procedure.commercial.builtin.QueryId;
+import com.neo4j.procedure.enterprise.builtin.QueryId;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;

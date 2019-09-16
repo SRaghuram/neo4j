@@ -13,7 +13,7 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -167,7 +167,7 @@ public class Stores
         System.out.println( config );
 
         // will create an empty database directory under top level
-        new CommercialDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() )
+        new EnterpriseDatabaseManagementServiceBuilder( topLevelStoreDir.toFile() )
                 .setConfigRaw( config.neo4jConfig().toMap() )
                 .build()
                 .shutdown();

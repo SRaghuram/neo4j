@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -51,7 +51,7 @@ import org.neo4j.server.security.systemgraph.SystemGraphCredential;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
-public class MultiRealmAuthManager implements CommercialAuthAndUserManager
+public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
 {
     private final EnterpriseUserManager userManager;
     private final Collection<Realm> realms;
@@ -91,18 +91,18 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     }
 
     @Override
-    public CommercialLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException
+    public EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException
     {
         try
         {
-            CommercialLoginContext securityContext;
+            EnterpriseLoginContext securityContext;
 
             ShiroAuthToken token = new ShiroAuthToken( authToken );
             assertValidScheme( token );
 
             try
             {
-                securityContext = new StandardCommercialLoginContext(
+                securityContext = new StandardEnterpriseLoginContext(
                         this, (ShiroSubject) securityManager.login( null, token ) );
                 AuthenticationResult authenticationResult = securityContext.subject().getAuthenticationResult();
                 if ( authenticationResult == AuthenticationResult.SUCCESS )
@@ -118,12 +118,12 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
                 }
                 else
                 {
-                    String errorMessage = ((StandardCommercialLoginContext.NeoShiroSubject) securityContext.subject())
+                    String errorMessage = ((StandardEnterpriseLoginContext.NeoShiroSubject) securityContext.subject())
                             .getAuthenticationFailureMessage();
                     securityLog.error( "[%s]: failed to log in: %s", escape( token.getPrincipal().toString() ), errorMessage );
                 }
                 // No need to keep full Shiro authentication info around on the subject
-                ((StandardCommercialLoginContext.NeoShiroSubject) securityContext.subject()).clearAuthenticationInfo();
+                ((StandardEnterpriseLoginContext.NeoShiroSubject) securityContext.subject()).clearAuthenticationInfo();
             }
             catch ( UnsupportedTokenException e )
             {
@@ -138,8 +138,8 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
             catch ( ExcessiveAttemptsException e )
             {
                 // NOTE: We only get this with single (internal) realm authentication
-                securityContext = new StandardCommercialLoginContext( this,
-                        new ShiroSubject( securityManager, AuthenticationResult.TOO_MANY_ATTEMPTS ) );
+                securityContext = new StandardEnterpriseLoginContext( this,
+                                                                      new ShiroSubject( securityManager, AuthenticationResult.TOO_MANY_ATTEMPTS ) );
                 securityLog.error( "[%s]: failed to log in: too many failed attempts",
                         escape( token.getPrincipal().toString() ) );
             }
@@ -161,8 +161,8 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
                             cause != null && cause.getMessage() != null ? " (" + cause.getMessage() + ")" : "" );
                     throw new AuthProviderFailedException( e.getCause().getMessage(), e.getCause() );
                 }
-                securityContext = new StandardCommercialLoginContext( this,
-                        new ShiroSubject( securityManager, AuthenticationResult.FAILURE ) );
+                securityContext = new StandardEnterpriseLoginContext( this,
+                                                                      new ShiroSubject( securityManager, AuthenticationResult.FAILURE ) );
                 Throwable cause = e.getCause();
                 Throwable causeCause = e.getCause() != null ? e.getCause().getCause() : null;
                 String errorMessage = String.format( "invalid principal or credentials%s%s",

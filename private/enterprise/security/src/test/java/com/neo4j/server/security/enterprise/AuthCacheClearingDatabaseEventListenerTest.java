@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise;
 
-import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;
@@ -14,7 +14,7 @@ import static org.mockito.Mockito.verify;
 
 class AuthCacheClearingDatabaseEventListenerTest
 {
-    private CommercialAuthManager authManager = mock( CommercialAuthManager.class );
+    private EnterpriseAuthManager authManager = mock( EnterpriseAuthManager.class );
     private AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
 
     @Test

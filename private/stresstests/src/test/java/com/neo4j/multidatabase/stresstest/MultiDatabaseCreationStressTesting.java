@@ -5,8 +5,8 @@
  */
 package com.neo4j.multidatabase.stresstest;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -43,8 +43,8 @@ class MultiDatabaseCreationStressTesting
         deleteRecursively( storeDirectory );
         ensureExistsAndEmpty( storeDirectory );
 
-        DatabaseManagementService managementService = new CommercialDatabaseManagementServiceBuilder( storeDirectory )
-                .setConfig( CommercialEditionSettings.maxNumberOfDatabases, Long.MAX_VALUE )
+        DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( storeDirectory )
+                .setConfig( EnterpriseEditionSettings.maxNumberOfDatabases, Long.MAX_VALUE )
                 .build();
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
 

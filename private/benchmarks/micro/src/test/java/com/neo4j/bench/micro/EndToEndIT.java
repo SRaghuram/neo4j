@@ -21,7 +21,7 @@ import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
-import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import io.findify.s3mock.S3Mock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,7 +74,7 @@ class EndToEndIT extends AnnotationsFixture
 
     @RegisterExtension
     static Neo4jExtension neo4jExtension =
-            CommercialNeo4jExtension.builder()
+            EnterpriseNeo4jExtension.builder()
                                     .withConfig( GraphDatabaseSettings.auth_enabled, false )
                                     .withConfig( BoltConnector.enabled, true )
                                     .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )

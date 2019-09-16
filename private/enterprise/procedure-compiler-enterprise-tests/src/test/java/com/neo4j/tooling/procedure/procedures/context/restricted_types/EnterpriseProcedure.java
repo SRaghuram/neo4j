@@ -5,7 +5,7 @@
  */
 package com.neo4j.tooling.procedure.procedures.context.restricted_types;
 
-import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
 import java.util.stream.Stream;
@@ -20,7 +20,7 @@ public class EnterpriseProcedure
     public GraphDatabaseService graphDatabaseService;
 
     @Context
-    public CommercialAuthManager commercialAuthManager;
+    public EnterpriseAuthManager enterpriseAuthManager;
 
     @Context
     public SecurityLog securityLog;

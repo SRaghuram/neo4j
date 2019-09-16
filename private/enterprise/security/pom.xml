@@ -3,20 +3,20 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j</groupId>
-        <artifactId>commercial-parent</artifactId>
+        <artifactId>enterprise-parent</artifactId>
         <version>4.0.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
-    <artifactId>neo4j-security-commercial</artifactId>
+    <artifactId>neo4j-security-enterprise</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-    <name>Neo4j - Commercial Graph Database Security Features</name>
-    <description>Commercial security features for Neo4j</description>
+    <name>Neo4j - Enterprise Graph Database Security Features</name>
+    <description>Enterprise security features for Neo4j</description>
     <packaging>jar</packaging>
 
     <properties>
-        <moduleName>com.neo4j.server.security.commercial</moduleName>
+        <moduleName>com.neo4j.server.security.enterprise</moduleName>
     </properties>
 
     <scm>
@@ -49,7 +49,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial-kernel</artifactId>
+            <artifactId>neo4j-enterprise-kernel</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -59,7 +59,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial-procedure</artifactId>
+            <artifactId>neo4j-enterprise-procedure</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -119,7 +119,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial-kernel</artifactId>
+            <artifactId>neo4j-enterprise-kernel</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

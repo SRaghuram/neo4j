@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.google.common.testing.FakeTicker;
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
@@ -85,7 +85,7 @@ class LdapCachingTest
     void shouldCacheAuthorizationInfo() throws Exception
     {
         // Given
-        CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
+        EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsReads();
         assertThat( "Test realm did not receive a call", testRealm.takeAuthorizationFlag(), is( true ) );
 
@@ -100,7 +100,7 @@ class LdapCachingTest
     void shouldInvalidateAuthorizationCacheAfterTTL() throws Exception
     {
         // Given
-        CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
+        EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsReads();
         assertThat( "Test realm did not receive a call", testRealm.takeAuthorizationFlag(), is( true ) );
 

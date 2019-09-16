@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import java.lang.Boolean.TRUE
 
-import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
+import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import cypher.features.Phase
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
@@ -67,7 +67,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   }
 }
 
-trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with CommercialGraphDatabaseTestSupport {
+trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with EnterpriseGraphDatabaseTestSupport {
 
   // abstract, can be defined through CypherComparisonSupport
   def eengineExecute(tx: InternalTransaction, query: String, params: Map[String, Any]): Result

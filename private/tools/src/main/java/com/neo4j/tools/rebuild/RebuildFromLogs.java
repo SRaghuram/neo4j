@@ -5,7 +5,7 @@
  */
 package com.neo4j.tools.rebuild;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -281,7 +281,7 @@ class RebuildFromLogs
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        managementService = new CommercialDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
+        managementService = new EnterpriseDatabaseManagementServiceBuilder( databaseLayout.getStoreLayout().storeDirectory() )
                 .setExternalDependencies( dependencies )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )

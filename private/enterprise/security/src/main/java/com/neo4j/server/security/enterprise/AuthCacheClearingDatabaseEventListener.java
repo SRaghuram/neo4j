@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise;
 
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventListener;
-import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
@@ -14,9 +14,9 @@ import org.neo4j.graphdb.event.TransactionEventListener;
 
 class AuthCacheClearingDatabaseEventListener implements ReplicatedDatabaseEventListener, TransactionEventListener<Object>
 {
-    private CommercialAuthManager authManager;
+    private EnterpriseAuthManager authManager;
 
-    AuthCacheClearingDatabaseEventListener( CommercialAuthManager authManager )
+    AuthCacheClearingDatabaseEventListener( EnterpriseAuthManager authManager )
     {
         this.authManager = authManager;
     }

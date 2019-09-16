@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.lang.Boolean.{FALSE, TRUE}
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
+import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Result
@@ -23,7 +23,7 @@ object MorselRuntimeAcceptanceTest {
   val MORSEL_SIZE = 4 // The morsel size to use in the config for testing
 }
 
-abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with CommercialGraphDatabaseTestSupport {
+abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
   private val doubleEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
 

@@ -5,11 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
+import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.scalatest.Matchers
 
-class ToStringAcceptanceTest extends ExecutionEngineFunSuite with Matchers with CommercialGraphDatabaseTestSupport {
+class ToStringAcceptanceTest extends ExecutionEngineFunSuite with Matchers with EnterpriseGraphDatabaseTestSupport {
 
   test("Node should provide sensible toString") {
     val data = makeModel()

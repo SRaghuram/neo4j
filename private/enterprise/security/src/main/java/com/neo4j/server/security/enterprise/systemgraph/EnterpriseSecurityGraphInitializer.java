@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.CommercialSecurityModule;
+import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
@@ -259,7 +259,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         {
             throw new InvalidArgumentsException(
                     "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " +
-                            "Please use `neo4j-admin " + CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
+                    "Please use `neo4j-admin " + EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
         }
 
         stopUserRepository( userRepository );
@@ -285,7 +285,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         {
             throw new InvalidArgumentsException(
                     "Import of users and roles into system graph failed because the import files are inconsistent. " +
-                            "Please use `neo4j-admin " + CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
+                    "Please use `neo4j-admin " + EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
         }
 
         stopUserRepository( userRepository );

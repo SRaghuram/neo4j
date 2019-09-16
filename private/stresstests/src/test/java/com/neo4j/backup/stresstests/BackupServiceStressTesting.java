@@ -7,7 +7,7 @@ package com.neo4j.backup.stresstests;
 
 import com.neo4j.causalclustering.stresstests.Config;
 import com.neo4j.causalclustering.stresstests.Control;
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.helper.Workload;
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +68,7 @@ class BackupServiceStressTesting
         File backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
-                new CommercialDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, true )
+                new EnterpriseDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, true )
                         .setConfig( auth_enabled, true )
                 .setConfig( online_backup_listen_address, new SocketAddress( backupHostname, backupPort ) )
                 .setConfig( keep_logical_logs, txPrune )

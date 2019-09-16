@@ -7,7 +7,7 @@ package cypher.features
 import java.util
 import java.util.Collections
 
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
@@ -22,13 +22,13 @@ class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
     if (Configs.runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, CostParallelTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
+      createTests(scenarios, CostParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     }
   }
 
   @Disabled
   def generateBlacklistCostMorsel(): Unit = {
-    printComputedBlacklist(scenarios, CostParallelTestConfig, () => new TestCommercialDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, CostParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

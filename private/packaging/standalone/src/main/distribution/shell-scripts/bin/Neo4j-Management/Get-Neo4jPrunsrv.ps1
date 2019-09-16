@@ -155,7 +155,7 @@ function Get-Neo4jPrunsrv
           }
         }
 
-        if ($Neo4jServer.ServerType -eq 'Enterprise') { $serverMainClass = 'com.neo4j.server.enterprise.CommercialEntryPoint' }
+        if ($Neo4jServer.ServerType -eq 'Enterprise') { $serverMainClass = 'com.neo4j.server.enterprise.EnterpriseEntryPoint' }
         if ($Neo4jServer.ServerType -eq 'Community') { $serverMainClass = 'org.neo4j.server.CommunityEntryPoint' }
         if ($serverMainClass -eq '') { Write-Error "Unable to determine the Server Main Class from the server information"; return $null }
         $PrunArgs += @("`"--StopClass=$($serverMainClass)`"",

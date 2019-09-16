@@ -14,7 +14,7 @@ import com.neo4j.bench.procedures.detection.DateTimeFunction;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
 import com.neo4j.common.util.SyntheticStoreGenerator;
 import com.neo4j.common.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
-import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -49,7 +49,7 @@ public class CompareFunctionTest
     private static final String PASSWORD = "neo4j";
 
     @RegisterExtension
-    static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
+    static Neo4jExtension neo4jExtension = EnterpriseNeo4jExtension.builder()
                                                                    .withProcedure( VarianceProcedure.class )
                                                                    .withConfig( BoltConnector.enabled, true )
                                                                    .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )

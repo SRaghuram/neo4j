@@ -5,7 +5,7 @@
  */
 package com.neo4j.tools.dbstructure;
 
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,7 +83,7 @@ public class DbStructureTool
 
     private static DatabaseManagementService instantiateGraphDatabase( String dbDir )
     {
-        return new CommercialDatabaseManagementServiceBuilder( new File( dbDir ) ).build();
+        return new EnterpriseDatabaseManagementServiceBuilder( new File( dbDir ) ).build();
     }
 
     private static void traceDb( String generator, String generatedClazzPackage, String generatedClazzName, GraphDatabaseService graph, Appendable output )

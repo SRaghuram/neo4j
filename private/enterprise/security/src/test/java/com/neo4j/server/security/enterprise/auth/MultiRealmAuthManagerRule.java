@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.logging.FormattedLog;
@@ -84,14 +83,14 @@ public class MultiRealmAuthManagerRule implements TestRule
         manager.init();
     }
 
-    public CommercialAuthAndUserManager getManager()
+    public EnterpriseAuthAndUserManager getManager()
     {
         return manager;
     }
 
     public LoginContext makeLoginContext( ShiroSubject shiroSubject )
     {
-        return new StandardCommercialLoginContext( manager, shiroSubject );
+        return new StandardEnterpriseLoginContext( manager, shiroSubject );
     }
 
     @Override

@@ -5,13 +5,13 @@
  */
 package com.neo4j.fabric.localdb;
 
-import com.neo4j.server.security.enterprise.systemgraph.CommercialSystemGraphInitializer;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSystemGraphInitializer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 
-public class FabricSystemGraphInitializer extends CommercialSystemGraphInitializer
+public class FabricSystemGraphInitializer extends EnterpriseSystemGraphInitializer
 {
     private final FabricDatabaseManager fabricDatabaseManager;
 

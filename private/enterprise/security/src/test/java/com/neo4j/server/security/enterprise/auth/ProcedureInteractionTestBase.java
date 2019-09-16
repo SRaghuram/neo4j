@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.apache.commons.lang.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

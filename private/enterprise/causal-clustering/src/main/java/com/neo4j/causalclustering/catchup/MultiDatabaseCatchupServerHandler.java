@@ -26,7 +26,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.logging.LogProvider;
 
 /**
- * The commercial catchup server multiplexes requests for multiple databases.
+ * The enterprise catchup server multiplexes requests for multiple databases.
  */
 public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 {

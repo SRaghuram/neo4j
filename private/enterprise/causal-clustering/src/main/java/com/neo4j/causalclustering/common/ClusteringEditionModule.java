@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
+import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
@@ -44,7 +44,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
         headerInformationFactory = createHeaderInformationFactory();
 
-        constraintSemantics = new CommercialConstraintSemantics();
+        constraintSemantics = new EnterpriseConstraintSemantics();
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
     }

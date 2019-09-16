@@ -20,7 +20,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toSet;
 
-public class ClusterSystemGraphDbmsModel extends CommercialSystemGraphDbmsModel
+public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
 {
     static final String INITIAL_MEMBERS = "initial_members";
     static final String STORE_CREATION_TIME = "store_creation_time";

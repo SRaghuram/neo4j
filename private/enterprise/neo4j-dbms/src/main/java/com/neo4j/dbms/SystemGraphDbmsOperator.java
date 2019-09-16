@@ -24,13 +24,13 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
  */
 class SystemGraphDbmsOperator extends DbmsOperator
 {
-    private final CommercialSystemGraphDbmsModel dbmsModel;
+    private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final ThreadToStatementContextBridge txBridge;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
-    SystemGraphDbmsOperator( CommercialSystemGraphDbmsModel dbmsModel, ThreadToStatementContextBridge txBridge,
-            ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
+    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, ThreadToStatementContextBridge txBridge,
+                             ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.txBridge = txBridge;

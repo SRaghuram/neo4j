@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j</groupId>
-        <artifactId>commercial-parent</artifactId>
+        <artifactId>enterprise-parent</artifactId>
         <version>4.0.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
@@ -61,7 +61,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial-kernel</artifactId>
+            <artifactId>neo4j-enterprise-kernel</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -96,7 +96,7 @@
 
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-security-commercial</artifactId>
+            <artifactId>neo4j-security-enterprise</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -104,7 +104,7 @@
 
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-security-commercial</artifactId>
+            <artifactId>neo4j-security-enterprise</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

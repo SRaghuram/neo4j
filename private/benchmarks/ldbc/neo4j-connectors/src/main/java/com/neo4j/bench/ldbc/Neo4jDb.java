@@ -24,7 +24,7 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularComma
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -440,7 +440,7 @@ public class Neo4jDb extends Db
     private static DatabaseManagementServiceBuilder newDbBuilder( File dbDir, File configFile )
     {
         File storeDir = dbDir.getParentFile();
-        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder( storeDir );
+        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( storeDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );

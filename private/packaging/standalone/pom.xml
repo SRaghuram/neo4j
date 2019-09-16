@@ -4,14 +4,14 @@
 
     <parent>
         <groupId>com.neo4j</groupId>
-        <artifactId>commercial-parent</artifactId>
+        <artifactId>enterprise-parent</artifactId>
         <version>4.0.0-SNAPSHOT</version>
 
         <relativePath>../..</relativePath>
     </parent>
 
     <groupId>com.neo4j.assembly</groupId>
-    <artifactId>neo4j-standalone-commercial</artifactId>
+    <artifactId>neo4j-standalone-enterprise</artifactId>
     <packaging>pom</packaging>
 
     <name>Neo4j - Server Assembler</name>

@@ -3,19 +3,19 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j</groupId>
-        <artifactId>commercial-parent</artifactId>
+        <artifactId>enterprise-parent</artifactId>
         <version>4.0.0-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
-    <artifactId>neo4j-commercial-record-storage-engine</artifactId>
+    <artifactId>neo4j-enterprise-record-storage-engine</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-    <name>Neo4j - Commercial Parts of Record storage engine</name>
-    <description>Commercial Parts of Record storage engine.</description>
+    <name>Neo4j - Enterprise Parts of Record storage engine</name>
+    <description>Enterprise Parts of Record storage engine.</description>
     <packaging>jar</packaging>
 
     <properties>
-        <moduleName>com.neo4j.internal.recordstorage.commercial</moduleName>
+        <moduleName>com.neo4j.internal.recordstorage.enterprise</moduleName>
     </properties>
 
     <scm>

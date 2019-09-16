@@ -6,7 +6,7 @@
 package com.neo4j.common.util;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.nio.file.Path;
 
@@ -17,7 +17,7 @@ public class TestSupport
     public static Store createEmptyStore( Path storeDir, Path neo4jConfigFile )
     {
         DatabaseManagementService managementService =
-                new CommercialDatabaseManagementServiceBuilder( storeDir.toFile() )
+                new EnterpriseDatabaseManagementServiceBuilder( storeDir.toFile() )
                         .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
                         .build();
         managementService.shutdown();

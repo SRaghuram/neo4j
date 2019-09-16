@@ -12,7 +12,7 @@ import static java.util.Comparator.comparingInt;
 import static java.util.Comparator.nullsLast;
 
 /**
- * Instances of this type represent the possible desired states of commercial Databases.
+ * Instances of this type represent the possible desired states of enterprise Databases.
  *
  * Instances should posses a total, deterministic ordering relative to *all*
  * other possible OperatorStates.

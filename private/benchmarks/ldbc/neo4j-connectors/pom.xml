@@ -50,7 +50,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial</artifactId>
+            <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -65,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial-record-storage-engine</artifactId>
+            <artifactId>neo4j-enterprise-record-storage-engine</artifactId>
             <version>${project.version}</version>
         </dependency>
 

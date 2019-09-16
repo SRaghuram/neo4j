@@ -11,7 +11,7 @@ import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
 import java.nio.file.Files
 import java.util.Collections.emptyMap
 
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
@@ -644,7 +644,7 @@ class LoadCsvAcceptanceTest
           }
     })
 
-    val managementService = new TestCommercialDatabaseManagementServiceBuilder(acceptanceDbFolder)
+    val managementService = new TestEnterpriseDatabaseManagementServiceBuilder(acceptanceDbFolder)
       .addURLAccessRule("testproto", (config: Configuration, url: URL) => url)
       .impermanent()
       .build()
@@ -821,7 +821,7 @@ class LoadCsvAcceptanceTest
   }
 
   private def acceptanceTestDatabaseBuilder = {
-    new TestCommercialDatabaseManagementServiceBuilder(acceptanceDbFolder).impermanent()
+    new TestEnterpriseDatabaseManagementServiceBuilder(acceptanceDbFolder).impermanent()
   }
 
   private def acceptanceDbFolder = {

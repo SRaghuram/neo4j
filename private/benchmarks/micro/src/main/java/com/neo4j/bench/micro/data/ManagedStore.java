@@ -11,7 +11,7 @@ import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
-import com.neo4j.commercial.edition.factory.CommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -78,7 +78,7 @@ public class ManagedStore
 
     public static GraphDatabaseService newDb( Store store, Path config )
     {
-        DatabaseManagementServiceBuilder builder = new CommercialDatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
+        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( store.topLevelDirectory().toFile() );
         if ( null != config )
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );

@@ -85,7 +85,7 @@
                     <dependencies>
                         <dependency>
                             <groupId>com.neo4j.build</groupId>
-                            <artifactId>build-resources-commercial</artifactId>
+                            <artifactId>build-resources-enterprise</artifactId>
                             <version>${project.version}</version>
                         </dependency>
                     </dependencies>
@@ -96,7 +96,7 @@
                     <dependencies>
                         <dependency>
                             <groupId>com.neo4j.build</groupId>
-                            <artifactId>build-resources-commercial</artifactId>
+                            <artifactId>build-resources-enterprise</artifactId>
                             <version>${project.version}</version>
                         </dependency>
                     </dependencies>

@@ -9,8 +9,8 @@ import java.util
 import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
-import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager
-import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.{DENY, GRANT}
 import com.neo4j.server.security.enterprise.auth._
@@ -28,8 +28,8 @@ import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedExceptio
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
-import org.neo4j.kernel.api.exceptions.{InvalidArgumentsException, Status}
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
+import org.neo4j.kernel.api.exceptions.{InvalidArgumentsException, Status}
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
@@ -43,7 +43,7 @@ import scala.util.{Failure, Success, Try}
   */
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver)
-  private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(CommercialEditionSettings.maxNumberOfDatabases)
+  private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(EnterpriseEditionSettings.maxNumberOfDatabases)
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
   override def name: String = "enterprise administration-commands"
@@ -63,7 +63,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   }
 
   private lazy val authManager = {
-    resolver.resolveDependency(classOf[CommercialAuthManager])
+    resolver.resolveDependency(classOf[EnterpriseAuthManager])
   }
 
   val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, SecurityContext) => ExecutionPlan] = {

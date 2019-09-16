@@ -5,11 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import com.neo4j.cypher.CommercialGraphDatabaseTestSupport
+import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import org.neo4j.cypher.{ExecutionEngineFunSuite, GraphIcing}
 import org.neo4j.internal.collector.DataCollectorMatchers._
 
-class DataCollectorEnterpriseAcceptanceTest extends ExecutionEngineFunSuite with GraphIcing with CommercialGraphDatabaseTestSupport {
+class DataCollectorEnterpriseAcceptanceTest extends ExecutionEngineFunSuite with GraphIcing with EnterpriseGraphDatabaseTestSupport {
 
   test("should retrieve node existence constraints") {
     // Given

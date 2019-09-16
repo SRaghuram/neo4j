@@ -36,7 +36,7 @@ import com.neo4j.bench.common.model.TestRunError;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
-import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,7 +83,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class SubmitTestRunsAndPlansIT
 {
     @RegisterExtension
-    static final Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
+    static final Neo4jExtension neo4jExtension = EnterpriseNeo4jExtension.builder()
                                                                          .withConfig( GraphDatabaseSettings.auth_enabled, false )
                                                                          .withConfig( BoltConnector.enabled, true )
                                                                          .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )

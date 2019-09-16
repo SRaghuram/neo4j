@@ -79,7 +79,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial</artifactId>
+            <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -96,14 +96,14 @@
         <!-- neo4j testing -->
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>commercial-cypher-it</artifactId>
+            <artifactId>enterprise-cypher-it</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-commercial-record-storage-engine</artifactId>
+            <artifactId>neo4j-enterprise-record-storage-engine</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
@@ -129,7 +129,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>commercial-it-test-support</artifactId>
+            <artifactId>enterprise-it-test-support</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
