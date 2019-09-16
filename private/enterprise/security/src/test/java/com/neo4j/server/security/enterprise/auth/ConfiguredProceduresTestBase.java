@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -59,9 +60,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         userManager.newRole( "other", "readSubject" );
 
         assertSuccess( readSubject, "CALL test.allowedReadProcedure", itr -> assertKeyIs( itr, "value", "foo" ) );
-//        assertSuccess( noneSubject, "CALL test.createNode", ResourceIterator::close );
-//        assertSuccess( readSubject, "CALL test.createNode", ResourceIterator::close );
-//        assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "5" ) );
+        assertSuccess( noneSubject, "CALL test.createNode", ResourceIterator::close );
+        assertSuccess( readSubject, "CALL test.createNode", ResourceIterator::close );
+        assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "5" ) );
     }
 
     @Test
@@ -102,8 +103,8 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         userManager.newRole( "other", "readSubject" );
 
         // Then
-//        assertSuccess( readSubject, "CALL test.createNode", ResourceIterator::close );
-//        assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "4" ) );
+        assertSuccess( readSubject, "CALL test.createNode", ResourceIterator::close );
+        assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "4" ) );
     }
 
     @Test

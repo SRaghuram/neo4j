@@ -6,13 +6,14 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
-import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -62,9 +63,9 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
 
         // when
         createEntity( transaction, "Type1" );
-        var e = assertThrows( ConstraintViolationTransactionFailureException.class, this::commit );
-        Status expected = Status.Schema.ConstraintValidationFailed;
-        assertThat( e.status(), is( expected ) );
+        var e = assertThrows( ConstraintViolationException.class, this::commit );
+        var rootCause = (Status.HasStatus) ExceptionUtils.getRootCause( e );
+        assertThat( rootCause.status(), is( Status.Schema.ConstraintValidationFailed ) );
     }
 
     @Test
@@ -78,9 +79,9 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         int key = transaction.tokenWrite().propertyKeyGetOrCreateForName( "key1" );
         removeProperty( transaction.dataWrite(), entity, key );
 
-        var e = assertThrows( ConstraintViolationTransactionFailureException.class, this::commit );
-        Status expected = Status.Schema.ConstraintValidationFailed;
-        assertThat( e.status(), is( expected ) );
+        var e = assertThrows( ConstraintViolationException.class, this::commit );
+        var rootCause = (Status.HasStatus) ExceptionUtils.getRootCause( e );
+        assertThat( rootCause.status(), is( Status.Schema.ConstraintValidationFailed ) );
     }
 
     @Test

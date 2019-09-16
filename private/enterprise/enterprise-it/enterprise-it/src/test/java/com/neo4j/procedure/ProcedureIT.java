@@ -6,6 +6,7 @@
 package com.neo4j.procedure;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -45,7 +47,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
@@ -53,7 +54,6 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import org.neo4j.procedure.ProcedureTransaction;
 import org.neo4j.procedure.TerminationGuard;
 import org.neo4j.procedure.UserAggregationFunction;
 import org.neo4j.procedure.UserAggregationResult;
@@ -67,6 +67,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -295,20 +296,20 @@ public class ProcedureIT
         }
     }
 
-//    @Test
-//    void shouldGiveNiceErrorWhenMissingArgumentsToVoidFunction()
-//    {
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            QueryExecutionException exception =
-//                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault()" ) );
-//            assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
-//                    "Procedure call does not provide the required number of arguments: got 0 expected 3 (where 1 is optional).%n%n" +
-//                            "Procedure com.neo4j.procedure.sideEffectWithDefault has signature: com.neo4j.procedure" +
-//                            ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
-//                            "meaning that it expects 3 arguments of type STRING?, STRING?, STRING? (line 1, column 1 (offset: 0))" ) ) );
-//        }
-//    }
+    @Test
+    void shouldGiveNiceErrorWhenMissingArgumentsToVoidFunction()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault()" ) );
+            assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
+                    "Procedure call does not provide the required number of arguments: got 0 expected 3 (where 1 is optional).%n%n" +
+                            "Procedure com.neo4j.procedure.sideEffectWithDefault has signature: com.neo4j.procedure" +
+                            ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
+                            "meaning that it expects 3 arguments of type STRING?, STRING?, STRING? (line 1, column 1 (offset: 0))" ) ) );
+        }
+    }
 
     @Test
     void shouldShowDescriptionWhenMissingArguments()
@@ -671,34 +672,34 @@ public class ProcedureIT
         logProvider.assertAtLeastOnce( match.debug( "1" ), match.info( "2" ), match.warn( "3" ), match.error( "4" ) );
     }
 
-//    @Test
-//    void shouldDenyReadOnlyProcedureToPerformWrites()
-//    {
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            QueryExecutionException exception =
-//                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyTryingToWrite()" ).next() );
-//            assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
-//        }
-//    }
+    @Test
+    void shouldDenyReadOnlyProcedureToPerformWrites()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyTryingToWrite()" ).next() );
+            assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
+        }
+    }
 
-//    @Test
-//    void shouldAllowWriteProcedureToPerformWrites()
-//    {
-//        // When
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            tx.execute( "CALL com.neo4j.procedure.writingProcedure()" ).close();
-//            tx.commit();
-//        }
-//
-//        // Then
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            assertEquals( 1, tx.getAllNodes().stream().count() );
-//            tx.commit();
-//        }
-//    }
+    @Test
+    void shouldAllowWriteProcedureToPerformWrites()
+    {
+        // When
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CALL com.neo4j.procedure.writingProcedure()" ).close();
+            tx.commit();
+        }
+
+        // Then
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertEquals( 1, tx.getAllNodes().stream().count() );
+            tx.commit();
+        }
+    }
 
     @Test
     void readProceduresShouldPresentThemSelvesAsReadQueries()
@@ -724,40 +725,40 @@ public class ProcedureIT
         }
     }
 
-//    @Test
-//    void writeProceduresShouldPresentThemSelvesAsWriteQueries()
-//    {
-//        // When
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n')" );
-//            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
-//            tx.commit();
-//        }
-//    }
+    @Test
+    void writeProceduresShouldPresentThemSelvesAsWriteQueries()
+    {
+        // When
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n')" );
+            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
+            tx.commit();
+        }
+    }
 
-//    @Test
-//    void writeProceduresWithYieldShouldPresentThemSelvesAsWriteQueries()
-//    {
-//        // When
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n') YIELD node as n RETURN n.prop" );
-//            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
-//            tx.commit();
-//        }
-//    }
+    @Test
+    void writeProceduresWithYieldShouldPresentThemSelvesAsWriteQueries()
+    {
+        // When
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n') YIELD node as n RETURN n.prop" );
+            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
+            tx.commit();
+        }
+    }
 
-//    @Test
-//    void shouldNotBeAbleToCallWriteProcedureThroughReadProcedure()
-//    {
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            QueryExecutionException exception =
-//                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyCallingWriteProcedure" ).next() );
-//            assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
-//        }
-//    }
+    @Test
+    void shouldNotBeAbleToCallWriteProcedureThroughReadProcedure()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyCallingWriteProcedure" ).next() );
+            assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
+        }
+    }
 
     @Test
     void shouldNotBeAbleToCallReadProcedureThroughWriteProcedureInWriteOnlyTransaction()
@@ -773,23 +774,23 @@ public class ProcedureIT
         }
     }
 
-//    @Test
-//    void shouldBeAbleToCallWriteProcedureThroughWriteProcedure()
-//    {
-//        // When
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingWriteProcedure()" ).close();
-//            tx.commit();
-//        }
-//
-//        // Then
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            assertEquals( 1, tx.getAllNodes().stream().count() );
-//            tx.commit();
-//        }
-//    }
+    @Test
+    void shouldBeAbleToCallWriteProcedureThroughWriteProcedure()
+    {
+        // When
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingWriteProcedure()" ).close();
+            tx.commit();
+        }
+
+        // Then
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertEquals( 1, tx.getAllNodes().stream().count() );
+            tx.commit();
+        }
+    }
 
     @Test
     void shouldNotBeAbleToCallSchemaProcedureThroughWriteProcedureInWriteTransaction()
@@ -874,18 +875,18 @@ public class ProcedureIT
         }
     }
 
-//    @Test
-//    void shouldDenySchemaProcedureToPerformWrite()
-//    {
-//        // Give
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            // When
-//            QueryExecutionException exception =
-//                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.schemaTryingToWrite" ).next() );
-//            assertThat( exception.getMessage(), containsString( "Cannot perform data updates in a transaction that has performed schema updates" ) );
-//        }
-//    }
+    @Test
+    void shouldDenySchemaProcedureToPerformWrite()
+    {
+        // Give
+        try ( Transaction tx = db.beginTx() )
+        {
+            // When
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.schemaTryingToWrite" ).next() );
+            assertThat( exception.getMessage(), containsString( "Cannot perform data updates in a transaction that has performed schema updates" ) );
+        }
+    }
 
     @Test
     void shouldCoerceLongToDoubleAtRuntimeWhenCallingProcedure()
@@ -947,39 +948,39 @@ public class ProcedureIT
         }
     }
 
-//    @Test
-//    void shouldBeAbleToCallVoidProcedure()
-//    {
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            tx.execute( "CALL com.neo4j.procedure.sideEffect('PONTUS')" );
-//
-//            assertThat( tx.execute( "MATCH (n:PONTUS) RETURN count(n) AS c" ).next().get( "c" ), equalTo( 1L ) );
-//        }
-//    }
+    @Test
+    void shouldBeAbleToCallVoidProcedure()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CALL com.neo4j.procedure.sideEffect('PONTUS')" );
 
-//    @Test
-//    void shouldBeAbleToCallVoidProcedureWithDefaultValue()
-//    {
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault('Person','name')" );
-//            Result result = tx.execute( "MATCH (n:Person) RETURN n.name AS name" );
-//            assertThat( result.next().get( "name" ), equalTo( "Zhang Wei" ) );
-//            assertFalse( result.hasNext() );
-//        }
-//    }
+            assertThat( tx.execute( "MATCH (n:PONTUS) RETURN count(n) AS c" ).next().get( "c" ), equalTo( 1L ) );
+        }
+    }
 
-//    @Test
-//    void shouldBeAbleToCallDelegatingVoidProcedure()
-//    {
-//        try ( Transaction tx = db.beginTx() )
-//        {
-//            tx.execute( "CALL com.neo4j.procedure.delegatingSideEffect('SUTNOP')" );
-//
-//            assertThat( tx.execute( "MATCH (n:SUTNOP) RETURN count(n) AS c" ).next().get( "c" ), equalTo( 1L ) );
-//        }
-//    }
+    @Test
+    void shouldBeAbleToCallVoidProcedureWithDefaultValue()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault('Person','name')" );
+            Result result = tx.execute( "MATCH (n:Person) RETURN n.name AS name" );
+            assertThat( result.next().get( "name" ), equalTo( "Zhang Wei" ) );
+            assertFalse( result.hasNext() );
+        }
+    }
+
+    @Test
+    void shouldBeAbleToCallDelegatingVoidProcedure()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.execute( "CALL com.neo4j.procedure.delegatingSideEffect('SUTNOP')" );
+
+            assertThat( tx.execute( "MATCH (n:SUTNOP) RETURN count(n) AS c" ).next().get( "c" ), equalTo( 1L ) );
+        }
+    }
 
     @Test
     void shouldBeAbleToPerformWritesOnNodesReturnedFromReadOnlyProcedure()
@@ -1056,37 +1057,37 @@ public class ProcedureIT
         assertThat( "Should be no exceptions in procedures", exceptionsInProcedure.isEmpty(), equalTo( true ) );
     }
 
-//    @Test
-//    void shouldBeAbleToUseCallYieldWithPeriodicCommit() throws Exception
-//    {
-//        // GIVEN
-//        String[] lines = IntStream.rangeClosed( 1, 100 )
-//                .boxed()
-//                .map( i -> Integer.toString( i ) )
-//                .toArray( String[]::new );
-//        String url = createCsvFile( lines);
-//
-//        //WHEN
-//        MutableInt counter = new MutableInt( 1 );
-//        db.executeTransactionally(
-//                "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " + "CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n " +
-//                        "RETURN n.prop", emptyMap(), result ->
-//                {
-//                    while ( result.hasNext() )
-//                    {
-//                        var row = result.next();
-//                        assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter.getAndIncrement() ) ) );
-//                    }
-//                } );
-//        assertEquals( 101, counter.getValue() );
-//
-//        try ( Transaction transaction = db.beginTx() )
-//        {
-//            //Make sure all the lines has been properly commited to the database.
-//            String[] dbContents = tx.execute( "MATCH (n) return n.prop" ).stream().map( m -> (String) m.get( "n.prop" ) ).toArray( String[]::new );
-//            assertThat( dbContents, equalTo( lines ) );
-//        }
-//    }
+    @Test
+    void shouldBeAbleToUseCallYieldWithPeriodicCommit() throws Exception
+    {
+        // GIVEN
+        String[] lines = IntStream.rangeClosed( 1, 100 )
+                .boxed()
+                .map( i -> Integer.toString( i ) )
+                .toArray( String[]::new );
+        String url = createCsvFile( lines);
+
+        //WHEN
+        MutableInt counter = new MutableInt( 1 );
+        db.executeTransactionally(
+                "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " + "CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n " +
+                        "RETURN n.prop", emptyMap(), result ->
+                {
+                    while ( result.hasNext() )
+                    {
+                        var row = result.next();
+                        assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter.getAndIncrement() ) ) );
+                    }
+                } );
+        assertEquals( 101, counter.getValue() );
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Make sure all the lines has been properly commited to the database.
+            String[] dbContents = transaction.execute( "MATCH (n) return n.prop" ).stream().map( m -> (String) m.get( "n.prop" ) ).toArray( String[]::new );
+            assertThat( dbContents, equalTo( lines ) );
+        }
+    }
 
     @Test
     void shouldFailIfUsingPeriodicCommitWithReadOnlyQuery() throws IOException
@@ -1102,22 +1103,22 @@ public class ProcedureIT
         }
     }
 
-//    @Test
-//    void shouldBeAbleToUseCallYieldWithLoadCsvAndSet() throws IOException
-//    {
-//        // GIVEN
-//        String url = createCsvFile( "foo" );
-//
-//        try ( Transaction transaction = db.beginTx() )
-//        {
-//            //WHEN
-//            Result result =
-//                    tx.execute( "LOAD CSV FROM '" + url + "' AS line CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n SET n.p = 42 RETURN n.p" );
-//            // THEN
-//            assertThat( result.next().get( "n.p" ), equalTo( 42L ) );
-//            transaction.commit();
-//        }
-//    }
+    @Test
+    void shouldBeAbleToUseCallYieldWithLoadCsvAndSet() throws IOException
+    {
+        // GIVEN
+        String url = createCsvFile( "foo" );
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //WHEN
+            Result result = transaction.execute( "LOAD CSV FROM '" + url +
+                    "' AS line CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n SET n.p = 42 RETURN n.p" );
+            // THEN
+            assertThat( result.next().get( "n.p" ), equalTo( 42L ) );
+            transaction.commit();
+        }
+    }
 
     @Test
     void shouldCallProcedureReturningPaths()
@@ -1198,21 +1199,21 @@ public class ProcedureIT
         return file.toURI().toURL().toString();
     }
 
-//    @Test
-//    void shouldReturnNodeListTypedAsNodeList()
-//    {
-//        try ( Transaction transaction = db.beginTx() )
-//        {
-//            // When
-//            Result res = tx.execute( "CALL com.neo4j.procedure.nodeList() YIELD nodes RETURN [ x IN nodes | id(x) ] as ids" );
-//
-//            // Then
-//            assertTrue( res.hasNext() );
-//            assertThat( ((List<?>) res.next().get( "ids" )).size(), equalTo( 2 ) );
-//            assertFalse( res.hasNext() );
-//            transaction.commit();
-//        }
-//    }
+    @Test
+    void shouldReturnNodeListTypedAsNodeList()
+    {
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // When
+            Result res = transaction.execute( "CALL com.neo4j.procedure.nodeList() YIELD nodes RETURN [ x IN nodes | id(x) ] as ids" );
+
+            // Then
+            assertTrue( res.hasNext() );
+            assertThat( ((List<?>) res.next().get( "ids" )).size(), equalTo( 2 ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
+    }
 
     @Test
     void shouldGiveNiceErrorMessageWhenAggregationFunctionInProcedureCall()
@@ -1262,23 +1263,23 @@ public class ProcedureIT
         assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
     }
 
-//    @Test
-//    void shouldNotAllowWriteProcedureInReadOnlyTransaction()
-//    {
-//        GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
-//
-//        // When
-//        AuthorizationViolationException exception =
-//                assertThrows( AuthorizationViolationException.class, () ->
-//                {
-//                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.read() ) )
-//                    {
-//                        tx.execute( "CALL com.neo4j.procedure.writingProcedure()" );
-//                        tx.commit();
-//                    }
-//                } );
-//        assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
-//    }
+    @Test
+    void shouldNotAllowWriteProcedureInReadOnlyTransaction()
+    {
+        GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
+
+        // When
+        AuthorizationViolationException exception =
+                assertThrows( AuthorizationViolationException.class, () ->
+                {
+                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.read() ) )
+                    {
+                        tx.execute( "CALL com.neo4j.procedure.writingProcedure()" );
+                        tx.commit();
+                    }
+                } );
+        assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
+    }
 
     @Test
     void shouldNotAllowSchemaWriteProcedureInWriteTransaction()
@@ -1722,7 +1723,7 @@ public class ProcedureIT
         public TerminationGuard guard;
 
         @Context
-        public ProcedureTransaction procedureTransaction;
+        public Transaction transaction;
 
         @Context
         public ProcedureCallContext callContext;
@@ -1730,7 +1731,7 @@ public class ProcedureIT
         @Procedure
         public Stream<Output> guardMe()
         {
-            procedureTransaction.terminate();
+            transaction.terminate();
             guard.check();
             throw new IllegalStateException( "Should never have executed this!" );
         }
@@ -1744,8 +1745,8 @@ public class ProcedureIT
         @Procedure
         public Stream<Output> failingPersonCount()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n:Person) RETURN count(n) as count" );
-            procedureTransaction.rollback();
+            Result result = transaction.execute( "MATCH (n:Person) RETURN count(n) as count" );
+            transaction.rollback();
             return Stream.of( new Output( (Long) result.next().get( "count" ) ) );
         }
 
@@ -1796,7 +1797,7 @@ public class ProcedureIT
         @Procedure
         public Stream<Output> delegatingProcedure( @Name( "name" ) long someValue )
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            return transaction
                     .execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", someValue ) ).stream().map(
                     row -> new Output( (Long) row.get( "someVal" ) ) );
         }
@@ -1808,7 +1809,7 @@ public class ProcedureIT
             {
                 return Stream.of( new Output( 0L ) );
             }
-            Long prev = (Long) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            Long prev = (Long) transaction
                     .execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", order - 1 ) ).next().get( "someVal" );
             return Stream.of( new Output( order + prev ) );
         }
@@ -1869,7 +1870,7 @@ public class ProcedureIT
             }
             else
             {
-                nodeOutput.setNode( GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().getNodeById( id ) );
+                nodeOutput.setNode( transaction.getNodeById( id ) );
             }
             return Stream.of( nodeOutput );
         }
@@ -1926,8 +1927,7 @@ public class ProcedureIT
         @Procedure
         public Stream<MyOutputRecord> listCoolPeopleInDatabase()
         {
-            return ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get()
-                    .findNodes( label( "Person" ) ).stream().map( n -> new MyOutputRecord( (String) n.getProperty( "name" ) ) );
+            return transaction.findNodes( label( "Person" ) ).stream().map( n -> new MyOutputRecord( (String) n.getProperty( "name" ) ) );
         }
 
         @Procedure
@@ -1940,76 +1940,76 @@ public class ProcedureIT
             return Stream.empty();
         }
 
-//        @Procedure
-//        public Stream<Output> readOnlyTryingToWrite()
-//        {
-//            tx.createNode();
-//            return Stream.empty();
-//        }
+        @Procedure
+        public Stream<Output> readOnlyTryingToWrite()
+        {
+            transaction.createNode();
+            return Stream.empty();
+        }
 
-//        @Procedure( mode = WRITE )
-//        public Stream<Output> writingProcedure()
-//        {
-//            tx.createNode();
-//            return Stream.empty();
-//        }
+        @Procedure( mode = WRITE )
+        public Stream<Output> writingProcedure()
+        {
+            transaction.createNode();
+            return Stream.empty();
+        }
 
-//        @Procedure( mode = WRITE )
-//        public Stream<NodeOutput> createNode( @Name( "value" ) String value )
-//        {
-//            Node node = tx.createNode();
-//            node.setProperty( "prop", value );
-//            NodeOutput out = new NodeOutput();
-//            out.setNode( node );
-//            return Stream.of( out );
-//        }
+        @Procedure( mode = WRITE )
+        public Stream<NodeOutput> createNode( @Name( "value" ) String value )
+        {
+            Node node = transaction.createNode();
+            node.setProperty( "prop", value );
+            NodeOutput out = new NodeOutput();
+            out.setNode( node );
+            return Stream.of( out );
+        }
 
         @Procedure
         public Stream<Output> readOnlyCallingWriteProcedure()
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.writingProcedure" ).stream().map(
+            return transaction.execute( "CALL com.neo4j.procedure.writingProcedure" ).stream().map(
                     row -> new Output( 0 ) );
         }
 
         @Procedure( mode = WRITE )
         public Stream<Output> writeProcedureCallingWriteProcedure()
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.writingProcedure" ).stream().map(
+            return transaction.execute( "CALL com.neo4j.procedure.writingProcedure" ).stream().map(
                     row -> new Output( 0 ) );
         }
 
         @Procedure( mode = WRITE )
         public Stream<Output> writeProcedureCallingReadProcedure()
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.integrationTestMe" ).stream().map(
+            return transaction.execute( "CALL com.neo4j.procedure.integrationTestMe" ).stream().map(
                     row -> new Output( 0 ) );
         }
 
         @Procedure( mode = WRITE )
         public Stream<Output> writeProcedureCallingSchemaProcedure()
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.schemaProcedure" ).stream().map(
+            return transaction.execute( "CALL com.neo4j.procedure.schemaProcedure" ).stream().map(
                     row -> new Output( 0 ) );
         }
 
-//        @Procedure( mode = WRITE )
-//        public void sideEffect( @Name( "value" ) String value )
-//        {
-//            tx.createNode( Label.label( value ) );
-//        }
-//
-//        @Procedure( mode = WRITE )
-//        public void sideEffectWithDefault( @Name( "label" ) String label, @Name( "propertyKey" ) String propertyKey,
-//                /* Most common name, according to the internet */
-//                @Name( value = "value", defaultValue = "Zhang Wei" ) String value )
-//        {
-//            tx.createNode( Label.label( label ) ).setProperty( propertyKey, value );
-//        }
+        @Procedure( mode = WRITE )
+        public void sideEffect( @Name( "value" ) String value )
+        {
+            transaction.createNode( Label.label( value ) );
+        }
+
+        @Procedure( mode = WRITE )
+        public void sideEffectWithDefault( @Name( "label" ) String label, @Name( "propertyKey" ) String propertyKey,
+                /* Most common name, according to the internet */
+                @Name( value = "value", defaultValue = "Zhang Wei" ) String value )
+        {
+            transaction.createNode( Label.label( label ) ).setProperty( propertyKey, value );
+        }
 
         @Procedure( mode = WRITE )
         public void delegatingSideEffect( @Name( "value" ) String value )
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.sideEffect", map( "value", value ) );
+            transaction.execute( "CALL com.neo4j.procedure.sideEffect", map( "value", value ) );
         }
 
         @Procedure( mode = WRITE )
@@ -2032,7 +2032,7 @@ public class ProcedureIT
         @Procedure
         public Stream<PathOutputRecord> nodePaths( @Name( "node" ) Node node )
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            return transaction
                     .execute( "WITH $node AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) ).stream().map(
                     record -> new PathOutputRecord( (Path) record.getOrDefault( "p", null ) ) );
         }
@@ -2050,38 +2050,38 @@ public class ProcedureIT
             return Stream.of( new NodeOutput( node ) );
         }
 
-//        @Procedure( mode = WRITE )
-//        public Stream<NodeListRecord> nodeList()
-//        {
-//            List<Node> nodesList = new ArrayList<>();
-//            nodesList.add( tx.createNode() );
-//            nodesList.add( tx.createNode() );
-//
-//            return Stream.of( new NodeListRecord( nodesList ) );
-//        }
+        @Procedure( mode = WRITE )
+        public Stream<NodeListRecord> nodeList()
+        {
+            List<Node> nodesList = new ArrayList<>();
+            nodesList.add( transaction.createNode() );
+            nodesList.add( transaction.createNode() );
+
+            return Stream.of( new NodeListRecord( nodesList ) );
+        }
 
         @Procedure
         public void readOnlyTryingToWriteSchema()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
+            transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
         }
 
         @Procedure( mode = WRITE )
         public void readWriteTryingToWriteSchema()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
+            transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
         }
 
         @Procedure( mode = SCHEMA )
         public void schemaProcedure()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
+            transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
         }
 
         @Procedure( mode = SCHEMA )
         public Stream<NodeOutput> schemaCallReadProcedure( @Name( "id" ) long id )
         {
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.node(" + id + ")" ).stream().map( record ->
+            return transaction.execute( "CALL com.neo4j.procedure.node(" + id + ")" ).stream().map( record ->
             {
                 NodeOutput n = new NodeOutput();
                 n.setNode( (Node) record.get( "node" ) );
@@ -2089,12 +2089,12 @@ public class ProcedureIT
             } );
         }
 
-//        @Procedure( mode = SCHEMA )
-//        public void schemaTryingToWrite()
-//        {
-//            tx.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
-//            tx.createNode();
-//        }
+        @Procedure( mode = SCHEMA )
+        public void schemaTryingToWrite()
+        {
+            transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
+            transaction.createNode();
+        }
 
         @Procedure( name = "com.neo4j.procedure.onCloseProcedure" )
         public Stream<Output> onCloseProcedure( @Name( "index" ) long index )

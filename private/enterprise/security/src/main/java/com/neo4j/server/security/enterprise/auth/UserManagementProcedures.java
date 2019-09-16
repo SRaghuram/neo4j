@@ -20,7 +20,6 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.SystemProcedure;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -141,7 +140,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         var query = "SHOW USERS";
         try
         {
-            Result execute = ((GraphDatabaseFacade) graph).TEMP_TOP_LEVEL_TRANSACTION.get().execute( query );
+            Result execute = transaction.execute( query );
             execute.accept( row ->
             {
                 var user = row.getString( "user" );
@@ -288,7 +287,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         var query = "SHOW ALL ROLES WITH USERS";
         try
         {
-            Result execute = ((GraphDatabaseFacade) graph).TEMP_TOP_LEVEL_TRANSACTION.get().execute( query );
+            Result execute = transaction.execute( query );
             execute.accept( visitor );
         }
         catch ( Exception e )
@@ -319,7 +318,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     {
         try
         {
-            Result execute = ((GraphDatabaseFacade) graph).TEMP_TOP_LEVEL_TRANSACTION.get().execute( query );
+            Result execute = transaction.execute( query );
             execute.accept( row -> true );
         }
         catch ( Exception e )

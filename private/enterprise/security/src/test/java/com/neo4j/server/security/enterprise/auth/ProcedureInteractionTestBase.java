@@ -38,7 +38,6 @@ import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.graphdb.spatial.Point;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -595,6 +594,9 @@ public abstract class ProcedureInteractionTestBase<S>
         public GraphDatabaseService db;
 
         @Context
+        public Transaction transaction;
+
+        @Context
         public Log log;
 
         private static final AtomicReference<LatchedRunnables> testLatch = new AtomicReference<>();
@@ -665,7 +667,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.numNodes" )
         public Stream<CountResult> numNodes()
         {
-            Long nNodes = ((GraphDatabaseFacade) db).TEMP_TOP_LEVEL_TRANSACTION.get().getAllNodes().stream().count();
+            Long nNodes = transaction.getAllNodes().stream().count();
             return Stream.of( new CountResult( nNodes ) );
         }
 
@@ -690,29 +692,29 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.allowedReadProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure1()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = transaction.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "foo" ).toString() ) );
         }
 
         @Procedure( name = "test.otherAllowedReadProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> otherAllowedProcedure()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = transaction.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "foo" ).toString() ) );
         }
 
         @Procedure( name = "test.allowedWriteProcedure", mode = Mode.WRITE )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure2()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "UNWIND [1, 2] AS i CREATE (:VeryUniqueLabel {prop: 'a'})" );
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n:VeryUniqueLabel) RETURN n.prop AS a LIMIT 2" );
+            transaction.execute( "UNWIND [1, 2] AS i CREATE (:VeryUniqueLabel {prop: 'a'})" );
+            Result result = transaction.execute( "MATCH (n:VeryUniqueLabel) RETURN n.prop AS a LIMIT 2" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "a" ).toString() ) );
         }
 
         @Procedure( name = "test.allowedSchemaProcedure", mode = Mode.SCHEMA )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure3()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE INDEX ON :VeryUniqueLabel(prop)" );
+            transaction.execute( "CREATE INDEX ON :VeryUniqueLabel(prop)" );
             return Stream.of( new AuthProceduresBase.StringResult( "OK" ) );
         }
 
@@ -721,14 +723,14 @@ public abstract class ProcedureInteractionTestBase<S>
                 @Name( "nestedProcedure" ) String nestedProcedure
         )
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL " + nestedProcedure );
+            Result result = transaction.execute( "CALL " + nestedProcedure );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
         @Procedure( name = "test.doubleNestedAllowedProcedure", mode = Mode.READ )
         public Stream<AuthProceduresBase.StringResult> doubleNestedAllowedProcedure()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            Result result = transaction
                     .execute( "CALL test.nestedAllowedProcedure('test.allowedReadProcedure') YIELD value" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
@@ -736,7 +738,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.failingNestedAllowedWriteProcedure", mode = Mode.WRITE )
         public Stream<AuthProceduresBase.StringResult> failingNestedAllowedWriteProcedure()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            Result result = transaction
                     .execute( "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value" );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
@@ -746,15 +748,14 @@ public abstract class ProcedureInteractionTestBase<S>
                 @Name( "nestedProcedure" ) String nestedProcedure
         )
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL " + nestedProcedure );
+            Result result = transaction.execute( "CALL " + nestedProcedure );
             return result.stream().map( r -> new AuthProceduresBase.StringResult( r.get( "value" ).toString() ) );
         }
 
         @Procedure( name = "test.createNode", mode = WRITE )
         public void createNode()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE (n)" );
-//            tx.createNode();
+            transaction.createNode();
         }
 
         @Procedure( name = "test.waitForLatch", mode = READ )
@@ -841,7 +842,7 @@ public abstract class ProcedureInteractionTestBase<S>
     public static class ClassWithFunctions
     {
         @Context
-        public GraphDatabaseService db;
+        public Transaction transaction;
 
         @UserFunction( name = "test.nonAllowedFunc" )
         public String nonAllowedFunc()
@@ -858,14 +859,14 @@ public abstract class ProcedureInteractionTestBase<S>
         @UserFunction( name = "test.allowedFunction1" )
         public String allowedFunction1()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = transaction.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.next().get( "foo" ).toString();
         }
 
         @UserFunction( name = "test.allowedFunction2" )
         public String allowedFunction2()
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
+            Result result = transaction.execute( "MATCH (:Foo) WITH count(*) AS c RETURN 'foo' AS foo" );
             return result.next().get( "foo" ).toString();
         }
 
@@ -874,7 +875,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 @Name( "nestedFunction" ) String nestedFunction
         )
         {
-            Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "RETURN " + nestedFunction + " AS value" );
+            Result result = transaction.execute( "RETURN " + nestedFunction + " AS value" );
             return result.next().get( "value" ).toString();
         }
     }

@@ -10,9 +10,8 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.UserFunction;
@@ -20,7 +19,7 @@ import org.neo4j.procedure.UserFunction;
 public class TestFunction
 {
     @Context
-    public GraphDatabaseService db;
+    public Transaction transaction;
 
     @UserFunction( "test.toSet" )
     public List<Object> toSet( @Name( "values" ) List<Object> list )
@@ -31,7 +30,7 @@ public class TestFunction
     @UserFunction( "test.nodeList" )
     public List<Object> nodeList()
     {
-        Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n) RETURN n LIMIT 1" );
+        Result result = transaction.execute( "MATCH (n) RETURN n LIMIT 1" );
         Object node = result.next().get( "n" );
         return Collections.singletonList( node );
     }

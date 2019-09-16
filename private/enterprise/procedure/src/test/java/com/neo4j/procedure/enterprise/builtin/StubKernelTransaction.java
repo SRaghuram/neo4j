@@ -36,6 +36,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.ClockContext;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -203,6 +204,11 @@ class StubKernelTransaction implements KernelTransaction
     public long lastTransactionIdWhenStarted()
     {
         return 0;
+    }
+
+    @Override
+    public void bindToUserTransaction( InternalTransaction internalTransaction )
+    {
     }
 
     @Override

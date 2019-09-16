@@ -24,11 +24,11 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -619,12 +619,12 @@ class PropertyLevelSecurityIT
     public static class TestProcedure
     {
         @Context
-        public GraphDatabaseService db;
+        public Transaction transaction;
 
         @Procedure( name = "test.getAlias", mode = Mode.READ )
         public Stream<MyOutputRecord> getAlias()
         {
-            ResourceIterator<Node> nodes = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( "Person" ) );
+            ResourceIterator<Node> nodes = transaction.findNodes( Label.label( "Person" ) );
             return nodes
                     .stream()
                     .map( n -> new MyOutputRecord( (String) n.getProperty( "name" ),

@@ -12,8 +12,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -47,13 +49,13 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
+import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
@@ -79,6 +81,7 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.procedure.Mode.WRITE;
 
 @TestDirectoryExtension
 class FunctionIT
@@ -374,33 +377,33 @@ class FunctionIT
         );
     }
 
-//    @Test
-//    void shouldDenyReadOnlyFunctionToPerformWrites()
-//    {
-//        QueryExecutionException exception =
-//                assertThrows( QueryExecutionException.class, () ->
-//                {
-//                    try ( Transaction tx = db.beginTx() )
-//                    {
-//                        tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
-//                    }
-//                } );
-//        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
-//    }
+    @Test
+    void shouldDenyReadOnlyFunctionToPerformWrites()
+    {
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction tx = db.beginTx() )
+                    {
+                        tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
+                    }
+                } );
+        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+    }
 
-//    @Test
-//    void shouldNotBeAbleToCallWriteProcedureThroughReadFunction()
-//    {
-//        QueryExecutionException exception =
-//                assertThrows( QueryExecutionException.class, () ->
-//                {
-//                    try ( Transaction tx = db.beginTx() )
-//                    {
-//                        tx.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
-//                    }
-//                } ) ;
-//        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
-//    }
+    @Test
+    void shouldNotBeAbleToCallWriteProcedureThroughReadFunction()
+    {
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction tx = db.beginTx() )
+                    {
+                        tx.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
+                    }
+                } ) ;
+        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+    }
 
     @Test
     void shouldDenyReadOnlyFunctionToPerformSchema()
@@ -836,31 +839,31 @@ class FunctionIT
         }
     }
 
-//    /**
-//     * NOTE: this test tests user-defined functions added in this file {@link ClassWithFunctions}. These are not
-//     * built-in functions in any shape or form.
-//     */
-//    @Test
-//    void shouldListAllFunctions()
-//    {
-//        try ( Transaction transaction = db.beginTx() )
-//        {
-//            //Given/When
-//            Result res = tx.execute( "CALL dbms.functions()" );
-//
-//            try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
-//            {
-//                String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
-//                String actual = res.resultAsString();
-//                // Be aware that the text file "functions" must end with two newlines
-//                assertThat( actual, equalTo( expected ) );
-//            }
-//            catch ( IOException e )
-//            {
-//                throw new RuntimeException( "Failed to read functions file." );
-//            }
-//        }
-//    }
+    /**
+     * NOTE: this test tests user-defined functions added in this file {@link ClassWithFunctions}. These are not
+     * built-in functions in any shape or form.
+     */
+    @Test
+    void shouldListAllFunctions()
+    {
+        try ( Transaction transaction = db.beginTx() )
+        {
+            //Given/When
+            Result res = transaction.execute( "CALL dbms.functions()" );
+
+            try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
+            {
+                String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
+                String actual = res.resultAsString();
+                // Be aware that the text file "functions" must end with two newlines
+                assertEquals( expected, actual );
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( "Failed to read functions file." );
+            }
+        }
+    }
 
     @Test
     void shouldCallFunctionWithSameNameAsBuiltIn()
@@ -918,8 +921,8 @@ class FunctionIT
         @Context
         public GraphDatabaseService db;
 
-//        @Context
-//        public Transaction transaction;
+        @Context
+        public Transaction transaction;
 
         @Context
         public Log log;
@@ -964,7 +967,7 @@ class FunctionIT
         @UserFunction
         public long delegatingFunction( @Name( "someValue" ) long someValue )
         {
-            return (long) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            return (long) transaction
                     .execute( "RETURN com.neo4j.procedure.simpleArgument($name) AS result", map( "name", someValue ) )
                     .next().get( "result" );
         }
@@ -977,7 +980,7 @@ class FunctionIT
                 return 0L;
             }
             Long prev =
-                    (Long) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+                    (Long) transaction
                             .execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal",
                             map( "order", order - 1 ) )
                             .next().get( "someVal" );
@@ -1008,7 +1011,7 @@ class FunctionIT
             {
                 return null;
             }
-            return GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().getNodeById( id );
+            return transaction.getNodeById( id );
         }
 
         @UserFunction
@@ -1052,7 +1055,7 @@ class FunctionIT
         @UserFunction
         public List<String> listCoolPeopleInDatabase()
         {
-            return ((GraphDatabaseFacade)db).TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( label( "Person" ) )
+            return transaction.findNodes( label( "Person" ) )
                     .map( node -> (String) node.getProperty( "name" ) )
                     .stream()
                     .collect( Collectors.toList() );
@@ -1068,23 +1071,23 @@ class FunctionIT
             return 1337L;
         }
 
-//        @UserFunction
-//        public Node readOnlyTryingToWrite()
-//        {
-//            return transaction.createNode();
-//        }
+        @UserFunction
+        public Node readOnlyTryingToWrite()
+        {
+            return transaction.createNode();
+        }
 
         @UserFunction
         public Node readOnlyCallingWriteFunction()
         {
-            return (Node) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "RETURN com.neo4j.procedure.writingFunction() AS node" ).next().get(
+            return (Node) transaction.execute( "RETURN com.neo4j.procedure.writingFunction() AS node" ).next().get(
                     "node" );
         }
 
         @UserFunction
         public long readOnlyCallingWriteProcedure()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CALL com.neo4j.procedure.writingProcedure()" );
+            transaction.execute( "CALL com.neo4j.procedure.writingProcedure()" );
             return 1337L;
         }
 
@@ -1094,11 +1097,11 @@ class FunctionIT
             return numbers.stream().mapToDouble( Number::doubleValue ).sum();
         }
 
-//        @Procedure( mode = WRITE )
-//        public void writingProcedure()
-//        {
-//            transaction.createNode();
-//        }
+        @Procedure( mode = WRITE )
+        public void writingProcedure()
+        {
+            transaction.createNode();
+        }
 
         @UserFunction
         public String unsupportedFunction()
@@ -1122,7 +1125,7 @@ class FunctionIT
         @UserFunction
         public Path nodePaths( @Name( "someValue" ) Node node )
         {
-            return (Path) GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get()
+            return (Path) transaction
                     .execute( "WITH $node AS node MATCH p=(node)-[*]->() RETURN p", map( "node", node ) )
                     .next()
                     .getOrDefault( "p", null );
@@ -1138,7 +1141,7 @@ class FunctionIT
         @UserFunction
         public String readOnlyTryingToWriteSchema()
         {
-            GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
+            transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
             return "done";
         }
     }

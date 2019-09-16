@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.Context;
@@ -28,6 +29,9 @@ public class AuthProceduresBase
 
     @Context
     public GraphDatabaseAPI graph;
+
+    @Context
+    public Transaction transaction;
 
     @Context
     public SecurityLog securityLog;

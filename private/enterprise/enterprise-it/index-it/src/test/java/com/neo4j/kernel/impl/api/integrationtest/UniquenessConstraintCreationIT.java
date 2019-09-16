@@ -160,6 +160,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         assertEquals( ConstraintDescriptorFactory.uniqueForSchema( descriptor ), e.constraint() );
         Throwable cause = e.getCause();
         assertThat( cause, instanceOf( ConstraintValidationException.class ) );
+        rollback();
 
         String expectedMessage = String.format( "Both Node(%d) and Node(%d) have the label `Foo` and property `name` = 'foo'", node1, node2 );
         String actualMessage = userMessage( (ConstraintValidationException) cause );

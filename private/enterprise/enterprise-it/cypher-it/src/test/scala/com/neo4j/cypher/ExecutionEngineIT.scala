@@ -100,7 +100,7 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
     override def apply(context: Context,
                        objects: Array[AnyValue],
                        resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-      val ktx = context.kernelTransaction()
+      val ktx = context.internalTransaction().kernelTransaction()
       val nodeBuffer = new ArrayBuffer[Long]()
       val cursor = ktx.cursors().allocateNodeCursor()
       ktx.dataRead().allNodesScan(cursor)

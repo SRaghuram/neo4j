@@ -29,9 +29,12 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.Evaluation;
 import org.neo4j.graphdb.traversal.Evaluator;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.graphdb.traversal.Evaluators;
+import org.neo4j.graphdb.traversal.TraversalDescription;
+import org.neo4j.graphdb.traversal.Uniqueness;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
@@ -48,6 +51,8 @@ import static org.neo4j.procedure.Mode.WRITE;
 public class TestProcedure
 {
     @Context
+    public Transaction transaction;
+    @Context
     public GraphDatabaseService db;
 
     @Procedure( "org.neo4j.time" )
@@ -62,7 +67,7 @@ public class TestProcedure
     @Description( "org.neo4j.aNodeWithLabel" )
     public Stream<NodeResult> aNodeWithLabel( @Name( value = "label", defaultValue = "Dog" ) String label )
     {
-        Result result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n:" + label + ") RETURN n LIMIT 1" );
+        Result result = transaction.execute( "MATCH (n:" + label + ") RETURN n LIMIT 1" );
         return result.stream().map( row -> new NodeResult( (Node)row.get( "n" ) ) );
     }
 
@@ -80,11 +85,11 @@ public class TestProcedure
         Result result;
         if ( n == 0 )
         {
-            result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute( "MATCH (n) RETURN n LIMIT 1" );
+            result = transaction.execute( "MATCH (n) RETURN n LIMIT 1" );
         }
         else
         {
-            result = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().execute(
+            result = transaction.execute(
                     "UNWIND [1] AS i CALL org.neo4j.recurseN(" + (n - 1) + ") YIELD node RETURN node" );
         }
         return result.stream().map( row -> new NodeResult( (Node)row.get( "node" ) ) );
@@ -94,7 +99,7 @@ public class TestProcedure
     @Description( "org.neo4j.findNodesWithLabel" )
     public Stream<NodeResult> findNodesWithLabel( @Name( "label" ) String label )
     {
-        ResourceIterator<Node> nodes = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().findNodes( Label.label( label ) );
+        ResourceIterator<Node> nodes = transaction.findNodes( Label.label( label ) );
         return nodes.stream().map( NodeResult::new );
     }
 
@@ -102,7 +107,7 @@ public class TestProcedure
     @Description( "org.neo4j.expandNode" )
     public Stream<NodeResult> expandNode( @Name( "nodeId" ) Long nodeId )
     {
-        Node node = GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get().getNodeById( nodeId );
+        Node node = transaction.getNodeById( nodeId );
         List<Node> result = new ArrayList<>();
         for ( Relationship r : node.getRelationships() )
         {
@@ -112,15 +117,15 @@ public class TestProcedure
         return result.stream().map( NodeResult::new );
     }
 
-//    @Procedure( name = "org.neo4j.createNodeWithLoop", mode = WRITE )
-//    @Description( "org.neo4j.createNodeWithLoop" )
-//    public Stream<NodeResult> createNodeWithLoop(
-//            @Name( "nodeLabel" ) String label, @Name( "relType" ) String relType )
-//    {
-//        Node node = tx.createNode( Label.label( label ) );
-//        node.createRelationshipTo( node, RelationshipType.withName( relType ) );
-//        return Stream.of( new NodeResult( node ) );
-//    }
+    @Procedure( name = "org.neo4j.createNodeWithLoop", mode = WRITE )
+    @Description( "org.neo4j.createNodeWithLoop" )
+    public Stream<NodeResult> createNodeWithLoop(
+            @Name( "nodeLabel" ) String label, @Name( "relType" ) String relType )
+    {
+        Node node = transaction.createNode( Label.label( label ) );
+        node.createRelationshipTo( node, RelationshipType.withName( relType ) );
+        return Stream.of( new NodeResult( node ) );
+    }
 
     @Procedure( name = "org.neo4j.graphAlgosDijkstra" )
     @Description( "org.neo4j.graphAlgosDijkstra" )
@@ -130,7 +135,7 @@ public class TestProcedure
             @Name( "relType" ) String relType,
             @Name( "weightProperty" ) String weightProperty )
     {
-        var context = new BasicEvaluationContext( null, db );
+        var context = new BasicEvaluationContext( transaction, db );
         PathFinder<WeightedPath> pathFinder = GraphAlgoFactory.dijkstra( context,
                         PathExpanders.forTypeAndDirection(
                                 RelationshipType.withName( relType ), Direction.BOTH ),
@@ -176,22 +181,22 @@ public class TestProcedure
         }
     }
 
-//    @Procedure( "org.neo4j.movieTraversal" )
-//    @Description( "org.neo4j.movieTraversal" )
-//    public Stream<PathResult> movieTraversal( @Name( "start" ) Node start )
-//    {
-//        TraversalDescription td =
-//                transaction.traversalDescription()
-//                        .breadthFirst()
-//                        .relationships( RelationshipType.withName( "ACTED_IN" ), Direction.BOTH )
-//                        .relationships( RelationshipType.withName( "PRODUCED" ), Direction.BOTH )
-//                        .relationships( RelationshipType.withName( "DIRECTED" ), Direction.BOTH )
-//                        .evaluator( Evaluators.fromDepth( 3 ) )
-//                        .evaluator( new LabelEvaluator( "Western", 1, 3 ) )
-//                        .uniqueness( Uniqueness.NODE_GLOBAL );
-//
-//        return td.traverse( start ).stream().map( PathResult::new );
-//    }
+    @Procedure( "org.neo4j.movieTraversal" )
+    @Description( "org.neo4j.movieTraversal" )
+    public Stream<PathResult> movieTraversal( @Name( "start" ) Node start )
+    {
+        TraversalDescription td =
+                transaction.traversalDescription()
+                        .breadthFirst()
+                        .relationships( RelationshipType.withName( "ACTED_IN" ), Direction.BOTH )
+                        .relationships( RelationshipType.withName( "PRODUCED" ), Direction.BOTH )
+                        .relationships( RelationshipType.withName( "DIRECTED" ), Direction.BOTH )
+                        .evaluator( Evaluators.fromDepth( 3 ) )
+                        .evaluator( new LabelEvaluator( "Western", 1, 3 ) )
+                        .uniqueness( Uniqueness.NODE_GLOBAL );
+
+        return td.traverse( start ).stream().map( PathResult::new );
+    }
 
     @Procedure( "org.neo4j.internalTypes" )
     public Stream<InternalTypeResult> internal( @Name( value = "text", defaultValue = "Dog" ) TextValue text,

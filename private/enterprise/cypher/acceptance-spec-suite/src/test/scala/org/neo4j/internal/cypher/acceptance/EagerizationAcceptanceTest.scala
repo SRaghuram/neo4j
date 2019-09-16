@@ -183,7 +183,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.kernelTransaction()
+          val transaction = ctx.internalTransaction().kernelTransaction()
           val statement = transaction.acquireStatement()
           try {
             val relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName("KNOWS")
@@ -225,7 +225,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.kernelTransaction()
+          val transaction = ctx.internalTransaction().kernelTransaction()
           val statement = transaction.acquireStatement()
           try {
             val relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName("KNOWS")
@@ -265,7 +265,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.kernelTransaction()
+          val transaction = ctx.internalTransaction().kernelTransaction()
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor()
           var relCursor: RelationshipSelectionCursor = null
@@ -319,7 +319,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.kernelTransaction()
+          val transaction = ctx.internalTransaction().kernelTransaction()
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor()
           var relCursor: RelationshipSelectionCursor = null

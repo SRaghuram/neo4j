@@ -27,7 +27,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Name;
@@ -366,6 +365,9 @@ class AggregationFunctionIT
         public GraphDatabaseService db;
 
         @Context
+        public Transaction transaction;
+
+        @Context
         public Log log;
 
         @UserAggregationFunction
@@ -419,7 +421,7 @@ class AggregationFunctionIT
         @UserAggregationFunction
         public NodeFromIdAggregator collectNode()
         {
-            return new NodeFromIdAggregator( GraphDatabaseFacade.TEMP_TOP_LEVEL_TRANSACTION.get() );
+            return new NodeFromIdAggregator( transaction );
         }
 
         @UserAggregationFunction
