@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.kubernetes.KubernetesType;
 import com.neo4j.causalclustering.discovery.kubernetes.ServiceList;
 import com.neo4j.causalclustering.discovery.kubernetes.Status;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -46,7 +46,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.PkiUtils;
 
-import static org.codehaus.jackson.map.DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static org.neo4j.util.Preconditions.checkState;
 
 public class KubernetesResolver implements RemoteMembersResolver

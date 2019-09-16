@@ -35,12 +35,15 @@ Apache Software License, Version 2.0
   Caffeine cache
   Commons Lang
   config
-  Data Mapper for Jackson
   fastinfoset
   Graphite Integration for Metrics
-  Jackson
+  Jackson module: JAXB Annotations
+  Jackson-annotations
+  Jackson-core
+  jackson-databind
+  Jackson-JAXRS-base
+  Jackson-JAXRS-JSON
   Javassist
-  JAX-RS provider for JSON content type
   jersey-container-servlet
   jersey-container-servlet-core
   jersey-core-client

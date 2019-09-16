@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.time.Duration;
 import java.util.Collection;

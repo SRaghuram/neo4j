@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.rest.security;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
-import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Rule;
 import org.junit.Test;
 

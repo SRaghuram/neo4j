@@ -5,18 +5,18 @@
  */
 package com.neo4j.server.rest.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
 import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.BooleanNode;
-import org.codehaus.jackson.node.IntNode;
-import org.codehaus.jackson.node.LongNode;
-import org.codehaus.jackson.node.ObjectNode;
-import org.codehaus.jackson.node.TextNode;
 
 import java.io.File;
 import java.io.IOException;
@@ -309,7 +309,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         }
         else if ( valueNode instanceof ObjectNode )
         {
-            value = mapValue( valueNode.getFieldNames(), valueNode );
+            value = mapValue( valueNode.fieldNames(), valueNode );
         }
         else if ( valueNode instanceof ArrayNode )
         {
@@ -323,15 +323,15 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         }
         else if ( valueNode instanceof IntNode )
         {
-            value = valueNode.getIntValue();
+            value = valueNode.asInt();
         }
         else if ( valueNode instanceof LongNode )
         {
-            value = valueNode.getLongValue();
+            value = valueNode.asLong();
         }
         else if ( valueNode instanceof BooleanNode )
         {
-            value = valueNode.getBooleanValue();
+            value = valueNode.asBoolean();
         }
         else if ( valueNode.isNull() )
         {

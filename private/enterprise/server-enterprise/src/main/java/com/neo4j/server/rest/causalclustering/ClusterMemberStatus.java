@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
 import java.time.Duration;

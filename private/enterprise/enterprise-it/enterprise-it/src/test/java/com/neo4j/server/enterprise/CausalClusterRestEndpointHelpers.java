@@ -5,12 +5,12 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.harness.PortAuthorityPortPickingStrategy;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import com.neo4j.harness.internal.EnterpriseInProcessNeo4jBuilder;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.platform.commons.util.StringUtils;
 
 import java.io.IOException;

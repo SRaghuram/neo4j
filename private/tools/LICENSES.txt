@@ -32,14 +32,15 @@ Apache Software License, Version 2.0
   Apache Shiro :: Lang
   Caffeine cache
   config
-  Data Mapper for Jackson
   error-prone annotations
   FindBugs-jsr305
   Guava InternalFutureFailureAccess and InternalFutures
   Guava ListenableFuture only
   Guava: Google Core Libraries for Java
   J2ObjC Annotations
-  Jackson
+  Jackson-annotations
+  Jackson-core
+  jackson-databind
   javax.inject
   Jetty :: Asynchronous HTTP Client
   Jetty :: Http Utility

@@ -32,8 +32,9 @@ Apache Software License, Version 2.0
   Apache Shiro :: Lang
   Caffeine cache
   config
-  Data Mapper for Jackson
-  Jackson
+  Jackson-annotations
+  Jackson-core
+  jackson-databind
   Jetty :: Asynchronous HTTP Client
   Jetty :: Http Utility
   Jetty :: IO Utility
