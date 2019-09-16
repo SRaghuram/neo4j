@@ -578,7 +578,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // The result slot configuration should only contain the variables we join on.
         // If both lhs and rhs has a long slot with the same type the result should
         // also use a long slot, otherwise we use a ref slot.
-        val result = SlotConfiguration.empty
+        val result = lhs.emptyUnderSameApply()
         lhs.foreachSlot({
           case (key, lhsSlot: LongSlot) =>
             //find all shared variables and look for other long slots with same type

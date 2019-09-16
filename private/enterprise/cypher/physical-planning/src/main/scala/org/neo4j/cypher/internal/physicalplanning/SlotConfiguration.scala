@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty}
+import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.exceptions.InternalException
@@ -92,6 +92,14 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     newPipeline.aliases ++= aliases
     newPipeline.slotAliases ++= slotAliases
     newPipeline
+  }
+
+  def emptyUnderSameApply(): SlotConfiguration = {
+    new SlotConfiguration(mutable.Map.empty,
+      mutable.Map.empty,
+      this.applyPlans.clone(),
+      0,
+      0)
   }
 
   private def replaceExistingSlot(key: String, existingSlot: Slot, modifiedSlot: Slot): Unit = {
