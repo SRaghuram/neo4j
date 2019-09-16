@@ -29,7 +29,7 @@ import org.neo4j.cypher.internal.v4_0.util.{Cardinality, LabelId, RelTypeId, Sel
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, EnterpriseRuntimeFactory, ExecutionPlan, LogicalQuery}
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
-import org.neo4j.internal.kernel.api.security.SecurityContext
+import org.neo4j.internal.kernel.api.security.{LoginContext, SecurityContext}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Kernel
@@ -86,7 +86,10 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     } else visitor.count
 
   def beginInternalTransaction(): InternalTransaction =
-    new GraphDatabaseCypherService(db).beginTransaction(Type.explicit, SecurityContext.AUTH_DISABLED)
+    beginInternalTransaction(SecurityContext.AUTH_DISABLED)
+
+  def beginInternalTransaction(loginContext: LoginContext): InternalTransaction =
+    new GraphDatabaseCypherService(db).beginTransaction(Type.explicit, loginContext)
 
   private def solve(logicalPlan: LogicalPlan) {
     solveds.set(logicalPlan.id, SinglePlannerQuery.empty)

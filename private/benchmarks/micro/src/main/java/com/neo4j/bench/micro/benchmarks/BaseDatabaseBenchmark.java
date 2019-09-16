@@ -70,6 +70,11 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
         return managedStore.db();
     }
 
+    protected GraphDatabaseService systemDb()
+    {
+        return managedStore.systemDb();
+    }
+
     protected Store store()
     {
         return managedStore.store();
