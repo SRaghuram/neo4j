@@ -68,12 +68,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, SecurityContext) => ExecutionPlan] = {
     // SHOW USERS
-    case ShowUsers() => (_, _, _) =>
+    case ShowUsers(source) => (context, parameterMapping, securityContext) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         """MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |RETURN u.name as user, collect(r.name) as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
-        VirtualValues.EMPTY_MAP
+        VirtualValues.EMPTY_MAP, source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD password
@@ -109,7 +109,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
     // ALTER USER foo
-    case AlterUser(userName, initialPassword, None, requirePasswordChange, suspended) => (_, _, _) =>
+    case AlterUser(source, userName, initialPassword, None, requirePasswordChange, suspended) => (context, parameterMapping, securityContext) =>
       val params = Seq(
         initialPassword -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
@@ -148,15 +148,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               case None => None
             }
             maybeThrowable
-          })
+          }),
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // ALTER USER foo
-    case AlterUser(userName, _, Some(_), _, _) =>
+    case AlterUser(_, userName, _, Some(_), _, _) =>
       throw new IllegalStateException(s"Failed to alter the specified user '$userName': Did not resolve parameters correctly.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
-    case ShowRoles(withUsers, showAll) => (_, _, _) =>
+    case ShowRoles(source, withUsers, showAll) => (context, parameterMapping, securityContext) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
         PredefinedRoles.EDITOR, PredefinedRoles.READER)
       val query = if (showAll)
@@ -178,11 +179,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """.stripMargin
       if (withUsers) {
         SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine, query + ", u.name as member",
-          VirtualValues.map(Array("predefined"), Array(predefinedRoles))
+          VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
+          source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
         )
       } else {
         SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine, query,
-          VirtualValues.map(Array("predefined"), Array(predefinedRoles))
+          VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
+          source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
         )
       }
 
@@ -341,7 +344,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(scope) => (_, _, _) =>
+    case ShowPrivileges(source, scope) => (context, parameterMapping, securityContext) =>
       val privilegeMatch =
         """
           |MATCH (r)-[g]->(p:Privilege)-[:SCOPE]->(s:Segment),
@@ -406,7 +409,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)))
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)),
+        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     // SHOW DATABASES
     case ShowDatabases() => (_, _, _) =>
@@ -522,7 +526,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // START DATABASE foo
-    case StartDatabase(normalizedName) => (_, _, _) =>
+    case StartDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
       val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d:Database {name: $name})
@@ -546,7 +550,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
               new IllegalStateException(s"Failed to start the specified database '$dbName': $followerError", error)
             case error => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
-          }
+          },
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // STOP DATABASE foo
