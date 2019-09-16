@@ -86,11 +86,11 @@ class LdapCachingTest
     {
         // Given
         EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsReads();
+        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         assertThat( "Test realm did not receive a call", testRealm.takeAuthorizationFlag(), is( true ) );
 
         // When
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsWrites();
+        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // Then
         assertThat( "Test realm received a call", testRealm.takeAuthorizationFlag(), is( false ) );
@@ -101,19 +101,19 @@ class LdapCachingTest
     {
         // Given
         EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsReads();
+        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         assertThat( "Test realm did not receive a call", testRealm.takeAuthorizationFlag(), is( true ) );
 
         // When
         fakeTicker.advance( 99, TimeUnit.MILLISECONDS );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsWrites();
+        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // Then
         assertThat( "Test realm received a call", testRealm.takeAuthorizationFlag(), is( false ) );
 
         // When
         fakeTicker.advance( 2, TimeUnit.MILLISECONDS );
-        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsWrites();
+        mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // Then
         assertThat( "Test realm did not received a call", testRealm.takeAuthorizationFlag(), is( true ) );

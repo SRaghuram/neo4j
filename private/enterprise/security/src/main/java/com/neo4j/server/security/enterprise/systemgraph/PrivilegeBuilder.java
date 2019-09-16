@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.DatabaseSegment;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
@@ -54,6 +55,9 @@ class PrivilegeBuilder
         {
             switch ( ((StringValue) qualifierType).stringValue() )
             {
+            case "DatabaseQualifier":
+                this.segment = DatabaseSegment.ALL;
+                break;
             case "LabelQualifier":
                 String label = ((TextValue) qualifierNode.properties().get( "label" )).stringValue();
                 this.segment = new LabelSegment( label );
@@ -81,6 +85,9 @@ class PrivilegeBuilder
         Resource.Type resourceType = asResourceType( type );
         switch ( resourceType )
         {
+        case DATABASE:
+            this.resource = new Resource.DatabaseResource();
+            break;
         case GRAPH:
             this.resource = new Resource.GraphResource();
             break;
@@ -106,6 +113,7 @@ class PrivilegeBuilder
             this.resource = new Resource.ProcedureResource( namespace, procedureName );
             break;
         default:
+            throw new IllegalArgumentException( "Unknown resourceType: " + resourceType );
         }
         return this;
     }

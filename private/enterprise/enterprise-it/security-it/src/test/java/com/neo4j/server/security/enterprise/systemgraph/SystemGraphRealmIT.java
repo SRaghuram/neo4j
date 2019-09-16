@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.DatabaseSegment;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
@@ -340,6 +341,7 @@ class SystemGraphRealmIT
                 .mayPerformMigration()
                 .build(), securityLog, dbManager, defaultConfig );
 
+        ResourcePrivilege accessPrivilege = new ResourcePrivilege( GRANT, Action.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL );
         ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
         ResourcePrivilege readRelPrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
         ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL );
@@ -354,45 +356,39 @@ class SystemGraphRealmIT
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
 
         // Then
-        assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege )
-        );
+        assertThat( privileges, containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
 
         // Then
-        assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, writeRelPrivilege )
-        );
+        assertThat( privileges,
+                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
+                        writeRelPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
 
         // Then
-        assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege )
-        );
+        assertThat( privileges,
+                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
+                        writeRelPrivilege, tokenNodePrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
 
         // Then
-        assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege, schemaNodePrivilege )
-        );
+        assertThat( privileges,
+                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
+                        writeRelPrivilege, tokenNodePrivilege, schemaNodePrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
 
         // Then
-        assertThat( privileges, containsInAnyOrder(
-                readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege,
-                writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege, schemaNodePrivilege, adminNodePrivilege )
-        );
+        assertThat( privileges,
+                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
+                        writeRelPrivilege, tokenNodePrivilege, schemaNodePrivilege, adminNodePrivilege ) );
     }
 
     @Test

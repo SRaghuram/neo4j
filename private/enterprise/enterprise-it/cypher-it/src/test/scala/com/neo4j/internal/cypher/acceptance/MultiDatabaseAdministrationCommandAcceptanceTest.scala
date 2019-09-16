@@ -426,9 +426,11 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("CREATE ROLE custom")
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO joe")
+    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
     execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
@@ -452,7 +454,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
@@ -485,10 +487,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("GRANT ROLE custom TO joe")
 
     // WHEN
+    execute("GRANT ACCESS ON DATABASE foo TO custom")
     execute("GRANT MATCH {*} ON GRAPH foo NODES * (*) TO custom")
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      access().database("foo").user("joe").role("custom").map,
       read().node("*").database("foo").user("joe").role("custom").map,
       traverse().node("*").database("foo").user("joe").role("custom").map
     ))
@@ -514,7 +518,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
@@ -530,10 +534,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("GRANT ROLE custom TO joe")
 
     // WHEN
+    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
     execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
     ))
@@ -561,7 +567,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }

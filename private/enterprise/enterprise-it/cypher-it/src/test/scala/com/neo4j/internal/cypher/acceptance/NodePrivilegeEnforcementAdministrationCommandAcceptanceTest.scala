@@ -17,13 +17,18 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserWithCustomRole()
+    setupUserWithCustomRole(access = false)
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.withTx( tx => tx.execute("CREATE (n:A {name:'a'})"))
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT ACCESS ON DATABASE * TO custom")
+
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
@@ -55,7 +60,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
   test("should read properties when granted MATCH privilege to custom role for all databases and all labels") {
     // GIVEN
-    setupUserWithCustomRole()
+    setupUserWithCustomRole(access = false)
 
     // WHEN
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -65,6 +70,13 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT ACCESS ON DATABASE * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -95,9 +107,10 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("CREATE (:A {name:'a'})")
     selectDatabase(SYSTEM_DATABASE_NAME)
 
-    setupUserWithCustomRole()
+    setupUserWithCustomRole(access = false)
 
     // WHEN
+    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
     execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
 
     // THEN
@@ -107,7 +120,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Read operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
   }
 
   test("read privilege for node should not imply traverse privilege") {
@@ -147,13 +160,16 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("CREATE ROLE role2")
     execute("CREATE ROLE role3")
 
+    execute("GRANT ACCESS ON DATABASE * TO role1")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role1")
     execute("GRANT READ {*} ON GRAPH * NODES * (*) TO role1")
 
+    execute("GRANT ACCESS ON DATABASE * TO role2")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
     execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role2")
     execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role2")
 
+    execute("GRANT ACCESS ON DATABASE * TO role3")
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role3")
@@ -218,12 +234,15 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("CREATE ROLE role2")
     execute("CREATE ROLE role3")
 
+    execute("GRANT ACCESS ON DATABASE * TO role1")
     execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO role1")
 
+    execute("GRANT ACCESS ON DATABASE * TO role2")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO role2")
     execute("GRANT MATCH {foo} ON GRAPH * NODES A (*) TO role2")
     execute("GRANT MATCH {bar} ON GRAPH * NODES B (*) TO role2")
 
+    execute("GRANT ACCESS ON DATABASE * TO role3")
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ {foo} ON GRAPH * NODES A (*) TO role3")
     execute("GRANT READ {bar} ON GRAPH * NODES B (*) TO role3")
@@ -283,7 +302,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // GIVEN
     setupMultiLabelData
     selectDatabase(SYSTEM_DATABASE_NAME)
-    setupUserWithCustomRole()
+    setupUserWithCustomRole(access = false)
 
     // WHEN
     an[AuthorizationViolationException] shouldBe thrownBy {
@@ -291,6 +310,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }
 
     selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT ACCESS ON DATABASE * TO custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 

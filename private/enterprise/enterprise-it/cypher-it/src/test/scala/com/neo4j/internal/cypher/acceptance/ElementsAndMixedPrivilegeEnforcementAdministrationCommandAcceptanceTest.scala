@@ -42,7 +42,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
   test("should see correct things when granted element privileges") {
     // GIVEN
-    setupUserWithCustomRole()
+    setupUserWithCustomRole(access = false)
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name: 'a1'})-[:A {name: 'ra1'}]->(:A {name: 'a2'})")
     execute("CREATE (:A {name: 'a3'})-[:B {name: 'rb1'}]->(:A {name: 'a4'})")
@@ -53,6 +53,13 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", query)
     }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT ACCESS ON DATABASE * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -240,6 +247,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
     execute("CREATE USER tim SET PASSWORD '123' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role")
     execute("GRANT ROLE role TO tim")
+    execute("GRANT ACCESS ON DATABASE * TO role")
     execute("GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role")
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP WROTE TO role")
 

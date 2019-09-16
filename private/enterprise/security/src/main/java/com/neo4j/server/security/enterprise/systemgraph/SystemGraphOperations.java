@@ -205,31 +205,40 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
         String databaseMatch = resourcePrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
         Segment segment = resourcePrivilege.getSegment();
-        String qualifierPattern;
+        String qualifierLabel;
+        String qualifierType;
+        String qualifierArg;
         if ( segment instanceof LabelSegment )
         {
             boolean fullSegment = segment.equals( LabelSegment.ALL );
-            qualifierPattern = fullSegment ? "q:LabelQualifierAll {type: 'node', label: '*'}"
-                                           : String.format( "q:LabelQualifier {type: 'node', label: '%s'}", ((LabelSegment) segment).getLabel() );
+            qualifierLabel = fullSegment ? "LabelQualifierAll" : "LabelQualifier";
+            qualifierType = "node";
+            qualifierArg = fullSegment ? "*" : ((LabelSegment) segment).getLabel();
+        }
+        else if ( segment instanceof RelTypeSegment )
+        {
+            boolean fullSegment = segment.equals( RelTypeSegment.ALL );
+            qualifierLabel = fullSegment ? "RelationshipQualifierAll" : "RelationshipQualifier";
+            qualifierType = "relationship";
+            qualifierArg = fullSegment ? "*" : ((RelTypeSegment) segment).getRelType();
         }
         else
         {
-            boolean fullSegment = segment.equals( RelTypeSegment.ALL );
-            qualifierPattern = fullSegment ? "q:RelationshipQualifierAll {type: 'relationship', label: '*'}"
-                                           : String.format( "q:RelationshipQualifier {type: 'relationship', label: '%s'}",
-                                                   ((RelTypeSegment) segment).getRelType() );
+            qualifierLabel = "DatabaseQualifier";
+            qualifierType = "database";
+            qualifierArg = "";
         }
 
         String query = String.format(
                 "MATCH (r:Role {name: $roleName}) " +
                 "%s " +
                 "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) " +
-                "MERGE (%s) " +
+                "MERGE (q:%s {type: '%s', label: '%s'}) " +
                 "MERGE (db)<-[:FOR]-(segment:Segment)-[:QUALIFIED]->(q) " +
-                "MERGE (segment)<-[:SCOPE]-(p:Action {action: $action})-[:APPLIES_TO]->(res) " +
+                "MERGE (segment)<-[:SCOPE]-(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
                 "MERGE (r)-[:GRANTED]->(p) " +
                 "RETURN id(p)",
-                databaseMatch, qualifierPattern
+                databaseMatch, qualifierLabel, qualifierType, qualifierArg
         );
         assertPrivilegeSuccess( roleName, query, params, resourcePrivilege );
     }
@@ -269,12 +278,12 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         if ( lookupPrivileges )
         {
             String query =
-                    "MATCH (r:Role)-[rel]->(a:Action)-[:SCOPE]->(segment:Segment), " +
-                            "(a)-[:APPLIES_TO]->(res) " +
+                    "MATCH (r:Role)-[rel]->(p:Privilege)-[:SCOPE]->(segment:Segment), " +
+                            "(p)-[:APPLIES_TO]->(res) " +
                             "WHERE r.name IN $roles " +
                             "MATCH (segment)-[:FOR]->(db) " +
                             "MATCH (segment)-[:QUALIFIED]->(q) " +
-                            "RETURN r.name, db.name, db, a.action, res, q, type(rel) as grant";
+                            "RETURN r.name, db.name, db, p.action, res, q, type(rel) as grant";
 
             final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
             {

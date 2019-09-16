@@ -24,6 +24,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
+      "GRANT ACCESS ON DATABASE * TO custom" -> 1,
       "GRANT TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE GRANT TRAVERSE ON GRAPH * NODES * FROM custom" -> 1,
       "DENY TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
@@ -66,8 +67,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO custom")
     execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
-    val grantOnFoo = Set(traverse().node("*").role("custom").database("foo").map)
+    val grantOnFoo = Set(
+      access().role("custom").database("foo").map,
+      traverse().node("*").role("custom").database("foo").map
+    )
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges ++ grantOnFoo)
 
     // WHEN
@@ -81,8 +86,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
+    execute("GRANT ACCESS ON DATABASE * TO custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    val grantForCustom = Set(traverse().node("*").role("custom").map)
+    val grantForCustom = Set(
+      access().role("custom").map,
+      traverse().node("*").role("custom").map
+    )
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges ++ grantForCustom)
 
     // WHEN
@@ -110,6 +119,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
+      access().role("editor").map,
       traverse().role("editor").node("*").map,
       traverse().role("editor").relationship("*").map,
       read().role("editor").node("*").map,
@@ -188,6 +198,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
+      access().role("admin").user("neo4j").map,
       traverse().role("admin").user("neo4j").node("*").map,
       traverse().role("admin").user("neo4j").relationship("*").map,
       read().role("admin").user("neo4j").node("*").map,
@@ -284,10 +295,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   // Tests for granting and denying privileges
 
   Seq(
-    ("grant", "GRANT", "GRANTED"),
-    ("deny", "DENY", "DENIED"),
+    ("grant", "GRANTED"),
+    ("deny", "DENIED"),
   ).foreach {
-    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+    case (grantOrDeny, grantOrDenyRelType) =>
+      val grantOrDenyCommand = grantOrDeny.toUpperCase
 
       Seq(
         ("traversal", "TRAVERSE", Set(traverse(grantOrDenyRelType))),
@@ -609,16 +621,17 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   // Tests for granting and denying privileges on properties
   Seq(
-    ("grant", "GRANT", "GRANTED"),
-    ("deny", "DENY", "DENIED"),
+    ("grant", "GRANTED"),
+    ("deny", "DENIED"),
   ).foreach {
-    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+    case (grantOrDeny, grantOrDenyRelType) =>
+      val grantOrDenyCommand = grantOrDeny.toUpperCase
 
       Seq(
-        ("read", "READ"),
-        ("match", "MATCH")
+        ("read", "READ", Set.empty),
+        ("match", "MATCH", if(grantOrDeny == "grant") Set(traverse(grantOrDenyRelType)) else Set.empty)
       ).foreach {
-        case (actionName, actionCommand) =>
+        case (actionName, actionCommand, expectedTraverse) =>
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all element types") {
             // GIVEN
@@ -629,15 +642,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") => Set(traverse().role("custom").node("*").map, traverse().role("custom").relationship("*").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").property("bar").node("*").map,
-              read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").property("bar").node("*").map,
+                read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map) ++
+                expectedTraverse.map(_.role("custom").node("*").map) ++
+                expectedTraverse.map(_.role("custom").relationship("*").map)
+            )
           }
 
           Seq(
@@ -655,14 +665,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * $segmentCommand * (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") => Set(segmentFunction(traverse().role("custom"), "*").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead = Set(segmentFunction(read(grantOrDenyRelType).role("custom").property("bar"), "*").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).role("custom").property("bar"), "*").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.role("custom"), "*").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific $segmentName") {
@@ -674,14 +680,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * $segmentCommand A (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") => Set(segmentFunction(traverse().role("custom"), "A").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead =  Set(segmentFunction(read(grantOrDenyRelType).role("custom").property("bar"), "A").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).role("custom").property("bar"), "A").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.role("custom"), "A").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific $segmentName") {
@@ -694,14 +696,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand A (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") => Set(segmentFunction(traverse().database("foo").role("custom"), "A").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead = Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "A").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all ${segmentName}s") {
@@ -714,14 +712,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand * (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") => Set(segmentFunction(traverse().database("foo").role("custom"), "*").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead = Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "*").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "*").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "*").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple ${segmentName}s") {
@@ -735,17 +729,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo $segmentCommand B (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") =>
-                    Set(segmentFunction(traverse().database("foo").role("custom"), "A").map,
-                      segmentFunction(traverse().database("foo").role("custom"), "B").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead = Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map,
-                  segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "B").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map,
+                    segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "B").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "A").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "B").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific $segmentName") {
@@ -759,15 +748,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo $segmentCommand A (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") => Set(segmentFunction(traverse().database("foo").role("custom"), "A").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead = Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map,
-                  segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("baz"), "A").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map,
+                    segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("baz"), "A").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "A").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple ${segmentName}s") {
@@ -781,17 +766,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo $segmentCommand B (*) TO custom")
 
                 // THEN
-                val expectedTraverse = (grantOrDeny, actionName) match {
-                  case ("grant", "match") =>
-                    Set(segmentFunction(traverse().database("foo").role("custom"), "A").map,
-                      segmentFunction(traverse().database("foo").role("custom"), "B").map)
-                  case _ => Set.empty
-                }
-
-                val expectedRead = Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map,
-                  segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("baz"), "B").map)
-
-                execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+                  Set(segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("bar"), "A").map,
+                    segmentFunction(read(grantOrDenyRelType).database("foo").role("custom").property("baz"), "B").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "A").map) ++
+                    expectedTraverse.map(expected => segmentFunction(expected.database("foo").role("custom"), "B").map)
+                )
               }
 
               test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple ${segmentName}s in a single grant") {
@@ -807,15 +787,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
                 // THEN
                 val expected = (for (l <- Seq("A", "B", "C")) yield {
-
-                  val expectedTraverse = (grantOrDeny, actionName) match {
-                    case ("grant", "match") => Set(segmentFunction(traverse().database("foo"), l))
-                    case _ => Set.empty
-                  }
-
                   (for (p <- Seq("a", "b", "c")) yield {
                     segmentFunction(read(grantOrDenyRelType).database("foo").property(p), l)
-                  }) ++ expectedTraverse
+                  }) ++ expectedTraverse.map(expected => segmentFunction(expected.database("foo"), l))
                 }).flatten
 
                 execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -834,16 +808,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * ELEMENTS * (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").node("*").map, traverse().role("custom").relationship("*").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").property("bar").node("*").map,
-              read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").property("bar").node("*").map,
+                read(grantOrDenyRelType).role("custom").property("bar").relationship("*").map) ++
+                expectedTraverse.map(_.role("custom").node("*").map) ++
+                expectedTraverse.map(_.role("custom").relationship("*").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific element") {
@@ -855,16 +825,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH * ELEMENTS A (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").node("A").map, traverse().role("custom").relationship("A").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").property("bar").node("A").map,
-              read(grantOrDenyRelType).role("custom").property("bar").relationship("A").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").property("bar").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").node("A").map) ++
+                expectedTraverse.map(_.role("custom").relationship("A").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific element") {
@@ -877,17 +843,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS A (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").database("foo").node("A").map,
-                  traverse().role("custom").database("foo").relationship("A").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all elements") {
@@ -900,16 +861,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS * (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").database("foo").node("*").map, traverse().role("custom").database("foo").relationship("*").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("*").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("*").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("*").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("*").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("*").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("*").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple elements") {
@@ -923,21 +880,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {bar} ON GRAPH foo ELEMENTS B (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").database("foo").node("A").map,
-                  traverse().role("custom").database("foo").relationship("A").map,
-                  traverse().role("custom").database("foo").node("B").map,
-                  traverse().role("custom").database("foo").relationship("B").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
                 read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
                 read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("B").map,
-                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("B").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific element") {
@@ -951,18 +903,14 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo ELEMENTS A (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").database("foo").node("A").map, traverse().role("custom").database("foo").relationship("A").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("baz").node("A").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("baz").relationship("A").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple elements") {
@@ -976,21 +924,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute(s"$grantOrDenyCommand $actionCommand {baz} ON GRAPH foo ELEMENTS B (*) TO custom")
 
             // THEN
-            val expectedTraverse = (grantOrDeny, actionName) match {
-              case ("grant", "match") =>
-                Set(traverse().role("custom").database("foo").node("A").map,
-                  traverse().role("custom").database("foo").relationship("A").map,
-                  traverse().role("custom").database("foo").node("B").map,
-                  traverse().role("custom").database("foo").relationship("B").map)
-              case _ => Set.empty
-            }
-
-            val expectedRead = Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("baz").node("B").map,
-              read(grantOrDenyRelType).role("custom").database("foo").property("baz").relationship("B").map)
-
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedTraverse ++ expectedRead)
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(
+              Set(read(grantOrDenyRelType).role("custom").database("foo").property("bar").node("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("bar").relationship("A").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").node("B").map,
+                read(grantOrDenyRelType).role("custom").database("foo").property("baz").relationship("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("A").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").node("B").map) ++
+                expectedTraverse.map(_.role("custom").database("foo").relationship("B").map)
+            )
           }
 
           test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple elements in a single grant") {
@@ -1006,15 +949,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
             // THEN
             val expected = (for (l <- Seq("A", "B", "C")) yield {
-              val expectedTraverse = (grantOrDeny, actionName) match {
-                case ("grant", "match") => Set(traverse().database("foo").node(l), traverse().database("foo").relationship(l))
-                case _ => Set.empty
-              }
-
               (for (p <- Seq("a", "b", "c")) yield {
                 Seq(read(grantOrDenyRelType).database("foo").property(p).node(l),
                   read(grantOrDenyRelType).database("foo").property(p).relationship(l))
-              }).flatten ++ expectedTraverse
+              }).flatten ++ expectedTraverse.map(expected => expected.database("foo").node(l)) ++
+                expectedTraverse.map(expected => expected.database("foo").relationship(l))
             }).flatten
 
             execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)

@@ -29,14 +29,15 @@ import java.util.stream.Stream;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.LabelSet;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 {
@@ -60,6 +61,10 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     private StandardAccessMode mode( IdLookup resolver, String dbName ) throws KernelException
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
+        if ( !isAuthenticated )
+        {
+            throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED );
+        }
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         Set<String> roles = queryForRoleNames();
         StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver );
@@ -73,9 +78,29 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 accessModeBuilder.addPrivilege( privilege );
             }
         }
-
+        if ( dbName.equals( SYSTEM_DATABASE_NAME ) )
+        {
+            try
+            {
+                accessModeBuilder.addPrivilege(
+                        new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, ResourcePrivilege.Action.ACCESS, new Resource.DatabaseResource(),
+                                DatabaseSegment.ALL, dbName ) );
+            }
+            catch ( InvalidArgumentsException e )
+            {
+                throw new AuthorizationViolationException( String.format( "Database '%s' access not allowed: %s", dbName, e.getMessage() ), e );
+            }
+        }
         accessModeBuilder.addBlacklistedPropertyPermissions( authManager.getPropertyPermissions( roles(), resolver ) );
-        return accessModeBuilder.build();
+
+        StandardAccessMode mode = accessModeBuilder.build();
+        if ( !mode.allowsAccess )
+        {
+            throw mode.onViolation(
+                    String.format( "Database access is not allowed for user '%s' with roles %s.", neoShiroSubject.username(), roles.toString() ) );
+        }
+
+        return mode;
     }
 
     @Override
@@ -110,6 +135,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 
     private static class StandardAccessMode implements AccessMode
     {
+        private final boolean allowsAccess;
         private final boolean allowsReads;
         private final boolean allowsWrites;
         private final boolean allowsTokenCreates;
@@ -147,6 +173,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         private final IntObjectMap<IntSet> blacklistedRelTypesForProperty;
 
         StandardAccessMode(
+                boolean allowsAccess,
                 boolean allowsReads,
                 boolean allowsWrites,
                 boolean allowsTokenCreates,
@@ -184,6 +211,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 IntObjectMap<IntSet> blacklistedRelTypesForProperty
         )
         {
+            this.allowsAccess = allowsAccess;
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
             this.allowsTokenCreates = allowsTokenCreates;
@@ -225,12 +253,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         public boolean allowsTokenReads()
         {
             return allowsReads || allowsWrites || allowsTokenCreates || allowsSchemaWrites;
-        }
-
-        @Override
-        public boolean allowsReads()
-        {
-            return allowsReads;
         }
 
         @Override
@@ -493,6 +515,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             private final Set<String> roles;
             private final IdLookup resolver;
 
+            private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyAccess = new HashMap<>();  // track any access rights
             private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
             private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyWrite = new HashMap<>(); // track any writes because we only support global write GRANT/DENY
             private boolean token;  // TODO - still to support GRANT/DENY
@@ -544,6 +567,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             StandardAccessMode build()
             {
                 return new StandardAccessMode(
+                        isAuthenticated && anyAccess.getOrDefault( GRANT, false ),
                         isAuthenticated && anyRead.getOrDefault( GRANT, false ),
                         isAuthenticated && anyWrite.getOrDefault( GRANT, false ) && !anyWrite.getOrDefault( DENY, false ),
                         isAuthenticated && token,
@@ -589,6 +613,9 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 
                 switch ( privilege.getAction() )
                 {
+                case ACCESS:
+                    anyAccess.put( privilegeType, true );
+                    break;
                 case TRAVERSE:
                     anyRead.put( privilegeType, true );
                     if ( segment instanceof LabelSegment )

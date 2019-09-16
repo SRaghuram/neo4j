@@ -226,8 +226,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       // This operator expects CreateRole(to) and RequireRole(from) to run as source, so we do not check for those
       UpdatingSystemCommandExecutionPlan("CopyPrivileges", normalExecutionEngine,
         s"""MATCH (to:Role {name: $$to})
-           |MATCH (from:Role {name: $$from})-[:$grantDeny]->(a:Action)
-           |MERGE (to)-[g:$grantDeny]->(a)
+           |MATCH (from:Role {name: $$from})-[:$grantDeny]->(p:Privilege)
+           |MERGE (to)-[g:$grantDeny]->(p)
            |RETURN from.name, to.name, count(g)""".stripMargin,
         VirtualValues.map(Array("from", "to"), Array(Values.stringValue(from), Values.stringValue(to))),
         QueryHandler.handleError(e => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
@@ -288,6 +288,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
+    // GRANT/DENY/REVOKE ACCESS ON DATABASE foo TO role
+    case GrantAccess(source, database, roleName) => (context, parameterMapping, securityContext) =>
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.ACCESS.toString, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant access privilege to role '$roleName'")
+
+    case DenyAccess(source, database, roleName) => (context, parameterMapping, securityContext) =>
+      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.ACCESS.toString, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny access privilege to role '$roleName'")
+
+    case RevokeAccess(source, database, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+      makeRevokeExecutionPlan(ResourcePrivilege.Action.ACCESS.toString, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName, revokeType,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke access privilege from role '$roleName'")
+
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
@@ -331,8 +344,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case ShowPrivileges(scope) => (_, _, _) =>
       val privilegeMatch =
         """
-          |MATCH (r)-[g]->(a:Action)-[:SCOPE]->(s:Segment),
-          |    (a)-[:APPLIES_TO]->(res:Resource),
+          |MATCH (r)-[g]->(p:Privilege)-[:SCOPE]->(s:Segment),
+          |    (p)-[:APPLIES_TO]->(res:Resource),
           |    (s)-[:FOR]->(d),
           |    (s)-[:QUALIFIED]->(q)
           |WHERE d:Database OR d:DatabaseAll
@@ -342,6 +355,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |CASE q.type
           |  WHEN 'node' THEN 'NODE('+q.label+')'
           |  WHEN 'relationship' THEN 'RELATIONSHIP('+q.label+')'
+          |  WHEN 'database' THEN 'database'
           |  ELSE 'ELEMENT('+q.label+')'
           |END
         """.stripMargin
@@ -354,7 +368,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """.stripMargin
       val returnColumns =
         s"""
-          |RETURN type(g) AS grant, a.action AS action, $resourceColumn AS resource,
+          |RETURN type(g) AS grant, p.action AS action, $resourceColumn AS resource,
           |coalesce(d.name, '*') AS graph, segment, r.name AS role
         """.stripMargin
       val orderBy =
@@ -367,7 +381,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           s"""
              |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
              |$privilegeMatch
-             |WITH g, a, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
+             |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
              |$orderBy
           """.stripMargin
@@ -376,7 +390,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
              |$privilegeMatch
-             |WITH g, a, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
+             |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
              |$returnColumns, u.name AS user
              |$orderBy
           """.stripMargin
@@ -385,7 +399,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           s"""
              |OPTIONAL MATCH (r:Role) WITH r
              |$privilegeMatch
-             |WITH g, a, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
+             |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
              |$orderBy
           """.stripMargin
@@ -589,6 +603,23 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
   }
 
+  private def getResourcePart(resource: ast.ActionResource, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, Value, String) = resource match {
+    case ast.DatabaseResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.DATABASE.toString), matchOrMerge + " (res:Resource {type: $resource})")
+    case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), matchOrMerge + " (res:Resource {type: $resource, arg1: $property})")
+    case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), matchOrMerge + " (res:Resource {type: $resource})")
+    case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), matchOrMerge + " (res:Resource {type: $resource})") // The label is just for later printout of results
+    case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
+  }
+
+  private def getQualifierPart(qualifier: ast.PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, String) = qualifier match {
+    case ast.AllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
+    case ast.LabelQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:LabelQualifier {type: 'node', label: $label})")
+    case ast.LabelAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
+    case ast.RelationshipQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:RelationshipQualifier {type: 'relationship', label: $label})")
+    case ast.RelationshipAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
+    case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName qualifier $qualifier")
+  }
+
   private def makeGrantOrDenyExecutionPlan(actionName: String,
                                            resource: ast.ActionResource,
                                            database: ast.GraphScope,
@@ -601,19 +632,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
-    val (property: Value, resourceType: Value, resourceMerge: String) = resource match {
-      case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MERGE (res:Resource {type: $resource, arg1: $property})")
-      case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MERGE (res:Resource {type: $resource})")
-      case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MERGE (res:Resource {type: $resource})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} resource type $resource")
-    }
-    val (label: Value, qualifierMerge: String) = qualifier match {
-      case ast.LabelQualifier(name) => (Values.stringValue(name), "MERGE (q:LabelQualifier {type: 'node', label: $label})")
-      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MERGE (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
-      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MERGE (q:RelationshipQualifier {type: 'relationship', label: $label})")
-      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MERGE (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} qualifier $qualifier")
-    }
+    val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage, grant.name, "MERGE")
+    val (label: Value, qualifierMerge: String) = getQualifierPart(qualifier, startOfErrorMessage, grant.name, "MERGE")
     val (dbName, db, databaseMerge, scopeMerge) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
@@ -632,17 +652,17 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |// Create a new scope connecting the database to the qualifier using a :Segment node
          |$scopeMerge
          |
-         |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through an :Action
+         |// Find or create the appropriate resource type (eg. 'graph') and then connect it to the scope through a :Privilege
          |$resourceMerge
-         |MERGE (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
-         |WITH q, d, a
+         |MERGE (res)<-[:APPLIES_TO]-(p:Privilege {action: $$action})-[:SCOPE]->(s)
+         |WITH q, d, p
          |
          |// Connect the role to the action to complete the privilege assignment
          |OPTIONAL MATCH (r:Role {name: $$role})
-         |MERGE (r)-[:${grant.relType}]->(a)
+         |MERGE (r)-[:${grant.relType}]->(p)
          |
          |// Return the table of results
-         |RETURN '${grant.prefix}' AS grant, a.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
+         |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
         .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist.")))
@@ -662,19 +682,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val role = Values.stringValue(roleName)
     val relType = if (revokeType.relType.nonEmpty) ":" + revokeType.relType else ""
 
-    val (property: Value, resourceType: Value, resourceMatch: String) = resource match {
-      case ast.PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), "MATCH (res:Resource {type: $resource, arg1: $property})")
-      case ast.NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), "MATCH (res:Resource {type: $resource})")
-      case ast.AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), "MATCH (res:Resource {type: $resource})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke resource type $resource")
-    }
-    val (label: Value, qualifierMatch: String) = qualifier match {
-      case ast.LabelQualifier(name) => (Values.stringValue(name), "MATCH (q:LabelQualifier {type: 'node', label: $label})")
-      case ast.LabelAllQualifier() => (Values.NO_VALUE, "MATCH (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
-      case ast.RelationshipQualifier(name) => (Values.stringValue(name), "MATCH (q:RelationshipQualifier {type: 'relationship', label: $label})")
-      case ast.RelationshipAllQualifier() => (Values.NO_VALUE, "MATCH (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke qualifier $qualifier")
-    }
+    val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
+    val (label: Value, qualifierMatch: String) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
     val (dbName, _, scopeMatch) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
@@ -690,12 +699,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |
          |// Find the action connecting the resource and segment
          |$resourceMatch
-         |MATCH (res)<-[:APPLIES_TO]-(a:Action {action: $$action})-[:SCOPE]->(s)
+         |MATCH (res)<-[:APPLIES_TO]-(p:Privilege {action: $$action})-[:SCOPE]->(s)
          |
          |// Find the privilege assignment connecting the role to the action
          |OPTIONAL MATCH (r:Role {name: $$role})
-         |WITH a, r, d, q
-         |OPTIONAL MATCH (r)-[g$relType]->(a)
+         |WITH p, r, d, q
+         |OPTIONAL MATCH (r)-[g$relType]->(p)
          |
          |// Remove the assignment
          |DELETE g

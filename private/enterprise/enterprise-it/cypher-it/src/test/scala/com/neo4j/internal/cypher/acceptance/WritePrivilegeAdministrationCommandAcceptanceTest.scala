@@ -706,9 +706,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }
   }
 
-  test("write privilege should not imply traverse privilege") {
+  test("write privilege should not imply access privilege") {
     // GIVEN
-    setupUserWithCustomRole()
+    setupUserWithCustomRole(access = false)
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
 
@@ -720,6 +720,20 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     an[AuthorizationViolationException] shouldBe thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)")
     }
+  }
+
+  test("write privilege should not imply traverse privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a'})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN labels(n)") should be(0)
   }
 
   test("should create nodes when granted WRITE privilege to custom role for a specific database") {

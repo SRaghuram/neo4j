@@ -82,7 +82,6 @@ class EnterpriseLoginContextTest
         SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
-        assertTrue( securityContext.mode().allowsReads() );
         assertTrue( securityContext.mode().allowsWrites() );
         assertTrue( securityContext.mode().allowsSchemaWrites() );
         assertTrue( securityContext.isAdmin() );
@@ -99,7 +98,6 @@ class EnterpriseLoginContextTest
         SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
-        assertTrue( securityContext.mode().allowsReads() );
         assertTrue( securityContext.mode().allowsWrites() );
         assertTrue( securityContext.mode().allowsSchemaWrites() );
     }
@@ -115,7 +113,6 @@ class EnterpriseLoginContextTest
         SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
-        assertTrue( securityContext.mode().allowsReads(), "should allow reads" );
         assertTrue( securityContext.mode().allowsWrites(), "should allow writes" );
         assertFalse( securityContext.mode().allowsSchemaWrites(), "should _not_ allow schema writes" );
     }
@@ -131,7 +128,6 @@ class EnterpriseLoginContextTest
         SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
 
         // Then
-        assertTrue( securityContext.mode().allowsReads() );
         assertFalse( securityContext.mode().allowsWrites() );
         assertFalse( securityContext.mode().allowsSchemaWrites() );
     }
@@ -143,12 +139,7 @@ class EnterpriseLoginContextTest
         EnterpriseLoginContext loginContext = login();
 
         // When
-        SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
-
-        // Then
-        assertFalse( securityContext.mode().allowsReads() );
-        assertFalse( securityContext.mode().allowsWrites() );
-        assertFalse( securityContext.mode().allowsSchemaWrites() );
+        assertThrows( AuthorizationViolationException.class, () -> loginContext.authorize( token, DEFAULT_DATABASE_NAME ) );
     }
 
     @Test
@@ -160,7 +151,6 @@ class EnterpriseLoginContextTest
 
         // When
         SecurityContext securityContext = loginContext.authorize( token, DEFAULT_DATABASE_NAME );
-        assertTrue( securityContext.mode().allowsReads() );
         assertTrue( securityContext.mode().allowsWrites() );
         assertTrue( securityContext.mode().allowsSchemaWrites() );
 

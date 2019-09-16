@@ -143,6 +143,15 @@ public class ResourcePrivilege
 
     public enum Action
     {
+        /** ACCESS database */
+        ACCESS,
+
+        /** START database */
+        START,
+
+        /** STOP database */
+        STOP,
+
         /** MATCH element and read labels */
         TRAVERSE,
 

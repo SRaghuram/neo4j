@@ -6,11 +6,13 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
+import com.neo4j.server.security.enterprise.auth.DatabaseSegment;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource.AllPropertiesResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
+import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
 import com.neo4j.server.security.enterprise.auth.Resource.SchemaResource;
 import com.neo4j.server.security.enterprise.auth.Resource.SystemResource;
 import com.neo4j.server.security.enterprise.auth.Resource.TokenResource;
@@ -213,18 +215,15 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
-                // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SystemResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SystemResource(), DatabaseSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
-                // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SchemaResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SchemaResource(), DatabaseSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
-                // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new TokenResource(), LabelSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new TokenResource(), DatabaseSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
@@ -244,6 +243,11 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                         new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
                         new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
+            }
+            if ( simpleRole.isPermitted( PredefinedRolesBuilder.ACCESS ) )
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( GRANT, Action.ACCESS, new DatabaseResource(), DatabaseSegment.ALL ) );
             }
         }
     }

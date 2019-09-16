@@ -37,11 +37,13 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
+    access().role("reader").map,
     traverse().role("reader").node("*").map,
     traverse().role("reader").relationship("*").map,
     read().role("reader").node("*").map,
     read().role("reader").relationship("*").map,
 
+    access().role("editor").map,
     traverse().role("editor").node("*").map,
     traverse().role("editor").relationship("*").map,
     read().role("editor").node("*").map,
@@ -49,6 +51,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     write().role("editor").node("*").map,
     write().role("editor").relationship("*").map,
 
+    access().role("publisher").map,
     traverse().role("publisher").node("*").map,
     traverse().role("publisher").relationship("*").map,
     read().role("publisher").node("*").map,
@@ -57,6 +60,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     write().role("publisher").relationship("*").map,
     grantToken().role("publisher").map,
 
+    access().role("architect").map,
     traverse().role("architect").node("*").map,
     traverse().role("architect").relationship("*").map,
     read().role("architect").node("*").map,
@@ -66,6 +70,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     grantToken().role("architect").map,
     grantSchema().role("architect").map,
 
+    access().role("admin").map,
     traverse().role("admin").node("*").map,
     traverse().role("admin").relationship("*").map,
     read().role("admin").node("*").map,
@@ -91,11 +96,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
-  def setupUserWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom"): Unit = {
+  def setupUserWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom", access: Boolean = true): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
     execute(s"CREATE ROLE $rolename")
     execute(s"GRANT ROLE $rolename TO $username")
+    if (access) execute(s"GRANT ACCESS ON DATABASE * TO $rolename")
   }
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
@@ -114,15 +120,16 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
 
-  def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("grant" -> grant, "graph" -> "*")
+  def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("grant" -> grant, "graph" -> "*", "segment" -> "database")
 
+  def access(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("access")
   def traverse(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("traverse")
   def read(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("read")
   def write(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("write")
 
-  def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "token")).action("write").node("*")
-  def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "schema")).action("write").node("*")
-  def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "system")).action("write").node("*")
+  def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "token")).action("write")
+  def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "schema")).action("write")
+  def grantSystem(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "system")).action("write")
 
   type builderType = (PrivilegeMapBuilder, String) => PrivilegeMapBuilder
   def addNode(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.node(name)

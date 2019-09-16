@@ -26,6 +26,7 @@ public class PredefinedRolesBuilder implements RolesBuilder
     public static final WildcardPermission TOKEN = new WildcardPermission( "database:*:*:token" );
     public static final WildcardPermission WRITE = new WildcardPermission( "database:*:write:graph" );
     public static final WildcardPermission READ = new WildcardPermission( "database:*:read:graph" );
+    public static final WildcardPermission ACCESS = new WildcardPermission( "database:*:access:graph" );
 
     private static final Map<String,SimpleRole> innerRoles = staticBuildRoles();
     public static final Map<String,SimpleRole> roles = Collections.unmodifiableMap( innerRoles );
@@ -40,6 +41,7 @@ public class PredefinedRolesBuilder implements RolesBuilder
         admin.add( TOKEN );
         admin.add( WRITE );
         admin.add( READ );
+        admin.add( ACCESS );
         roles.put( ADMIN, admin );
 
         SimpleRole architect = new SimpleRole( ARCHITECT );
@@ -47,21 +49,25 @@ public class PredefinedRolesBuilder implements RolesBuilder
         architect.add( TOKEN );
         architect.add( WRITE );
         architect.add( READ );
+        architect.add( ACCESS );
         roles.put( ARCHITECT, architect );
 
         SimpleRole publisher = new SimpleRole( PUBLISHER );
         publisher.add( TOKEN );
         publisher.add( WRITE );
         publisher.add( READ );
+        publisher.add( ACCESS );
         roles.put( PUBLISHER, publisher );
 
         SimpleRole editor = new SimpleRole( EDITOR );
         editor.add( WRITE );
         editor.add( READ );
+        editor.add( ACCESS );
         roles.put( EDITOR, editor );
 
         SimpleRole reader = new SimpleRole( READER );
         reader.add( READ );
+        reader.add( ACCESS );
         roles.put( READER, reader );
 
         return roles;

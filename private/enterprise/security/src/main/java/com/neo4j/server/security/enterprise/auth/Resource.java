@@ -61,6 +61,42 @@ public interface Resource
         }
     }
 
+    class DatabaseResource implements Resource
+    {
+        @Override
+        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        {
+            if ( !(action.equals( Action.ACCESS ) || action.equals( Action.START ) || action.equals( Action.STOP )) )
+            {
+                throw new InvalidArgumentsException( String.format( "Database resource cannot be combined with action '%s'", action.toString() ) );
+            }
+        }
+
+        @Override
+        public Type type()
+        {
+            return Type.DATABASE;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "database";
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Type.DATABASE.hashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            return obj instanceof GraphResource;
+        }
+    }
+
     class AllPropertiesResource implements Resource
     {
         public AllPropertiesResource( )
@@ -342,6 +378,7 @@ public interface Resource
         ALL_PROPERTIES,
         PROPERTY,
         GRAPH,
+        DATABASE,
         TOKEN,
         SCHEMA,
         SYSTEM,
