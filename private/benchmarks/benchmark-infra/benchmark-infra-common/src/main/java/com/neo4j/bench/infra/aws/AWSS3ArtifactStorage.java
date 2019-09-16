@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
@@ -100,7 +101,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             for ( Path artifact : workspace.allArtifacts() )
             {
                 ObjectMetadata objectMetadata = new ObjectMetadata();
-                String s3key = s3Path + workspace.baseDir().relativize( artifact );
+                String s3key = Paths.get( s3Path, workspace.baseDir().relativize( artifact ).toString() ).toString();
                 // don't you ever dare to touch it,
                 // otherwise you will run out of memory
                 // as AWS S3 client tries to cache whole stream in memory
