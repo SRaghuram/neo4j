@@ -27,18 +27,23 @@ import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Workspace;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static org.apache.commons.lang3.StringUtils.appendIfMissing;
+import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class AWSS3ArtifactStorage implements ArtifactStorage
 {
@@ -100,13 +105,15 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             for ( Path artifact : workspace.allArtifacts() )
             {
                 ObjectMetadata objectMetadata = new ObjectMetadata();
-                String s3key = s3Path + workspace.baseDir().relativize( artifact );
+                String s3key = Paths.get( s3Path, workspace.baseDir().relativize( artifact ).toString() ).toString();
                 // don't you ever dare to touch it,
                 // otherwise you will run out of memory
                 // as AWS S3 client tries to cache whole stream in memory
                 // if size is unknown
                 objectMetadata.setContentLength( Files.size( artifact ) );
-                LOG.info( "upload artifact {} to path {}", artifact.toString(), s3key );
+                LOG.info( "upload artifact {} to path {}",
+                          artifact.toString(),
+                          new URI( artifactBaseURI.getScheme(), artifactBaseURI.getHost(), s3key, null ) );
                 PutObjectResult result = amazonS3.putObject( bucketName,  s3key,
                                                              Files.newInputStream( artifact ), objectMetadata );
                 // TODO this fails under tests, and works with real implementation
@@ -114,15 +121,10 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             }
             return artifactBaseURI;
         }
-        catch ( IOException e )
+        catch ( IOException | URISyntaxException e )
         {
             throw new ArtifactStoreException( e );
         }
-    }
-
-    private String getS3Path( String fullPath )
-    {
-        return fullPath.substring( 1 ) + "/";
     }
 
     @Override
@@ -161,16 +163,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         return new S3ObjectDataset( s3Object );
     }
 
-    private String createDatasetKey( String neo4jVersion, String dataset )
-    {
-        return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
-    }
-
-    private static String createBuildArtifactPrefix( String buildID )
-    {
-        return format( "%s/%s", ARTIFACTS_PREFIX, buildID );
-    }
-
     public void verifyBuildArtifactsExpirationRule( URI artifactBaseURI )
     {
         String bucketName = artifactBaseURI.getAuthority();
@@ -192,8 +184,14 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         amazonS3.setBucketLifecycleConfiguration( bucketName, configuration );
     }
 
-    private static String createBuildArtifactKey( String buildID, Path artifact )
+    private static String getS3Path( String fullPath )
     {
-        return format( "%s/%s/%s", ARTIFACTS_PREFIX, buildID, artifact.toString() );
+        return appendIfMissing( removeStart( fullPath, "/" ), "/");
     }
+
+    private static String createDatasetKey( String neo4jVersion, String dataset )
+    {
+        return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
+    }
+
 }
