@@ -64,6 +64,22 @@ case class BufferDefinition(id: BufferId,
 
   def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
     copy(workCancellers = workCancellers.toArray)(bufferSlotConfiguration)
+
+  // Override equality for correct array handling. Only used in tests so not performant.
+
+  override def canEqual(that: Any): Boolean = that.isInstanceOf[BufferDefinition]
+
+  override def equals(obj: Any): Boolean = {
+    obj.isInstanceOf[BufferDefinition] && {
+      val other = obj.asInstanceOf[BufferDefinition]
+      asTuple.equals(other.asTuple)
+    }
+  }
+
+  override def hashCode(): Int = asTuple.hashCode()
+
+  private def asTuple: (BufferId, Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], BufferVariant) =
+    (id, reducers, workCancellers, downstreamStates, variant)
 }
 
 /**
@@ -91,7 +107,24 @@ case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends
   */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
                               reducersOnRHSReversed: Array[ArgumentStateMapId],
-                              delegates: Array[BufferId]) extends BufferVariant
+                              delegates: Array[BufferId]) extends BufferVariant {
+
+  // Override equality for correct array handling. Only used in tests so not performant.
+
+  override def canEqual(that: Any): Boolean = that.isInstanceOf[ApplyBufferVariant]
+
+  override def equals(obj: Any): Boolean = {
+    obj.isInstanceOf[ApplyBufferVariant] && {
+      val other = obj.asInstanceOf[ApplyBufferVariant]
+      asTuple.equals(other.asTuple)
+    }
+  }
+
+  override def hashCode(): Int = asTuple.hashCode()
+
+  private def asTuple: (Int, Seq[ArgumentStateMapId], Seq[BufferId]) =
+    (argumentSlotOffset, reducersOnRHSReversed, delegates)
+}
 
 /**
   * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
