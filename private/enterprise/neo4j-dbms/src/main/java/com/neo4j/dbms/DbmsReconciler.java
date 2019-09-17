@@ -43,7 +43,9 @@ import static com.neo4j.dbms.OperatorState.INITIAL;
 import static com.neo4j.dbms.OperatorState.STARTED;
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.lang.String.format;
+import static java.lang.Thread.currentThread;
 import static java.util.concurrent.CompletableFuture.delayedExecutor;
+import static org.apache.commons.lang3.StringUtils.left;
 
 /**
  * Responsible for controlling the lifecycles of *all* databases in this neo4j instance, via the {@link DatabaseManager}.
@@ -74,6 +76,8 @@ import static java.util.concurrent.CompletableFuture.delayedExecutor;
  */
 public class DbmsReconciler
 {
+    private static final int MAX_THREAD_DBNAME_LENGTH = 64;
+
     private final ExponentialBackoffStrategy backoffStrategy;
     private final Executor executor;
     private final Set<String> reconciling;
@@ -128,7 +132,16 @@ public class DbmsReconciler
 
     private ReconcilerStepResult reconcileSteps( DatabaseState currentState, Stream<Transition> steps, DatabaseState desiredState )
     {
-        return reconcileSteps0( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+        String oldThreadName = currentThread().getName();
+        try
+        {
+            currentThread().setName( oldThreadName + "-" + left( desiredState.databaseId().name(), MAX_THREAD_DBNAME_LENGTH ) );
+            return reconcileSteps0( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+        }
+        finally
+        {
+            currentThread().setName( oldThreadName );
+        }
     }
 
     private ReconcilerStepResult reconcileSteps0( Iterator<Transition> steps, ReconcilerStepResult result )
@@ -233,7 +246,7 @@ public class DbmsReconciler
             }
             catch ( InterruptedException e )
             {
-                Thread.currentThread().interrupt();
+                currentThread().interrupt();
                 throw new CompletionException( e );
             }
 
