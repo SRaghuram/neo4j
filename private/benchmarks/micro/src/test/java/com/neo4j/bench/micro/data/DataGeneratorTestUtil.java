@@ -27,10 +27,10 @@ import java.util.stream.StreamSupport;
 
 import org.neo4j.driver.internal.util.Iterables;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
@@ -256,7 +256,7 @@ public class DataGeneratorTestUtil
         }
     }
 
-    private static int propertyCount( Iterable<? extends PropertyContainer> propertyContainers )
+    private static int propertyCount( Iterable<? extends Entity> propertyContainers )
     {
         return StreamSupport.stream( propertyContainers.spliterator(), false )
                             .map( n -> Iterables.count( n.getPropertyKeys() ) )
@@ -297,7 +297,7 @@ public class DataGeneratorTestUtil
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            return computeChainsStats( transaction.getAllNodes(), PropertyContainer::getPropertyKeys );
+            return computeChainsStats( transaction.getAllNodes(), Entity::getPropertyKeys );
         }
     }
 
@@ -305,7 +305,7 @@ public class DataGeneratorTestUtil
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            return computeChainsStats( transaction.getAllRelationships(), PropertyContainer::getPropertyKeys );
+            return computeChainsStats( transaction.getAllRelationships(), Entity::getPropertyKeys );
         }
     }
 

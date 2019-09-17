@@ -17,9 +17,9 @@ import java.io.PrintStream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -235,7 +235,7 @@ class DatabaseRebuildToolTest
         managementService.shutdown();
     }
 
-    private static void setProperties( PropertyContainer entity, int i )
+    private static void setProperties( Entity entity, int i )
     {
         entity.setProperty( "key", "name" + i );
     }

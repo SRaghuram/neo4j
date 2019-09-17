@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -619,7 +619,7 @@ public class ListQueriesProcedureTest
         }
     }
 
-    private <T extends PropertyContainer> Resource<T> test( Function<Transaction, T> setup, String... queries )
+    private <T extends Entity> Resource<T> test( Function<Transaction, T> setup, String... queries )
             throws InterruptedException, ExecutionException
     {
         CountDownLatch resourceLocked = new CountDownLatch( 1 );
@@ -655,7 +655,6 @@ public class ListQueriesProcedureTest
             }
             catch ( Throwable t )
             {
-                t.printStackTrace();
                 throw new RuntimeException( t );
             }
             finally

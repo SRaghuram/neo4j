@@ -13,8 +13,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.PropertyContainer;
 
 public class Neo4jJsonCodec extends ObjectMapper
 {
@@ -22,9 +22,9 @@ public class Neo4jJsonCodec extends ObjectMapper
     @Override
     public void writeValue( JsonGenerator out, Object value ) throws IOException
     {
-        if ( value instanceof PropertyContainer )
+        if ( value instanceof Entity )
         {
-            writePropertyContainer( out, (PropertyContainer) value );
+            writePropertyContainer( out, (Entity) value );
         }
         else if ( value instanceof Path )
         {
@@ -70,7 +70,7 @@ public class Neo4jJsonCodec extends ObjectMapper
         out.writeEndArray();
     }
 
-    private void writePath( JsonGenerator out, Iterator<PropertyContainer> value ) throws IOException
+    private void writePath( JsonGenerator out, Iterator<Entity> value ) throws IOException
     {
         out.writeStartArray();
         while ( value.hasNext() )
@@ -80,7 +80,7 @@ public class Neo4jJsonCodec extends ObjectMapper
         out.writeEndArray();
     }
 
-    private void writePropertyContainer( JsonGenerator out, PropertyContainer value ) throws IOException
+    private void writePropertyContainer( JsonGenerator out, Entity value ) throws IOException
     {
         out.writeStartObject();
         for ( String key : value.getPropertyKeys() )

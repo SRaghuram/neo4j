@@ -29,10 +29,10 @@ import org.neo4j.graphalgo.BasicEvaluationContext;
 import org.neo4j.graphalgo.GraphAlgoFactory;
 import org.neo4j.graphalgo.PathFinder;
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.PathExpanders;
-import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 
@@ -72,7 +72,7 @@ public class LongQuery14EmbeddedCore_1 extends Neo4jQuery14<Neo4jConnectionState
     }
 
     private double calculatePathWeight(
-            Iterable<PropertyContainer> path,
+            Iterable<Entity> path,
             List<Long> personIdsInPath,
             RelationshipType[] postHasCreatorRelationshipTypes,
             RelationshipType[] commentHasCreatorRelationshipTypes )
@@ -80,7 +80,7 @@ public class LongQuery14EmbeddedCore_1 extends Neo4jQuery14<Neo4jConnectionState
         double weight = 0;
         Map<Node,Set<Node>> personComments = new HashMap<>();
         Map<Node,Set<Node>> personPosts = new HashMap<>();
-        Iterator<PropertyContainer> pathIterator = path.iterator();
+        Iterator<Entity> pathIterator = path.iterator();
         Node prevPerson;
         Node currPerson = (Node) pathIterator.next();
         personIdsInPath.add( (long) currPerson.getProperty( Person.ID ) );
