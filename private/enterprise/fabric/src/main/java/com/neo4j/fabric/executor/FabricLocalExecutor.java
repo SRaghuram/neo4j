@@ -12,8 +12,8 @@ import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
-import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +80,7 @@ public class FabricLocalExecutor
     {
         InternalTransaction internalTransaction;
         Transaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
-        FabricLocalLoginContext loginContext = new FabricLocalLoginContext( (CommercialLoginContext) transactionInfo.getLoginContext() );
+        FabricLocalLoginContext loginContext = new FabricLocalLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext() );
         if ( transactionInfo.getTxTimeout() == null )
         {
             internalTransaction = databaseFacade.beginTransaction( kernelTransactionType, loginContext, transactionInfo.getClientConnectionInfo() );
@@ -190,11 +190,11 @@ public class FabricLocalExecutor
         }
     }
 
-    private static class FabricLocalLoginContext implements CommercialLoginContext
+    private static class FabricLocalLoginContext implements EnterpriseLoginContext
     {
-        private final CommercialLoginContext inner;
+        private final EnterpriseLoginContext inner;
 
-        private FabricLocalLoginContext( CommercialLoginContext inner )
+        private FabricLocalLoginContext( EnterpriseLoginContext inner )
         {
             this.inner = inner;
         }
@@ -212,11 +212,11 @@ public class FabricLocalExecutor
         }
 
         @Override
-        public CommercialSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
+        public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
         {
             var originalSecurityContext = inner.authorize( idLookup, dbName );
             var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.READ );
-            return new CommercialSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), originalSecurityContext.isAdmin() );
+            return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), originalSecurityContext.isAdmin() );
         }
     }
 }

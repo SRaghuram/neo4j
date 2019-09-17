@@ -5,8 +5,8 @@
  */
 package com.neo4j;
 
-import com.neo4j.commercial.edition.CommercialEditionModule;
-import com.neo4j.test.TestCommercialDatabaseManagementServiceBuilder;
+import com.neo4j.enterprise.edition.EnterpriseEditionModule;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.mockito.MockingDetails;
 import org.mockito.Mockito;
 
@@ -25,7 +25,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.SystemNanoClock;
 
-public class TestFabricDatabaseManagementServiceBuilder extends TestCommercialDatabaseManagementServiceBuilder
+public class TestFabricDatabaseManagementServiceBuilder extends TestEnterpriseDatabaseManagementServiceBuilder
 {
 
     private Dependencies dependencies;
@@ -42,7 +42,7 @@ public class TestFabricDatabaseManagementServiceBuilder extends TestCommercialDa
     {
         return globalModule -> {
             dependencies = createDependencyResolver( globalModule.getGlobalDependencies() );
-            return new CommercialEditionModule( globalModule, dependencies )
+            return new EnterpriseEditionModule( globalModule, dependencies )
             {
                 @Override
                 public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependenciesWithoutMocks,

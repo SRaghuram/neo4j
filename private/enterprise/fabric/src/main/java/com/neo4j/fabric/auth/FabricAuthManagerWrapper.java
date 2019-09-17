@@ -5,8 +5,8 @@
  */
 package com.neo4j.fabric.auth;
 
-import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -17,17 +17,17 @@ import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.Credential;
 
-public class FabricAuthManagerWrapper implements CommercialAuthManager
+public class FabricAuthManagerWrapper implements EnterpriseAuthManager
 {
-    private final CommercialAuthManager wrappedAuthManager;
+    private final EnterpriseAuthManager wrappedAuthManager;
 
-    public FabricAuthManagerWrapper( CommercialAuthManager wrappedAuthManager )
+    public FabricAuthManagerWrapper( EnterpriseAuthManager wrappedAuthManager )
     {
         this.wrappedAuthManager = wrappedAuthManager;
     }
 
     @Override
-    public CommercialLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException
+    public EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException
     {
         boolean authProvided = !authToken.get( AuthToken.SCHEME_KEY ).equals( "none" );
         String username = null;
@@ -41,7 +41,7 @@ public class FabricAuthManagerWrapper implements CommercialAuthManager
             password = Arrays.copyOf( originalPassword, originalPassword.length );
         }
 
-        CommercialLoginContext wrappedLoginContext = wrappedAuthManager.login( authToken );
+        EnterpriseLoginContext wrappedLoginContext = wrappedAuthManager.login( authToken );
 
         Credentials credentials = new Credentials( username, password, authProvided );
         FabricAuthSubject fabricAuthSubject = new FabricAuthSubject( wrappedLoginContext.subject(), credentials );

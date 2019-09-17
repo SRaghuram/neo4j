@@ -129,7 +129,7 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
         clauses
           .foldLeft(Seq[Segment]()) {
             case (segs, sub: SubQuery)        =>
-              sub.query.part match {
+              sub.part match {
                 case singleQuery: SingleQuery => Sub(singleQuery.clauses) +: segs
                 // TODO fix this
                 case u => Errors.unimplemented("Union queries in subqueries", u.productPrefix)

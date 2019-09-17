@@ -5,9 +5,9 @@
  */
 package com.neo4j.fabric.pipeline
 
-import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
+import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.v4_0.ast.Statement
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases, MultipleGraphs}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticErrorDef, SemanticState}

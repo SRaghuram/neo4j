@@ -7,8 +7,8 @@ package com.neo4j;
 
 import com.neo4j.fabric.auth.Credentials;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
-import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,8 +46,8 @@ class CredentialsTest
 
     private final BoltGraphDatabaseManagementServiceSPI databaseManagementService = mock( BoltGraphDatabaseManagementServiceSPI.class );
     private final BoltGraphDatabaseServiceSPI boltDatabaseService = mock( BoltGraphDatabaseServiceSPI.class );
-    private final CommercialAuthManager commercialAuthManager = mock( CommercialAuthManager.class );
-    private final CommercialLoginContext commercialLoginContext = mock( CommercialLoginContext.class );
+    private final EnterpriseAuthManager commercialAuthManager = mock( EnterpriseAuthManager.class );
+    private final EnterpriseLoginContext commercialLoginContext = mock( EnterpriseLoginContext.class );
     private final AuthSubject authSubject = mock( AuthSubject.class );
     private Driver driver;
     private TestServer testServer;

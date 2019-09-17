@@ -26,11 +26,11 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_DEFAULT_PROPERTY;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_LABEL;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_NAME_PROPERTY;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_STATUS_PROPERTY;
-import static org.neo4j.dbms.database.SystemGraphInitializer.DATABASE_UUID_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_DEFAULT_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERTY;
 
 public class FabricDatabaseManager extends LifecycleAdapter
 {

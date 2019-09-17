@@ -22,6 +22,8 @@ import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
 import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
+import com.neo4j.fabric.transaction.TransactionManager;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
@@ -234,12 +236,12 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
             return authManager;
         }
 
-        if ( !(authManager instanceof CommercialAuthManager) )
+        if ( !(authManager instanceof EnterpriseAuthManager) )
         {
             throw new IllegalStateException( "Unexpected type of Auth manager: " + authManager.getClass() );
         }
 
-        return new FabricAuthManagerWrapper( (CommercialAuthManager) authManager );
+        return new FabricAuthManagerWrapper( (EnterpriseAuthManager) authManager );
     }
 
     @Override

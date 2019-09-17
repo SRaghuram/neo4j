@@ -5,21 +5,21 @@
  */
 package com.neo4j.fabric.auth;
 
-import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
-import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.util.Set;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 
-public class FabricLoginContext implements CommercialLoginContext
+public class FabricLoginContext implements EnterpriseLoginContext
 {
 
-    private final CommercialLoginContext wrappedLoginContext;
+    private final EnterpriseLoginContext wrappedLoginContext;
     private final FabricAuthSubject authSubject;
 
-    public FabricLoginContext( CommercialLoginContext wrappedLoginContext, FabricAuthSubject authSubject )
+    public FabricLoginContext( EnterpriseLoginContext wrappedLoginContext, FabricAuthSubject authSubject )
     {
         this.wrappedLoginContext = wrappedLoginContext;
         this.authSubject = authSubject;
@@ -38,7 +38,7 @@ public class FabricLoginContext implements CommercialLoginContext
     }
 
     @Override
-    public CommercialSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
+    public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
     {
         return wrappedLoginContext.authorize( idLookup, dbName );
     }
