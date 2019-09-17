@@ -7,15 +7,14 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
@@ -54,7 +53,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     protected String[] getAdditionalArguments() throws IOException
     {
         String[] args = new String[]{"-c", OnlineBackupSettings.online_backup_enabled.name() + "=false"};
-        return Stream.concat( Arrays.stream( super.getAdditionalArguments() ), Arrays.stream( args ) ).toArray( String[]::new );
+        return ArrayUtils.addAll( super.getAdditionalArguments(), args );
     }
 
     @Test
