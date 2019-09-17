@@ -79,7 +79,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         // Given
         String roleName = "CustomRole";
         userManager.newUser( "Alice", password( PASSWORD ), false );
-        userManager.newRole( roleName, "Alice" );
+        createRole( roleName, "Alice" );
 
         // When
         EnterpriseLoginContext subject = neo.login( "Alice", PASSWORD );

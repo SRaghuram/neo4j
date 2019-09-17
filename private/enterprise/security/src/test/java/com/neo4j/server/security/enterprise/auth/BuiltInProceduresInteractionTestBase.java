@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.procedure.enterprise.builtin.QueryId;
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.jetty.server.Request;
@@ -44,6 +43,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
@@ -51,6 +51,7 @@ import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
@@ -1101,11 +1102,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleWriteAfterAllowedReadProcedureForWriteUser() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
-        userManager.addRoleToUser( PUBLISHER, "role1Subject" );
+        setupRole1Subject();
+        assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO role1Subject", PUBLISHER ) );
         assertEmpty( neo.login( "role1Subject", "abc" ),
                 "CALL test.allowedReadProcedure() YIELD value CREATE (:NEWNODE {name:value})" );
     }
@@ -1113,11 +1111,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldNotAllowNonWriterToWriteAfterCallingAllowedWriteProc() throws Exception
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "notAllowedToWrite", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "notAllowedToWrite" );
-        userManager.addRoleToUser( READER, "notAllowedToWrite" );
+        assertDDLCommandSuccess( adminSubject, "CREATE USER notAllowedToWrite SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
+        createRole( "role1", "notAllowedToWrite" );
+        assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s to notAllowedToWrite", READER ) );
         // should be able to invoke allowed procedure
         assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
                 itr -> assertEquals( (int) itr.stream().count(), 2 ) );
@@ -1129,8 +1125,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldNotAllowUnauthorizedAccessToProcedure() throws Exception
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "nopermission", password( "abc" ), false );
+        assertDDLCommandSuccess( adminSubject, "CREATE USER nopermission SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
+
         // should not be able to invoke any procedure
         assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticReadProcedure()", READ_OPS_NOT_ALLOWED );
         assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticWriteProcedure()", WRITE_OPS_NOT_ALLOWED );
@@ -1140,10 +1136,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldNotAllowNonReaderToReadAfterCallingAllowedReadProc() throws Exception
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "nopermission", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "nopermission" );
+        assertDDLCommandSuccess( adminSubject, "CREATE USER nopermission SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
+        createRole( "role1", "nopermission" );
+
         // should not be able to invoke any procedure
         assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.allowedReadProcedure()",
                 itr -> assertEquals( (int) itr.stream().count(), 1 ) );
@@ -1154,10 +1149,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleNestedReadProcedures() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertSuccess( neo.login( "role1Subject", "abc" ),
                 "CALL test.nestedAllowedProcedure('test.allowedReadProcedure') YIELD value",
                 r -> assertKeyIs( r, "value", "foo" ) );
@@ -1166,10 +1158,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleDoubleNestedReadProcedures() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertSuccess( neo.login( "role1Subject", "abc" ),
                 "CALL test.doubleNestedAllowedProcedure YIELD value",
                 r -> assertKeyIs( r, "value", "foo" ) );
@@ -1178,10 +1167,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldFailNestedAllowedWriteProcedureFromAllowedReadProcedure() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertFail( neo.login( "role1Subject", "abc" ),
                 "CALL test.nestedAllowedProcedure('test.allowedWriteProcedure') YIELD value",
                 WRITE_OPS_NOT_ALLOWED );
@@ -1190,11 +1176,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldFailNestedAllowedWriteProcedureFromAllowedReadProcedureEvenIfAdmin() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
-        userManager.addRoleToUser( PredefinedRoles.ADMIN, "role1Subject" );
+        setupRole1Subject();
+        assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO role1Subject", ADMIN ) );
         assertFail( neo.login( "role1Subject", "abc" ),
                 "CALL test.nestedAllowedProcedure('test.allowedWriteProcedure') YIELD value",
                 WRITE_OPS_NOT_ALLOWED );
@@ -1203,10 +1186,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldRestrictNestedReadProcedureFromAllowedWriteProcedures() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertFail( neo.login( "role1Subject", "abc" ),
                 "CALL test.failingNestedAllowedWriteProcedure YIELD value",
                 WRITE_OPS_NOT_ALLOWED );
@@ -1215,10 +1195,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleNestedReadProcedureWithDifferentAllowedRole() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertSuccess( neo.login( "role1Subject", "abc" ),
                 "CALL test.nestedAllowedProcedure('test.otherAllowedReadProcedure') YIELD value",
                 r -> assertKeyIs( r, "value", "foo" )
@@ -1228,12 +1205,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldFailNestedAllowedWriteProcedureFromNormalReadProcedure() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
-        userManager.addRoleToUser( PredefinedRoles.PUBLISHER, "role1Subject" ); // Even if subject has WRITE permission
-        // the procedure should restrict to READ
+        setupRole1Subject();
+        assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO role1Subject", PUBLISHER ) );
+
+        // Even if subject has WRITE permission the procedure should restrict to READ
         assertFail( neo.login( "role1Subject", "abc" ),
                 "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value",
                 WRITE_OPS_NOT_ALLOWED );
@@ -1242,11 +1217,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleFunctionWithAllowed() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertSuccess( neo.login( "role1Subject", "abc" ),
                 "RETURN test.allowedFunction1() AS value",
                 r -> assertKeyIs( r, "value", "foo" ) );
@@ -1255,12 +1226,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleNestedFunctionsWithAllowed() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
-        assertSuccess( neo.login( "role1Subject", "abc" ),
+       setupRole1Subject();
+       assertDDLCommandSuccess( adminSubject, "GRANT ROLE role1 TO role1Subject" );
+       assertSuccess( neo.login( "role1Subject", "abc" ),
                 "RETURN test.nestedAllowedFunction('test.allowedFunction1()') AS value",
                 r -> assertKeyIs( r, "value", "foo" ) );
     }
@@ -1268,11 +1236,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHandleNestedFunctionWithDifferentAllowedRole() throws Throwable
     {
-        userManager = neo.getLocalUserManager();
-
-        userManager.newUser( "role1Subject", password( "abc" ), false );
-        userManager.newRole( "role1" );
-        userManager.addRoleToUser( "role1", "role1Subject" );
+        setupRole1Subject();
         assertSuccess( neo.login( "role1Subject", "abc" ),
                 "RETURN test.nestedAllowedFunction('test.allowedFunction2()') AS value",
                 r -> assertKeyIs( r, "value", "foo" )
@@ -1295,6 +1259,12 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         assertSuccess( adminSubject,"CALL dbms.clearQueryCaches()", ResourceIterator::close );
         // any answer is okay, as long as it isn't denied. That is why we don't care about the actual result here
+    }
+
+    private void setupRole1Subject() throws InvalidArgumentsException
+    {
+        assertDDLCommandSuccess( adminSubject, "CREATE USER role1Subject SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
+        createRole( "role1", "role1Subject" );
     }
 
     /*

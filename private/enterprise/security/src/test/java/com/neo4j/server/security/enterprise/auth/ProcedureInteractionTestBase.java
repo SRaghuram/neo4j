@@ -164,7 +164,6 @@ public abstract class ProcedureInteractionTestBase<S>
         userManager.addRoleToUser( PUBLISHER, "writeSubject" );
         userManager.addRoleToUser( EDITOR, "editorSubject" );
         userManager.addRoleToUser( READER, "readSubject" );
-        userManager.newRole( EMPTY_ROLE );
         noneSubject = neo.login( "noneSubject", "abc" );
         pwdSubject = neo.login( "pwdSubject", "abc" );
         readSubject = neo.login( "readSubject", "123" );
@@ -172,6 +171,7 @@ public abstract class ProcedureInteractionTestBase<S>
         writeSubject = neo.login( "writeSubject", "abc" );
         schemaSubject = neo.login( "schemaSubject", "abc" );
         adminSubject = neo.login( "adminSubject", "abc" );
+        createRole( EMPTY_ROLE );
         setupTokensAndNodes();
     }
 
@@ -308,6 +308,17 @@ public abstract class ProcedureInteractionTestBase<S>
         assertSystemCommandFail( subject, "CALL dbms.security.deleteRole('" + roleName + "')", errMsg );
     }
 
+    @SuppressWarnings( {"SameParameterValue"} )
+    boolean userIsSuspended( String username )
+    {
+        List<Object> suspendedUsers = new LinkedList<>();
+        neo.executeQuery( adminSubject, SYSTEM_DATABASE_NAME, "SHOW USERS", null,
+                r -> r.stream().filter( u -> u.get( "suspended" ).equals( valueOf( true ) ) ).map( u -> u.get( "user" ) ).forEach( suspendedUsers::add ) );
+        return suspendedUsers.contains( valueOf( username ) );
+    }
+
+    // List users
+
     void testSuccessfulListUsers( S subject, Object[] users )
     {
         assertSystemCommandSuccess( subject, "CALL dbms.security.listUsers() YIELD username",
@@ -318,6 +329,21 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         assertSystemCommandFail( subject, "CALL dbms.security.listUsers() YIELD username", errMsg );
     }
+
+    @SuppressWarnings( "SameParameterValue" )
+    void testListUsersContains( S subject, Object user )
+    {
+        assertSystemCommandSuccess( subject, "CALL dbms.security.listUsers() YIELD username",
+                r -> assertKeyContains( r, "username", user ) );
+    }
+
+    void testListUsersNotContains( S subject, Object user )
+    {
+        assertSystemCommandSuccess( subject, "CALL dbms.security.listUsers() YIELD username",
+                r -> assertKeyNotContains( r, "username", user ) );
+    }
+
+    // List roles
 
     void testSuccessfulListRoles( S subject, Object[] roles )
     {
@@ -330,6 +356,15 @@ public abstract class ProcedureInteractionTestBase<S>
         assertSystemCommandFail( subject, "CALL dbms.security.listRoles() YIELD role", errMsg );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
+    void testListRolesContains( S subject, Object role )
+    {
+        assertSystemCommandSuccess( subject, "CALL dbms.security.listRoles() YIELD role",
+                r -> assertKeyContains( r, "role", role ) );
+    }
+
+    // List roles for specific user
+
     void testFailListUserRoles( S subject, String username, String errMsg )
     {
         assertSystemCommandFail( subject,
@@ -337,11 +372,35 @@ public abstract class ProcedureInteractionTestBase<S>
                 errMsg );
     }
 
+    void testListUserRolesContains( S subject, String username, String roleName )
+    {
+        assertSystemCommandSuccess( subject,
+                "CALL dbms.security.listRolesForUser('" + username + "') YIELD value AS roles",
+                r -> assertKeyContains( r, "roles", roleName ));
+    }
+
+    void testListUserRolesNotContains( S subject, String username, String roleName )
+    {
+        assertSystemCommandSuccess( subject,
+                "CALL dbms.security.listRolesForUser('" + username + "') YIELD value AS roles",
+                r -> assertKeyNotContains( r, "roles", roleName ));
+    }
+
+    // List users for specific role
+
     void testFailListRoleUsers( S subject, String roleName, String errMsg )
     {
         assertSystemCommandFail( subject,
                 "CALL dbms.security.listUsersForRole('" + roleName + "') YIELD value AS users RETURN count(users)",
                 errMsg );
+    }
+
+    @SuppressWarnings( "SameParameterValue" )
+    void testListRoleUsersNotContains( S subject, String roleName, String username )
+    {
+        assertSystemCommandSuccess( subject,
+                "CALL dbms.security.listUsersForRole('" + roleName + "') YIELD value AS users",
+                r -> assertKeyNotContains( r, "users", username ));
     }
 
     void testFailTestProcs( S subject )
@@ -460,15 +519,31 @@ public abstract class ProcedureInteractionTestBase<S>
                 } );
     }
 
-    @SuppressWarnings( "SameParameterValue" )
-    boolean userHasRole( String user, String role )
+    void createRole( String roleName, String... usernames )
     {
-        return userManager.silentlyGetUsernamesForRole( role ).contains( user );
+        assertDDLCommandSuccess( adminSubject, String.format( "CREATE ROLE %s", roleName) );
+
+        for ( String username : usernames )
+        {
+            assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", roleName, username) );
+        }
     }
 
     List<Object> getObjectsAsList( ResourceIterator<Map<String,Object>> r, String key )
     {
         return r.stream().map( s -> s.get( key ) ).collect( toList() );
+    }
+
+    private void assertKeyContains( ResourceIterator<Map<String,Object>> r, String key, Object item )
+    {
+        List<Object> results = getObjectsAsList( r, key );
+        assertTrue( results.contains( valueOf( item )) );
+    }
+
+    private void assertKeyNotContains( ResourceIterator<Map<String,Object>> r, String key, Object item )
+    {
+        List<Object> results = getObjectsAsList( r, key );
+        assertFalse( results.contains( valueOf( item ) ) );
     }
 
     void assertKeyIs( ResourceIterator<Map<String,Object>> r, String key, Object... items )
