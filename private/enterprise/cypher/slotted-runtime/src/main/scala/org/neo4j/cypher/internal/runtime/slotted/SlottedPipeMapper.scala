@@ -411,16 +411,19 @@ class SlottedPipeMapper(fallback: PipeMapper,
           NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
         }
 
-      case ValueHashJoin(_, rhsPlan, Equals(lhsAstExp, rhsAstExp)) =>
-        val argumentSize: SlotConfiguration.Size = physicalPlan.argumentSizes(plan.id)
+      case ValueHashJoin(lhsPlan, _, Equals(lhsAstExp, rhsAstExp)) =>
+        val argumentSize = physicalPlan.argumentSizes(plan.id)
         val lhsCmdExp = convertExpressions(lhsAstExp)
         val rhsCmdExp = convertExpressions(rhsAstExp)
-        val rhsSlots = slotConfigs(rhsPlan.id)
+        val lhsSlots = slotConfigs(lhsPlan.id)
+        val longOffset = lhsSlots.numberOfLongs
+        val refOffset = lhsSlots.numberOfReferences
 
-        // Verify the assumption that the argument slots are the same on both sides
-        ifAssertionsEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
-        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
-        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+        // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
+        // This assumption enables us to use array copy within ValueHashJoin.
+        ifAssertionsEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
+
+        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longOffset, refOffset, argumentSize)(id)
 
       case ConditionalApply(_, _, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
@@ -572,6 +575,48 @@ class SlottedPipeMapper(fallback: PipeMapper,
         } else {
           OrderedDistinctSlottedPipe(source, slots, expressionConverters.toGroupingExpression(id, groupingExpressions, orderToLeverage))(id)
         }
+    }
+  }
+
+  // Verifies the assumption that all shared slots are arguments with slot offsets within the first argument size number of slots
+  // and the number of shared slots are identical to the argument size.
+  private def verifyOnlyArgumentsAreSharedSlots(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
+    val argumentSize = physicalPlan.argumentSizes(plan.id)
+    val configuration = physicalPlan.slotConfigurations(plan.id)
+    val lhsPlan = plan.lhs.get
+    val rhsPlan = plan.rhs.get
+    val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
+    val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
+    val sharedSlots = rhsSlots.filterSlots(
+      onVariable = {
+        case (k, _) =>  lhsSlots.get(k).isDefined
+      }, onCachedProperty = {
+        case (k, slot) => slot.offset < argumentSize.nReferences && lhsSlots.hasCachedPropertySlot(k)
+      })
+
+    val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_.isLongSlot)
+
+    def checkSharedSlots(slots: Seq[Slot], expectedSlots: Int): Boolean = {
+      val sorted = slots.sortBy(_.offset)
+      var prevOffset = -1
+      for (slot <- sorted) {
+        if (slot.offset == prevOffset ||      // if we have aliases for the same slot, we will get it again
+          slot.offset == prevOffset + 1) {  // otherwise we expect the next shared slot to sit at the next offset
+          prevOffset = slot.offset
+        } else {
+          return false
+        }
+      }
+      prevOffset + 1 == expectedSlots
+    }
+
+    val longSlotsOk = checkSharedSlots(sharedLongSlots.toSeq, argumentSize.nLongs)
+    val refSlotsOk = checkSharedSlots(sharedRefSlots.toSeq, argumentSize.nReferences)
+
+    if (!longSlotsOk || !refSlotsOk) {
+      val longSlotsMessage = if (longSlotsOk) "" else s"#long arguments=${argumentSize.nLongs} shared long slots: $sharedLongSlots "
+      val refSlotsMessage = if (refSlotsOk) "" else s"#ref arguments=${argumentSize.nReferences} shared ref slots: $sharedRefSlots "
+      throw new InternalException(s"Unexpected slot configuration. Shared slots not only within argument size: $longSlotsMessage$refSlotsMessage")
     }
   }
 

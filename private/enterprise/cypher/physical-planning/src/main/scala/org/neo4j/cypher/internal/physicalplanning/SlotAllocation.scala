@@ -564,7 +564,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
-        rhs.foreachSlotOrdered(result.add, result.newCachedProperty)
+        rhs.foreachSlotOrdered(result.add, p => result.newCachedProperty(p)(shouldDuplicate = true),
+                               startReferenceOffset = argument.argumentSize.nReferences)
         result
 
       case RollUpApply(_, _, collectionName, _, _) =>

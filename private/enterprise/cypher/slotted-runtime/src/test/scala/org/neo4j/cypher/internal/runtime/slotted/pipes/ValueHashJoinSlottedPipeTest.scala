@@ -29,7 +29,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
 
 
     val right = mock[Pipe]
-    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo, Array.empty, Array.empty, Array.empty)()
+    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo, 0, 1, SlotConfiguration.Size.zero)()
 
     // when
     val result = pipe.createResults(queryState)
@@ -49,7 +49,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
     val left = mockPipeFor(slotInfo, RowR(NO_VALUE))
     val right = mockPipeFor(slotInfo, RowR(intValue(42)))
 
-    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo, Array.empty, Array.empty, Array.empty)()
+    val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(0), ReferenceFromSlot(0), left, right, slotInfo, 0, 1, SlotConfiguration.Size.zero)()
 
     // when
     val result = pipe.createResults(queryState)
@@ -86,7 +86,7 @@ class ValueHashJoinSlottedPipeTest extends CypherFunSuite {
     )
 
     val pipe = ValueHashJoinSlottedPipe(ReferenceFromSlot(1), ReferenceFromSlot(1), left, right, slotInfoForJoin,
-                                        Array((0,0)), Array((1,2)), Array.empty)()
+      longOffset = 1, refsOffset = 2, SlotConfiguration.Size(1, 1))()
 
     // when
     val result = pipe.createResults(queryState)

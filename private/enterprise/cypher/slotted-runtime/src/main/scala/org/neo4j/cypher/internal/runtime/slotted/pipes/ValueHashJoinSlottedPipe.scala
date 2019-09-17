@@ -19,17 +19,16 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
                                     left: Pipe,
                                     right: Pipe,
                                     slots: SlotConfiguration,
-                                    longsToCopy: Array[(Int, Int)],
-                                    refsToCopy: Array[(Int, Int)],
-                                    cachedPropertiesToCopy: Array[(Int, Int)])
+                                    longOffset: Int,
+                                    refsOffset: Int,
+                                    argumentSize: SlotConfiguration.Size)
                                    (val id: Id = Id.INVALID_ID)
   extends AbstractHashJoinPipe[AnyValue, Expression](left, right, slots) {
 
   leftSide.registerOwningPipe(this)
   rightSide.registerOwningPipe(this)
 
-  override def computeKey(context: ExecutionContext, keyColumns: Expression,
-                          queryState: QueryState): Option[AnyValue] = {
+  override def computeKey(context: ExecutionContext, keyColumns: Expression, queryState: QueryState): Option[AnyValue] = {
     val value = keyColumns.apply(context, queryState)
     if (value eq NO_VALUE)
       None
@@ -38,5 +37,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
   }
 
   override def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit =
-    NodeHashJoinSlottedPipe.copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, newRow, rhs)
+    rhs.copyTo(newRow,
+      fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences,
+      toLongOffset = longOffset, toRefOffset = refsOffset)
 }

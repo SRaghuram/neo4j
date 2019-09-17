@@ -76,6 +76,22 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     case (name, LongSlot(o, _, _)) if o == offset && !aliases(name) => name
   }
 
+  def filterSlots[U](onVariable: ((String,Slot)) => Boolean,
+                     onCachedProperty: ((ASTCachedProperty, RefSlot)) => Boolean
+                    ): Iterable[Slot] = {
+    (slots.filter(onVariable) ++ cachedProperties.filter(onCachedProperty)).values
+  }
+
+  /**
+    * Partition slots only, not cached properties
+    */
+  def partitionSlotsOnly(p: (String, Slot) => Boolean): (Seq[(String, Slot)], Seq[(String, Slot)]) = {
+    slots.toSeq.partition {
+      case (k, slot) =>
+        p(k, slot)
+    }
+  }
+
   def get(key: String): Option[Slot] = slots.get(key)
 
   def add(key: String, slot: Slot): Unit = slot match {
@@ -185,10 +201,13 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     this
   }
 
-  def newCachedProperty(key: ASTCachedProperty): SlotConfiguration = {
+  def newCachedProperty(key: ASTCachedProperty)(implicit shouldDuplicate: Boolean = false): SlotConfiguration = {
     cachedProperties.get(key) match {
       case Some(_) =>
         // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
+        if (shouldDuplicate) {
+          numberOfReferences += 1
+        }
 
       case None =>
         cachedProperties.put(key, RefSlot(numberOfReferences, nullable = false, CTAny))
@@ -269,14 +288,15 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   // NOTE: This will give duplicate slots when we have aliases
   def foreachSlotOrdered(onVariable: (String, Slot) => Unit,
-                         onCachedProperty: ASTCachedProperty => Unit
+                         onCachedProperty: ASTCachedProperty => Unit,
+                         startReferenceOffset: Int = 0
                         ): Unit = {
     val (longs, refs) = slots.toSeq.partition(_._2.isLongSlot)
     for ((variable, slot) <- longs.sortBy(_._2.offset)) onVariable(variable, slot)
 
     var sortedRefs = refs.sortBy(_._2.offset)
     var sortedCached = cachedProperties.toSeq.sortBy(_._2.offset)
-    var i = 0
+    var i = startReferenceOffset
     while (i < numberOfReferences) {
       if (sortedRefs.nonEmpty && sortedRefs.head._2.offset == i) {
         val (variable, slot) = sortedRefs.head
