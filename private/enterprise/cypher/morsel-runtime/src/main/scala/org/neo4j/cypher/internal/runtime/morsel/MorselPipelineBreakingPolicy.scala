@@ -54,7 +54,8 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, inte
 
       // 2 child operators
       case _: Apply |
-           _: NodeHashJoin
+           _: NodeHashJoin |
+           _: CartesianProduct
       => true
 
       case plan =>

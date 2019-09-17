@@ -270,6 +270,16 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           refsToCopy,
           cachedPropertiesToCopy)
 
+      case _: plans.CartesianProduct =>
+        val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
+        new CartesianProductOperator(
+          WorkIdentity.fromPlan(plan),
+          buffer.lhsArgumentStateMapId,
+          buffer.rhsArgumentStateMapId,
+          slots,
+          physicalPlan.argumentSizes(plan.id)
+        )
+
       case plans.UnwindCollection(_, variable, collection) =>
         val offset = slots.get(variable) match {
           case Some(RefSlot(idx, _, _)) => idx

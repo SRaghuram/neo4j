@@ -12,7 +12,8 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
-                                       lhsLongCount: Int, lhsRefCount: Int,
+                                       lhsLongCount: Int,
+                                       lhsRefCount: Int,
                                        slots: SlotConfiguration,
                                        argumentSize: SlotConfiguration.Size)
                                       (val id: Id = Id.INVALID_ID) extends Pipe {
@@ -25,8 +26,8 @@ case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
             val context = SlottedExecutionContext(slots)
             lhsCtx.copyTo(context)
             rhsCtx.copyTo(context,
-              fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx
-              toLongOffset = lhsLongCount, toRefOffset = lhsRefCount)
+              sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx
+              targetLongOffset = lhsLongCount, targetRefOffset = lhsRefCount)
             context
         }
     }

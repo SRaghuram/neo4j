@@ -106,7 +106,7 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
   // The methods below should never be called on a produced result
   private def fail(): Nothing = throw new InternalException("Tried using a result context as an execution context")
 
-  override def copyTo(target: ExecutionContext, fromLongOffset: Int, fromRefOffset: Int, toLongOffset: Int, toRefOffset: Int): Unit = fail()
+  override def copyTo(target: ExecutionContext, sourceLongOffset: Int, sourceRefOffset: Int, targetLongOffset: Int, targetRefOffset: Int): Unit = fail()
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = fail()
 

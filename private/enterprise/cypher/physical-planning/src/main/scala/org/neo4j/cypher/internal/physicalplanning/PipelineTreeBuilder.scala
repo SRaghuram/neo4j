@@ -365,7 +365,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
 
-      case _: plans.NodeHashJoin =>
+      case _: plans.NodeHashJoin |
+           _: plans.CartesianProduct=>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           val buffer = outputToLhsAccumulatingRhsStreamingBuffer(lhs, rhs, plan.id, argument, argument.argumentSlotOffset)

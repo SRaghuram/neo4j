@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
+import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.exceptions.TransactionOutOfMemoryException
 
 /**
@@ -54,6 +55,8 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
     sb += ')'
     sb.result()
   }
+
+  override def iterator: java.util.Iterator[T] = data.iterator()
 }
 
 class BoundedConcurrentBuffer[T <: WithHeapUsageEstimation](bound: Int) extends ConcurrentBuffer[T] {

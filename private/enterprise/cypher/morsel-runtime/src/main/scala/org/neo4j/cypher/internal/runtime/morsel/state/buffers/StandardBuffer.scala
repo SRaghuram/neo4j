@@ -5,8 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import java.util
+
 import org.neo4j.cypher.internal.runtime.{QueryMemoryTracker, WithHeapUsageEstimation}
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -42,6 +45,8 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
     sb += ')'
     sb.result()
   }
+
+  override def iterator: util.Iterator[T] = data.iterator.asJava
 }
 
 class MemoryTrackingStandardBuffer[T <: WithHeapUsageEstimation](memoryTracker: QueryMemoryTracker) extends StandardBuffer[T] {

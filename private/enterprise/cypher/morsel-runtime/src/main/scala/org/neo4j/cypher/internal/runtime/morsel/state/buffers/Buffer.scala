@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+
 /**
   * Basic buffer (put things and then take them in FIFO order).
   */
@@ -17,6 +19,11 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T] {
     * by [[foreach]] will not be taken.
     */
   def foreach(f: T => Unit): Unit
+
+  /**
+   * @return an iterator of the contents of the buffer. Does not modify the buffer.
+   */
+  def iterator: java.util.Iterator[T]
 }
 
 trait SingletonBuffer[T <: AnyRef] extends Buffer[T] {

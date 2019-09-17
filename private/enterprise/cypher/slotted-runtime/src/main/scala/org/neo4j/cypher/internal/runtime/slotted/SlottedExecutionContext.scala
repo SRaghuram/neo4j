@@ -52,7 +52,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     s.result
   }
 
-  override def copyTo(target: ExecutionContext, fromLongOffset: Int = 0, fromRefOffset: Int = 0, toLongOffset: Int = 0, toRefOffset: Int = 0): Unit =
+  override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
     target match {
       case other@SlottedExecutionContext(otherPipeline) =>
         if (slots.numberOfLongs > otherPipeline.numberOfLongs ||
@@ -62,8 +62,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
                |From : $slots
                |To :   $otherPipeline""".stripMargin)
         else {
-          System.arraycopy(longs, fromLongOffset, other.longs, toLongOffset, slots.numberOfLongs - fromLongOffset)
-          System.arraycopy(refs, fromRefOffset, other.refs, toRefOffset, slots.numberOfReferences - fromRefOffset)
+          System.arraycopy(longs, sourceLongOffset, other.longs, targetLongOffset, slots.numberOfLongs - sourceLongOffset)
+          System.arraycopy(refs, sourceRefOffset, other.refs, targetRefOffset, slots.numberOfReferences - sourceRefOffset)
           other.setLinenumber(getLinenumber)
         }
       case _ => fail()

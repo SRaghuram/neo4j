@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import java.util
+
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
@@ -289,6 +291,8 @@ class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] wi
   override def take(): T = inner.take()
 
   override def canPut: Boolean = inner.canPut
+
+  override def iterator: util.Iterator[T] = inner.iterator
 }
 
 class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with OptionalBuffer {
@@ -309,4 +313,6 @@ class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] 
   override def take(): T = inner.take()
 
   override def canPut: Boolean = inner.canPut
+
+  override def iterator: util.Iterator[T] = inner.iterator
 }

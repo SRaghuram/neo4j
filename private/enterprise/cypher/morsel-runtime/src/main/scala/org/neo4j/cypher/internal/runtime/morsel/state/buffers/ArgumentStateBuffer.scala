@@ -32,6 +32,10 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   override def take(): MorselExecutionContext = inner.take()
   override def foreach(f: MorselExecutionContext => Unit): Unit = inner.foreach(f)
 
+  override def iterator: java.util.Iterator[MorselExecutionContext] = {
+    inner.iterator
+  }
+
   override def toString: String = {
     s"ArgumentStateBuffer(argumentRowId=$argumentRowId)"
   }

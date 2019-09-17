@@ -21,7 +21,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
   /**
     * Initialize the inner loop for the current input row.
     *
-    * @return true iff the inner loop might result it output rows
+    * @return true iff the inner loop might result in output rows
     */
   protected def initializeInnerLoop(context: QueryContext,
                                     state: QueryState,

@@ -38,6 +38,6 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
 
   override def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit =
     rhs.copyTo(newRow,
-      fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences,
-      toLongOffset = longOffset, toRefOffset = refsOffset)
+      sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences,
+      targetLongOffset = longOffset, targetRefOffset = refsOffset)
 }

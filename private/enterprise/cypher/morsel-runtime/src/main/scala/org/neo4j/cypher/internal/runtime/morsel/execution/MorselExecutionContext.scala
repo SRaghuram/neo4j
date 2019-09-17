@@ -128,15 +128,15 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
       System.arraycopy(input.morsel.refs, 0, morsel.refs, startRow * refsPerRow, nInputRows * refsPerRow)
   }
 
-  override def copyTo(target: ExecutionContext, fromLongOffset: Int = 0, fromRefOffset: Int = 0, toLongOffset: Int = 0, toRefOffset: Int = 0): Unit =
+  override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
     target match {
       case other: MorselExecutionContext =>
-        System.arraycopy(morsel.longs, longsAtCurrentRow + fromLongOffset, other.morsel.longs, other.longsAtCurrentRow + toLongOffset, longsPerRow - fromLongOffset)
-        System.arraycopy(morsel.refs, refsAtCurrentRow + fromRefOffset, other.morsel.refs, other.refsAtCurrentRow + toRefOffset, refsPerRow - fromRefOffset)
+        System.arraycopy(morsel.longs, longsAtCurrentRow + sourceLongOffset, other.morsel.longs, other.longsAtCurrentRow + targetLongOffset, longsPerRow - sourceLongOffset)
+        System.arraycopy(morsel.refs, refsAtCurrentRow + sourceRefOffset, other.morsel.refs, other.refsAtCurrentRow + targetRefOffset, refsPerRow - sourceRefOffset)
 
       case other: SlottedExecutionContext =>
-        System.arraycopy(morsel.longs, longsAtCurrentRow + fromLongOffset, other.longs, toLongOffset, longsPerRow - fromLongOffset)
-        System.arraycopy(morsel.refs, refsAtCurrentRow + fromRefOffset, other.refs, toRefOffset, refsPerRow - fromRefOffset)
+        System.arraycopy(morsel.longs, longsAtCurrentRow + sourceLongOffset, other.longs, targetLongOffset, longsPerRow - sourceLongOffset)
+        System.arraycopy(morsel.refs, refsAtCurrentRow + sourceRefOffset, other.refs, targetRefOffset, refsPerRow - sourceRefOffset)
     }
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {

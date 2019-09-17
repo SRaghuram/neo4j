@@ -4,6 +4,9 @@
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
+import java.util
+
+import org.neo4j.internal.helpers.collection.Iterators
 
 /**
   * Implementation of a standard non-Thread-safe singleton buffer of elements of type T.
@@ -49,4 +52,6 @@ class StandardSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
     sb += ')'
     sb.result()
   }
+
+  override def iterator: util.Iterator[T] = Iterators.iterator[T](datum)
 }
