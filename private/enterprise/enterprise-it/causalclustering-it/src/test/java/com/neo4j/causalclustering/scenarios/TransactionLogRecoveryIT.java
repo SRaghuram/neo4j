@@ -29,7 +29,7 @@ import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.Collections.singletonList;
 
 /**

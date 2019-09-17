@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 
 @ClusterExtension
 abstract class BaseClusterIpFamilyIT

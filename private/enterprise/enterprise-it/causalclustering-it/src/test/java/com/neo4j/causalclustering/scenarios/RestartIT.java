@@ -33,7 +33,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;

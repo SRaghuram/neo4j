@@ -37,7 +37,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertFalse;
 

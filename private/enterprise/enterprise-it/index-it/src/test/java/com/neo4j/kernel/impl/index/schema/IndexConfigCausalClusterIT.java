@@ -6,6 +6,7 @@
 package com.neo4j.kernel.impl.index.schema;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataMatching;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -74,7 +75,7 @@ class IndexConfigCausalClusterIT
             tx.commit();
         } );
 
-        Cluster.dataMatchesEventually( cluster.awaitLeader(), cluster.coreMembers() );
+        DataMatching.dataMatchesEventually( cluster.awaitLeader(), cluster.coreMembers() );
 
         // Validate index has the same config on all cores even though they are configured with different settings.
         Map<String,Value> first = null;

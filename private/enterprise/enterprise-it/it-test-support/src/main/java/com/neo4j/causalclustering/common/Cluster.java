@@ -714,30 +714,6 @@ public class Cluster
         highestReplicaServerId = noOfReadReplicas - 1;
     }
 
-    /**
-     * Awaits for all given members to eventually have database content equivalent to the given other cluster member.
-     * Timeout of {@link #DEFAULT_TIMEOUT_MS} milliseconds is used.
-     *
-     * @param expectedMember cluster member to match database representation with.
-     * @param targets cluster members to check.
-     */
-    public static void dataMatchesEventually( ClusterMember expectedMember, Collection<? extends ClusterMember> targets ) throws TimeoutException
-    {
-        dataMatchesEventually( () -> buildDbRepresentation( expectedMember ), targets );
-    }
-
-    /**
-     * Awaits for all given members to eventually have database content equivalent to the given {@link DbRepresentation}.
-     * Timeout of {@link #DEFAULT_TIMEOUT_MS} milliseconds is used.
-     *
-     * @param expected expected database representation.
-     * @param targets cluster members to check.
-     */
-    public static void dataMatchesEventually( DbRepresentation expected, Collection<? extends ClusterMember> targets ) throws TimeoutException
-    {
-        dataMatchesEventually( () -> expected, targets );
-    }
-
     public Optional<ClusterMember> randomMember( boolean mustBeStarted )
     {
         Stream<ClusterMember> members = Stream.concat( coreMembers().stream(), readReplicas().stream() );
@@ -772,32 +748,5 @@ public class Cluster
         }
         int ordinal = ThreadLocalRandom.current().nextInt( list.size() );
         return Optional.of( list.get( ordinal ) );
-    }
-
-    private static void dataMatchesEventually( Supplier<DbRepresentation> expected, Collection<? extends ClusterMember> members ) throws TimeoutException
-    {
-        for ( ClusterMember member : members )
-        {
-            Predicates.await( () -> Objects.equals( expected.get(), buildDbRepresentation( member ) ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
-        }
-    }
-
-    private static DbRepresentation buildDbRepresentation( ClusterMember member )
-    {
-        try
-        {
-            var db = member.defaultDatabase();
-            if ( db == null )
-            {
-                // cluster member is shutdown
-                return null;
-            }
-            return DbRepresentation.of( db );
-        }
-        catch ( DatabaseShutdownException e )
-        {
-            // this can happen if the database is still in the process of starting or doing a store copy
-            return null;
-        }
     }
 }

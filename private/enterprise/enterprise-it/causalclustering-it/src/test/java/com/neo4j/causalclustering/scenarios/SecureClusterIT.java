@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataMatching;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
@@ -111,8 +112,8 @@ class SecureClusterIT
         } );
 
         // then
-        Cluster.dataMatchesEventually( leader, cluster.coreMembers() );
-        Cluster.dataMatchesEventually( leader, cluster.readReplicas() );
+        DataMatching.dataMatchesEventually( leader, cluster.coreMembers() );
+        DataMatching.dataMatchesEventually( leader, cluster.readReplicas() );
     }
 
     private void installKeyToInstance( File homeDir, int keyId ) throws IOException

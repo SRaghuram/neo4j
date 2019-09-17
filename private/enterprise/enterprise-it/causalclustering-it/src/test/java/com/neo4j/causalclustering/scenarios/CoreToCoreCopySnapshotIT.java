@@ -32,7 +32,7 @@ import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;

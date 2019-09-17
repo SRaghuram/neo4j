@@ -36,7 +36,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
 
@@ -129,7 +129,7 @@ public class ClusterSeedingIT
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
             Config config = Config.defaults( GraphDatabaseSettings.default_database, backups.defaultDb().getName() );
-            dataMatchesEventually( DbRepresentation.of( DatabaseLayout.of( backups.defaultDb() ), config ), cluster.coreMembers() );
+            dataMatchesEventually( DbRepresentation.of( DatabaseLayout.of( backups.defaultDb() ), config ), DEFAULT_DATABASE_NAME, cluster.coreMembers() );
         }
         assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
     }

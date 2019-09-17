@@ -26,7 +26,7 @@ import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -88,7 +88,7 @@ public class ClusterCommunityToEnterpriseIT
         cluster.start();
 
         // then
-        dataMatchesEventually( before, cluster.coreMembers() );
+        dataMatchesEventually( before, DEFAULT_DATABASE_NAME, cluster.coreMembers() );
     }
 
     private void copyStoreToCore( DatabaseLayout databaseLayout, int i ) throws IOException
