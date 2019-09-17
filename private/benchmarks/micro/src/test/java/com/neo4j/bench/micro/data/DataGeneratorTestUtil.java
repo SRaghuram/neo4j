@@ -256,9 +256,9 @@ public class DataGeneratorTestUtil
         }
     }
 
-    private static int propertyCount( Iterable<? extends Entity> propertyContainers )
+    private static int propertyCount( Iterable<? extends Entity> entities )
     {
-        return StreamSupport.stream( propertyContainers.spliterator(), false )
+        return StreamSupport.stream( entities.spliterator(), false )
                             .map( n -> Iterables.count( n.getPropertyKeys() ) )
                             .reduce( 0, Integer::sum );
     }

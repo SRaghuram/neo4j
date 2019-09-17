@@ -24,7 +24,7 @@ public class Neo4jJsonCodec extends ObjectMapper
     {
         if ( value instanceof Entity )
         {
-            writePropertyContainer( out, (Entity) value );
+            writeEntity( out, (Entity) value );
         }
         else if ( value instanceof Path )
         {
@@ -75,12 +75,12 @@ public class Neo4jJsonCodec extends ObjectMapper
         out.writeStartArray();
         while ( value.hasNext() )
         {
-            writePropertyContainer( out, value.next() );
+            writeEntity( out, value.next() );
         }
         out.writeEndArray();
     }
 
-    private void writePropertyContainer( JsonGenerator out, Entity value ) throws IOException
+    private void writeEntity( JsonGenerator out, Entity value ) throws IOException
     {
         out.writeStartObject();
         for ( String key : value.getPropertyKeys() )
