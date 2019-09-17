@@ -14,9 +14,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
                                        lhsLongCount: Int, lhsRefCount: Int,
                                        slots: SlotConfiguration,
-                                       longsToCopy: Array[(Int, Int)],
-                                       refsToCopy: Array[(Int, Int)],
-                                       cachedPropertiesToCopy: Array[(Int, Int)])
+                                       argumentSize: SlotConfiguration.Size)
                                       (val id: Id = Id.INVALID_ID) extends Pipe {
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
@@ -26,7 +24,9 @@ case class CartesianProductSlottedPipe(lhs: Pipe, rhs: Pipe,
           rhsCtx =>
             val context = SlottedExecutionContext(slots)
             lhsCtx.copyTo(context)
-            NodeHashJoinSlottedPipe.copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, context, rhsCtx)
+            rhsCtx.copyTo(context,
+              fromLongOffset = argumentSize.nLongs, fromRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx
+              toLongOffset = lhsLongCount, toRefOffset = lhsRefCount)
             context
         }
     }

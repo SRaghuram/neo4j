@@ -385,14 +385,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val argumentSize = physicalPlan.argumentSizes(plan.id)
         val lhsPlan = plan.lhs.get
         val lhsSlots = slotConfigs(lhsPlan.id)
-        val rhsPlan = plan.rhs.get
-        val rhsSlots = slotConfigs(rhsPlan.id)
 
-        // Verify the assumption that the argument slots are the same on both sides
-        ifAssertionsEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
-        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
+        // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
+        // This assumption enables us to use array copy within CartesianProductSlottedPipe.
+        ifAssertionsEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
 
-        CartesianProductSlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
+        CartesianProductSlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, argumentSize)(id)
 
       case joinPlan: NodeHashJoin =>
         val argumentSize = physicalPlan.argumentSizes(plan.id)
@@ -582,7 +580,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
   // and the number of shared slots are identical to the argument size.
   private def verifyOnlyArgumentsAreSharedSlots(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
     val argumentSize = physicalPlan.argumentSizes(plan.id)
-    val configuration = physicalPlan.slotConfigurations(plan.id)
     val lhsPlan = plan.lhs.get
     val rhsPlan = plan.rhs.get
     val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
