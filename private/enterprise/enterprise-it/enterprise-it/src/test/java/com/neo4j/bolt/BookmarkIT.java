@@ -7,6 +7,7 @@ package com.neo4j.bolt;
 
 import com.neo4j.bolt.txtracking.WaitTrackingMonitor;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -267,6 +268,7 @@ class BookmarkIT
     {
         return Config.newBuilder()
                 .set( BoltConnector.enabled, true )
+                .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( GraphDatabaseSettings.neo4j_home, directory.storeDir().toPath().toAbsolutePath() )
                 .build();
