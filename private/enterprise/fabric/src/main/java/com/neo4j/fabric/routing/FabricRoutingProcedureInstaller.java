@@ -19,7 +19,7 @@ import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 
 public class FabricRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
 {
-    
+
     private final DatabaseManager<?> databaseManager;
     private final ConnectorPortRegister portRegister;
     private final Config config;

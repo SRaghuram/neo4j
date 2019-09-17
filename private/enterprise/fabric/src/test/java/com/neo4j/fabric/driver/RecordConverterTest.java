@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
@@ -67,7 +68,7 @@ class RecordConverterTest
     {
         testServer = TestNeo4jBuilders.newInProcessBuilder().withFixture( "CREATE (:Person {name: 'Anna'})" ).build();
         String serverUri = testServer.boltURI().toString();
-        driver = GraphDatabase.driver( serverUri, AuthTokens.none() );
+        driver = GraphDatabase.driver( serverUri, AuthTokens.none(), Config.builder().withoutEncryption().build() );
     }
 
     @AfterAll

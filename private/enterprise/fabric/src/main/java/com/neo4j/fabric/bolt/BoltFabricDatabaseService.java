@@ -64,7 +64,8 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
             AccessMode accessMode, Map<String,Object> txMetadata )
     {
         // for transactions started by Bolt it holds that implicit transaction = periodic commit
-        if (type == Transaction.Type.implicit) {
+        if ( type == Transaction.Type.implicit )
+        {
             throw new FabricException( SemanticError, "Periodic commit is not supported in Fabric" );
         }
         if ( txTimeout == null )

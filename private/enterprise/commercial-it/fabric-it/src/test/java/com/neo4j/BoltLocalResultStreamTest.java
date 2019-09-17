@@ -61,6 +61,7 @@ class BoltLocalResultStreamTest
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )
+                        .withoutEncryption()
                         .build() );
     }
 

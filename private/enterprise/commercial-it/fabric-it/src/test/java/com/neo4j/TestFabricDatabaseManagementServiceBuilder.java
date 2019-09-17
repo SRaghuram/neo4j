@@ -45,13 +45,17 @@ public class TestFabricDatabaseManagementServiceBuilder extends TestCommercialDa
             return new CommercialEditionModule( globalModule, dependencies )
             {
                 @Override
-                public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
+                public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependenciesWithoutMocks,
                         DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
                 {
                     return (BoltGraphDatabaseManagementServiceSPI) mocks.stream()
                             .filter( mock -> mock instanceof BoltGraphDatabaseManagementServiceSPI )
                             .findAny()
-                            .orElseGet( () -> super.createBoltDatabaseManagementServiceProvider( dependencies, managementService, monitors, clock, logService ) );
+                            .orElseGet( () -> super.createBoltDatabaseManagementServiceProvider( dependencies,
+                                    managementService,
+                                    monitors,
+                                    clock,
+                                    logService ) );
                 }
             };
         };

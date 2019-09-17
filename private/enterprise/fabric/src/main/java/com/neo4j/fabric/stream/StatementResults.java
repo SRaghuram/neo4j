@@ -206,7 +206,7 @@ public class StatementResults
     {
         private int numberOfFields;
         private AnyValue[] fields;
-        private int fieldIndex = 0;
+        private int fieldIndex;
 
         @Override
         public void onResult( int numberOfFields )

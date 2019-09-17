@@ -59,6 +59,7 @@ class CredentialsTest
         ports = PortUtils.findFreePorts();
 
         var configProperties = Map.of(
+                "fabric.database.name", "mega",
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true"
@@ -138,6 +139,9 @@ class CredentialsTest
 
     private void createDriver( AuthToken authToken )
     {
-        driver = GraphDatabase.driver( "bolt://localhost:" + ports.bolt, authToken, Config.builder().withMaxConnectionPoolSize( 1 ).build() );
+        driver = GraphDatabase.driver( "bolt://localhost:" + ports.bolt, authToken, Config.builder()
+                .withMaxConnectionPoolSize( 1 )
+                .withoutEncryption()
+                .build() );
     }
 }

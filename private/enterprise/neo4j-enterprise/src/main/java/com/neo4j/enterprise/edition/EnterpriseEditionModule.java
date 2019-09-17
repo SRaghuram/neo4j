@@ -228,8 +228,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     {
         AuthManager authManager = super.getBoltAuthManager( dependencyResolver );
         var fabricConfig = dependencyResolver.resolveDependency( FabricConfig.class );
-        
-        if (!fabricConfig.isEnabled()) {
+
+        if ( !fabricConfig.isEnabled() )
+        {
             return authManager;
         }
 

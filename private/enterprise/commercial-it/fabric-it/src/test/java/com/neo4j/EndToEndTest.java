@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EndToEndTest
 {
-    
+
     private Driver clientDriver;
     private TestServer testServer;
     private InProcessNeo4j shard0;

@@ -71,6 +71,7 @@ class BoltAdapterTest
     private final CountDownLatch transactionLatch = new CountDownLatch( 1 );
     private final FabricTransaction fabricTransaction = mock( FabricTransaction.class );
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final SessionConfig sessionConfig = SessionConfig.builder().withDatabase( "mega" ).build();
 
     @BeforeAll
     static void setUpServer() throws UnavailableException
@@ -91,8 +92,8 @@ class BoltAdapterTest
 
         fabricConfig = mock( FabricConfig.class );
         FabricDatabaseManager databaseManager = mock( FabricDatabaseManager.class );
-        
-        var databaseId = mock( DatabaseId.class);
+
+        var databaseId = mock( DatabaseId.class );
         when(databaseId.name()).thenReturn( "mega" );
         var graphDatabaseFacade = mock( GraphDatabaseFacade.class );
         when( graphDatabaseFacade.databaseId() ).thenReturn( databaseId );
@@ -140,7 +141,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 try ( Transaction transaction = session.beginTransaction() )
                 {
@@ -170,7 +171,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );
@@ -196,7 +197,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 try ( Transaction transaction = session.beginTransaction() )
                 {
@@ -228,7 +229,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 try ( Transaction transaction = session.beginTransaction() )
                 {
@@ -264,7 +265,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );
@@ -295,7 +296,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 try ( Transaction transaction = session.beginTransaction() )
                 {
@@ -333,7 +334,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session() )
+            try ( Session session = driver.session( sessionConfig ) )
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );
