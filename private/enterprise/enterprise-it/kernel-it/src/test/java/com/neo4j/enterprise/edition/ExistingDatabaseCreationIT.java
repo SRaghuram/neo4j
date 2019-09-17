@@ -5,7 +5,6 @@
  */
 package com.neo4j.enterprise.edition;
 
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -93,7 +92,7 @@ class ExistingDatabaseCreationIT
         DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
         copyDatabaseData( databaseLayout, cloneLayout );
 
-        managementService = new EnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.storeDir() )
                 .setConfig( fail_on_missing_files, false ).build();
         managementService.createDatabase( cloneDatabase );
         GraphDatabaseService cloneDatabaseService = managementService.database( cloneDatabase );
