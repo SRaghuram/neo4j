@@ -449,7 +449,7 @@ class TransactionGuardIT
     {
         return MapUtil.genericMap(
                 transaction_timeout, SettingValueParsers.DURATION.parse( DEFAULT_TIMEOUT ),
-                BoltConnector.advertised_address, new org.neo4j.configuration.helpers.SocketAddress( "localhost", 0 ),
+                BoltConnector.listen_address, new org.neo4j.configuration.helpers.SocketAddress( "localhost", 0 ),
                 BoltConnector.enabled, true,
                 BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED,
                 OnlineBackupSettings.online_backup_enabled, false,
@@ -493,9 +493,10 @@ class TransactionGuardIT
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( createIdContextFactory( fileSystem ) );
 
-        DatabaseManagementServiceBuilder databaseBuilder =
-                new TestEnterpriseDatabaseManagementServiceBuilder( storeDir ).setClock( fakeClock ).setExternalDependencies( dependencies ).setFileSystem(
-                        fileSystem ).impermanent();
+        DatabaseManagementServiceBuilder databaseBuilder = new TestEnterpriseDatabaseManagementServiceBuilder( storeDir )
+                        .setClock( fakeClock )
+                        .setExternalDependencies( dependencies )
+                        .setFileSystem( fileSystem ).impermanent();
         databaseBuilder.setConfig( configMap );
 
         customManagementService = databaseBuilder.build();
