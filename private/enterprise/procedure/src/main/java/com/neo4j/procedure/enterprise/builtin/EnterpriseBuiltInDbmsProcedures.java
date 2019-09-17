@@ -48,7 +48,6 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -91,6 +90,9 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public SecurityContext securityContext;
+
+    @Context
+    public KernelTransaction kernelTransaction;
 
     @SystemProcedure
     @Description( "List all accepted network connections at this instance that are visible to the user." )
@@ -515,11 +517,10 @@ public class EnterpriseBuiltInDbmsProcedures
         long deadline = System.nanoTime() + durationNanos;
         try
         {
-            KernelTransaction tx = getCurrentTx();
             scheduler.profileGroup( group, profiler );
             while ( System.nanoTime() < deadline )
             {
-                tx.assertOpen();
+                kernelTransaction.assertOpen();
                 Thread.sleep( 100 );
             }
         }
@@ -541,7 +542,6 @@ public class EnterpriseBuiltInDbmsProcedures
     @Procedure( name = "dbms.checkpoint", mode = DBMS )
     public Stream<CheckpointResult> checkpoint() throws IOException
     {
-        KernelTransaction kernelTransaction = getCurrentTx();
         CheckPointer checkPointer = resolver.resolveDependency( CheckPointer.class );
         // Use isTerminated as a timeout predicate to ensure that we stop waiting, if the transaction is terminated.
         BooleanSupplier timeoutPredicate = kernelTransaction::isTerminated;
@@ -659,12 +659,6 @@ public class EnterpriseBuiltInDbmsProcedures
     private boolean isAdminOrSelf( String username )
     {
         return securityContext.isAdmin() || securityContext.subject().hasUsername( username );
-    }
-
-    private KernelTransaction getCurrentTx()
-    {
-        return graph.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
-                .getKernelTransactionBoundToThisThread( true, graph.databaseId() );
     }
 
     public static class QueryTerminationResult

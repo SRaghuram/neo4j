@@ -108,9 +108,13 @@ public class ProcedureIT
     {
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
+        new JarBuilder().createJarFor( plugins.createFile( "myProceduresWithKernelTransaction.jar" ), ClassWithProceduresUsingKernelTransaction.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent()
-                                                                                .setConfig( plugin_dir, plugins.directory().toPath().toAbsolutePath() ).build();
+                                                                                .setConfig( plugin_dir, plugins.directory().toPath().toAbsolutePath() )
+                                                                                .setConfig( procedure_unrestricted,
+                                                                                        List.of("com.neo4j.procedure.startTimeOfKernelTransaction") )
+                                                                                .build();
         db = managementService.database( DEFAULT_DATABASE_NAME );
         system = managementService.database( SYSTEM_DATABASE_NAME );
         onCloseCalled = new boolean[2];
@@ -1586,6 +1590,23 @@ public class ProcedureIT
         }
     }
 
+    @Test
+    void shouldBeAbleToGetKernelTransactionFromContext()
+    {
+        // Given
+        try ( Transaction tx = db.beginTx() )
+        {
+            // When
+            Result res = tx.execute( "CALL com.neo4j.procedure.startTimeOfKernelTransaction()" );
+
+            // Then
+            assertTrue(res.hasNext());
+            Map<String,Object> results = res.next();
+            assertFalse( res.hasNext() );
+            assertThat( results.get( "someVal" ).getClass(), equalTo( Long.class ) );
+        }
+    }
+
     public static class Output
     {
         public long someVal = 1337;
@@ -1707,6 +1728,19 @@ public class ProcedureIT
         public NodeListRecord( List<Node> nodes )
         {
             this.nodes = nodes;
+        }
+    }
+
+    @SuppressWarnings( "unused" )
+    public static class ClassWithProceduresUsingKernelTransaction
+    {
+        @Context
+        public KernelTransaction ktx;
+
+        @Procedure
+        public Stream<Output> startTimeOfKernelTransaction()
+        {
+            return Stream.of( new Output( ktx.startTime() ) );
         }
     }
 
