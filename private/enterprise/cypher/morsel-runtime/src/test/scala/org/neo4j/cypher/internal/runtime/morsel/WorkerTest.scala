@@ -21,10 +21,7 @@ class WorkerTest extends CypherFunSuite {
       new QueryManager {
         override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = countDown.next()
       }
-    val schedulingPolicy = new SchedulingPolicy {
-      override def nextTask(executingQuery: ExecutingQuery,
-                            queryResources: QueryResources): PipelineTask = null
-    }
+    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => null
     val sleeper = mock[Sleeper]
 
     val worker = new Worker(1, queryManager, schedulingPolicy, sleeper)
@@ -43,11 +40,7 @@ class WorkerTest extends CypherFunSuite {
       }
 
     val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
-    val schedulingPolicy: SchedulingPolicy =
-      new SchedulingPolicy {
-        override def nextTask(executingQuery: ExecutingQuery,
-                              queryResources: QueryResources): PipelineTask = countDown.next()
-      }
+    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => countDown.next()
 
     val sleeper = mock[Sleeper]
     val worker = new Worker(1, queryManager, schedulingPolicy,  sleeper)
@@ -76,10 +69,10 @@ class WorkerTest extends CypherFunSuite {
     val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
     worker.scheduleNextTask(query, resources) shouldBe null
 
-    verify(input, times(1)).originalForClosing
+    verify(input).originalForClosing
     verify(input, never()).nextCopy
-    verify(executionState, times(1)).closeMorselTask(pipeline, originalMorsel)
-    verify(executionState, times(1)).failQuery(cause, resources, pipeline)
+    verify(executionState).closeMorselTask(pipeline, originalMorsel)
+    verify(executionState).failQuery(cause, resources, pipeline)
   }
 
   test("should handle scheduling error which occurred after getting morsel from parallelizer") {
@@ -100,10 +93,10 @@ class WorkerTest extends CypherFunSuite {
     val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
     worker.scheduleNextTask(query, resources) shouldBe null
 
-    verify(input, times(1)).originalForClosing
+    verify(input).originalForClosing
     verify(input, never()).nextCopy
-    verify(executionState, times(1)).closeMorselTask(pipeline, originalMorsel)
-    verify(executionState, times(1)).failQuery(cause, resources, pipeline)
+    verify(executionState).closeMorselTask(pipeline, originalMorsel)
+    verify(executionState).failQuery(cause, resources, pipeline)
   }
 
   class NoMoreAttemptsException() extends IllegalArgumentException
