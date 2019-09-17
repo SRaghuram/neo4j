@@ -507,7 +507,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create node key constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
@@ -518,15 +518,15 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
-    val index = graph.getIndex("Person", Seq("name"))
+    val index = inTx(_ => kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")), tokenReader(t => t.propertyKey("name"))))
 
     // when
-    val listResult = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes()")
+    val listResult = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.indexes()")
 
     // then
     listResult.toList should equal(
       List(Map(
-        "id" -> 3,
+        "id" -> index.getId,
         "name" -> index.getName,
         "state" -> "ONLINE",
         "populationPercent" -> 100.0,
