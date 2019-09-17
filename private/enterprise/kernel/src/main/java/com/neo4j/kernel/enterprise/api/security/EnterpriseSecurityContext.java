@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 
@@ -18,19 +19,25 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 public class EnterpriseSecurityContext extends SecurityContext
 {
     private final Set<String> roles;
-    private final boolean isAdmin;
+    private final AdminAccessMode adminAccessMode;
 
-    public EnterpriseSecurityContext( AuthSubject subject, AccessMode mode, Set<String> roles, boolean isAdmin )
+    public EnterpriseSecurityContext( AuthSubject subject, AccessMode mode, Set<String> roles, AdminAccessMode adminAccessMode )
     {
         super( subject, mode );
         this.roles = roles;
-        this.isAdmin = isAdmin;
+        this.adminAccessMode = adminAccessMode;
     }
 
     @Override
     public boolean isAdmin()
     {
-        return isAdmin;
+        return adminAccessMode.allows( AdminActionOnResource.ALL );
+    }
+
+    @Override
+    public boolean allowsAdminAction( AdminActionOnResource action )
+    {
+        return adminAccessMode.allows( action );
     }
 
     @Override
@@ -42,7 +49,7 @@ public class EnterpriseSecurityContext extends SecurityContext
     @Override
     public EnterpriseSecurityContext withMode( AccessMode mode )
     {
-        return new EnterpriseSecurityContext( subject, mode, roles, isAdmin );
+        return new EnterpriseSecurityContext( subject, mode, roles, adminAccessMode );
     }
 
     /**
@@ -58,7 +65,7 @@ public class EnterpriseSecurityContext extends SecurityContext
 
     private static EnterpriseSecurityContext authDisabled( AccessMode mode )
     {
-        return new EnterpriseSecurityContext( AuthSubject.AUTH_DISABLED, mode, Collections.emptySet(), true )
+        return new EnterpriseSecurityContext( AuthSubject.AUTH_DISABLED, mode, Collections.emptySet(), AdminAccessMode.FULL )
         {
 
             @Override

@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.AdminAccessMode;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
@@ -534,7 +535,7 @@ class SecurityAdministrationCommandLoggingIT
         @Override
         public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
         {
-            return new EnterpriseSecurityContext( subject, accessMode, Collections.emptySet(), true );
+            return new EnterpriseSecurityContext( subject, accessMode, Collections.emptySet(), AdminAccessMode.FULL );
         }
     }
 }

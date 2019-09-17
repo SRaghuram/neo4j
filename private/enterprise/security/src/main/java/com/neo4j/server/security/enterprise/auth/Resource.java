@@ -93,7 +93,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return obj instanceof GraphResource;
+            return obj instanceof DatabaseResource;
         }
     }
 

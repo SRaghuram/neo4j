@@ -102,7 +102,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
             @Override
             public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
             {
-                return new EnterpriseSecurityContext( subject(), inner.mode(), Collections.emptySet(), false );
+                return new EnterpriseSecurityContext( subject(), inner.mode(), Collections.emptySet(), action -> false );
             }
 
             @Override

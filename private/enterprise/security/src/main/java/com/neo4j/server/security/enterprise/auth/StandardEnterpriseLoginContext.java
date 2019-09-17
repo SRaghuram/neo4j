@@ -61,10 +61,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     private StandardAccessMode mode( IdLookup resolver, String dbName ) throws KernelException
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
-        if ( !isAuthenticated )
-        {
-            throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED );
-        }
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         Set<String> roles = queryForRoleNames();
         StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver );
@@ -111,7 +107,13 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED, Status.Security.Unauthorized );
         }
         StandardAccessMode mode = mode( idLookup, dbName );
-        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles, mode.isAdmin() );
+        // TODO implement fine-grained admin check
+        StandardAdminAccessMode.Builder admin = new StandardAdminAccessMode.Builder();
+        if ( mode.isAdmin )
+        {
+            admin.full();
+        }
+        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles, admin.build() );
     }
 
     @Override
