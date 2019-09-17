@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +46,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -56,7 +54,6 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.function.Predicates;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
@@ -68,11 +65,9 @@ import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ports.PortAuthority;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -192,7 +187,7 @@ public class Cluster
         startMembers( Arrays.asList( clusterMembers ) );
     }
 
-    public static void startMembers( Collection<? extends ClusterMember> clusterMembers ) throws ExecutionException, InterruptedException
+    private static void startMembers( Collection<? extends ClusterMember> clusterMembers ) throws ExecutionException, InterruptedException
     {
         combine( invokeAll( "starting-members", clusterMembers, cm ->
         {
@@ -239,7 +234,7 @@ public class Cluster
         shutdownMembers( coreMembers() );
     }
 
-    public static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers )
+    private static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers )
     {
         try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown members" ) )
         {
@@ -256,8 +251,7 @@ public class Cluster
         } ) ).get() );
     }
 
-    private static <X extends GraphDatabaseAPI, T extends ClusterMember, R> List<Future<R>> invokeAll( String threadName, Collection<T> members,
-            Function<T,R> call )
+    private static <T extends ClusterMember, R> List<Future<R>> invokeAll( String threadName, Collection<T> members, Function<T,R> call )
     {
         List<Future<R>> list = new ArrayList<>( members.size() );
         int threadNumber = 0;
@@ -320,7 +314,7 @@ public class Cluster
         }
     }
 
-    public void removeReadReplica( ReadReplica memberToRemove )
+    private void removeReadReplica( ReadReplica memberToRemove )
     {
         memberToRemove.shutdown();
         readReplicas.values().remove( memberToRemove );
@@ -492,9 +486,9 @@ public class Cluster
     /**
      * Perform a transaction against the core cluster, selecting the target and retrying as necessary.
      */
-    public CoreClusterMember systemTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
+    public void systemTx( BiConsumer<GraphDatabaseFacade,Transaction> op ) throws Exception
     {
-        return coreTx( SYSTEM_DATABASE_NAME, op );
+        coreTx( SYSTEM_DATABASE_NAME, op );
     }
 
     /**
