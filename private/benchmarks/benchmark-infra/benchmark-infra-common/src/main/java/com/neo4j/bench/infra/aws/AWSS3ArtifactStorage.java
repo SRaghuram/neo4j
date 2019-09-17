@@ -27,6 +27,7 @@ import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Workspace;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,8 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static org.apache.commons.lang3.StringUtils.appendIfMissing;
+import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class AWSS3ArtifactStorage implements ArtifactStorage
 {
@@ -124,11 +127,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         }
     }
 
-    private String getS3Path( String fullPath )
-    {
-        return fullPath.substring( 1 ) + "/";
-    }
-
     @Override
     public void downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
     {
@@ -165,16 +163,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         return new S3ObjectDataset( s3Object );
     }
 
-    private String createDatasetKey( String neo4jVersion, String dataset )
-    {
-        return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
-    }
-
-    private static String createBuildArtifactPrefix( String buildID )
-    {
-        return format( "%s/%s", ARTIFACTS_PREFIX, buildID );
-    }
-
     public void verifyBuildArtifactsExpirationRule( URI artifactBaseURI )
     {
         String bucketName = artifactBaseURI.getAuthority();
@@ -196,8 +184,14 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         amazonS3.setBucketLifecycleConfiguration( bucketName, configuration );
     }
 
-    private static String createBuildArtifactKey( String buildID, Path artifact )
+    private static String getS3Path( String fullPath )
     {
-        return format( "%s/%s/%s", ARTIFACTS_PREFIX, buildID, artifact.toString() );
+        return appendIfMissing( removeStart( fullPath, "/" ), "/");
     }
+
+    private static String createDatasetKey( String neo4jVersion, String dataset )
+    {
+        return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
+    }
+
 }
