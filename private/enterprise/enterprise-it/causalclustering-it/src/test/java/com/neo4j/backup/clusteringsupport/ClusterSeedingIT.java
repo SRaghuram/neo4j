@@ -39,6 +39,7 @@ import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class ClusterSeedingIT
@@ -114,7 +115,7 @@ public class ClusterSeedingIT
             {
                 DefaultDatabasesBackup backups = backupsOpt.get();
                 restoreFromBackup( backups.systemDb(), fileSystemRule.get(), member, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), member, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), member, DEFAULT_DATABASE_NAME );
             }
         }
 

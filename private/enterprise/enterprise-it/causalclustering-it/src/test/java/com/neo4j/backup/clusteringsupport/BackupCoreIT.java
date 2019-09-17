@@ -17,9 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -65,9 +64,9 @@ class BackupCoreIT
             // Run backup
             DbRepresentation beforeChange = DbRepresentation.of( createSomeData( cluster ) );
             File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
-            DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
-            File coreDefaultDbBackupDir = new File( coreBackupDir, databaseId.name() );
-            String[] args = backupArguments( backupAddress( db.defaultDatabase() ), coreBackupDir, databaseId );
+            String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+            File coreDefaultDbBackupDir = new File( coreBackupDir, databaseName );
+            String[] args = backupArguments( backupAddress( db.defaultDatabase() ), coreBackupDir, databaseName );
             assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseLayout().databaseDirectory(), args ) );
 
             // Add some new data

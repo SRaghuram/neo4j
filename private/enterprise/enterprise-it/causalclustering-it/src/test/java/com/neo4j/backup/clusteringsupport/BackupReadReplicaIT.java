@@ -18,7 +18,6 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
@@ -81,7 +80,7 @@ class BackupReadReplicaIT
         DbRepresentation beforeChange = DbRepresentation.of( readReplica );
         String backupAddress = backupAddress( readReplica );
 
-        String[] args = backupArguments( backupAddress, backupsDir, new TestDatabaseIdRepository().defaultDatabase() );
+        String[] args = backupArguments( backupAddress, backupsDir, DEFAULT_DATABASE_NAME );
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( readReplica.databaseLayout().databaseDirectory(), args ) );
 
         // Add some new data

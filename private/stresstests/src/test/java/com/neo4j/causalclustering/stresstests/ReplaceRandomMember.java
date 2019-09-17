@@ -23,6 +23,7 @@ import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class ReplaceRandomMember extends RepeatOnRandomMember
@@ -70,7 +71,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         if ( replaceFromBackup )
         {
             log.info( "Restoring backup: " + backup.getName() + " to: " + newMember );
-            restoreFromBackup( backup, fs, newMember );
+            restoreFromBackup( backup, fs, newMember, DEFAULT_DATABASE_NAME );
             fs.deleteRecursively( backup );
         }
 

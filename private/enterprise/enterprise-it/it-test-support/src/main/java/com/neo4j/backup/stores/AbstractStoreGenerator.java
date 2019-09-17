@@ -14,10 +14,9 @@ import java.nio.file.Files;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.neo4j.kernel.database.DatabaseId;
-
-import static com.neo4j.backup.BackupTestUtil.createBackupFromCore;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static com.neo4j.backup.BackupTestUtil.createBackup;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public abstract class AbstractStoreGenerator implements BackupStore
 {
@@ -29,9 +28,8 @@ public abstract class AbstractStoreGenerator implements BackupStore
     public Optional<DefaultDatabasesBackup> generate( File baseBackupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        DatabaseId defaultDatabaseId = core.databaseId();
-        File defaultBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, defaultDatabaseId.name() ), defaultDatabaseId );
-        File systemBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, SYSTEM_DATABASE_ID.name() ), SYSTEM_DATABASE_ID );
+        File defaultBackupFromCore = createBackup( core, backupDir( baseBackupDir, DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
+        File systemBackupFromCore = createBackup( core, backupDir( baseBackupDir, SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
         DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
         modify( defaultBackupFromCore );
         return Optional.of( backups );

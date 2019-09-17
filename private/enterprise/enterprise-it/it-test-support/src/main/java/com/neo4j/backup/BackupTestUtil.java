@@ -8,7 +8,6 @@ package com.neo4j.backup;
 import com.neo4j.backup.impl.OnlineBackupCommand;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.restore.RestoreDatabaseCommand;
 import picocli.CommandLine;
 
@@ -23,10 +22,8 @@ import org.neo4j.cli.AdminTool;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.ProcessStreamHandler;
 import org.neo4j.test.StreamConsumer;
@@ -40,25 +37,19 @@ import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
 public class BackupTestUtil
 {
-    public static File createBackupFromCore( CoreClusterMember core, File baseBackupDir, DatabaseId databaseId ) throws Exception
+    public static File createBackup( ClusterMember member, File baseBackupDir, String databaseName ) throws Exception
     {
-        String[] args = backupArguments( backupAddress( core.defaultDatabase() ), baseBackupDir, databaseId );
+        String[] args = backupArguments( backupAddress( member.defaultDatabase() ), baseBackupDir, databaseName );
         assertThat( runBackupToolFromOtherJvmToGetExitCode( baseBackupDir, args ), equalTo( 0 ) );
-        return new File( baseBackupDir, databaseId.name() );
+        return new File( baseBackupDir, databaseName );
     }
 
-    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember clusterMember ) throws IOException
+    public static void restoreFromBackup( File fromDatabasePath, FileSystemAbstraction fsa, ClusterMember clusterMember, String databaseName )
+            throws IOException
     {
-        restoreFromBackup( backup, fsa, clusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-    }
-
-    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
-            ClusterMember clusterMember, String databaseName ) throws IOException
-    {
-        Config config = Config.newBuilder().fromConfig( clusterMember.config() )
-                .build();
+        Config config = Config.newBuilder().fromConfig( clusterMember.config() ).build();
         ConfigUtils.disableAllConnectors( config );
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, databaseName, true );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, fromDatabasePath, config, databaseName, true );
         restoreDatabaseCommand.execute();
     }
 
@@ -72,13 +63,13 @@ public class BackupTestUtil
         } ).defaultDatabase();
     }
 
-    public static String[] backupArguments( String from, File backupsDir, DatabaseId databaseId )
+    public static String[] backupArguments( String from, File backupsDir, String databaseName )
     {
         return new String[]{
                 "--from=" + from,
                 "--report-dir=" + backupsDir,
                 "--backup-dir=" + backupsDir,
-                "--database=" + databaseId.name()
+                "--database=" + databaseName
         };
     }
 
