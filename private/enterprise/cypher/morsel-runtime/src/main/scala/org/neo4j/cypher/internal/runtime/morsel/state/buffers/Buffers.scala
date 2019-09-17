@@ -218,17 +218,8 @@ class Buffers(numBuffers: Int,
     if (b.length == 0) return a
 
     val result = new Array[AnyVal](a.length + b.length)
-    var i = 0
-    while (i < a.length) {
-      result(i) = a(i)
-      i += 1
-    }
-
-    i = 0
-    while (i < b.length) {
-      result(a.length + i) = b(i)
-      i += 1
-    }
+    System.arraycopy(a, 0, result, 0, a.length)
+    System.arraycopy(b, 0, result, a.length, b.length)
 
     result.asInstanceOf[Array[T]]
   }
