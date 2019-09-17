@@ -306,8 +306,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
     } catch {
       case _: LocksNotFrozenException =>
         // locks are already thawed, nothing more to do
-      case thawError: Throwable => // unexpected, stash and continue
-        errors.add(thawError)
+      case thawException: Exception => // unexpected, stash and continue
+        errors.add(thawException)
     }
   }
 
@@ -321,8 +321,8 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
         subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
       }
     } catch {
-      case reportError: Throwable =>
-        errors.add(reportError)
+      case reportException: Exception =>
+        errors.add(reportException)
     }
   }
 
