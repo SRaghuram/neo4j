@@ -7,16 +7,15 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.time.Clock
 
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.CypherOperatorEngineOption
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.runtime.NO_TRACKING_CONTROLLER
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
-import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, NoSchedulerTracing, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.lifecycle.LifeSupport
@@ -32,8 +31,8 @@ object ContextHelper extends MockitoSugar {
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
-    memoryTrackingController = NO_TRACKING_CONTROLLER
-    )
+    memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults())
+  )
 
   def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,
              tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING,
