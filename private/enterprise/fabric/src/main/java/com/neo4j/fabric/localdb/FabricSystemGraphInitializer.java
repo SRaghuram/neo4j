@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.localdb;
 
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSystemGraphInitializer;
+import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;

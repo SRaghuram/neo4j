@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealmTestHelper.TestDatabaseManager;

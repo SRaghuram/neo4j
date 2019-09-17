@@ -134,9 +134,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         {
             topology = topologyService.coreTopologyForDatabase( databaseId );
 
-            if ( databaseId.isSystemDatabase() || systemGraph.getInitialMembers( databaseId ).isEmpty() )
+            if ( databaseId.isSystemDatabase() )
             {
                 // Used for initial databases (system + default) in conjunction with cluster formation.
+                snapshot = tryBootstrapUsingDiscoveryService( topology );
+            }
+            else if ( systemGraph.getInitialMembers( databaseId ).isEmpty() )
+            {
                 snapshot = tryBootstrapUsingDiscoveryService( topology );
             }
             else
@@ -163,6 +167,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             else if ( topology.raftId() != null )
             {
                 // Someone else bootstrapped, we're done!
+                if ( databaseId.isSystemDatabase() )
+                {
+                    /* Because the bootstrapping instance might modify the seed and change
+                       the store ID, other instances have to remove their seeds and perform
+                       a store copy later in the startup. */
+                    raftBootstrapper.removeStore();
+                }
                 raftId = topology.raftId();
                 monitor.boundToRaft( databaseId, raftId );
             }

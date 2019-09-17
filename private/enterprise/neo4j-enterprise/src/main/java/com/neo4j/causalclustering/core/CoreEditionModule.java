@@ -51,6 +51,7 @@ import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
@@ -59,7 +60,6 @@ import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurit
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSystemGraphInitializer;
 
 import java.io.File;
 import java.util.Collection;
@@ -94,7 +94,6 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
@@ -123,7 +122,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private final InstalledProtocolHandler serverInstalledProtocolHandler;
 
     private final Map<DatabaseId,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
-    private final CompositeDatabaseHealth globalHealth;
     private final LogProvider logProvider;
     private final Config globalConfig;
     private final GlobalModule globalModule;
@@ -143,7 +141,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         this.globalModule = globalModule;
         this.globalConfig = globalModule.getGlobalConfig();
-        this.globalHealth = globalModule.getGlobalHealthService();
         this.logProvider = logService.getInternalLogProvider();
 
         RaftMonitor.register( logService, globalModule.getGlobalMonitors() );
@@ -334,7 +331,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         SystemGraphInitializer initializer =
                 CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                        () -> new EnterpriseSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
+                        () -> new ClusterSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig() ) );
         databaseInitializerMap.put( SYSTEM_DATABASE_ID, db ->
         {
             try

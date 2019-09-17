@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import java.io.File
 import java.lang.Boolean.TRUE
 
+import com.neo4j.dbms.EnterpriseSystemGraphInitializer
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
@@ -20,7 +21,6 @@ import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentExc
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher

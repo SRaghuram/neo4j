@@ -14,11 +14,13 @@ import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.dbms.ClusterSystemGraphInitializer;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabasePageCache;
@@ -46,6 +48,7 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -106,6 +109,11 @@ public class RaftBootstrapper
             if ( isStorePresent() )
             {
                 ensureRecoveredOrThrow( bootstrapContext, config );
+
+                if ( bootstrapContext.databaseId().isSystemDatabase() )
+                {
+                    bootstrapExistingSystemDatabase();
+                }
             }
             else
             {
@@ -120,6 +128,54 @@ public class RaftBootstrapper
         {
             throw new BootstrapException( bootstrapContext.databaseId(), e );
         }
+    }
+
+    public void removeStore() throws IOException
+    {
+        DatabaseLayout databaseLayout = bootstrapContext.databaseLayout();
+
+        fs.deleteRecursively( databaseLayout.databaseDirectory() );
+        fs.deleteRecursively( databaseLayout.getTransactionLogsDirectory() );
+    }
+
+    /**
+     * Copies store files and transaction logs of the system database seed, typically into
+     *   $NEO4J_HOME/data/databases/system/temp-bootstrap/neo4j
+     *
+     * upon which a temporary DBMS will be started, so that the seed database
+     * can be modified using the initializer, see {@link ClusterSystemGraphInitializer}.
+     *
+     * After the database has been updated, the store ID is changed on this instance
+     * because the seed is now different from that of other instances. Other instances
+     * should delete their system databases and store copy this one as part of their
+     * binding process.
+     *
+     * The database is then copied back into the regular place, typically
+     *   $NEO4J_HOME/data/databases/system
+     *
+     * before the startup process continues.
+     */
+    private void bootstrapExistingSystemDatabase() throws IOException
+    {
+        File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
+        File tempDefaultDatabaseDir = new File( bootstrapRootDir, DEFAULT_DATABASE_NAME );
+
+        fs.copyRecursively(  bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
+        fs.copyRecursively(  bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
+
+        DatabaseLayout databaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir );
+
+        changeStoreId( databaseLayout );
+        bootstrapContext.replaceWith( databaseLayout.databaseDirectory() );
+    }
+
+    private void changeStoreId( DatabaseLayout databaseLayout ) throws IOException
+    {
+        StoreId storeId = MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore() );
+        long creationTime = currentTimeMillis();
+        long randomId = ThreadLocalRandom.current().nextLong();
+        storeId = new StoreId( creationTime, randomId, storeId.getStoreVersion() );
+        MetaDataStore.setStoreId( pageCache, databaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP );
     }
 
     private boolean isStorePresent()
