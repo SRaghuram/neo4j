@@ -5,13 +5,18 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation.{and, block, labeledLoop}
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {
@@ -51,4 +56,37 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
     override protected def closeCursors(resources: QueryResources): Unit = {}
   }
+}
+
+class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
+                                   override val id: Id,
+                                   innermost: DelegateOperatorTaskTemplate)
+                                   (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+  import OperatorCodeGenHelperTemplates._
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  // [HN] It might be time to try to move the shared logic between InputLoopTask, InputOperator and ArgumentOperator templates into ContinuableOperatorTaskWithMorselTemplate
+  override protected def genOperate: IntermediateRepresentation = {
+    block(
+      labeledLoop(OUTER_LOOP_LABEL_NAME, and(INPUT_ROW_IS_VALID, innermost.predicate))(
+        block(
+          profileRow(id),
+          inner.genOperateWithExpressions,
+          INPUT_ROW_MOVE_TO_NEXT,
+          innermost.resetCachedPropertyVariables
+        )
+      )
+    )
+  }
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty[IntermediateExpression]
+
+  override def genFields: Seq[Field] = Seq.empty[Field]
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty[LocalVariable]
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 }

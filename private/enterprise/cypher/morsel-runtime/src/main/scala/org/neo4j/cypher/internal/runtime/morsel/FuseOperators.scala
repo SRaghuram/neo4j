@@ -298,6 +298,13 @@ class FuseOperators(operatorFactory: OperatorFactory,
       reversePlans.foldLeft(FusionPlan(innerTemplate, initFusedPlans, List.empty, middlePlans.toList, initUnhandledOutput)) {
         case (acc, nextPlan) => nextPlan match {
 
+          case plan@plans.Argument(_) =>
+            val newTemplate =
+              new ArgumentOperatorTaskTemplate(acc.template, plan.id, innermostTemplate)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
           case plan@plans.AllNodesScan(nodeVariableName, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
             val newTemplate =
