@@ -94,6 +94,10 @@ public class EnterpriseBuiltInDbmsProcedures
     @Context
     public KernelTransaction kernelTransaction;
 
+    // If needed, this is also available from the context (even if its not directly obvious):
+    // @Context
+    // public TerminationGuard terminationGuard;
+
     @SystemProcedure
     @Description( "List all accepted network connections at this instance that are visible to the user." )
     @Procedure( name = "dbms.listConnections", mode = DBMS )
