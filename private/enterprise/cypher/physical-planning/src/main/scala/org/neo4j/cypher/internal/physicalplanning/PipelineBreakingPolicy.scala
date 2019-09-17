@@ -47,7 +47,7 @@ object OperatorFusionPolicy {
   def apply(fusingEnabled: Boolean, parallelExecution: Boolean): OperatorFusionPolicy =
     if (!fusingEnabled) OPERATOR_FUSION_DISABLED
     else {
-      if (parallelExecution) OPERATOR_FUSION_ENABLED_PARALLEL else OPERATOR_FUSION_ENABLED
+      if (parallelExecution) OPERATOR_FUSION_WITHIN_PIPELINE else OPERATOR_FUSION_OVER_PIPELINES
     }
 
   private case object OPERATOR_FUSION_DISABLED extends OperatorFusionPolicy {
@@ -57,7 +57,7 @@ object OperatorFusionPolicy {
     override def canFuseMiddle(lp: LogicalPlan): Boolean = false
   }
 
-  private case object OPERATOR_FUSION_ENABLED extends OperatorFusionPolicy {
+  private case object OPERATOR_FUSION_OVER_PIPELINES extends OperatorFusionPolicy {
 
     override def canFuse(lp: LogicalPlan): Boolean = {
       lp match {
@@ -98,9 +98,9 @@ object OperatorFusionPolicy {
     override def canFuseMiddle(lp: LogicalPlan): Boolean = canFuse(lp)
   }
 
-  private case object OPERATOR_FUSION_ENABLED_PARALLEL extends OperatorFusionPolicy {
+  private case object OPERATOR_FUSION_WITHIN_PIPELINE extends OperatorFusionPolicy {
 
-    override def canFuse(lp: LogicalPlan): Boolean = OPERATOR_FUSION_ENABLED.canFuse(lp)
+    override def canFuse(lp: LogicalPlan): Boolean = OPERATOR_FUSION_OVER_PIPELINES.canFuse(lp)
 
     override def canFuseMiddle(lp: LogicalPlan): Boolean = false
   }

@@ -9,11 +9,12 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
 
-case class MorselPipelineBreakingPolicy(fusingPolicy: OperatorFusionPolicy) extends PipelineBreakingPolicy {
+case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 
-    def canFuseOneChildOperator: Boolean = fusingPolicy.canFuseMiddle(lp) && fusingPolicy.canFuse(lp.lhs.get)
+    def canFuseOneChildOperator: Boolean = fusionPolicy.canFuseMiddle(lp) &&
+      fusionPolicy.canFuse(lp.lhs.getOrElse(throw new IllegalStateException("Must be called from a one-child operator")))
 
     lp match {
       // leaf operators

@@ -121,6 +121,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val innermostTemplate = new DelegateOperatorTaskTemplate()(expressionCompiler)
 
     val (innerTemplate, initFusedPlans, initUnhandledOutput) = {
+      //if we have any middle plan it means we can't fuse all the way to the output operator
       if (middlePlans.nonEmpty) {
         (innermostTemplate, List.empty[LogicalPlan], output)
       } else {
