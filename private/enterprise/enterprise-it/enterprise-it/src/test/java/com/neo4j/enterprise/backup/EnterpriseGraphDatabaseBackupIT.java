@@ -69,7 +69,7 @@ class EnterpriseGraphDatabaseBackupIT
         var backupDir = performBackup();
         managementService.shutdown();
 
-        db = newEnterpriseDb( backupDir, false );
+        db = newEnterpriseBackupDb( backupDir, false );
         verifyNodes( nodeCount );
 
         managementService.shutdown();
