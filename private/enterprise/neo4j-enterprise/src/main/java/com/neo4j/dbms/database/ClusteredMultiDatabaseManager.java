@@ -58,14 +58,13 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     }
 
     @Override
-    protected final ClusteredDatabaseContext startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final void startDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
             context = recreateContextIfNeeded( databaseId, context );
             log.info( "Starting '%s' database.", databaseId.name() );
             context.clusteredDatabaseLife().start();
-            return context;
         }
         catch ( Throwable t )
         {
@@ -79,23 +78,24 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         {
             context.clusteredDatabaseLife().stop();
             // Clustering components cannot be reused, so we have to create a new context on each start->stop-start cycle.
-            return createDatabaseContext( databaseId );
+            var updatedContext = createDatabaseContext( databaseId );
+            databaseMap.put( databaseId, updatedContext );
+            return updatedContext;
         }
         return context;
     }
 
     @Override
-    protected final ClusteredDatabaseContext stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected final void stopDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         try
         {
             log.info( "Stopping '%s' database.", databaseId.name() );
             context.clusteredDatabaseLife().stop();
-            return context;
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagementException( format( "Unable to stop database `%s`", databaseId ), t );
+            throw new DatabaseManagementException( format( "An error occurred! Unable to stop database `%s`.", databaseId ), t );
         }
     }
 
@@ -107,7 +107,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
             {
                 log.info( "Stopping '%s' database for store copy.", databaseId.name() );
                 context.database().stop();
-                return context;
             }
             catch ( Throwable t )
             {
@@ -124,7 +123,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
             {
                 log.info( "Starting '%s' database after store copy.", databaseId.name() );
                 context.database().start();
-                return context;
             }
             catch ( Throwable t )
             {
@@ -134,8 +132,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     }
 
     public abstract void cleanupClusterState( String databaseName );
-
-    //TODO: Clean out shouldRecreateContext on drop!
 
     protected final LogFiles buildTransactionLogs( DatabaseLayout dbLayout )
     {

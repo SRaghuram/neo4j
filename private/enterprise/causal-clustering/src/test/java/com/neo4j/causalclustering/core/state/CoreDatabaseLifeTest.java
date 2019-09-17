@@ -30,7 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ExtendWith( {LifeExtension.class} )
+@ExtendWith( LifeExtension.class )
 class CoreDatabaseLifeTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();

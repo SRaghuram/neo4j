@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.member;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
-import java.util.function.Function;
 
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -49,6 +48,6 @@ public class DefaultDiscoveryMemberFactory implements DiscoveryMemberFactory
 
     private boolean hasFailed( DatabaseId databaseId )
     {
-        return databaseStateService.databaseHasFailed( databaseId ).isPresent();
+        return databaseStateService.causeOfFailure( databaseId ).isPresent();
     }
 }

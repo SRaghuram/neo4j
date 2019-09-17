@@ -63,7 +63,7 @@ class DefaultDiscoveryMemberFactoryTest
     @Test
     void shouldCreateDiscoveryMemberWithNonFailedDatabases()
     {
-        when( databaseStateService.databaseHasFailed( databaseId1 ) ).thenReturn( Optional.of( new IOException() ) );
+        when( databaseStateService.causeOfFailure( databaseId1 ) ).thenReturn( Optional.of( new IOException() ) );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId1 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId2 ).register();
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId3 ).register();

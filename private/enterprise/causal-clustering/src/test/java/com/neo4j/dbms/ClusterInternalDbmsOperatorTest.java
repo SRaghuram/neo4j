@@ -180,13 +180,14 @@ class ClusterInternalDbmsOperatorTest
         var someDb = randomDatabaseId();
         var desiredStateOnTrigger = new AtomicReference<OperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
+        var e = new IllegalStateException();
 
         // when
-        operator.stopOnPanic( someDb, null );
+        operator.stopOnPanic( someDb, e );
 
         // then
         assertEquals( STOPPED, desiredStateOnTrigger.get() );
-        verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb, null ) );
+        verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb, e ) );
     }
 
     @Test
@@ -199,7 +200,7 @@ class ClusterInternalDbmsOperatorTest
 
         // when
         operator.stopForStoreCopy( someDb );
-        operator.stopOnPanic( someDb, null );
+        operator.stopOnPanic( someDb, new IllegalStateException() );
 
         // then
         assertEquals( STOPPED, desiredStateOnTrigger.get() );
@@ -210,14 +211,15 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = randomDatabaseId();
+        var e = new IllegalStateException();
 
         // when
-        operator.stopOnPanic( someDb, null );
+        operator.stopOnPanic( someDb, e );
         var storeCopyHandle = operator.stopForStoreCopy( someDb );
         assertTrue( storeCopyHandle.release() );
 
         // then
-        verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb, null ) );
+        verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb, e ) );
     }
 
     private void captureDesiredStateWhenOperatorTriggered( DatabaseId databaseId, AtomicReference<OperatorState> stateRef )

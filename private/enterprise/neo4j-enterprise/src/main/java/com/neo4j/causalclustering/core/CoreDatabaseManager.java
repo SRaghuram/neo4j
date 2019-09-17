@@ -18,11 +18,13 @@ import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseConfig;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -46,12 +48,15 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final CoreEditionModule edition;
+    private final ClusterSystemGraphDbmsModel dbmsModel;
 
     CoreDatabaseManager( GlobalModule globalModule, CoreEditionModule edition, CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
             PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
         super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config, clusterStateLayout );
         this.edition = edition;
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> getDatabaseContext( SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
+        this.dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
     }
 
     @Override
@@ -66,13 +71,9 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 
-        ClusterSystemGraphDbmsModel systemGraph = new ClusterSystemGraphDbmsModel( () -> getDatabaseContext( SYSTEM_DATABASE_ID )
-                .orElseThrow( IllegalArgumentException::new )
-                .databaseFacade() );
-
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, coreDatabaseLife,
-                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, systemGraph );
+                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel );
 
         var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
@@ -109,13 +110,10 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected ClusteredDatabaseContext dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         super.dropDatabase( databaseId, context );
-
         cleanupClusterState( databaseId.name() );
-
-        return null;
     }
 
     @Override
@@ -129,6 +127,11 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         {
             throw new DatabaseManagementException( "Was unable to delete cluster state as part of drop. ", e );
         }
+    }
+
+    ClusterSystemGraphDbmsModel dbmsModel()
+    {
+        return dbmsModel;
     }
 
     /**

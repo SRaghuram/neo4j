@@ -51,8 +51,6 @@ public abstract class ClusteredDatabaseLife
 
     protected abstract void stop0() throws Exception;
 
-    protected abstract void add( Lifecycle lifecycledComponent );
-
     public final boolean initialized()
     {
         return initialized;

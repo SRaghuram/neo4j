@@ -12,31 +12,54 @@ import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.internal.NullLogService;
-import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+//TODO: Merge this and StubClusteredDatabasemanager into a single class heirarchy
 public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
 {
-    private static final GlobalModule globalModule = mockGlobalModule();
-
     public StubMultiDatabaseManager()
     {
-        super( globalModule, null, true );
+        this( new CallingThreadJobScheduler() );
+    }
+
+    public StubMultiDatabaseManager( JobScheduler jobScheduler )
+    {
+        super( mockGlobalModule( jobScheduler ), null, true );
     }
 
     @Override
     protected DatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
+        return mockDatabaseContext( databaseId );
+    }
+
+    public GlobalModule globalModule()
+    {
+        return globalModule;
+    }
+
+    private static DatabaseContext mockDatabaseContext( DatabaseId databaseId )
+    {
+        var facade = mock( GraphDatabaseFacade.class );
+        Dependencies deps = new Dependencies();
+        deps.satisfyDependencies( mock( TransactionIdStore.class ) );
+        when( facade.getDependencyResolver() ).thenReturn( deps );
         Database db = mock( Database.class );
         when( db.getDatabaseId() ).thenReturn( databaseId );
+        when( db.getDatabaseFacade() ).thenReturn( facade );
         return spy( new StandaloneDatabaseContext( db ) );
     }
 
-    static GlobalModule mockGlobalModule()
+    static GlobalModule mockGlobalModule( JobScheduler jobScheduler )
     {
         Dependencies dependencies = new Dependencies();
         GlobalModule module = mock( GlobalModule.class );
@@ -44,7 +67,8 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         when( module.getGlobalConfig() ).thenReturn( Config.defaults() );
         when( module.getLogService() ).thenReturn( NullLogService.getInstance() );
         when( module.getExternalDependencyResolver() ).thenReturn( new Dependencies() );
-        when( module.getJobScheduler() ).thenReturn( new ThreadPoolJobScheduler() );
+        when( module.getJobScheduler() ).thenReturn( jobScheduler );
+        when( module.getTransactionEventListeners() ).thenReturn( new GlobalTransactionEventListeners() );
         return module;
     }
 }

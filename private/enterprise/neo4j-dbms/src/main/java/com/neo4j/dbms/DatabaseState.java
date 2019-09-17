@@ -29,6 +29,11 @@ class DatabaseState
         return new DatabaseState( id, UNKNOWN, null );
     }
 
+    public static DatabaseState failedUnknownId( Throwable failure )
+    {
+        return new DatabaseState( null, UNKNOWN, failure );
+    }
+
     DatabaseState( DatabaseId databaseId, OperatorState operationalState )
     {
         this( databaseId, operationalState, null );

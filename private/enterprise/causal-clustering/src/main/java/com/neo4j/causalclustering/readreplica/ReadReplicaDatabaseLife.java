@@ -79,6 +79,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
     @Override
     protected void start0() throws Exception
     {
+        addPanicEventHandlers();
         checkOrCreateRaftId();
         bootstrap();
 
@@ -106,49 +107,53 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
             var raftId = RaftId.from( databaseContext.databaseId() );
             raftIdStorage.writeState( raftId );
         }
-        addPanicEventHandlers();
     }
 
     private void bootstrap() throws Exception
     {
         var signal = clusterInternalOperator.bootstrap( databaseContext.databaseId() );
-        clusterComponentsLife.init();
-        databaseContext.database().init();
-        catchupProcess.init();
-
-        clusterComponentsLife.start();
-        TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
-        boolean synced = false;
-        while ( !synced )
+        try
         {
-            try
+            clusterComponentsLife.init();
+            databaseContext.database().init();
+            catchupProcess.init();
+
+            clusterComponentsLife.start();
+            TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
+            boolean synced = false;
+            while ( !synced )
             {
-                debugLog.info( "Syncing db: %s", databaseContext.database().getDatabaseId() );
-                synced = doSyncStoreCopyWithUpstream( databaseContext );
-                if ( synced )
+                try
                 {
-                    debugLog.info( "Successfully synced db: %s", databaseContext.database().getDatabaseId() );
+                    debugLog.info( "Syncing db: %s", databaseContext.database().getDatabaseId() );
+                    synced = doSyncStoreCopyWithUpstream( databaseContext );
+                    if ( synced )
+                    {
+                        debugLog.info( "Successfully synced db: %s", databaseContext.database().getDatabaseId() );
+                    }
+                    else
+                    {
+                        Thread.sleep( syncRetryWaitPeriod.getMillis() );
+                        syncRetryWaitPeriod.increment();
+                    }
                 }
-                else
+                catch ( InterruptedException e )
                 {
-                    Thread.sleep( syncRetryWaitPeriod.getMillis() );
-                    syncRetryWaitPeriod.increment();
+                    Thread.currentThread().interrupt();
+                    userLog.error( "Interrupted while trying to start read replica" );
+                    throw new RuntimeException( e );
                 }
-            }
-            catch ( InterruptedException e )
-            {
-                Thread.currentThread().interrupt();
-                userLog.error( "Interrupted while trying to start read replica" );
-                throw new RuntimeException( e );
-            }
-            catch ( Exception e )
-            {
-                debugLog.error( "Unexpected error when syncing stores", e );
-                throw new RuntimeException( e );
+                catch ( Exception e )
+                {
+                    debugLog.error( "Unexpected error when syncing stores", e );
+                    throw new RuntimeException( e );
+                }
             }
         }
-
-        signal.bootstrapped();
+        finally
+        {
+            signal.bootstrapped();
+        }
     }
 
     private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext )
@@ -242,12 +247,6 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
         databaseContext.database().shutdown();
         clusterComponentsLife.stop();
         removePanicEventHandlers();
-    }
-
-    @Override
-    public void add( Lifecycle lifecycledComponent )
-    {
-        clusterComponentsLife.add( lifecycledComponent );
     }
 
     private void addPanicEventHandlers()

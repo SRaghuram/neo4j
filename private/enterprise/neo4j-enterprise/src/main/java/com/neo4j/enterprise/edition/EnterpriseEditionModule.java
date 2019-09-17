@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
+import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
@@ -52,6 +53,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -79,6 +81,7 @@ import org.neo4j.token.TokenHolders;
 
 import static java.lang.String.format;
 import static org.neo4j.function.Predicates.any;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 import static org.neo4j.token.api.TokenHolder.TYPE_LABEL;
 import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
 import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
@@ -175,7 +178,11 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         globalModule.getGlobalLife().add( databaseManager );
         globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
-        var reconcilerModule = new StandaloneDbmsReconcilerModule<>( globalModule, databaseManager, reconciledTxTracker );
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
+                .orElseThrow()
+                .databaseFacade();
+        var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
+        var reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 

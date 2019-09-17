@@ -61,13 +61,10 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected ClusteredDatabaseContext dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
+    protected void dropDatabase( DatabaseId databaseId, ClusteredDatabaseContext context )
     {
         super.dropDatabase( databaseId, context );
-
         cleanupClusterState( databaseId.name() );
-
-        return null;
     }
 
     @Override

@@ -54,4 +54,5 @@ class DbmsReconcilerIT
         var dbHealth = db.getDependencyResolver().resolveDependency( DatabaseHealth.class );
         assertEventually( "Database is expected to panic", dbHealth::isHealthy, equalTo( false ), 30, SECONDS );
     }
+
 }

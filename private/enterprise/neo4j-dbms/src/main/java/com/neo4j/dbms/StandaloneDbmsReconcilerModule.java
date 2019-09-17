@@ -23,10 +23,10 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
-public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? extends DatabaseContext>> extends LifecycleAdapter
+public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 {
     private final GlobalModule globalModule;
-    private final DM databaseManager;
+    private final MultiDatabaseManager<?> databaseManager;
     private final LocalDbmsOperator localOperator;
     private final SystemGraphDbmsOperator systemOperator;
     private final ShutdownOperator shutdownOperator;
@@ -34,13 +34,14 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final DbmsReconciler reconciler;
 
-    public StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, ReconciledTransactionTracker reconciledTxTracker )
+    public StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager, ReconciledTransactionTracker reconciledTxTracker,
+            EnterpriseSystemGraphDbmsModel dbmsModel )
     {
-        this( globalModule, databaseManager, reconciledTxTracker, createReconciler( globalModule, databaseManager ) );
+        this( globalModule, databaseManager, reconciledTxTracker, createReconciler( globalModule, databaseManager ), dbmsModel );
     }
 
-    protected StandaloneDbmsReconcilerModule( GlobalModule globalModule, DM databaseManager, ReconciledTransactionTracker reconciledTxTracker,
-            DbmsReconciler reconciler )
+    protected StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager,
+            ReconciledTransactionTracker reconciledTxTracker, DbmsReconciler reconciler, EnterpriseSystemGraphDbmsModel dbmsModel )
     {
         var internalLogProvider = globalModule.getLogService().getInternalLogProvider();
         var txBridge = globalModule.getThreadToTransactionBridge();
@@ -50,7 +51,6 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         this.databaseIdRepository = databaseManager.databaseIdRepository();
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
-        EnterpriseSystemGraphDbmsModel dbmsModel = new EnterpriseSystemGraphDbmsModel( () -> getSystemDatabase( databaseManager ) );
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, txBridge, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager );
         this.reconciler = reconciler;
@@ -121,12 +121,12 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         } );
     }
 
-    private GraphDatabaseAPI getSystemDatabase( DM databaseManager )
+    private GraphDatabaseAPI getSystemDatabase( MultiDatabaseManager<?> databaseManager )
     {
         return databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
     }
 
-    private static <DM extends MultiDatabaseManager<? extends DatabaseContext>> DbmsReconciler createReconciler( GlobalModule globalModule, DM databaseManager )
+    private static DbmsReconciler createReconciler( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager )
     {
         return new DbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
                 globalModule.getJobScheduler() );
@@ -138,4 +138,5 @@ public class StandaloneDbmsReconcilerModule<DM extends MultiDatabaseManager<? ex
         var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
         reconciledTxTracker.initialize( txIdStore.getLastClosedTransactionId() );
     }
+
 }

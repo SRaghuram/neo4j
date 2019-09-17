@@ -93,6 +93,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
 
     public void stopOnPanic( DatabaseId databaseId, Throwable causeOfPanic )
     {
+        Objects.requireNonNull( causeOfPanic, "The cause of a panic cannot be null!" );
         panicked.add( databaseId );
         var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( databaseId, causeOfPanic ) );
         reconcilerResult.whenComplete( () -> panicked.remove( databaseId ) );

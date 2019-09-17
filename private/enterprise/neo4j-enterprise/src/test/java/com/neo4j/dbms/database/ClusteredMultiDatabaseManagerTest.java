@@ -7,14 +7,18 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockSettings;
+import org.mockito.Mockito;
 
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -55,11 +59,11 @@ class ClusteredMultiDatabaseManagerTest
 
         StubClusteredMultiDatabaseManager()
         {
-            super( StubMultiDatabaseManager.mockGlobalModule(), null, null, null, null,
+            super( StubMultiDatabaseManager.mockGlobalModule( new CallingThreadJobScheduler() ), null, null, null, null,
                     NullLogProvider.getInstance(), Config.defaults(), null );
         }
 
-        void testStartDatabase( DatabaseId databaseId, ClusteredDatabaseContext databaseContext )
+        void testStartDatabase( DatabaseId databaseId, ClusteredDatabaseContext databaseContext ) throws Exception
         {
             super.startDatabase( databaseId, databaseContext );
         }
@@ -70,7 +74,7 @@ class ClusteredMultiDatabaseManagerTest
         }
 
         @Override
-        protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId ) throws Exception
+        protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
         {
             var dbCtx = mock( ClusteredDatabaseContext.class );
             when( dbCtx.databaseId() ).thenReturn( databaseId );
@@ -123,11 +127,6 @@ class ClusteredMultiDatabaseManagerTest
         protected void stop0()
         {
             startStopTracker.stop();
-        }
-
-        @Override
-        protected void add( Lifecycle lifecycledComponent )
-        {
         }
     }
 

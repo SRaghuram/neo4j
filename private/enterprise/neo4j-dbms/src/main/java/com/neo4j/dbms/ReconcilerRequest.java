@@ -75,7 +75,7 @@ public class ReconcilerRequest
      *
      * @return {@code Optional.of( cause )} if the state should be failed, {@code Optional.empty()} otherwise.
      */
-    Optional<Throwable> databasePanicked( DatabaseId databaseId )
+    Optional<Throwable> causeOfPanic( DatabaseId databaseId )
     {
         boolean thisDatabaseHasPanicked = panickedDatabaseId != null && panickedDatabaseId.equals( databaseId );
         return thisDatabaseHasPanicked ? Optional.of( causeOfPanic ) : Optional.empty();

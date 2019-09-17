@@ -270,12 +270,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var globalLife = globalModule.getGlobalLife();
         var fileSystem = globalModule.getFileSystem();
         var myIdentity = identityModule.myself();
+
         var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
-                reconciledTxTracker, panicService );
+                reconciledTxTracker, panicService, databaseManager.dbmsModel() );
 
         var dependencies = globalModule.getGlobalDependencies();
         dependencies.satisfyDependencies( databaseEventService );
-        dependencies.satisfyDependency( databaseManager );
         dependencies.satisfyDependency( reconciledTxTracker );
 
         topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.reconciler() );
@@ -300,10 +300,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalModule.getGlobalDependencies().satisfyDependencies( raftServer ); // resolved in tests
         globalLife.add( raftServer );
 
-        // must start last and stop first, since it handles external requests
         createCoreServers( globalLife, databaseManager, fileSystem );
-
-        globalModule.getGlobalLife().add( databaseManager );
+        //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
         globalModule.getGlobalLife().add( reconcilerModule );
     }
 
@@ -313,6 +311,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig(), clusterStateLayout );
+
+        globalModule.getGlobalLife().add( databaseManager );
+        globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
 
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;

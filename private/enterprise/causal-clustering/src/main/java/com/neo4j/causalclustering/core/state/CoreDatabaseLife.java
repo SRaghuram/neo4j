@@ -66,6 +66,7 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
     @Override
     protected void start0() throws Exception
     {
+        addPanicEventHandlers();
         bootstrap();
 
         kernelDatabase.start();
@@ -75,33 +76,37 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
 
     private void bootstrap() throws Exception
     {
-        addPanicEventHandlers();
         var signal = clusterInternalOperator.bootstrap( kernelDatabase.getDatabaseId() );
-        clusterComponentsLife.init();
-        kernelDatabase.init();
-        clusterComponentsLife.start();
-        ensureRecovered();
-
-        topologyService.onDatabaseStart( kernelDatabase.getDatabaseId() );
-        BoundState boundState = raftBinder.bindToRaft();
-        raftMessageHandler.start( boundState.raftId() );
-
-        if ( boundState.snapshot().isPresent() )
+        try
         {
-            // this means that we bootstrapped the cluster
-            snapshotService.installSnapshot( boundState.snapshot().get() );
-        }
-        else
-        {
-            snapshotService.awaitState();
-            Optional<JobHandle> downloadJob = downloadService.downloadJob();
-            if ( downloadJob.isPresent() )
+            clusterComponentsLife.init();
+            kernelDatabase.init();
+            clusterComponentsLife.start();
+            ensureRecovered();
+
+            topologyService.onDatabaseStart( kernelDatabase.getDatabaseId() );
+            BoundState boundState = raftBinder.bindToRaft();
+            raftMessageHandler.start( boundState.raftId() );
+
+            if ( boundState.snapshot().isPresent() )
             {
-                downloadJob.get().waitTermination();
+                // this means that we bootstrapped the cluster
+                snapshotService.installSnapshot( boundState.snapshot().get() );
+            }
+            else
+            {
+                snapshotService.awaitState();
+                Optional<JobHandle> downloadJob = downloadService.downloadJob();
+                if ( downloadJob.isPresent() )
+                {
+                    downloadJob.get().waitTermination();
+                }
             }
         }
-
-        signal.bootstrapped();
+        finally
+        {
+            signal.bootstrapped();
+        }
     }
 
     private void ensureRecovered() throws Exception
@@ -123,12 +128,6 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
         kernelDatabase.shutdown();
         clusterComponentsLife.shutdown();
         removePanicEventHandlers();
-    }
-
-    @Override
-    public void add( Lifecycle lifecycledComponent )
-    {
-        clusterComponentsLife.add( lifecycledComponent );
     }
 
     private void addPanicEventHandlers()

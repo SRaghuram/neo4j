@@ -336,7 +336,7 @@ public class StoreUpgradeIT
             try
             {
                 DatabaseStateService dbStateService = database.getDependencyResolver().resolveDependency( DatabaseStateService.class );
-                var failure = dbStateService.databaseHasFailed( database.databaseId() );
+                var failure = dbStateService.causeOfFailure( database.databaseId() );
                 assertTrue( failure.isPresent() );
                 assertThat( failure.get(), new RootCauseMatcher<>( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
             }

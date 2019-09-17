@@ -6,13 +6,10 @@
 package com.neo4j.graphdb;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.Exceptions;
@@ -118,8 +115,8 @@ class StartupConstraintSemanticsTest
         {
             graphDb = getCommunityDatabase();
             DatabaseStateService dbStateService = graphDb.getDependencyResolver().resolveDependency( DatabaseStateService.class );
-            assertTrue( dbStateService.databaseHasFailed( graphDb.databaseId() ).isPresent() );
-            Throwable error = Exceptions.rootCause( dbStateService.databaseHasFailed( graphDb.databaseId() ).get() );
+            assertTrue( dbStateService.causeOfFailure( graphDb.databaseId() ).isPresent() );
+            Throwable error = Exceptions.rootCause( dbStateService.causeOfFailure( graphDb.databaseId() ).get() );
             assertThat( error, instanceOf( IllegalStateException.class ) );
             assertEquals( errorMessage, error.getMessage() );
         }

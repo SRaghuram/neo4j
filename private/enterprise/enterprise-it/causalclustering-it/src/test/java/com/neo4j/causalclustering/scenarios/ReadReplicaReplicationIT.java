@@ -553,7 +553,7 @@ class ReadReplicaReplicationIT
         ReadReplicaDatabaseManager databaseManager = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, ReadReplicaDatabaseManager.class );
         var dbStateService = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
         var db = databaseManager.getDatabaseContext( databaseName ).orElseThrow();
-        assertTrue( dbStateService.databaseHasFailed( db.databaseId() ).isPresent() );
+        assertTrue( dbStateService.causeOfFailure( db.databaseId() ).isPresent() );
     }
 
     private Cluster startClusterWithDefaultConfig() throws Exception

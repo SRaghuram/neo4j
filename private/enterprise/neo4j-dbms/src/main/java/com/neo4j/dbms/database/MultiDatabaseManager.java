@@ -6,9 +6,11 @@
 package com.neo4j.dbms.database;
 
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
+import org.neo4j.dbms.api.DatabaseLimitReachedException;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.AbstractDatabaseManager;
@@ -39,40 +41,34 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     }
 
     @Override
-    public DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException
+    public DB createDatabase( DatabaseId databaseId ) throws DatabaseManagementException
     {
-        return createDatabase( databaseId, false );
-    }
-
-    public DB createDatabase( DatabaseId databaseId, boolean autoStart )
-    {
-        return databaseMap.compute( databaseId, ( key, currentContext ) ->
+        if ( databaseMap.get( databaseId ) != null )
         {
-            if ( currentContext != null )
-            {
-                throw new DatabaseExistsException( format( "Database with name `%s` already exists.", databaseId.name() ) );
-            }
-            if ( databaseMap.size() >= maximumNumberOfDatabases )
-            {
-                throw new DatabaseManagementException(
-                        format( "Reached maximum number of active databases. Fail to create new database `%s`.", databaseId.name() ) );
-            }
-            DB databaseContext;
-            try
-            {
-                log.info( "Creating '%s' database.", databaseId.name() );
-                databaseContext = createDatabaseContext( databaseId );
-            }
-            catch ( Exception e )
-            {
-                throw new DatabaseManagementException(
-                        format( "An error occured! Fail to create new database `%s`.", databaseId.name() ), e );
-            }
+            throw new DatabaseExistsException( format( "Database with name `%s` already exists.", databaseId.name() ) );
+        }
+        if ( databaseMap.size() >= maximumNumberOfDatabases )
+        {
+            throw new DatabaseLimitReachedException(
+                    format( "Reached maximum number of active databases. Unable to create new database `%s`.", databaseId.name() ) );
+        }
 
-            databaseIdRepository().cache( databaseId );
+        DB databaseContext;
+        try
+        {
+            log.info( "Creating '%s' database.", databaseId.name() );
+            databaseContext = createDatabaseContext( databaseId );
+        }
+        catch ( Exception e )
+        {
+            throw new DatabaseManagementException(
+                    format( "An error occured! Unable to create new database `%s`.", databaseId.name() ), e );
+        }
 
-            return databaseContext;
-        } );
+        databaseMap.put( databaseId, databaseContext );
+        databaseIdRepository().cache( databaseId );
+
+        return databaseContext;
     }
 
     @Override
@@ -88,7 +84,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         {
             throw new DatabaseManagementException( "System database can't be dropped." );
         }
-
         forSingleDatabase( databaseId, this::dropDatabase );
     }
 
@@ -104,17 +99,18 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         forSingleDatabase( databaseId, this::startDatabase );
     }
 
-    protected final void forSingleDatabase( DatabaseId databaseId, BiFunction<DatabaseId,DB,DB> operation )
+    protected final void forSingleDatabase( DatabaseId databaseId, BiConsumer<DatabaseId,DB> consumer )
     {
         requireStarted( databaseId );
-        databaseMap.compute( databaseId, ( key, currentContext ) ->
+
+        DB ctx = databaseMap.get( databaseId );
+
+        if ( ctx == null )
         {
-            if ( currentContext == null )
-            {
-                throw new DatabaseNotFoundException( format( "Database with name `%s` not found.", databaseId.name() ) );
-            }
-            return operation.apply( databaseId, currentContext );
-        } );
+            throw new DatabaseNotFoundException( format( "Database with name `%s` not found.", databaseId.name() ) );
+        }
+
+        consumer.accept( databaseId, ctx );
     }
 
     @Override
@@ -143,13 +139,20 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         databaseMap.clear();
     }
 
-    protected DB dropDatabase( DatabaseId databaseId, DB context )
+    protected void dropDatabase( DatabaseId databaseId, DB context )
     {
-        log.info( "Drop '%s' database.", databaseId.name() );
-        Database database = context.database();
-        database.drop();
-        databaseIdRepository().invalidate( databaseId );
-        return null;
+        try
+        {
+            log.info( "Drop '%s' database.", databaseId.name() );
+            Database database = context.database();
+            database.drop();
+            databaseIdRepository().invalidate( databaseId );
+            databaseMap.remove( databaseId );
+        }
+        catch ( Throwable t )
+        {
+            throw new DatabaseManagementException( format( "An error occurred! Unable to drop database with name `%s`.", databaseId.name() ), t );
+        }
     }
 
     private void requireStarted( DatabaseId databaseId )

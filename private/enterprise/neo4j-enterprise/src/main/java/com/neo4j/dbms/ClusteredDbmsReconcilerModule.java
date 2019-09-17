@@ -16,16 +16,17 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
-public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule<ClusteredMultiDatabaseManager>
+public class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule
 {
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
             ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
-            ReconciledTransactionTracker reconciledTxTracker, PanicService panicService )
+            ReconciledTransactionTracker reconciledTxTracker, PanicService panicService, ClusterSystemGraphDbmsModel dbmsModel )
     {
-        super( globalModule, databaseManager, reconciledTxTracker, createReconciler( globalModule, databaseManager, stateStorageFactory, panicService ) );
+        super( globalModule, databaseManager, reconciledTxTracker,
+                createReconciler( globalModule, databaseManager, stateStorageFactory, panicService ), dbmsModel );
         this.databaseEventService = databaseEventService;
         this.internalOperator = databaseManager.internalDbmsOperator();
     }

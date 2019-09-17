@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
@@ -36,6 +37,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -46,6 +48,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
@@ -62,6 +65,8 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
+
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -170,6 +175,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig, clusterStateLayout );
 
+        globalModule.getGlobalLife().add( databaseManager );
+        globalModule.getGlobalDependencies().satisfyDependency( databaseManager );
+
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
@@ -182,14 +190,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var fileSystem = globalModule.getFileSystem();
         var dependencies = globalModule.getGlobalDependencies();
 
-        dependencies.satisfyDependency( databaseManager );
         dependencies.satisfyDependency( reconciledTxTracker );
         dependencies.satisfyDependencies( databaseEventService );
 
-        globalModule.getGlobalLife().add( databaseManager );
-
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
+                .orElseThrow()
+                .databaseFacade();
+        var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
         var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
-                databaseEventService, storageFactory, reconciledTxTracker, panicService );
+                databaseEventService, storageFactory, reconciledTxTracker, panicService, dbmsModel );
 
         topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
         globalLife.add( dependencies.satisfyDependency( topologyService ) );

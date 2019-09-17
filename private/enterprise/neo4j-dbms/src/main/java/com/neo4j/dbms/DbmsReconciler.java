@@ -22,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -91,19 +93,16 @@ public class DbmsReconciler implements DatabaseStateService
     DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler )
     {
         this.databaseManager = databaseManager;
+
+        this.canRetry = config.get( GraphDatabaseSettings.reconciler_may_retry );
         this.backoffStrategy = new ExponentialBackoffStrategy(
                 config.get( GraphDatabaseSettings.reconciler_minimum_backoff ),
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
-
-        int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
-        parallelism = parallelism == 0 ? Runtime.getRuntime().availableProcessors() : parallelism;
-        scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
         this.executor = scheduler.executor( Group.DATABASE_RECONCILER );
 
         this.reconciling = new HashSet<>();
         this.currentStates = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
-        this.canRetry = config.get( GraphDatabaseSettings.reconciler_may_retry );
         this.precedence = OperatorState.minByOperatorState( DatabaseState::operationalState );
         this.transitions = prepareLifecycleTransitionSteps();
     }
@@ -111,11 +110,11 @@ public class DbmsReconciler implements DatabaseStateService
     @Override
     public String stateOfDatabase( DatabaseId databaseId )
     {
-        return currentStates.getOrDefault( databaseId.name(), DatabaseState.unknown( databaseId ) ).operationalState().name();
+        return currentStates.getOrDefault( databaseId.name(), DatabaseState.unknown( databaseId ) ).operationalState().description();
     }
 
     @Override
-    public Optional<Throwable> databaseHasFailed( DatabaseId databaseId )
+    public Optional<Throwable> causeOfFailure( DatabaseId databaseId )
     {
         return currentStates.getOrDefault( databaseId.name(), DatabaseState.unknown( databaseId ) ).failure();
     }
@@ -184,6 +183,25 @@ public class DbmsReconciler implements DatabaseStateService
         return currentStates.getOrDefault( databaseId.name(), DatabaseState.initial( databaseId ) );
     }
 
+    /**
+     * This method attempts to perform reconciliation of the given database to the desired state, as specified via {@link DbmsOperator#desired()} for each of
+     * the provided operators.
+     *
+     * Reconciliation happens in 4 distinct steps: ACQUIRE LOCKS -> RECONCILE -> RETRY -> RELEASE LOCKS
+     *
+     * Each of these steps is asynchronously executed on completion of the previous step. Unfortunately, {@link CompletableFuture#thenCompose(Function)} does
+     * not guarantee that the submitted function is executed using the same execution context as the previous step. Therefore, in order to ensure
+     * reconciliation steps are strictly limited to being executed on the reconciler's provided executor, we must issue each step function using
+     * {@link CompletableFuture#supplyAsync(Supplier, Executor)} again.
+     *
+     * This leads to the potentially odd looking pattern in the method below:
+     *
+     * {@code
+     *      CompletableFuture.supplyAsync( step, executor )
+     *          .thenCompose( CompletableFuture.supplyAsync( step, executor )
+     *              .thenCompose( CompletableFuture.supplyAsync( step, executor )
+     *                  .andSoOn() ) }
+     */
     private CompletableFuture<ReconcilerStepResult> reconcile( String databaseName, ReconcilerRequest request, List<DbmsOperator> operators )
     {
         var work = preReconcile( databaseName, operators )
@@ -241,6 +259,7 @@ public class DbmsReconciler implements DatabaseStateService
         {
             try
             {
+                log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
                 acquireLockOn( databaseName );
 
                 var desiredState = desiredStates( operators, precedence ).get( databaseName );
@@ -280,7 +299,7 @@ public class DbmsReconciler implements DatabaseStateService
                         if ( previousState == null )
                         {
                             log.error( message, throwable );
-                            return DatabaseState.initial( null ).failed( throwable );
+                            return DatabaseState.failedUnknownId( throwable );
                         }
                         else
                         {
@@ -303,6 +322,9 @@ public class DbmsReconciler implements DatabaseStateService
             }
             finally
             {
+                String outcome = result.error() != null || throwable != null ? "failed" : "succeeded";
+                log.debug( "Releasing lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
+                        result.desiredState().operationalState().description() );
                 releaseLockOn( databaseName );
             }
         } );
@@ -328,7 +350,7 @@ public class DbmsReconciler implements DatabaseStateService
             // preserve the current failed state because we didn't force reconciliation
             return currentState.failure();
         }
-        return request.databasePanicked( databaseId );
+        return request.causeOfPanic( databaseId );
     }
 
     private void releaseLockOn( String databaseName )

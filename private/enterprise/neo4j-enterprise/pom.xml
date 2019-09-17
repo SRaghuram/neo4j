@@ -77,7 +77,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-dbms-commercial</artifactId>
+            <artifactId>neo4j-dbms-enterprise</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

@@ -23,8 +23,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -107,8 +105,8 @@ class RecordFormatsMigrationIT
         try
         {
             DatabaseStateService dbStateService = database.getDependencyResolver().resolveDependency( DatabaseStateService.class );
-            assertTrue( dbStateService.databaseHasFailed( database.databaseId() ).isPresent() );
-            assertThat( getRootCause( dbStateService.databaseHasFailed( database.databaseId() ).get() ),
+            assertTrue( dbStateService.causeOfFailure( database.databaseId() ).isPresent() );
+            assertThat( getRootCause( dbStateService.causeOfFailure( database.databaseId() ).get() ),
                     instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
         }
         finally

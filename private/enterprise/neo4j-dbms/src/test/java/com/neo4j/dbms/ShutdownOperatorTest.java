@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.util.Arrays.asList;
