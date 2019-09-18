@@ -28,7 +28,7 @@ import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.database.Database
-import org.neo4j.kernel.impl.coreapi.TopLevelTransaction
+import org.neo4j.kernel.impl.coreapi.TransactionImpl
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 import scala.collection.JavaConverters._
@@ -578,7 +578,7 @@ order by a.COL1""".format(a, b))
     // Until we have a clean cut way where statement context is injected into cypher,
     // I don't know a non-hairy way to tell if this was done correctly, so here goes:
     val tx = graph.beginTransaction( Type.explicit, AnonymousContext.none() )
-    val isTopLevelTx = tx.getClass === classOf[TopLevelTransaction]
+    val isTopLevelTx = tx.getClass === classOf[TransactionImpl]
     tx.close()
 
     isTopLevelTx shouldBe true
