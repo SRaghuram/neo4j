@@ -10,7 +10,7 @@ import java.time.Duration
 import java.util
 
 import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.{Database, Graph, RemoteGraphDriver}
+import com.neo4j.fabric.config.FabricConfig.{Database, Graph, GlobalDriverConfig}
 import com.neo4j.fabric.planner.Errors.InvalidQueryException
 import com.neo4j.fabric.planner.FabricQuery.{ChainedQuery, LocalQuery, ShardQuery, UnionQuery}
 import com.neo4j.fabric.{AstHelp, Test}
@@ -25,13 +25,13 @@ import scala.reflect.ClassTag
 
 class FabricPlannerTest extends Test with AstHelp with AstConstructionTestSupport {
 
-  private val shardFoo0 = new Graph(0, URI.create("bolt://foo"), "s0", "shard-name-0")
-  private val shardFoo1 = new Graph(1, URI.create("bolt://foo"), "s1", "shard-name-1")
-  private val shardBar0 = new Graph(2, URI.create("bolt://bar"), "neo4j", "shard-name-2")
+  private val shardFoo0 = new Graph(0, URI.create("bolt://foo"), "s0", "shard-name-0", null)
+  private val shardFoo1 = new Graph(1, URI.create("bolt://foo"), "s1", "shard-name-1", null)
+  private val shardBar0 = new Graph(2, URI.create("bolt://bar"), "neo4j", "shard-name-2", null)
   val config = new FabricConfig(
     true,
     new Database("mega", util.Set.of(shardFoo0, shardFoo1, shardBar0)),
-    util.List.of(), 0L, Duration.ZERO, new RemoteGraphDriver(Duration.ZERO, Duration.ZERO), new FabricConfig.DataStream(300, 1000, 50)
+    util.List.of(), 0L, Duration.ZERO, new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 1, null), new FabricConfig.DataStream(300, 1000, 50)
   )
   private val params = MapValue.EMPTY
 

@@ -42,8 +42,8 @@ class FabricConfigTest
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName() );
         assertEquals( Set.of(
-                new FabricConfig.Graph( 0L, URI.create( "bolt://mega:1111" ), "neo4j", null ),
-                new FabricConfig.Graph( 1L, URI.create( "bolt://mega:2222" ), "db0", "source-of-all-wisdom" )
+                new FabricConfig.Graph( 0L, URI.create( "bolt://mega:1111" ), "neo4j", null, emptyDriverConfig() ),
+                new FabricConfig.Graph( 1L, URI.create( "bolt://mega:2222" ), "db0", "source-of-all-wisdom", emptyDriverConfig() )
                 ), database.getGraphs() );
     }
 
@@ -94,5 +94,10 @@ class FabricConfigTest
                 .build();
 
         assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ));
+    }
+
+    private FabricConfig.DriverConfig emptyDriverConfig()
+    {
+        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null, null, null );
     }
 }

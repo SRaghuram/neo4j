@@ -14,26 +14,65 @@ import org.neo4j.configuration.GroupSetting;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.driver.Config.LoadBalancingStrategy;
+import org.neo4j.driver.Config.TrustStrategy.Strategy;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.logging.Level;
 
 import static java.time.Duration.ofMinutes;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
+import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.DURATION;
 import static org.neo4j.configuration.SettingValueParsers.INT;
 import static org.neo4j.configuration.SettingValueParsers.LONG;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
+import static org.neo4j.configuration.SettingValueParsers.ofEnum;
+import static org.neo4j.configuration.SettingValueParsers.ofPartialEnum;
+import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES;
+import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES;
 
 @ServiceProvider
 public class FabricSettings implements SettingsDeclaration
 {
+    private static final String DRIVER_LOGGING_LEVEL = "driver.logging.level";
+    private static final String DRIVER_LOG_LEAKED_SESSIONS = "driver.logging.leaked_sessions";
+    private static final String DRIVER_MAX_CONNECTION_POOL_SIZE = "driver.connection.pool.max_size";
+    private static final String DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST = "driver.connection.pool.idle_test";
+    private static final String DRIVER_CONNECTION_ACQUISITION_TIMEOUT = "driver.connection.pool.acquisition_timeout";
+    private static final String DRIVER_MAX_CONNECTION_LIFETIME = "driver.connection.max_lifetime";
+    private static final String DRIVER_ENCRYPTED = "driver.connection.encrypted";
+    private static final String DRIVER_CONNECT_TIMEOUT = "driver.connection.connect_timeout";
+    private static final String DRIVER_TRUST_STRATEGY = "driver.trust_strategy";
+    private static final String DRIVER_LOAD_BALANCING_STRATEGY = "driver.load_balancing_strategy";
+    private static final String DRIVER_RETRY_MAX_TIME = "driver.retry_timeout";
+    private static final String DRIVER_METRICS_ENABLED = "driver.metrics.enabled";
+
     static Setting<List<SocketAddress>> fabricServersSetting = newBuilder( "fabric.routing.servers",
             SettingValueParsers.listOf( SettingValueParsers.SOCKET_ADDRESS ),
             List.of(new SocketAddress( "localhost", 7687 )))
             .build();
     static Setting<String> databaseName = newBuilder( "fabric.database.name", STRING, null ).build();
     static Setting<Long> routingTtlSetting = newBuilder( "fabric.routing.ttl", LONG, 1000L ).build();
+
     static Setting<Duration> driverIdleTimeout = newBuilder( "fabric.driver.timeout", DURATION, ofMinutes( 1 ) ).build();
     static Setting<Duration> driverIdleCheckInterval = newBuilder( "fabric.driver.idle.check.interval", DURATION, ofMinutes( 1 ) ).build();
+    static Setting<Integer> driverEventLoopCount = newBuilder( "fabric.driver.event.loop.count", INT, Runtime.getRuntime().availableProcessors() ).build();
+
+    static Setting<Level> driverLoggingLevel = newBuilder( "fabric." + DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
+    static Setting<Boolean> driverLogLeakedSessions = newBuilder( "fabric." + DRIVER_LOG_LEAKED_SESSIONS, BOOL, null ).build();
+    static Setting<Integer> driverMaxConnectionPoolSize = newBuilder( "fabric." + DRIVER_MAX_CONNECTION_POOL_SIZE, INT, null ).build();
+    static Setting<Duration> driverIdleTimeBeforeConnectionTest = newBuilder( "fabric." + DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null ).build();
+    static Setting<Duration> driverMaxConnectionLifetime = newBuilder( "fabric." + DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
+    static Setting<Duration> driverConnectionAcquisitionTimeout = newBuilder( "fabric." + DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
+    static Setting<Boolean> driverEncrypted = newBuilder( "fabric." + DRIVER_ENCRYPTED, BOOL, null ).build();
+    static Setting<Strategy> driverTrustStrategy =
+            newBuilder( "fabric." + DRIVER_TRUST_STRATEGY, ofPartialEnum( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, TRUST_ALL_CERTIFICATES ), null ).build();
+    static Setting<LoadBalancingStrategy> driverLoadBalancingStrategy =
+            newBuilder( "fabric." + DRIVER_LOAD_BALANCING_STRATEGY, ofEnum( LoadBalancingStrategy.class ), null ).build();
+    static Setting<Duration> driverConnectTimeout = newBuilder( "fabric." + DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
+    static Setting<Duration> driverRetryMaxTime = newBuilder( "fabric." + DRIVER_RETRY_MAX_TIME, DURATION, null ).build();
+    static Setting<Boolean> driverMetricsEnabled = newBuilder( "fabric." + DRIVER_METRICS_ENABLED, BOOL, null ).build();
+
     static Setting<Integer> bufferLowWatermarkSetting = newBuilder( "fabric.stream.buffer.low.watermark",
             INT,
             300 )
@@ -46,10 +85,23 @@ public class FabricSettings implements SettingsDeclaration
     {
 
         public final Setting<URI> uri = getBuilder( "uri", SettingValueParsers.URI, null ).build();
-
         public final Setting<String> database = getBuilder( "database", SettingValueParsers.STRING, "neo4j" ).build();
-
         public final Setting<String> name = getBuilder( "name", SettingValueParsers.STRING, null ).build();
+
+        public final Setting<Level> driverLoggingLevel = getBuilder( DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
+        public final Setting<Boolean> driverLogLeakedSessions = getBuilder( DRIVER_LOG_LEAKED_SESSIONS, BOOL, null ).build();
+        public final Setting<Integer> driverMaxConnectionPoolSize = getBuilder( DRIVER_MAX_CONNECTION_POOL_SIZE, INT, null ).build();
+        public final Setting<Duration> driverIdleTimeBeforeConnectionTest = getBuilder( DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null ).build();
+        public final Setting<Duration> driverMaxConnectionLifetime = getBuilder( DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
+        public final Setting<Duration> driverConnectionAcquisitionTimeout = getBuilder( DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
+        public final Setting<Boolean> driverEncrypted = getBuilder( DRIVER_ENCRYPTED, BOOL, null ).build();
+        public final Setting<Strategy> driverTrustStrategy =
+                getBuilder( DRIVER_TRUST_STRATEGY, ofPartialEnum( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, TRUST_ALL_CERTIFICATES ), null ).build();
+        public final Setting<LoadBalancingStrategy> driverLoadBalancingStrategy =
+                getBuilder( DRIVER_LOAD_BALANCING_STRATEGY, ofEnum( LoadBalancingStrategy.class ), null ).build();
+        public final Setting<Duration> driverConnectTimeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
+        public final Setting<Duration> driverRetryMaxTime = getBuilder( DRIVER_RETRY_MAX_TIME, DURATION, null ).build();
+        public final Setting<Boolean> driverMetricsEnabled = getBuilder( DRIVER_METRICS_ENABLED, BOOL, null ).build();
 
         protected GraphSetting( String name )
         {

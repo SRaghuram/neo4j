@@ -68,6 +68,7 @@ class EndToEndTest
                 "fabric.graph.0.uri", shard0.boltURI().toString(),
                 "fabric.graph.1.uri", shard1.boltURI().toString(),
                 "fabric.routing.servers", "localhost:" + ports.bolt,
+                "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true"
         );

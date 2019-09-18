@@ -5,11 +5,21 @@
  */
 package com.neo4j.fabric.driver;
 
+import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.transaction.FabricTransactionInfo;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.driver.reactive.RxSession;
+import org.neo4j.driver.reactive.RxTransaction;
 
 public class PooledDriver
 {
@@ -24,14 +34,21 @@ public class PooledDriver
         this.releaseCallback = releaseCallback;
     }
 
-    public Driver getDriver()
-    {
-        return driver;
-    }
-
     public void release()
     {
         releaseCallback.accept( this );
+    }
+
+    public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo )
+    {
+        var session = driver.rxSession( SessionConfig.builder()
+                .withDefaultAccessMode( translateAccessMode(accessMode) )
+                .withDatabase( location.getDatabase() )
+                .build() );
+
+        var driverTransaction = getDriverTransaction( session, transactionInfo );
+
+        return driverTransaction.map( tx ->  new FabricDriverTransaction( tx, session, location ));
     }
 
     AtomicInteger getReferenceCounter()
@@ -47,5 +64,31 @@ public class PooledDriver
     void setLastUsedTimestamp( Instant lastUsedTimestamp )
     {
         this.lastUsedTimestamp = lastUsedTimestamp;
+    }
+
+    void close()
+    {
+        driver.close();
+    }
+
+    private org.neo4j.driver.AccessMode translateAccessMode( AccessMode accessMode )
+    {
+        if ( accessMode == AccessMode.READ )
+        {
+            return org.neo4j.driver.AccessMode.READ;
+        }
+
+        return org.neo4j.driver.AccessMode.WRITE;
+    }
+
+    private Mono<RxTransaction> getDriverTransaction( RxSession session, FabricTransactionInfo transactionInfo )
+    {
+        if ( transactionInfo.getTxTimeout().equals( Duration.ZERO ) )
+        {
+
+            return Mono.from( session.beginTransaction() ).cache();
+        }
+
+        return Mono.from( session.beginTransaction( TransactionConfig.builder().withTimeout( transactionInfo.getTxTimeout() ).build() ) ).cache();
     }
 }

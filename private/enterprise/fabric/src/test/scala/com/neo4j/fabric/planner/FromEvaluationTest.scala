@@ -11,7 +11,7 @@ import java.util
 
 import com.neo4j.fabric.Test
 import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.{Graph, RemoteGraphDriver}
+import com.neo4j.fabric.config.FabricConfig.{Graph, GlobalDriverConfig}
 import com.neo4j.fabric.planner.Catalog.RemoteGraph
 import org.neo4j.cypher.internal.v4_0.ast.FromGraph
 import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
@@ -31,15 +31,15 @@ import scala.collection.mutable.ListBuffer
 
 class FromEvaluationTest extends Test with TestName {
 
-  private val mega0 = new Graph(0L, URI.create("bolt://mega:1111"), "neo4j", "source_of_all_truth")
-  private val mega1 = new Graph(1L, URI.create("bolt://mega:2222"), "neo4j", null)
-  private val mega2 = new Graph(2L, URI.create("bolt://mega:3333"), "neo4j", "mega")
+  private val mega0 = new Graph(0L, URI.create("bolt://mega:1111"), "neo4j", "source_of_all_truth", null)
+  private val mega1 = new Graph(1L, URI.create("bolt://mega:2222"), "neo4j", null, null)
+  private val mega2 = new Graph(2L, URI.create("bolt://mega:3333"), "neo4j", "mega", null)
 
   private val config = new FabricConfig(
     true,
     new FabricConfig.Database("mega", util.Set.of(mega0, mega1, mega2)),
     util.List.of(), 0L, Duration.ZERO,
-    new RemoteGraphDriver(Duration.ZERO, Duration.ZERO),
+    new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
     new FabricConfig.DataStream(300, 1000, 50)
   )
 

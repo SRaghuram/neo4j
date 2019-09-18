@@ -44,6 +44,7 @@ class BoltLocalResultStreamTest
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", "somewhere:6666",
                 "fabric.routing.servers", "localhost:" + ports.bolt,
+                "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true"
         );

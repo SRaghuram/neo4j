@@ -46,9 +46,10 @@ public class FabricServicesBootstrap
         if ( fabricConfig.isEnabled() )
         {
             var jobScheduler = dependencies.resolveDependency( JobScheduler.class );
-            var driverPool = serviceBootstrapper.registerService( new DriverPool( jobScheduler, fabricConfig, Clock.systemUTC() ), DriverPool.class );
             var credentialsProvider = serviceBootstrapper.registerService( new CredentialsProvider(), CredentialsProvider.class );
-            serviceBootstrapper.registerService( new FabricRemoteExecutor( driverPool, credentialsProvider ), FabricRemoteExecutor.class );
+            var driverPool = serviceBootstrapper
+                    .registerService( new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider ), DriverPool.class );
+            serviceBootstrapper.registerService( new FabricRemoteExecutor( driverPool ), FabricRemoteExecutor.class );
             serviceBootstrapper.registerService( new FabricLocalExecutor( fabricConfig, fabricDatabaseManager ), FabricLocalExecutor.class );
             serviceBootstrapper.registerService( new TransactionManager( dependencies ), TransactionManager.class );
             var monitors = new Monitors();

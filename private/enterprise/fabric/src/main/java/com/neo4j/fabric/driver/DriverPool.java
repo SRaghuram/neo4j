@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
+import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -20,8 +21,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.neo4j.driver.AuthToken;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.internal.DriverFactory;
+import org.neo4j.driver.internal.async.connection.EventLoopGroupFactory;
+import org.neo4j.driver.internal.cluster.RoutingSettings;
+import org.neo4j.driver.internal.retry.RetrySettings;
+import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
+import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -31,20 +36,35 @@ public class DriverPool extends LifecycleAdapter
 {
     private final ConcurrentHashMap<Key,PooledDriver> driversInUse = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Key,PooledDriver> idleDrivers = new ConcurrentHashMap<>();
+    private final CredentialsProvider credentialsProvider;
     private final JobScheduler jobScheduler;
     private final FabricConfig fabricConfig;
     private final Clock clock;
+    private final DriverConfigFactory driverConfigFactory;
+    private final EventLoopGroup eventLoopGroup;
 
-    public DriverPool( JobScheduler jobScheduler, FabricConfig fabricConfig, Clock clock )
+    public DriverPool( JobScheduler jobScheduler,
+            FabricConfig fabricConfig,
+            org.neo4j.configuration.Config serverConfig,
+            Clock clock,
+            CredentialsProvider credentialsProvider )
     {
         this.jobScheduler = jobScheduler;
         this.fabricConfig = fabricConfig;
         this.clock = clock;
+        this.credentialsProvider = credentialsProvider;
+
+        driverConfigFactory = new DriverConfigFactory( fabricConfig, serverConfig );
+
+        var eventLoopCount = fabricConfig.getGlobalDriverConfig().getEventLoopCount();
+        eventLoopGroup = EventLoopGroupFactory.newEventLoopGroup( eventLoopCount );
     }
 
-    public PooledDriver getDriver( FabricConfig.Graph location, AuthToken auth )
+    public PooledDriver getDriver( FabricConfig.Graph location, AuthSubject subject )
     {
-        Key key = new Key( location.getUri(), auth );
+
+        var authToken = credentialsProvider.credentialsFor( subject );
+        Key key = new Key( location.getUri(), authToken );
         return driversInUse.compute( key, ( k, presentValue ) ->
         {
             if ( presentValue != null )
@@ -67,8 +87,7 @@ public class DriverPool extends LifecycleAdapter
             }
             else
             {
-                Driver driver = GraphDatabase.driver( key.uri, key.auth, org.neo4j.driver.Config.builder().withoutEncryption().build() );
-                pooledDriver = new PooledDriver( driver, pd -> release( key, pd ) );
+                pooledDriver = createDriver( key, location, authToken );
             }
 
             pooledDriver.getReferenceCounter().incrementAndGet();
@@ -94,8 +113,8 @@ public class DriverPool extends LifecycleAdapter
     @Override
     public void start()
     {
-        long checkInterval = fabricConfig.getRemoteGraphDriver().getDriverIdleCheckInterval().toSeconds();
-        Duration idleTimeout = fabricConfig.getRemoteGraphDriver().getIdleTimeout();
+        long checkInterval = fabricConfig.getGlobalDriverConfig().getDriverIdleCheckInterval().toSeconds();
+        Duration idleTimeout = fabricConfig.getGlobalDriverConfig().getIdleTimeout();
         jobScheduler.schedule( TRANSACTION_TIMEOUT_MONITOR, () ->
         {
             List<Key> timeoutCandidates = idleDrivers.entrySet().stream()
@@ -105,7 +124,7 @@ public class DriverPool extends LifecycleAdapter
 
             timeoutCandidates.forEach( key -> idleDrivers.computeIfPresent( key, ( k, pooledDriver ) ->
             {
-                pooledDriver.getDriver().close();
+                pooledDriver.close();
                 return null;
             } ) );
         }, checkInterval, TimeUnit.SECONDS );
@@ -114,17 +133,21 @@ public class DriverPool extends LifecycleAdapter
     @Override
     public void stop()
     {
-        idleDrivers.values().forEach( pooledDriver ->
-        {
-            pooledDriver.getDriver().close();
-            pooledDriver.getDriver().closeAsync();
-        } );
+        idleDrivers.values().forEach( PooledDriver::close );
+        driversInUse.values().forEach( PooledDriver::close );
+        eventLoopGroup.shutdownGracefully( 1, 4,  TimeUnit.SECONDS);
+    }
 
-        driversInUse.values().forEach( pooledDriver ->
-        {
-            pooledDriver.getDriver().close();
-            pooledDriver.getDriver().closeAsync();
-        } );
+    private PooledDriver createDriver( Key key, FabricConfig.Graph location, AuthToken token )
+    {
+        var config = driverConfigFactory.createConfig( location );
+
+        // TODO: retry setting are package private
+        // RetrySettings retrySettings = config.retrySettings();
+
+        var driverFactory = new DriverFactory();
+        var databaseDriver = driverFactory.newInstance( location.getUri(), token, RoutingSettings.DEFAULT, RetrySettings.DEFAULT, config, eventLoopGroup );
+        return new PooledDriver( databaseDriver, pd -> release( key, pd ) );
     }
 
     private class Key

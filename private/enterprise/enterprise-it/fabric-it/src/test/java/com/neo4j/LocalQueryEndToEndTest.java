@@ -55,6 +55,7 @@ class LocalQueryEndToEndTest
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", shard0.boltURI().toString(),
                 "fabric.routing.servers", "localhost:" + ports.bolt,
+                "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true");
         var config = Config.newBuilder().setRaw( configProperties ).build();
