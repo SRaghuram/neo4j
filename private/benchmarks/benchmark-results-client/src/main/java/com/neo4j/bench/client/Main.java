@@ -17,6 +17,7 @@ public class Main
                 .withCommand( ReIndexStoreCommand.class )
                 .withCommand( ReportCommand.class )
                 .withCommand( AddProfilesCommand.class )
+                .withCommand( CompareVersionsCommand.class )
                 .withCommand( Help.class )
                 .build()
                 .parse( args )
