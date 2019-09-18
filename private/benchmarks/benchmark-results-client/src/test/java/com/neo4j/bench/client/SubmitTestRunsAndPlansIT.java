@@ -82,6 +82,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @TestDirectoryExtension
 public class SubmitTestRunsAndPlansIT
 {
+    private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
+
     @RegisterExtension
     static final Neo4jExtension neo4jExtension = EnterpriseNeo4jExtension.builder()
                                                                          .withConfig( GraphDatabaseSettings.auth_enabled, false )
@@ -117,13 +119,13 @@ public class SubmitTestRunsAndPlansIT
     }
 
     @Test
-    void shouldNotCorruptSchemaWhenCallingSetVersionMultipleTimes() throws Exception
+    void shouldNotCorruptSchemaWhenCallingSetVersionMultipleTimes()
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            new QueryRetrier().execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
-            new QueryRetrier().execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
+            QUERY_RETRIER.execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
         }
     }
 
@@ -132,9 +134,9 @@ public class SubmitTestRunsAndPlansIT
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            new QueryRetrier().execute( client, new DropSchema(), 1 );
-            new QueryRetrier().execute( client, new CreateSchema(), 1 );
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new DropSchema(), 1 );
+            QUERY_RETRIER.execute( client, new CreateSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertEmptyStore( client );
 
             /*
@@ -162,7 +164,7 @@ public class SubmitTestRunsAndPlansIT
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson1.getAbsolutePath(),
                     ReportCommand.CMD_ERROR_POLICY, FAIL.name()} );
 
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -206,7 +208,7 @@ public class SubmitTestRunsAndPlansIT
                                                            ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
                                                            ReportCommand.CMD_ERROR_POLICY, FAIL.name()} ) );
 
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -240,7 +242,7 @@ public class SubmitTestRunsAndPlansIT
                                                            ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
                                                            ReportCommand.CMD_ERROR_POLICY, REPORT_THEN_FAIL.name()} ) );
 
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 2, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -283,7 +285,7 @@ public class SubmitTestRunsAndPlansIT
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson3.getAbsolutePath(),
                     ReportCommand.CMD_ERROR_POLICY, IGNORE.name()} );
 
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 3, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -310,9 +312,9 @@ public class SubmitTestRunsAndPlansIT
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            new QueryRetrier().execute( client, new DropSchema(), 1 );
-            new QueryRetrier().execute( client, new CreateSchema(), 1 );
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new DropSchema(), 1 );
+            QUERY_RETRIER.execute( client, new CreateSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertEmptyStore( client );
 
             TestRun testRun1 = new TestRun( "id1", 1, 1, 1, 1, "user" );
@@ -350,11 +352,11 @@ public class SubmitTestRunsAndPlansIT
                     ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
-            new QueryRetrier()
+            QUERY_RETRIER
                     .execute( client, new AttachTestRunAnnotation( testRunReport1.testRun().id(), annotation1 ), 1 );
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 3, client );
@@ -401,7 +403,7 @@ public class SubmitTestRunsAndPlansIT
             for ( BenchmarkGroupBenchmark bgb : testRunReport2.benchmarkGroupBenchmarks() )
             {
                 addedAnnotations++;
-                new QueryRetrier().execute( client,
+                QUERY_RETRIER.execute( client,
                                             new AttachMetricsAnnotation( testRunReport2.testRun().id(),
                                                                          bgb.benchmark().name(),
                                                                          bgb.benchmarkGroup().name(),
@@ -410,7 +412,7 @@ public class SubmitTestRunsAndPlansIT
             }
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 2, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 4, client );
@@ -430,10 +432,10 @@ public class SubmitTestRunsAndPlansIT
             // Annotation specific
             assertLabelCount( "Annotation", 1 + addedAnnotations, client );
 
-            new QueryRetrier().execute( client, new DeleteAnnotation( annotation1 ), 1 );
+            QUERY_RETRIER.execute( client, new DeleteAnnotation( annotation1 ), 1 );
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 2, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 4, client );
@@ -461,7 +463,7 @@ public class SubmitTestRunsAndPlansIT
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertEmptyStore( client );
 
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
@@ -493,14 +495,14 @@ public class SubmitTestRunsAndPlansIT
                     ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
-            new QueryRetrier()
+            QUERY_RETRIER
                     .execute( client, new AttachTestRunAnnotation( testRunReport1.testRun().id(), annotation1 ), 1 );
 
             int addedAnnotations = 0;
             for ( BenchmarkGroupBenchmark bgb : testRunReport1.benchmarkGroupBenchmarks() )
             {
                 addedAnnotations++;
-                new QueryRetrier().execute( client,
+                QUERY_RETRIER.execute( client,
                                             new AttachMetricsAnnotation( testRunReport1.testRun().id(),
                                                                          bgb.benchmark().name(),
                                                                          bgb.benchmarkGroup().name(),
@@ -509,7 +511,7 @@ public class SubmitTestRunsAndPlansIT
             }
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -529,10 +531,10 @@ public class SubmitTestRunsAndPlansIT
             // Annotation specific
             assertLabelCount( "Annotation", 1 + addedAnnotations, client );
 
-            new QueryRetrier().execute( client, new DeleteAnnotation( annotation1 ), 1 );
+            QUERY_RETRIER.execute( client, new DeleteAnnotation( annotation1 ), 1 );
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -560,7 +562,7 @@ public class SubmitTestRunsAndPlansIT
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertEmptyStore( client );
 
             TestRun testRun1 = new TestRun( "id1", 1, 1, 1, 1, "user" );
@@ -592,14 +594,14 @@ public class SubmitTestRunsAndPlansIT
                     ReportCommand.CMD_ERROR_POLICY, (errors.isEmpty() ? FAIL : IGNORE).name()} );
 
             Annotation annotation1 = new Annotation( "comment1", 1, "author1" );
-            new QueryRetrier()
+            QUERY_RETRIER
                     .execute( client, new AttachTestRunAnnotation( testRunReport1.testRun().id(), annotation1 ), 1 );
 
             int addedAnnotations = 0;
             for ( BenchmarkGroupBenchmark bgb : testRunReport1.benchmarkGroupBenchmarks() )
             {
                 addedAnnotations++;
-                new QueryRetrier().execute( client,
+                QUERY_RETRIER.execute( client,
                                             new AttachMetricsAnnotation( testRunReport1.testRun().id(),
                                                                          bgb.benchmark().name(),
                                                                          bgb.benchmarkGroup().name(),
@@ -608,7 +610,7 @@ public class SubmitTestRunsAndPlansIT
             }
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
@@ -628,10 +630,10 @@ public class SubmitTestRunsAndPlansIT
             // Annotation specific
             assertLabelCount( "Annotation", 1 + addedAnnotations, client );
 
-            new QueryRetrier().execute( client, new DeleteAnnotation( annotation1 ), 1 );
+            QUERY_RETRIER.execute( client, new DeleteAnnotation( annotation1 ), 1 );
 
             // general
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertLabelCount( "TestRun", 1, client );
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
