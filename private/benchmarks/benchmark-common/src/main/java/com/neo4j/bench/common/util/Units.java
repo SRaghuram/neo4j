@@ -220,4 +220,28 @@ public class Units
         }
         return unit;
     }
+
+    /**
+     * Computes the speedup factor between old and new results.
+     * Assumes both values are in the same unit.
+     * <p>
+     * E.g., if old=100 (tx/ms) & new=120 (tx/ms) improvement=1.2x
+     */
+    public static double improvement( double oldValue, double newValue, Mode mode )
+    {
+        switch ( mode )
+        {
+        case THROUGHPUT:
+            return (oldValue < newValue)
+                   ? newValue / oldValue
+                   : -oldValue / newValue;
+        case SINGLE_SHOT:
+        case LATENCY:
+            return (oldValue < newValue)
+                   ? -newValue / oldValue
+                   : oldValue / newValue;
+        default:
+            throw new IllegalArgumentException( "Unrecognized mode: " + mode );
+        }
+    }
 }
