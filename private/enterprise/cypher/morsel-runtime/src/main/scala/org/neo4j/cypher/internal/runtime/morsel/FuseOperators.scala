@@ -475,6 +475,50 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
+          case  plan@plans.VarExpand(_,
+                               fromName,
+                               dir,
+                               projectedDir,
+                               types,
+                               toName,
+                               relName,
+                               length,
+                               mode,
+                               nodePredicate,
+                               relationshipPredicate) =>
+
+            val fromSlot = slots(fromName)
+            val relOffset = slots.getReferenceOffsetFor(relName)
+            val toSlot = slots(toName)
+            val tokensOrNames = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
+              case Some(token) => Left(token)
+              case None => Right(r.name)
+            }
+                                          )
+
+            val typeTokens = tokensOrNames.collect {
+              case Left(token: Int) => token
+            }
+            val missingTypes = tokensOrNames.collect {
+              case Right(name: String) => name
+            }
+            val newTemplate = new VarExpandOperatorTaskTemplate(acc.template,
+                                                                plan.id,
+                                                                innermostTemplate,
+                                                                fromSlot,
+                                                                relOffset,
+                                                                toSlot,
+                                                                dir,
+                                                                projectedDir,
+                                                                typeTokens.toArray,
+                                                                missingTypes.toArray,
+                                                                length.min,
+                                                                length.max.getOrElse(Int.MaxValue),
+                                                                mode == ExpandAll)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
           case plan@plans.Selection(predicate, _) =>
             acc.copy(
               template = new FilterOperatorTemplate(acc.template, plan.id, compileExpression(predicate)),

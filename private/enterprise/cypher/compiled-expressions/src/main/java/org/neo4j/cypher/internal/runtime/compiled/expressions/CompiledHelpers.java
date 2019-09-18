@@ -81,4 +81,16 @@ public final class CompiledHelpers
                     format( "Expected to find a node but found %s instead", value ) );
         }
     }
+
+    public static long nodeIdOrNullFromAnyValue( AnyValue value )
+    {
+        if ( value instanceof VirtualNodeValue )
+        {
+            return ((VirtualNodeValue) value).id();
+        }
+        else
+        {
+            return -1L;
+        }
+    }
 }
