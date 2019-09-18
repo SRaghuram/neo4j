@@ -32,7 +32,7 @@ object PipelineBuilder {
     PipelineDefinition(
       pipeline.id,
       pipeline.headPlan,
-      pipeline.fusedHeadPlans,
+      pipeline.fusedPlans,
       mapBuffer(pipeline.inputBuffer),
       pipeline.outputDefinition,
       pipeline.middlePlans,

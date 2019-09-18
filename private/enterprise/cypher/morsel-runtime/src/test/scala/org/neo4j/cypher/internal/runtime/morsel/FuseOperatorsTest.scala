@@ -150,11 +150,11 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     val applyPlans = new ApplyPlans()
     val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
     if (policy.canFuse(head)) {
-      pipeline.fusedHeadPlans += head
+      pipeline.fusedPlans += head
     }
 
     private def canFuse(plan: LogicalPlan): Boolean =
-      pipeline.fusedHeadPlans.nonEmpty && (pipeline.fusedHeadPlans.last eq plan.lhs.get) && policy.canFuse(plan)
+      pipeline.fusedPlans.nonEmpty && (pipeline.fusedPlans.last eq plan.lhs.get) && policy.canFuse(plan)
 
 
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
@@ -165,7 +165,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
         case p: Aggregation => pipeline.outputDefinition = ReduceOutput(buffer(), p)
         case p =>
           if (canFuse(p)) {
-            pipeline.fusedHeadPlans += p
+            pipeline.fusedPlans += p
           } else {
             pipeline.middlePlans.append(p)
           }
@@ -228,7 +228,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                   parallelExecution = true)
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
                                       pipelineBuilder.pipeline.headPlan,
-                                      pipelineBuilder.pipeline.fusedHeadPlans,
+                                      pipelineBuilder.pipeline.fusedPlans,
                                       mock[BufferDefinition](RETURNS_DEEP_STUBS),
                                       pipelineBuilder.pipeline.outputDefinition,
                                       pipelineBuilder.pipeline.middlePlans,

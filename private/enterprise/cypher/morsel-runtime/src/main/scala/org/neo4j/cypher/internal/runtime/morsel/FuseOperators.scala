@@ -51,7 +51,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
   def compilePipeline(p: PipelineDefinition, needsFilteringMorsel: Boolean): (ExecutablePipeline, Boolean /* Upstream needs filtering morsel? */) = {
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
-      if (p.fusedHeadPlans.nonEmpty) fuseOperators(p)
+      if (p.fusedPlans.nonEmpty) fuseOperators(p)
       else (None, p.middlePlans, p.outputDefinition)
 
     //For a fully fused pipeline that includes ProduceResult or Aggregation we don't need to allocate an output morsel
@@ -177,7 +177,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       }
     }
 
-    val reversePlans = pipeline.fusedHeadPlans.reverse
+    val reversePlans = pipeline.fusedPlans.reverse
 
     def cantHandle(acc: FusionPlan,
                    nextPlan: LogicalPlan) = {
@@ -581,7 +581,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // Did we find any sequence of operators that we can fuse with the headPlan?
     //might have failed and should now be a middle plan
     if (fusedPipeline.fusedPlans.length < FUSE_LIMIT) {
-      (None, pipeline.fusedHeadPlans.tail ++ middlePlans, output)
+      (None, pipeline.fusedPlans.tail ++ middlePlans, output)
     } else {
       val workIdentity = WorkIdentity.fromFusedPlans(fusedPipeline.fusedPlans)
       val operatorTaskWithMorselTemplate = fusedPipeline.template.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
@@ -591,7 +591,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
         (Some(compiledOperator), fusedPipeline.unhandledPlans, fusedPipeline.unhandledOutput)
       } catch {
         case _: CantCompileQueryException =>
-          (None, pipeline.fusedHeadPlans.tail ++ middlePlans, output)
+          (None, pipeline.fusedPlans.tail ++ middlePlans, output)
       }
     }
   }

@@ -28,7 +28,12 @@ object PipelineTreeBuilder {
                                 val headPlan: LogicalPlan) {
     var inputBuffer: BufferDefinitionBuild = _
     var outputDefinition: OutputDefinition = NoOutput
-    val fusedHeadPlans = new ArrayBuffer[LogicalPlan]
+    /**
+      * The list of fused plans contains all fusable plans starting from the headPlan and
+      * continuing with as many fusable consecutive middlePlans as possible.
+      * If a plan is in `fusedPlans`. it will not be in `middlePlans` and vice versa.
+      */
+    val fusedPlans = new ArrayBuffer[LogicalPlan]
     val middlePlans = new ArrayBuffer[LogicalPlan]
     var serial: Boolean = false
   }
@@ -190,7 +195,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     val pipeline = new PipelineDefinitionBuild(PipelineId(pipelines.size), plan)
     pipelines += pipeline
     if (operatorFusionPolicy.canFuse(plan))
-      pipeline.fusedHeadPlans += plan
+      pipeline.fusedPlans += plan
     pipeline
   }
 
@@ -262,8 +267,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                         source: PipelineDefinitionBuild,
                                         argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
 
-    def canFuseMiddle: Boolean = source.fusedHeadPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuseMiddle(plan)
-    def canFuse: Boolean = source.fusedHeadPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuse(plan)
+    def canFuseMiddle: Boolean = source.fusedPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuseMiddle(plan)
+    def canFuse: Boolean = source.fusedPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuse(plan)
 
     plan match {
       case produceResult: ProduceResult =>
@@ -292,7 +297,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Optional =>
         if (canFuseMiddle) {
-          source.fusedHeadPlans += plan
+          source.fusedPlans += plan
           source
         } else if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
@@ -310,7 +315,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: FindShortestPaths |
            _: UnwindCollection =>
         if (canFuseMiddle) {
-          source.fusedHeadPlans += plan
+          source.fusedPlans += plan
           source
         } else if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
@@ -325,7 +330,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
         markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
         if (canFuseMiddle) {
-          source.fusedHeadPlans += plan
+          source.fusedPlans += plan
           source
         } else {
           source.middlePlans += plan
@@ -341,7 +346,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         //TODO shouldn't we ask the breaking policy here?
       case _ =>
         if (canFuse) {
-          source.fusedHeadPlans += plan
+          source.fusedPlans += plan
           source
         } else {
           source.middlePlans += plan
@@ -369,8 +374,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     plan match {
       case apply: plans.Apply =>
         //This is a little complicated: rhs.middlePlans can be empty because we have fused plans
-        val applyRhsPlan = if (rhs.middlePlans.isEmpty && rhs.fusedHeadPlans.size <= 1) rhs.headPlan
-                            else if (rhs.middlePlans.isEmpty) rhs.fusedHeadPlans.last
+        val applyRhsPlan = if (rhs.middlePlans.isEmpty && rhs.fusedPlans.size <= 1) rhs.headPlan
+                            else if (rhs.middlePlans.isEmpty) rhs.fusedPlans.last
                             else rhs.middlePlans.last
         applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
