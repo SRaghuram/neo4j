@@ -36,4 +36,22 @@ class IndexCreateEnterpriseIT extends IndexCreateIT
     {
         shouldFailWithNonExistentProviderName( NODE_KEY_CREATOR );
     }
+
+    @Test
+    void shouldFailCreateNodeKeyWithDuplicateLabels() throws KernelException
+    {
+        shouldFailWithDuplicateLabels( NODE_KEY_CREATOR );
+    }
+
+    @Test
+    void shouldFailCreateNodeKeyWithDuplicateRelationshipTypes() throws KernelException
+    {
+        shouldFailWithDuplicateRelationshipTypes( NODE_KEY_CREATOR );
+    }
+
+    @Test
+    void shouldFailCreateNodeKeyWithDuplicateProperties() throws KernelException
+    {
+        shouldFailWithDuplicateProperties( NODE_KEY_CREATOR );
+    }
 }
