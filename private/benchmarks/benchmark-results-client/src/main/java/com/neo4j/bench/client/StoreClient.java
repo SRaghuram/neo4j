@@ -25,6 +25,7 @@ import static org.neo4j.driver.v1.AccessMode.READ;
 public class StoreClient implements AutoCloseable
 {
     public static final long VERSION = 10;
+    private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
     private final Supplier<Driver> driverSupplier;
     private final int retries;
     private Driver driver;
@@ -39,7 +40,7 @@ public class StoreClient implements AutoCloseable
         AuthToken basicAuth = AuthTokens.basic( username, password );
         Config config = configWithEncryption();
         Supplier<Driver> driverSupplier = () -> GraphDatabase.driver( boltUri, basicAuth, config );
-        return new QueryRetrier().retry( () ->
+        return QUERY_RETRIER.retry( () ->
         {
             StoreClient storeClient = new StoreClient( driverSupplier, retries );
             try
@@ -97,7 +98,7 @@ public class StoreClient implements AutoCloseable
         this.driver = driverSupplier.get();
         setStoreVersionIfAbsent();
         // run in retry loop because verification is racy
-        new QueryRetrier().execute( this, new VerifyStoreSchema(), retries );
+        QUERY_RETRIER.execute( this, new VerifyStoreSchema(), retries );
     }
 
     private boolean connectionIsLost()
@@ -137,7 +138,7 @@ public class StoreClient implements AutoCloseable
         switch ( count )
         {
         case 0:
-            new QueryRetrier().execute( this, new SetStoreVersion( VERSION ) );
+            QUERY_RETRIER.execute( this, new SetStoreVersion( VERSION ) );
             break;
         case 1:
             return;
