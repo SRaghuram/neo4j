@@ -71,7 +71,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class SubmitTestRunsAndPlansIT
 {
     private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
-    
+
     private final Neo4jRule neo4j = new EnterpriseNeo4jRule()
             .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
 
