@@ -610,6 +610,66 @@ class EndToEndTest
     }
 
     @Test
+    void testCorrelatedRemoteSubquery()
+    {
+        List<Record> r;
+
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        {
+            var query = String.join( "\n",
+                    "UNWIND [10, 20] AS x",
+                    "CALL {",
+                    "  FROM mega.graph(0)",
+                    "  WITH x",
+                    "  RETURN 1 + x AS y",
+                    "}",
+                    "RETURN x, y"
+            );
+
+            r = tx.run( query ).list();
+            tx.success();
+        }
+
+        assertThat( r.size(), equalTo( 2 ) );
+        assertThat( r.get( 0 ).keys(), contains( "x", "y" ) );
+        assertThat( r.get( 0 ).values(), contains( Values.value( 10 ), Values.value( 11 ) ) );
+        assertThat( r.get( 1 ).keys(), contains( "x", "y" ) );
+        assertThat( r.get( 1 ).values(), contains( Values.value( 20 ), Values.value( 21 ) ) );
+    }
+
+    @Test
+    void testCorrelatedRemoteSubqueryWithNodes()
+    {
+        List<Record> r;
+
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        {
+            var query = String.join( "\n",
+                    "CALL {",
+                    "  FROM mega.graph(0)",
+                    "  MATCH (x)",
+                    "  RETURN x",
+                    "}",
+                    "CALL {",
+                    "  FROM mega.graph(0)",
+                    "  WITH x",
+                    "  RETURN x AS y",
+                    "}",
+                    "RETURN x, y"
+            );
+
+            r = tx.run( query ).list();
+            tx.success();
+        }
+
+//        assertThat( r.size(), equalTo( 2 ) );
+//        assertThat( r.get( 0 ).keys(), contains( "x", "y" ) );
+//        assertThat( r.get( 0 ).values(), contains( Values.value( 10 ), Values.value( 11 ) ) );
+//        assertThat( r.get( 1 ).keys(), contains( "x", "y" ) );
+//        assertThat( r.get( 1 ).values(), contains( Values.value( 20 ), Values.value( 21 ) ) );
+    }
+
+    @Test
     void testPeriodicCommitShouldFail()
     {
         ClientException ex = assertThrows( ClientException.class, () ->

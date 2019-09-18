@@ -23,8 +23,10 @@ import java.util.Map;
 
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
+import org.neo4j.values.virtual.MapValueBuilder;
 
 import static scala.collection.JavaConverters.asJavaIterable;
+import static scala.collection.JavaConverters.mapAsJavaMap;
 import static scala.collection.JavaConverters.seqAsJavaList;
 
 public class FabricExecutor
@@ -91,19 +93,21 @@ public class FabricExecutor
         Plan.QueryTask.QueryMode queryMode = getMode( query );
         Flux<Record> flux = input.records().flatMap( inputRecord ->
         {
-            FabricConfig.Graph graph = evalFrom( query, params, inputRecord );
+            Map<String,AnyValue> record = recordAsMap( query, inputRecord );
+            FabricConfig.Graph graph = evalFrom( query, params, record );
 
-            StatementResult result = ctx.getRemote().run( graph, queryString, queryMode, params ).block();
+            MapValue parameters = addImportParams( params, record, mapAsJavaMap( query.parameters() ) );
+
+            StatementResult result = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
             return result.records().map( rec -> Records.join( inputRecord, rec ) );
         } );
 
         return StatementResults.create( Flux.fromIterable( asJavaIterable( query.columns().produced() ) ), flux, Mono.empty() );
     }
 
-    private FabricConfig.Graph evalFrom( FabricQuery.ShardQuery query, MapValue params, Record inputRecord )
+    private FabricConfig.Graph evalFrom( FabricQuery.ShardQuery query, MapValue params, Map<String,AnyValue> record )
     {
-        Map<String,AnyValue> context = Records.asMap( inputRecord, seqAsJavaList( query.columns().input() ) );
-        Catalog.Graph graph = fromEvaluation.evaluate( query.from(), params, context );
+        Catalog.Graph graph = fromEvaluation.evaluate( query.from(), params, record );
         if ( graph instanceof Catalog.RemoteGraph )
         {
             return ((Catalog.RemoteGraph) graph).graph();
@@ -112,6 +116,19 @@ public class FabricExecutor
         {
             throw notImplemented( "Graph was not a ShardGraph", graph.toString() );
         }
+    }
+
+    private MapValue addImportParams( MapValue params, Map<String,AnyValue> record, Map<String,String> bindings )
+    {
+        MapValueBuilder builder = new MapValueBuilder( params.size() + bindings.size());
+        params.foreach( builder::add );
+        bindings.forEach( ( var, par ) -> builder.add( par, record.get( var ) ) );
+        return builder.build();
+    }
+
+    private Map<String,AnyValue> recordAsMap( FabricQuery.ShardQuery query, Record inputRecord )
+    {
+        return Records.asMap( inputRecord, seqAsJavaList( query.columns().input() ) );
     }
 
     private StatementResult runChainedQuery( FabricQuery.ChainedQuery query, MapValue params, StatementResult input,
