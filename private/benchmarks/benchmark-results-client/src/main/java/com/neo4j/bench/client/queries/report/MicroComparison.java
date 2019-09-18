@@ -33,11 +33,6 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
     private final String newNeo4jVersion;
     private final double minDifference;
 
-    public MicroComparison( String oldNeo4jVersion, String newNeo4jVersion )
-    {
-        this( oldNeo4jVersion, newNeo4jVersion, 1 );
-    }
-
     public MicroComparison( String oldNeo4jVersion, String newNeo4jVersion, double minDifference )
     {
         Repository.MICRO_BENCH.assertValidVersion( oldNeo4jVersion );
@@ -96,7 +91,6 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
 
     private static class ResultComparator implements Comparator<MicroComparisonResult>
     {
-
         @Override
         public int compare( MicroComparisonResult o1, MicroComparisonResult o2 )
         {
@@ -109,12 +103,6 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
             {
                 return Double.compare( o2.improvement(), o1.improvement() );
             }
-        }
-
-        @Override
-        public boolean equals( Object obj )
-        {
-            return false;
         }
     }
 }
