@@ -3,11 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.planner
+package com.neo4j.fabric.eval
 
 import java.util.Optional
 
-import com.neo4j.fabric.utils.Rewritten._
+import com.neo4j.fabric.util.Errors
+import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.ast.{CatalogName, FromGraph}

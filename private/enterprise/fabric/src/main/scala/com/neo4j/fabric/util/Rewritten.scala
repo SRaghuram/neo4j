@@ -3,11 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.utils
+package com.neo4j.fabric.util
 
+import org.neo4j.cypher.internal.v4_0.util
 import org.neo4j.cypher.internal.v4_0.util.Rewritable._
 import org.neo4j.cypher.internal.v4_0.util.Rewriter
-import org.neo4j.cypher.internal.v4_0.util
 
 object Rewritten {
 

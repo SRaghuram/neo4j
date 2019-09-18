@@ -8,14 +8,14 @@ package com.neo4j.fabric.bootstrap;
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
+import com.neo4j.fabric.eval.Catalog;
+import com.neo4j.fabric.eval.FromEvaluation;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.functions.GraphIdsFunction;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
-import com.neo4j.fabric.planner.Catalog;
-import com.neo4j.fabric.planner.FabricPlanner;
-import com.neo4j.fabric.planner.FromEvaluation;
+import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.transaction.TransactionManager;
 
 import java.time.Clock;

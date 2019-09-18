@@ -10,6 +10,6 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.{FreeSpec, Matchers}
 
 @RunWith(classOf[JUnitRunner])
-abstract class Test extends FreeSpec with Matchers {
+abstract class FabricTest extends FreeSpec with Matchers {
 
 }

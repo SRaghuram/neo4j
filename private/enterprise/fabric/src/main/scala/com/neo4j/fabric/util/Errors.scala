@@ -3,10 +3,15 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.planner
+package com.neo4j.fabric.util
 
+import com.neo4j.fabric.eval.Catalog
+import org.neo4j.cypher.internal.v4_0.ast.CatalogName
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{FeatureError, SemanticError, SemanticErrorDef}
+import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
 import org.neo4j.cypher.internal.v4_0.util.{ASTNode, InputPosition}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Value
 
 object Errors {
 
@@ -39,13 +44,15 @@ object Errors {
 
   def notFound(kind: String, needle: String, pos: InputPosition): Nothing = failure(SemanticError(s"$kind not found: $needle", pos))
 
+  def unexpected(exp: String, pos: InputPosition): Nothing = invalid(SemanticError(s"Expected: $exp", pos))
+
   def unexpected(exp: String, got: String, pos: InputPosition): Nothing = invalid(SemanticError(s"Expected: $exp, got: $got", pos))
 
   def unexpected(exp: String, got: String, in: String, pos: InputPosition): Nothing = invalid(SemanticError(s"Expected: $exp, got: $got, in: $in", pos))
 
-  def unexpected(exp: String, got: ASTNode): Nothing = unexpected(exp, AstShow.show(got), got.position)
+  def unexpected(exp: String, got: ASTNode): Nothing = unexpected(exp, got.position)
 
-  def wrongArity(exp: Int, got: Int, in: String, pos: InputPosition): Nothing = unexpected(s"$exp arguments", s"$got arguments", in, pos)
+  def wrongArity(exp: Int, got: Int, pos: InputPosition): Nothing = unexpected(s"$exp arguments", s"$got arguments", pos)
 
   def unimplemented(context: String, value: Any): Nothing = throw new NotImplementedError(s"$context not implemented: $value")
 
@@ -60,4 +67,20 @@ object Errors {
         case o                                                 => o
       }
     }
+
+  def show(n: CatalogName): String = n.parts.mkString(".")
+
+  def show(t: CypherType): String = t.toNeoTypeString
+
+  def show(av: AnyValue): String = av match {
+    case v: Value => s"${v.prettyPrint()}: ${v.getTypeName}"
+    case x        => x.getTypeName
+  }
+
+  def show(a: Catalog.Arg[_]) = s"${a.name}: ${a.tpe.getSimpleName}"
+
+  def show(seq: Seq[_]): String = seq.map {
+    case v: AnyValue       => show(v)
+    case a: Catalog.Arg[_] => show(a)
+  }.mkString("(", ",", ")")
 }

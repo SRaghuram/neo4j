@@ -6,11 +6,11 @@
 package com.neo4j.fabric.executor;
 
 import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.planner.Catalog;
-import com.neo4j.fabric.planner.FabricPlanner;
-import com.neo4j.fabric.planner.FabricQuery;
-import com.neo4j.fabric.planner.FromEvaluation;
+import com.neo4j.fabric.eval.Catalog;
+import com.neo4j.fabric.eval.FromEvaluation;
 import com.neo4j.fabric.planner.api.Plan;
+import com.neo4j.fabric.planning.FabricPlanner;
+import com.neo4j.fabric.planning.FabricQuery;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
@@ -24,6 +24,7 @@ import java.util.Map;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 
+import static scala.collection.JavaConverters.asJavaIterable;
 import static scala.collection.JavaConverters.seqAsJavaList;
 
 public class FabricExecutor
@@ -93,22 +94,15 @@ public class FabricExecutor
             FabricConfig.Graph graph = evalFrom( query, params, inputRecord );
 
             StatementResult result = ctx.getRemote().run( graph, queryString, queryMode, params ).block();
-            if ( query.hasOutput() )
-            {
-                return result.records().map( rec -> Records.join( inputRecord, rec ) );
-            }
-            else
-            {
-                return result.records().then( Mono.just( inputRecord ) );
-            }
+            return result.records().map( rec -> Records.join( inputRecord, rec ) );
         } );
 
-        return StatementResults.create( Flux.fromIterable( seqAsJavaList( query.output() ) ), flux, Mono.empty() );
+        return StatementResults.create( Flux.fromIterable( asJavaIterable( query.columns().produced() ) ), flux, Mono.empty() );
     }
 
     private FabricConfig.Graph evalFrom( FabricQuery.ShardQuery query, MapValue params, Record inputRecord )
     {
-        Map<String,AnyValue> context = Records.asMap( inputRecord, seqAsJavaList( query.input() ) );
+        Map<String,AnyValue> context = Records.asMap( inputRecord, seqAsJavaList( query.columns().input() ) );
         Catalog.Graph graph = fromEvaluation.evaluate( query.from(), params, context );
         if ( graph instanceof Catalog.RemoteGraph )
         {
@@ -123,10 +117,13 @@ public class FabricExecutor
     private StatementResult runChainedQuery( FabricQuery.ChainedQuery query, MapValue params, StatementResult input,
             FabricTransaction.FabricExecutionContext ctx )
     {
-        StatementResult lhs = run( query.lhs(), params, input, ctx );
-        StatementResult rhs = run( query.rhs(), params, lhs, ctx );
+        StatementResult previous = input;
+        for ( FabricQuery q : asJavaIterable( query.queries() ) )
+        {
+            previous = run( q, params, previous, ctx );
+        }
 
-        return rhs;
+        return previous;
     }
 
     private StatementResult runUnionQuery( FabricQuery.UnionQuery query, MapValue params, StatementResult input, FabricTransaction.FabricExecutionContext ctx )

@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
 import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.v4_0.ast.Statement
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, ExpressionsInViewInvocations, MultipleDatabases, MultipleGraphs}
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{CorrelatedSubQueries, Cypher9Comparability, ExpressionsInViewInvocations, MultipleDatabases, MultipleGraphs}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticErrorDef, SemanticState}
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
@@ -61,6 +61,7 @@ object Pipeline {
     Cypher9Comparability,
     MultipleDatabases,
     MultipleGraphs,
+    CorrelatedSubQueries,
     ExpressionsInViewInvocations
   )
 

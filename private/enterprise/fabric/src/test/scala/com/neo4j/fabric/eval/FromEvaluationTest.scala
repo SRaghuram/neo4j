@@ -3,16 +3,16 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.planner
+package com.neo4j.fabric.eval
 
 import java.net.URI
 import java.time.Duration
 import java.util
 
-import com.neo4j.fabric.Test
+import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.{Graph, GlobalDriverConfig}
-import com.neo4j.fabric.planner.Catalog.RemoteGraph
+import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
+import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import org.neo4j.cypher.internal.v4_0.ast.FromGraph
 import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.TestName
@@ -29,7 +29,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class FromEvaluationTest extends Test with TestName {
+class FromEvaluationTest extends FabricTest with TestName {
 
   private val mega0 = new Graph(0L, URI.create("bolt://mega:1111"), "neo4j", "source_of_all_truth", null)
   private val mega1 = new Graph(1L, URI.create("bolt://mega:2222"), "neo4j", null, null)

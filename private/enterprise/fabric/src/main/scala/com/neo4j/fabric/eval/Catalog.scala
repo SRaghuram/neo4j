@@ -3,12 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-
-package com.neo4j.fabric.planner
+package com.neo4j.fabric.eval
 
 import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.planner.AstShow.show
-import com.neo4j.fabric.planner.AstUtils._
+import com.neo4j.fabric.util.Errors
+import com.neo4j.fabric.util.Errors.show
 import org.neo4j.cypher.internal.v4_0.ast.CatalogName
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.values.AnyValue
@@ -31,7 +30,7 @@ object Catalog {
     def eval(args: Seq[AnyValue]): Graph
 
     def checkArity(args: Seq[AnyValue]): Unit =
-      if (args.size != arity) Errors.wrongArity(arity, args.size, show(args), InputPosition.NONE)
+      if (args.size != arity) Errors.wrongArity(arity, args.size, InputPosition.NONE)
 
     def cast[T <: AnyValue](a: Arg[T], v: AnyValue, args: Seq[AnyValue]): T =
       try a.tpe.cast(v)
@@ -99,10 +98,10 @@ case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
 
   def resolve(name: CatalogName, args: Seq[AnyValue]): Catalog.Graph = {
     entries.get(name) match {
-      case None => Errors.notFound("Catalog entry", show(name), ?)
+      case None => Errors.notFound("Catalog entry", show(name), InputPosition.NONE)
 
       case Some(g: Catalog.Graph) =>
-        if (args.nonEmpty) Errors.wrongArity(0, args.size, show(name) + show(args), ?)
+        if (args.nonEmpty) Errors.wrongArity(0, args.size, InputPosition.NONE)
         else g
 
       case Some(v: Catalog.View) => v.eval(args)
