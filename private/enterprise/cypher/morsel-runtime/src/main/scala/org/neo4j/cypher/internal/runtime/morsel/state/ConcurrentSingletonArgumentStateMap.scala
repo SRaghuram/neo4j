@@ -29,5 +29,5 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
                                             argumentRowIdsForReducers: Array[Long]): ConcurrentStateController[STATE] =
-    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), factory.completeOnConstruction)
 }

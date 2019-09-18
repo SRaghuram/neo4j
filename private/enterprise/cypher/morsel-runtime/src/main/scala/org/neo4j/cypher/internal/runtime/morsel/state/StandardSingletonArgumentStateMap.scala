@@ -26,5 +26,5 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
                                             argumentRowIdsForReducers: Array[Long]): StandardStateController[STATE] =
-    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), factory.completeOnConstruction)
 }

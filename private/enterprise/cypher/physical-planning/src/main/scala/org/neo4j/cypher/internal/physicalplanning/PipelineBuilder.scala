@@ -18,7 +18,7 @@ object PipelineBuilder {
             physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
 
     val executionStateDefinitionBuild = new ExecutionStateDefinitionBuild(physicalPlan)
-    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, operatorFusionPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations)
+    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, operatorFusionPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations, physicalPlan.argumentSizes)
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,
@@ -45,6 +45,9 @@ object PipelineBuilder {
     val downstreamStateIDs = bufferDefinition.downstreamStates.collect { case d: DownstreamState => d.id }
 
     val variant = bufferDefinition match {
+      case b: AttachBufferDefinitionBuild =>
+        AttachBufferVariant(b.attachingPlan.id, mapBuffer(b.applyBuffer), b.outputSlotConfiguration, b.argumentSize)
+
       case b: ApplyBufferDefinitionBuild =>
         ApplyBufferVariant(b.argumentSlotOffset,
                            b.reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse.toArray,

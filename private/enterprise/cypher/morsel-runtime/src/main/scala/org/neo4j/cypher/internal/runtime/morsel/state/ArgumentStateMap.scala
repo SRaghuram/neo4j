@@ -186,9 +186,22 @@ object ArgumentStateMap {
     * the corresponding ArgumentStateMap.
     */
   trait ArgumentStateFactory[S <: ArgumentState] {
+    /**
+      * Construct new ArgumentState for non-concurrent use.
+      */
     def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
 
+    /**
+      * Construct new ArgumentState for concurrent use.
+      */
     def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
+
+    /**
+      * True if argument states create by this factory should be completed on construction. This means that
+      * the execution graph has been constructed in such a way that no updates will ever arrive to this
+      * argument state.
+      */
+    def completeOnConstruction: Boolean = false
   }
 
   /**

@@ -35,6 +35,12 @@ import scala.util.Try
   **/
 object SlotAllocation {
 
+  /**
+   * TODO
+   * @param slotConfiguration
+   * @param argumentSize
+   * @param applyPlan
+   */
   case class SlotsAndArgument(slotConfiguration: SlotConfiguration, argumentSize: Size, applyPlan: Id)
 
   case class SlotMetaData(slotConfigurations: SlotConfigurations,
@@ -159,6 +165,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
         case (Some(left), Some(right)) if comingFrom eq left =>
           planStack.push((nullable, current))
+          if (allocateArgumentSlots && current.isInstanceOf[CartesianProduct]) {
+            val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
+                                   else argumentStack.top
+            val newArgument = previousArgument.slotConfiguration.copy().newArgument(current.id)
+            argumentStack.push(SlotsAndArgument(newArgument, newArgument.size(), current.id))
+          }
           populate(right, nullable)
 
         case (Some(_), Some(right)) if comingFrom eq right =>
@@ -172,8 +184,10 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           allocateExpressions(current, nullable, rhsSlots, semanticTable, shouldAllocateLhs = false)
           val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), argument)
           allocations.set(current.id, result)
-          if (current.isInstanceOf[ApplyPlan])
+          if (current.isInstanceOf[ApplyPlan] ||
+            (current.isInstanceOf[CartesianProduct] && allocateArgumentSlots)) {
             argumentStack.pop()
+          }
           resultStack.push(result)
       }
 

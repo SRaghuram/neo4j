@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
+import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue}
@@ -32,7 +33,6 @@ object MorselExecutionContext {
     new MorselExecutionContext(
       Morsel.create(INITIAL_SLOT_CONFIGURATION, 1),
       INITIAL_SLOT_CONFIGURATION, 1, 0, 0, 1) {
-      //TODO hmm...
 
       //it is ok to asked for a cached value even though nothing is allocated for it
       override def getCachedPropertyAt(offset: Int): Value = null
@@ -50,7 +50,32 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   protected final val longsPerRow: Int = slots.numberOfLongs
   protected final val refsPerRow: Int = slots.numberOfReferences
 
-  // ARGUMENT COLUMNS
+  // ====================
+  // MORSEL ATTACHMENT
+
+  // A morsel attachment is a limited life-span attachment to a morsel, which can be
+  // used to pass arbitrary data which related to a particular morsel through the
+  // regular buffers. Note that only a single attachment is available at any time,
+  // so designs using this functionality must ensure that no other usage can occur
+  // between the intended attach and detach.
+
+  private var attachedMorsel: MorselExecutionContext = _
+
+  def attach(morsel: MorselExecutionContext): Unit = {
+    Preconditions.checkState(
+      attachedMorsel == null,
+      "Cannot override existing MorselExecutionContext.attachment.")
+
+    attachedMorsel = morsel
+  }
+
+  def detach(): MorselExecutionContext = {
+    val temp = attachedMorsel
+    attachedMorsel = null
+    temp
+  }
+
+  // ====================
 
   def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow)
 

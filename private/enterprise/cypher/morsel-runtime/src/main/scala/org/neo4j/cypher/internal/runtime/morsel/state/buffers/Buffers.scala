@@ -86,6 +86,14 @@ class Buffers(numBuffers: Int,
 
     buffers(i) =
       bufferDefinition.variant match {
+        case x: AttachBufferVariant =>
+          constructBuffer(x.applyBuffer)
+          new MorselAttachBuffer(bufferDefinition.id,
+                                 applyBuffer(x.applyBuffer.id),
+                                 x.outputSlots,
+                                 x.argumentSize.nLongs,
+                                 x.argumentSize.nReferences)
+
         case x: ApplyBufferVariant =>
           val argumentStatesToInitiate = concatWithoutCopy(workCancellers, downstreamStates)
           val reducersOnRHS = findRHSAccumulatingStateBuffers(i, x.reducersOnRHSReversed)
@@ -157,6 +165,12 @@ class Buffers(numBuffers: Int,
     */
   def morselBuffer(bufferId: BufferId): MorselBuffer =
     buffers(bufferId.x).asInstanceOf[MorselBuffer]
+
+  /**
+    * Get the buffer with the given id casted as a [[MorselApplyBuffer]].
+    */
+  def applyBuffer(bufferId: BufferId): MorselApplyBuffer =
+    buffers(bufferId.x).asInstanceOf[MorselApplyBuffer]
 
   /**
     * Get the buffer with the given ud casted as a [[ClosingSource]].

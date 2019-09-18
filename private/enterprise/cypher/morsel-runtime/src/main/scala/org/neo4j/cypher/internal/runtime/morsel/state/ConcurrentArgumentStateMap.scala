@@ -28,7 +28,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
                                             argumentRowIdsForReducers: Array[Long]): ConcurrentStateController[STATE] =
-    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), factory.completeOnConstruction)
 }
 
 object ConcurrentArgumentStateMap {
@@ -41,10 +41,10 @@ object ConcurrentArgumentStateMap {
     * Controller which knows when an [[ArgumentState]] is complete,
     * and protects it from concurrent access.
     */
-  private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE)
+  private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE, completeOnConstruction: Boolean)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
-    private val count = new AtomicLong(1)
+    private val count = new AtomicLong(if (completeOnConstruction) 0 else 1)
 
     override def increment(): Long = count.incrementAndGet()
 

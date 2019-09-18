@@ -39,7 +39,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       val tasks = new Array[ContinuableOperatorTaskWithMorsel](parallelism)
       var i = 0
       while (i < parallelism) {
-        // Each task gets its own cursor which is reuses until it's done.
+        // Each task gets its own cursor which it reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
         val rowForTask = inputMorsel.nextCopy
         tasks(i) = new ParallelScanTask(rowForTask, scan, cursor, state.morselSize)

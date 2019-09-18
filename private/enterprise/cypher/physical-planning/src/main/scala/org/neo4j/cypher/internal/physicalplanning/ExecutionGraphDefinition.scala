@@ -136,6 +136,11 @@ case class ApplyBufferVariant(argumentSlotOffset: Int,
     (argumentSlotOffset, reducersOnRHSReversed, delegates)
 }
 
+case class AttachBufferVariant(attachingPlanId: Id, // TODO: remove?
+                               applyBuffer: BufferDefinition,
+                               outputSlots: SlotConfiguration,
+                               argumentSize: SlotConfiguration.Size) extends BufferVariant
+
 /**
   * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
   * Maps to a MorselArgumentStateBuffer.

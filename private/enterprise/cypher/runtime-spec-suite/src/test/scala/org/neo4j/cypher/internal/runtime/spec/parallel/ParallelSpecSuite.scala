@@ -184,8 +184,8 @@ class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(ENTERPRISE.NO
 
 
 // CARTESIAN PRODUCT
-class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.PARALLEL, PARALLEL, SIZE_HINT)
-class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(ENTERPRISE.PARALLEL_NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest

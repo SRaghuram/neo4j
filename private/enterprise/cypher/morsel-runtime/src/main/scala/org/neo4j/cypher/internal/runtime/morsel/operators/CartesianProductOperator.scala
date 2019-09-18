@@ -8,7 +8,8 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.morsel.operators.CartesianProductOperator.LHSMorsel
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -25,7 +26,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                            queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
+    argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new LHSMorsel.Factory(stateFactory))
     argumentStateCreator.createArgumentStateMap(rhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
     this
   }
@@ -35,7 +36,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                          operatorInput: OperatorInput,
                          parallelism: Int,
                          resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, ArgumentStateBuffer]] = {
+                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, LHSMorsel]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {
       Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
@@ -46,24 +47,21 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
   }
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
-  class OTask(override val accumulator: ArgumentStateBuffer, rhsRow: MorselExecutionContext)
+  class OTask(override val accumulator: LHSMorsel, rhsRow: MorselExecutionContext)
     extends InputLoopTask
-      with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, ArgumentStateBuffer] {
+      with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, LHSMorsel] {
 
     override def workIdentity: WorkIdentity = CartesianProductOperator.this.workIdentity
 
-    override val inputMorsel: MorselExecutionContext = rhsRow
+    override val inputMorsel: MorselExecutionContext = accumulator.lhsMorsel.shallowCopy()
 
     override def toString: String = "CartesianProductTask"
-
-    private var lhsMorselIterator: java.util.Iterator[MorselExecutionContext] = _
-    private var lhsMorsel: MorselExecutionContext = _
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
-     lhsMorselIterator = accumulator.iterator
+      rhsRow.resetToBeforeFirstRow()
       true
     }
 
@@ -71,31 +69,48 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                                      context: QueryContext,
                                      state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && next()) {
-        lhsMorsel.copyTo(outputRow)
+      while (outputRow.isValidRow && rhsRow.hasNextRow) {
+        rhsRow.moveToNextRow()
+        inputMorsel.copyTo(outputRow) // lhs
+        val lhsSlots = inputMorsel.slots
         rhsRow.copyTo(outputRow,
-          sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx
-          targetLongOffset = lhsMorsel.slots.numberOfLongs, targetRefOffset = lhsMorsel.slots.numberOfReferences)
+                      sourceLongOffset = argumentSize.nLongs, // Skip over arguments since they should be identical to lhsCtx
+                      sourceRefOffset = argumentSize.nReferences,
+                      targetLongOffset = lhsSlots.numberOfLongs,
+                      targetRefOffset = lhsSlots.numberOfReferences)
         outputRow.moveToNextRow()
       }
-    }
-
-    private def next(): Boolean = {
-      while (true) {
-        if (lhsMorsel != null && lhsMorsel.hasNextRow) {
-          lhsMorsel.moveToNextRow()
-          return true
-        } else if(lhsMorselIterator.hasNext) {
-          lhsMorsel = lhsMorselIterator.next().shallowCopy() // The morsels can be traversed in parallel by many tasks with different RHS morsels
-          lhsMorsel.resetToBeforeFirstRow()
-        } else {
-          return false
-        }
-      }
-      throw new IllegalStateException("Unreachable code")
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {}
   }
 
+}
+
+object CartesianProductOperator {
+
+  class LHSMorsel(override val argumentRowId: Long,
+                  val lhsMorsel: MorselExecutionContext,
+                  override val argumentRowIdsForReducers: Array[Long])
+    extends MorselAccumulator[MorselExecutionContext] {
+
+    override def update(morsel: MorselExecutionContext): Unit =
+      throw new IllegalStateException("LHSMorsel is completed directly on construction, and cannot be further updated")
+
+    override def toString: String = {
+      s"LHSMorsel(argumentRowId=$argumentRowId)"
+    }
+  }
+
+  object LHSMorsel {
+    class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[LHSMorsel] {
+      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LHSMorsel =
+        new LHSMorsel(argumentRowId, argumentMorsel.detach(), argumentRowIdsForReducers)
+
+      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LHSMorsel =
+        new LHSMorsel(argumentRowId, argumentMorsel.detach(), argumentRowIdsForReducers)
+
+      override def completeOnConstruction: Boolean = true
+    }
+  }
 }

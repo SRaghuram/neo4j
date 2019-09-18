@@ -25,7 +25,8 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
                                             argumentRowIdsForReducers: Array[Long]): StandardStateController[STATE] =
-    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers),
+                                factory.completeOnConstruction)
 }
 
 object StandardArgumentStateMap {
@@ -33,31 +34,31 @@ object StandardArgumentStateMap {
  /**
   * Controller which knows when an [[ArgumentState]] is complete.
   */
-  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE)
-   extends AbstractArgumentStateMap.StateController[STATE] {
+  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE, completeOnConstruction: Boolean)
+    extends AbstractArgumentStateMap.StateController[STATE] {
 
-    private var _count: Long = 1
+    private var _count: Long = if (completeOnConstruction) 0 else 1
 
-   override def isZero: Boolean = _count == 0
+    override def isZero: Boolean = _count == 0
 
-   override def increment(): Long = {
+    override def increment(): Long = {
       _count += 1
       _count
     }
 
-   override def decrement(): Long = {
+    override def decrement(): Long = {
       _count -= 1
       _count
     }
 
-   // No actual "taking" in single threaded
-   override def tryTake(): Boolean = isZero
+    // No actual "taking" in single threaded
+    override def tryTake(): Boolean = isZero
 
-   // No actual "taking" in single threaded
-   override def take(): Boolean = true
+    // No actual "taking" in single threaded
+    override def take(): Boolean = true
 
-   override def toString: String = {
-     s"[count: ${_count}, state: $state]"
-   }
+    override def toString: String = {
+      s"[count: ${_count}, state: $state]"
+    }
   }
 }
