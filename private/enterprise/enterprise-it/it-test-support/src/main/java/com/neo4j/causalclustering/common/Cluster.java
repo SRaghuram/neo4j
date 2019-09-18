@@ -26,6 +26,7 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -87,6 +88,8 @@ public class Cluster
 {
     private static final int DEFAULT_TIMEOUT_MS = (int) MINUTES.toMillis( 3 );
     private static final int DEFAULT_CLUSTER_SIZE = 3;
+
+    public static final Duration TOPOLOGY_REFRESH_INTERVAL = Duration.ofSeconds( 1 );
 
     private final File parentDir;
     private final Map<String,String> coreParams;

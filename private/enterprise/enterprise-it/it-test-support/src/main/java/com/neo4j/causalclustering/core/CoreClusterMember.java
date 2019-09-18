@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
+import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
@@ -110,7 +111,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.raft_listen_address, new SocketAddress( listenAddress, raftPort ) );
         config.set( CausalClusteringSettings.raft_advertised_address, new SocketAddress( raftPort ) );
-        config.set( CausalClusteringSettings.cluster_topology_refresh, Duration.ofMillis( 1000 ) );
+        config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_formation, clusterSize );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, clusterSize );
         config.set( CausalClusteringSettings.leader_election_timeout, Duration.ofMillis( 500 ) );
