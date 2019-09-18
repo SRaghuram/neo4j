@@ -3,16 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.common;
+package com.neo4j.bench.client;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.Main;
-import com.neo4j.bench.client.QueryRetrier;
-import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.common.util.SyntheticStoreGenerator;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +60,7 @@ public class SyntheticStoreGeneratorIT
                                                                    .build();
 
     private static final int CLIENT_RETRY_COUNT = 0;
-    private static final QueryRetrier QUERY_RETRIER = new QueryRetrier();
+    private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
 
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
@@ -96,7 +92,7 @@ public class SyntheticStoreGeneratorIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroupCount( 2 )
+                .withBenchmarkGroups( "group1", "group2" )
                 .withBenchmarkPerGroupCount( 50 )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0" )
                 .withNeo4jEditions( COMMUNITY )
@@ -123,7 +119,7 @@ public class SyntheticStoreGeneratorIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 10 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroupCount( 4 )
+                .withBenchmarkGroups( "group1", "group2", "group3", "group4" )
                 .withBenchmarkPerGroupCount( 50 )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0", "2.3.4", "2.3.3", "2.3.2" )
                 .withNeo4jEditions( COMMUNITY, ENTERPRISE )
@@ -153,16 +149,16 @@ public class SyntheticStoreGeneratorIT
         {
             QUERY_RETRIER.execute( client, new DropSchema(), CLIENT_RETRY_COUNT );
             QUERY_RETRIER.execute( client, new CreateSchema(), CLIENT_RETRY_COUNT );
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             generator.generate( client );
         }
     }
 
-    private void verifySchema( SyntheticStoreGenerator generator ) throws Exception
+    private void verifySchema( SyntheticStoreGenerator generator )
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
+            QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
 
             try ( Session session = client.session() )
             {
@@ -372,7 +368,7 @@ public class SyntheticStoreGeneratorIT
         }
     }
 
-    private void verifyPersonalRuns( Session session, SyntheticStoreGenerator generator ) throws Exception
+    private void verifyPersonalRuns( Session session, SyntheticStoreGenerator generator )
     {
         List<String> branchOwners = Lists.newArrayList( generator.neo4jBranchOwners() );
         branchOwners.addAll( Lists.newArrayList( generator.capsBranchOwners() ) );
