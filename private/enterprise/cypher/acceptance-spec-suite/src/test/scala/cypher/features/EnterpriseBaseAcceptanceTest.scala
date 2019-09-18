@@ -12,8 +12,8 @@ import org.opencypher.tools.tck.api.Scenario
 abstract class EnterpriseBaseAcceptanceTest extends BaseFeatureTest {
   // these two should be empty on commit!
   // Use a substring match, for example "UnwindAcceptance"
-  val featureToRun = "MatchAcceptance"
-  val scenarioToRun = "difficult to plan query number 2"
+  val featureToRun = ""
+  val scenarioToRun = ""
 
   lazy val scenarios: Seq[Scenario] =  filterScenarios(BaseFeatureTestHolder.allAcceptanceScenarios, featureToRun, scenarioToRun)
 

@@ -82,16 +82,6 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     (slots.filter(onVariable) ++ cachedProperties.filter(onCachedProperty)).values
   }
 
-  /**
-    * Partition slots only, not cached properties
-    */
-  def partitionSlotsOnly(p: (String, Slot) => Boolean): (Seq[(String, Slot)], Seq[(String, Slot)]) = {
-    slots.toSeq.partition {
-      case (k, slot) =>
-        p(k, slot)
-    }
-  }
-
   def get(key: String): Option[Slot] = slots.get(key)
 
   def add(key: String, slot: Slot): Unit = slot match {
@@ -201,7 +191,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     this
   }
 
-  def newCachedProperty(key: ASTCachedProperty)(implicit shouldDuplicate: Boolean = false): SlotConfiguration = {
+  def newCachedProperty(key: ASTCachedProperty, shouldDuplicate: Boolean = false): SlotConfiguration = {
     cachedProperties.get(key) match {
       case Some(_) =>
         // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
