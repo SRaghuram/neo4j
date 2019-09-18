@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.morsel.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.morsel.operators.VarExpandCursor.relationshipFromCursor
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
@@ -22,29 +21,32 @@ case object NOT_STARTED extends ExpandStatus
 case object EXPAND extends ExpandStatus
 case object EMIT extends ExpandStatus
 
-class VarExpandCursor(fromNode: Long,
-                      targetToNode: Long,
-                      theNodeCursor: NodeCursor,
-                      dir: SemanticDirection,
-                      projectBackwards: Boolean,
-                      relTypes: Array[Int],
-                      minLength: Int,
-                      maxLength: Int,
-                      read: Read,
-                      dbAccess: DbAccess,
-                      nodePredicate: VarExpandPredicate[Long],
-                      relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor]) {
+abstract class VarExpandCursor(fromNode: Long,
+                               targetToNode: Long,
+                               nodeCursor: NodeCursor,
+                               projectBackwards: Boolean,
+                               relTypes: Array[Int],
+                               minLength: Int,
+                               maxLength: Int,
+                               read: Read,
+                               dbAccess: DbAccess,
+                               nodePredicate: VarExpandPredicate[Long],
+                               relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor]) {
 
   private var expandStatus: ExpandStatus = NOT_STARTED
   private var pathLength: Int = 0
 
-  private val nodeCursor: NodeCursor = theNodeCursor
   private val relTraCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
   private val relGroupCursors: GrowingArray[RelationshipGroupCursor] = new GrowingArray[RelationshipGroupCursor]()
   private val selectionCursors: GrowingArray[RelationshipSelectionCursor] = new GrowingArray[RelationshipSelectionCursor]()
 
   // this needs to be explicitly managed on every work unit, to avoid parallel workers accessing each others cursorPools.
   private var cursorPools: CursorPools = _
+
+  protected def selectionCursor(groupCursor: RelationshipGroupCursor,
+                            traversalCursor: RelationshipTraversalCursor,
+                            node: NodeCursor,
+                            types: Array[Int]): RelationshipSelectionCursor
 
   def enterWorkUnit(cursorPools: CursorPools): Unit = {
     this.cursorPools = cursorPools
@@ -113,21 +115,13 @@ class VarExpandCursor(fromNode: Long,
 
     read.singleNode(node, nodeCursor)
 
-    val selectionCursor =
+    val cursor =
       if (!nodeCursor.next()) {
         RelationshipSelectionCursor.EMPTY
-      } else {
+      } else selectionCursor(groupCursor, traversalCursor, nodeCursor, relTypes)
 
-        val selectionCursor = dir match {
-          case OUTGOING => outgoingCursor(groupCursor, traversalCursor, nodeCursor, relTypes)
-          case INCOMING => incomingCursor(groupCursor, traversalCursor, nodeCursor, relTypes)
-          case BOTH => allCursor(groupCursor, traversalCursor, nodeCursor, relTypes)
-        }
 
-        selectionCursor
-      }
-
-    selectionCursors.set(pathLength, selectionCursor)
+    selectionCursors.set(pathLength, cursor)
   }
 
   def toNode: Long = {
@@ -172,6 +166,57 @@ class VarExpandCursor(fromNode: Long,
 }
 
 object VarExpandCursor {
+  def apply(direction: SemanticDirection,
+            fromNode: Long,
+            targetToNode: Long,
+            nodeCursor: NodeCursor,
+            projectBackwards: Boolean,
+            relTypes: Array[Int],
+            minLength: Int,
+            maxLength: Int,
+            read: Read,
+            dbAccess: DbAccess,
+            nodePredicate: VarExpandPredicate[Long],
+            relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor]): VarExpandCursor = direction match {
+    case SemanticDirection.OUTGOING =>
+      new OutgoingVarExpandCursor(fromNode,
+                                  targetToNode,
+                                  nodeCursor,
+                                  projectBackwards,
+                                  relTypes,
+                                  minLength,
+                                  maxLength,
+                                  read,
+                                  dbAccess,
+                                  nodePredicate,
+                                  relationshipPredicate)
+    case SemanticDirection.INCOMING =>
+      new IncomingVarExpandCursor(fromNode,
+                                  targetToNode,
+                                  nodeCursor,
+                                  projectBackwards,
+                                  relTypes,
+                                  minLength,
+                                  maxLength,
+                                  read,
+                                  dbAccess,
+                                  nodePredicate,
+                                  relationshipPredicate)
+    case SemanticDirection.BOTH =>
+      new AllVarExpandCursor(fromNode,
+                                  targetToNode,
+                                  nodeCursor,
+                                  projectBackwards,
+                                  relTypes,
+                                  minLength,
+                                  maxLength,
+                                  read,
+                                  dbAccess,
+                                  nodePredicate,
+                                  relationshipPredicate)
+
+  }
+
   def relationshipFromCursor(dbAccess: DbAccess, cursor: RelationshipSelectionCursor): RelationshipValue = {
     dbAccess.relationshipById(cursor.relationshipReference(),
                               cursor.sourceNodeReference(),
@@ -255,6 +300,93 @@ trait VarExpandPredicate[ENTITY] {
 }
 
 object VarExpandPredicate {
-  val NO_NODE_PREDICATE: VarExpandPredicate[Long] = (entity: Long) => true
-  val NO_RELATIONSHIP_PREDICATE: VarExpandPredicate[RelationshipSelectionCursor] = (entity: RelationshipSelectionCursor) => true
+  val NO_NODE_PREDICATE: VarExpandPredicate[Long] = (_: Long) => true
+  val NO_RELATIONSHIP_PREDICATE: VarExpandPredicate[RelationshipSelectionCursor] = (_: RelationshipSelectionCursor) => true
+}
+
+class OutgoingVarExpandCursor(fromNode: Long,
+                              targetToNode: Long,
+                              nodeCursor: NodeCursor,
+                              projectBackwards: Boolean,
+                              relTypes: Array[Int],
+                              minLength: Int,
+                              maxLength: Int,
+                              read: Read,
+                              dbAccess: DbAccess,
+                              nodePredicate: VarExpandPredicate[Long],
+                              relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor])
+  extends VarExpandCursor(fromNode,
+                          targetToNode,
+                          nodeCursor,
+                          projectBackwards,
+                          relTypes,
+                          minLength,
+                          maxLength,
+                          read,
+                          dbAccess,
+                          nodePredicate,
+                          relationshipPredicate) {
+
+  override protected def selectionCursor(groupCursor: RelationshipGroupCursor,
+                                         traversalCursor: RelationshipTraversalCursor,
+                                         node: NodeCursor,
+                                         types: Array[Int]): RelationshipSelectionCursor = outgoingCursor(groupCursor, traversalCursor, node, types)
+}
+
+class IncomingVarExpandCursor(fromNode: Long,
+                               targetToNode: Long,
+                               nodeCursor: NodeCursor,
+                               projectBackwards: Boolean,
+                               relTypes: Array[Int],
+                               minLength: Int,
+                               maxLength: Int,
+                               read: Read,
+                               dbAccess: DbAccess,
+                               nodePredicate: VarExpandPredicate[Long],
+                               relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor])
+  extends VarExpandCursor(fromNode,
+                          targetToNode,
+                          nodeCursor,
+                          projectBackwards,
+                          relTypes,
+                          minLength,
+                          maxLength,
+                          read,
+                          dbAccess,
+                          nodePredicate,
+                          relationshipPredicate) {
+
+  override protected def selectionCursor(groupCursor: RelationshipGroupCursor,
+                                         traversalCursor: RelationshipTraversalCursor,
+                                         node: NodeCursor,
+                                         types: Array[Int]): RelationshipSelectionCursor = incomingCursor(groupCursor, traversalCursor, node, types)
+}
+
+class AllVarExpandCursor(fromNode: Long,
+                              targetToNode: Long,
+                              nodeCursor: NodeCursor,
+                              projectBackwards: Boolean,
+                              relTypes: Array[Int],
+                              minLength: Int,
+                              maxLength: Int,
+                              read: Read,
+                              dbAccess: DbAccess,
+                              nodePredicate: VarExpandPredicate[Long],
+                              relationshipPredicate: VarExpandPredicate[RelationshipSelectionCursor])
+  extends VarExpandCursor(fromNode,
+                          targetToNode,
+                          nodeCursor,
+                          projectBackwards,
+                          relTypes,
+                          minLength,
+                          maxLength,
+                          read,
+                          dbAccess,
+                          nodePredicate,
+                          relationshipPredicate) {
+
+  override protected def selectionCursor(groupCursor: RelationshipGroupCursor,
+                                         traversalCursor: RelationshipTraversalCursor,
+                                         node: NodeCursor,
+                                         types: Array[Int]): RelationshipSelectionCursor = allCursor(groupCursor, traversalCursor, node, types)
 }
