@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.server.security.auth.SecurityTestUtils
 
@@ -166,7 +166,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
                 executeBefore: InternalTransaction => Unit = _ => ()): Int = {
     selectDatabase(database)
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
-    val tx = graph.beginTransaction(Transaction.Type.explicit, login)
+    val tx = graph.beginTransaction(Type.explicit, login)
     try {
       executeBefore(tx)
       var count = 0

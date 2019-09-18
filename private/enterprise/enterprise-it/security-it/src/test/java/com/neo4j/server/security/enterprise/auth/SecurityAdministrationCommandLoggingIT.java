@@ -23,12 +23,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.AssertableLogProvider;
@@ -473,7 +473,7 @@ class SecurityAdministrationCommandLoggingIT
 
     private void execute( LoginContext loginContext, String query, Map<String,Object> params )
     {
-        try ( InternalTransaction transaction = database.beginTransaction( Transaction.Type.explicit, loginContext ) )
+        try ( InternalTransaction transaction = database.beginTransaction( KernelTransaction.Type.explicit, loginContext ) )
         {
             transaction.execute( query, params );
             transaction.commit();

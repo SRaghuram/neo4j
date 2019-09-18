@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -27,7 +27,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
         // given
         long entityId = createConstraintAndEntity( "Label1", "key1", "value1" );
 
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
 
         // when
         int label = transaction.tokenWrite().labelGetOrCreateForName( "Label1" );
@@ -50,7 +50,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
     }
 
     @Override
-    long createEntity( Transaction transaction, String type ) throws Exception
+    long createEntity( KernelTransaction transaction, String type ) throws Exception
     {
         long node = transaction.dataWrite().nodeCreate();
         int labelId = transaction.tokenWrite().labelGetOrCreateForName( type );
@@ -59,7 +59,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
     }
 
     @Override
-    long createEntity( Transaction transaction, String property, String value ) throws Exception
+    long createEntity( KernelTransaction transaction, String property, String value ) throws Exception
     {
         long node = transaction.dataWrite().nodeCreate();
         int propertyKey = transaction.tokenWrite().propertyKeyGetOrCreateForName( property );
@@ -68,7 +68,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
     }
 
     @Override
-    long createEntity( Transaction transaction, String type, String property, String value ) throws Exception
+    long createEntity( KernelTransaction transaction, String type, String property, String value ) throws Exception
     {
         long node = createEntity( transaction, type );
         int propertyKey = transaction.tokenWrite().propertyKeyGetOrCreateForName( property );
@@ -79,7 +79,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
     @Override
     long createConstraintAndEntity( String type, String property, String value ) throws Exception
     {
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         int label = transaction.tokenWrite().labelGetOrCreateForName( type );
         long node = transaction.dataWrite().nodeCreate();
         transaction.dataWrite().nodeAddLabel( node, label );
@@ -107,7 +107,7 @@ class NodePropertyExistenceConstraintValidationIT extends AbstractPropertyExiste
     @Override
     int entityCount() throws TransactionFailureException
     {
-       Transaction transaction = newTransaction();
+       KernelTransaction transaction = newTransaction();
         int result = countNodes( transaction );
         rollback();
         return result;

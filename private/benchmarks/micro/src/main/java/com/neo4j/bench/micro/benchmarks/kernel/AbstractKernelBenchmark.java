@@ -12,7 +12,7 @@ import com.neo4j.bench.micro.data.RelationshipDefinition;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
-import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 public abstract class AbstractKernelBenchmark extends BaseDatabaseBenchmark

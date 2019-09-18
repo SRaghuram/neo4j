@@ -14,8 +14,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.newapi.KernelAPIWriteTestBase;
 import org.neo4j.kernel.impl.newapi.KernelAPIWriteTestSupport;
@@ -36,7 +36,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
         int label;
 
         // Given
-        try ( Transaction tx = beginTransaction() )
+        try ( KernelTransaction tx = beginTransaction() )
         {
             nodeProp = tx.tokenWrite().propertyKeyGetOrCreateForName( "nodeProp" );
             constraintProp = tx.tokenWrite().propertyKeyGetOrCreateForName( "constraintProp" );
@@ -44,7 +44,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
             tx.commit();
         }
 
-        try ( Transaction tx = beginTransaction() )
+        try ( KernelTransaction tx = beginTransaction() )
         {
             tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ), "constraint name" );
             tx.commit();
@@ -56,7 +56,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
         // When & Then
         ExecutorService executor = Executors.newFixedThreadPool( 2 );
         Future<?> f1 = executor.submit( () -> {
-            try ( Transaction tx = beginTransaction() )
+            try ( KernelTransaction tx = beginTransaction() )
             {
                 createNodeWithProperty( tx, nodeProp );
 
@@ -77,7 +77,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
 
         Future<?> f2 = executor.submit( () -> {
 
-            try ( Transaction tx = beginTransaction() )
+            try ( KernelTransaction tx = beginTransaction() )
             {
                 assertTrue( createNodeLatch.await( 5, TimeUnit.MINUTES) );
                 tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ), "other constraint name" );
@@ -109,7 +109,7 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
         }
     }
 
-    private void createNodeWithProperty( Transaction tx, int propId1 ) throws KernelException
+    private void createNodeWithProperty( KernelTransaction tx, int propId1 ) throws KernelException
     {
         long node = tx.dataWrite().nodeCreate();
         tx.dataWrite().nodeSetProperty( node, propId1, Values.intValue( 42 ) );

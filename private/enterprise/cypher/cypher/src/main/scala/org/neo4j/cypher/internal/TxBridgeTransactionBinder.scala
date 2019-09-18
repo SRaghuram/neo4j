@@ -6,13 +6,12 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.runtime.morsel.execution.TransactionBinder
-import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 
 class TxBridgeTransactionBinder(txBridge: ThreadToStatementContextBridge) extends TransactionBinder {
 
-  override def bindToThread(transaction: Transaction): Unit =
+  override def bindToThread(transaction: KernelTransaction): Unit =
     txBridge.bindTransactionToCurrentThread(transaction.asInstanceOf[KernelTransaction])
 
   override def unbindFromThread(): Unit =

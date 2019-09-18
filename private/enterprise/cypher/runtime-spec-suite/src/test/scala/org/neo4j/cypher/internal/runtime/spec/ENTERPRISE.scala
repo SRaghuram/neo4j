@@ -13,7 +13,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselRuntimeSchedule
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
-import org.neo4j.internal.kernel.api.Kernel
+import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler

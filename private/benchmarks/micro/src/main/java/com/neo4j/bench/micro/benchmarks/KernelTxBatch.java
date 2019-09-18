@@ -6,24 +6,24 @@
 package com.neo4j.bench.micro.benchmarks;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.Token;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.kernel.api.Kernel;
+import org.neo4j.kernel.api.KernelTransaction;
 
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 public class KernelTxBatch
 {
     private final int txBatchSize;
     private final Kernel kernel;
     private int txSize;
-    private Transaction tx;
+    private KernelTransaction tx;
     public CursorFactory cursors;
     public Read read;
     public Write write;
@@ -47,7 +47,7 @@ public class KernelTxBatch
         }
     }
 
-    public Transaction unwrap()
+    public KernelTransaction unwrap()
     {
         return tx;
     }
@@ -59,7 +59,7 @@ public class KernelTxBatch
         token = null;
     }
 
-    private void commitAndNew( Transaction oldTx )
+    private void commitAndNew( KernelTransaction oldTx )
             throws TransactionFailureException, InvalidTransactionTypeKernelException
     {
         commit( oldTx );
@@ -76,7 +76,7 @@ public class KernelTxBatch
         schemaRead = tx.schemaRead();
     }
 
-    private void commit( Transaction oldTx ) throws TransactionFailureException
+    private void commit( KernelTransaction oldTx ) throws TransactionFailureException
     {
         oldTx.commit();
     }

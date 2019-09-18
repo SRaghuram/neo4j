@@ -20,7 +20,6 @@ import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
@@ -33,6 +32,7 @@ import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
@@ -132,7 +132,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     void shouldAbortConstraintCreationWhenDuplicatesExist() throws Exception
     {
         // given
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         // name is not unique for Foo in the existing data
 
         int foo = transaction.tokenWrite().labelGetOrCreateForName( "Foo" );
@@ -176,7 +176,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         commit();
 
         // then
-        Transaction transaction = newTransaction();
+        KernelTransaction transaction = newTransaction();
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
         commit();
     }
@@ -185,7 +185,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     void shouldDropCreatedConstraintIndexWhenRollingBackConstraintCreation() throws Exception
     {
         // given
-        Transaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
+        KernelTransaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
         transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor, "constraint name" );
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
 
@@ -226,7 +226,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         // then
         {
-            Transaction transaction = newTransaction();
+            KernelTransaction transaction = newTransaction();
 
             Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetForSchema( descriptor );
 
@@ -297,7 +297,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     void shouldDropConstraintIndexWhenDroppingConstraint() throws Exception
     {
         // given
-        Transaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
+        KernelTransaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
         ConstraintDescriptor constraint =
                 transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor, "constraint name" );
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
@@ -317,7 +317,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     private String userMessage( ConstraintValidationException cause )
             throws TransactionFailureException
     {
-        try ( Transaction tx = newTransaction() )
+        try ( KernelTransaction tx = newTransaction() )
         {
             TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
             return cause.getUserMessage( lookup );

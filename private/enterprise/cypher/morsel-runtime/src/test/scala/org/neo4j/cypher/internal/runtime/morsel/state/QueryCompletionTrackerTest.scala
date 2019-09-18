@@ -10,7 +10,7 @@ import org.mockito.Mockito._
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics, QueryTransactionalContext}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.Transaction
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(false) {
@@ -30,7 +30,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
   protected var subscriber: QuerySubscriber = _
   protected var queryContext: QueryContext = _
   protected var tracer: QueryExecutionTracer = _
-  protected var transaction: Transaction = _
+  protected var transaction: KernelTransaction = _
   protected val stats = QueryStatistics()
 
   def newTracker(): QueryCompletionTracker
@@ -39,7 +39,7 @@ abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends Cyph
     subscriber = mock[QuerySubscriber]
     queryContext = mock[QueryContext](RETURNS_DEEP_STUBS)
     tracer = mock[QueryExecutionTracer]
-    transaction = mock[Transaction]
+    transaction = mock[KernelTransaction]
 
     val txContext = mock[QueryTransactionalContext]
     when(queryContext.getOptStatistics).thenReturn(Some(stats))

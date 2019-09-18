@@ -35,9 +35,9 @@ import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
 import org.neo4j.exceptions
 import org.neo4j.exceptions.{CypherTypeException, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.graphdb.{Entity, Relationship}
-import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
 import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.kernel.impl.coreapi.InternalTransaction

@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
@@ -30,11 +30,11 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
 {
     abstract void createConstraint( String key, String property ) throws KernelException;
 
-    abstract long createEntity( Transaction transaction, String type ) throws Exception;
+    abstract long createEntity( KernelTransaction transaction, String type ) throws Exception;
 
-    abstract long createEntity( Transaction transaction, String property, String value ) throws Exception;
+    abstract long createEntity( KernelTransaction transaction, String property, String value ) throws Exception;
 
-    abstract long createEntity( Transaction transaction, String type, String property, String value )
+    abstract long createEntity( KernelTransaction transaction, String type, String property, String value )
             throws Exception;
 
     abstract long createConstraintAndEntity( String type, String property, String value ) throws Exception;
@@ -59,7 +59,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         // given
         createConstraint( "Type1", "key1" );
 
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
 
         // when
         createEntity( transaction, "Type1" );
@@ -73,7 +73,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
     {
         // given
         long entity = createConstraintAndEntity( "Type1", "key1", "value1" );
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
 
         // when
         int key = transaction.tokenWrite().propertyKeyGetOrCreateForName( "key1" );
@@ -89,7 +89,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
     {
         // given
         long entity = createConstraintAndEntity( "Type1", "key1", "value1" );
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
 
         // when
         int key = transaction.tokenWrite().propertyKeyGetOrCreateForName( "key1" );
@@ -106,7 +106,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         // given
         long entity = createConstraintAndEntity( "Type1", "key1", "value1" );
 
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
 
         // when
         int key = transaction.tokenWrite().propertyKeyGetOrCreateForName( "key1" );
@@ -121,7 +121,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         // given
         createConstraintAndEntity( "Type1", "key1", "value1" );
 
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
 
         // when
         createEntity( transaction, "key1", "value1" );

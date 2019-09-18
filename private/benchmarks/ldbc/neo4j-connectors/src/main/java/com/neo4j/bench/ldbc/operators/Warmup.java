@@ -10,15 +10,15 @@ import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.temporal.TemporalUtil;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.kernel.api.Kernel;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
@@ -26,7 +26,7 @@ import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 public class Warmup
 {
@@ -66,7 +66,7 @@ public class Warmup
             int nodesPerPage ) throws DbException
     {
         Kernel kernel = getKernel( db );
-        try ( Transaction tx = startTransaction( kernel ) )
+        try ( KernelTransaction tx = startTransaction( kernel ) )
         {
             CursorFactory cursors = tx.cursors();
             Read read = tx.dataRead();
@@ -91,7 +91,7 @@ public class Warmup
             int relationshipsPerPage ) throws DbException
     {
         Kernel kernel = getKernel( db );
-        try ( Transaction tx = startTransaction( kernel ) )
+        try ( KernelTransaction tx = startTransaction( kernel ) )
         {
             CursorFactory cursors = tx.cursors();
             Read read = tx.dataRead();
@@ -125,7 +125,7 @@ public class Warmup
         return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
     }
 
-    private static Transaction startTransaction( Kernel kernel )
+    private static KernelTransaction startTransaction( Kernel kernel )
             throws TransactionFailureException
     {
         return kernel.beginTransaction( implicit, SecurityContext.AUTH_DISABLED );

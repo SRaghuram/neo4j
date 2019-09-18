@@ -22,12 +22,12 @@ import java.util.Objects;
 import java.util.StringJoiner;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.Procedures;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
+import org.neo4j.kernel.api.Kernel;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
@@ -104,7 +104,7 @@ public class InstalledProtocolsProcedureIT
     {
         List<ProtocolInfo> infos = new LinkedList<>();
         Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
-        try ( Transaction tx = kernel.beginTransaction( Transaction.Type.implicit, AnonymousContext.read() ) )
+        try ( KernelTransaction tx = kernel.beginTransaction( KernelTransaction.Type.implicit, AnonymousContext.read() ) )
         {
             Procedures procedures = tx.procedures();
             int procedureId = procedures.procedureGet( procedureName( "dbms", "cluster", InstalledProtocolsProcedure.PROCEDURE_NAME ) ).id();

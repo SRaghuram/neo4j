@@ -31,10 +31,10 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
@@ -104,7 +104,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     void shouldBeAbleToStoreAndRetrieveConstraint() throws Exception
     {
         // given
-        Transaction transaction = newTransaction( AUTH_DISABLED );
+        KernelTransaction transaction = newTransaction( AUTH_DISABLED );
 
         // when
         ConstraintDescriptor constraint = createConstraint( transaction.schemaWrite(), descriptor );
@@ -128,7 +128,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     void shouldBeAbleToStoreAndRetrieveConstraintAfterRestart() throws Exception
     {
         // given
-        Transaction transaction = newTransaction( AUTH_DISABLED );
+        KernelTransaction transaction = newTransaction( AUTH_DISABLED );
 
         // when
         ConstraintDescriptor constraint = createConstraint( transaction.schemaWrite(), descriptor );
@@ -161,7 +161,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // when
         rollback();
 
-       Transaction transaction = newTransaction();
+       KernelTransaction transaction = newTransaction();
 
         // then
         Iterator<?> constraints = transaction.schemaRead().constraintsGetAll();
@@ -173,7 +173,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     void shouldNotStoreConstraintThatIsRemovedInTheSameTransaction() throws Exception
     {
         // given
-        Transaction transaction = newTransaction( AUTH_DISABLED );
+        KernelTransaction transaction = newTransaction( AUTH_DISABLED );
 
         Constraint constraint = createConstraint( transaction.schemaWrite(), descriptor );
 
@@ -213,7 +213,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
         // then
         {
-            Transaction transaction = newTransaction();
+            KernelTransaction transaction = newTransaction();
 
             // then
             assertFalse( transaction.schemaRead().constraintsGetAll().hasNext(), "should not have any constraints" );
@@ -261,7 +261,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             commit();
         }
         {
-           Transaction transaction = newTransaction();
+           KernelTransaction transaction = newTransaction();
 
             // then
             assertEquals( singletonList( constraint ), asCollection( transaction.schemaRead().constraintsGetAll() ) );
@@ -331,7 +331,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
         // then
         {
-            Transaction transaction = newTransaction();
+            KernelTransaction transaction = newTransaction();
             assertEquals( emptySet(), asSet( transaction.schemaRead().indexesGetAll() ) );
             commit();
         }
@@ -467,27 +467,27 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
         public SchemaStateCheck setUp() throws TransactionFailureException
         {
-            Transaction transaction = newTransaction();
+            KernelTransaction transaction = newTransaction();
             checkState( transaction );
             commit();
             return this;
         }
 
-        void assertCleared( Transaction transaction )
+        void assertCleared( KernelTransaction transaction )
         {
             int count = invocationCount;
             checkState( transaction );
             assertEquals( count + 1, invocationCount, "schema state should have been cleared." );
         }
 
-        void assertNotCleared( Transaction transaction )
+        void assertNotCleared( KernelTransaction transaction )
         {
             int count = invocationCount;
             checkState( transaction );
             assertEquals( count, invocationCount, "schema state should not have been cleared." );
         }
 
-        private void checkState( Transaction transaction )
+        private void checkState( KernelTransaction transaction )
         {
             assertEquals( Integer.valueOf( 7 ), transaction.schemaRead().schemaStateGetOrCreate( "7", this ) );
         }

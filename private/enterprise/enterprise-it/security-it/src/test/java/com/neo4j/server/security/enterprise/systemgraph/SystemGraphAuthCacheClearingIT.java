@@ -31,7 +31,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
-import org.neo4j.internal.kernel.api.Transaction.Type;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -45,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.kernel.api.KernelTransaction.Type.explicit;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -90,7 +90,7 @@ class SystemGraphAuthCacheClearingIT
         var systemDb = (GraphDatabaseAPI) dbms.database( SYSTEM_DATABASE_NAME );
         var dbs = Collections.singletonList( systemDb );
 
-        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             tx.execute( "CREATE USER foo SET PASSWORD 'f00'" );
             tx.commit();
@@ -100,7 +100,7 @@ class SystemGraphAuthCacheClearingIT
         assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( true ), 5, TimeUnit.SECONDS );
 
         // When changing the system database
-        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             tx.execute( "ALTER USER foo SET PASSWORD 'b4r'" );
             tx.commit();
@@ -124,7 +124,7 @@ class SystemGraphAuthCacheClearingIT
         var userDB = (GraphDatabaseAPI) dbms.database( DEFAULT_DATABASE_NAME );
         var userDbs = Collections.singletonList( userDB );
 
-        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             tx.execute( "CREATE USER foo SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
             tx.execute( "CREATE ROLE role" );
@@ -137,7 +137,7 @@ class SystemGraphAuthCacheClearingIT
         assertFalse( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ) );
 
         // When changing the system database
-        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             tx.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
             tx.commit();
@@ -147,7 +147,7 @@ class SystemGraphAuthCacheClearingIT
         assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( true ), 5, TimeUnit.SECONDS );
 
         // When changing the system database
-        try ( Transaction tx = systemDb.beginTransaction( Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             tx.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
             tx.commit();
@@ -272,7 +272,7 @@ class SystemGraphAuthCacheClearingIT
     private boolean canExecuteQuery( GraphDatabaseAPI database, Map<String,Object> authToken, String query )
     {
         var context = login( database, authToken );
-        try ( var tx = database.beginTransaction( Type.explicit, context ) )
+        try ( var tx = database.beginTransaction( explicit, context ) )
         {
             Result result = tx.execute( query );
             result.accept( row -> true );

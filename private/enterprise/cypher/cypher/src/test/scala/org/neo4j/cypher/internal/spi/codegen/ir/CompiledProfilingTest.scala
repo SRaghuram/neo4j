@@ -20,9 +20,9 @@ import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContex
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.helpers.{StubNodeCursor, StubRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy}
 import org.neo4j.test.TestDatabaseManagementServiceBuilder

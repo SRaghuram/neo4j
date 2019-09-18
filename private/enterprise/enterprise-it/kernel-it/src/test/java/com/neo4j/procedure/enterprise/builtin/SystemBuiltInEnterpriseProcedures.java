@@ -20,11 +20,11 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
-import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureHandle;
+import org.neo4j.kernel.api.Kernel;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.ProcedureITBase;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -44,8 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureName;
+import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 @EnterpriseDbmsExtension
 class SystemBuiltInEnterpriseProcedures implements ProcedureITBase
@@ -64,7 +64,7 @@ class SystemBuiltInEnterpriseProcedures implements ProcedureITBase
         // When
         GraphDatabaseAPI system = getGraphDatabaseAPI();
         Kernel kernel = system.getDependencyResolver().resolveDependency( Kernel.class );
-        Transaction transaction = kernel.beginTransaction( implicit, AnonymousContext.read() );
+        KernelTransaction transaction = kernel.beginTransaction( implicit, AnonymousContext.read() );
         ProcedureHandle procedures = transaction.procedures().procedureGet( procedureName( "dbms", "procedures" ) );
         RawIterator<AnyValue[],ProcedureException> stream =
                 transaction.procedures().procedureCallRead( procedures.id(), new AnyValue[0], ProcedureCallContext.EMPTY );

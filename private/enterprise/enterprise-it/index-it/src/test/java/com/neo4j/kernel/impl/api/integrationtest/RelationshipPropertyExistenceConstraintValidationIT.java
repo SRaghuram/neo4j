@@ -10,9 +10,9 @@ import java.util.UUID;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
 import org.neo4j.values.storable.Value;
@@ -36,7 +36,7 @@ class RelationshipPropertyExistenceConstraintValidationIT extends AbstractProper
     }
 
     @Override
-    long createEntity( Transaction transaction, String type ) throws Exception
+    long createEntity( KernelTransaction transaction, String type ) throws Exception
     {
         long start = transaction.dataWrite().nodeCreate();
         long end = transaction.dataWrite().nodeCreate();
@@ -45,7 +45,7 @@ class RelationshipPropertyExistenceConstraintValidationIT extends AbstractProper
     }
 
     @Override
-    long createEntity( Transaction transaction, String property, String value ) throws Exception
+    long createEntity( KernelTransaction transaction, String property, String value ) throws Exception
     {
         long start = transaction.dataWrite().nodeCreate();
         long end = transaction.dataWrite().nodeCreate();
@@ -59,7 +59,7 @@ class RelationshipPropertyExistenceConstraintValidationIT extends AbstractProper
     }
 
     @Override
-    long createEntity( Transaction transaction, String type, String property, String value ) throws Exception
+    long createEntity( KernelTransaction transaction, String type, String property, String value ) throws Exception
     {
         long relationship = createEntity( transaction, type );
         int propertyKey = transaction.tokenWrite().propertyKeyGetOrCreateForName( property );
@@ -70,7 +70,7 @@ class RelationshipPropertyExistenceConstraintValidationIT extends AbstractProper
     @Override
     long createConstraintAndEntity( String type, String property, String value ) throws Exception
     {
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         int relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName( type );
         long start = transaction.dataWrite().nodeCreate();
         long end = transaction.dataWrite().nodeCreate();
@@ -99,7 +99,7 @@ class RelationshipPropertyExistenceConstraintValidationIT extends AbstractProper
     @Override
     int entityCount() throws TransactionFailureException
     {
-        Transaction transaction = newTransaction();
+        KernelTransaction transaction = newTransaction();
         int result = KernelIntegrationTest.countRelationships( transaction );
         rollback();
         return result;

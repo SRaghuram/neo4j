@@ -26,8 +26,8 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.TaskCloser
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
-import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.kernel.GraphDatabaseQueryService
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, RecordingQuerySubscriber}

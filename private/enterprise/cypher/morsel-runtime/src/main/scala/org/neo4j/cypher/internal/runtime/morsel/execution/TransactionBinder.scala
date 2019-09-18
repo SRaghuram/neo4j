@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import org.neo4j.internal.kernel.api.Transaction
+import org.neo4j.kernel.api.KernelTransaction
 
 /**
   * Interface which binds a transaction to the current Thread. This is needed to accommodate
@@ -16,12 +16,12 @@ import org.neo4j.internal.kernel.api.Transaction
   * [[org.neo4j.kernel.impl.util.RelationshipProxyWrappingValue]].
   */
 trait TransactionBinder {
-  def bindToThread(transaction: Transaction): Unit
+  def bindToThread(transaction: KernelTransaction): Unit
   def unbindFromThread(): Unit
 }
 
 object NO_TRANSACTION_BINDER extends TransactionBinder {
-  override def bindToThread(transaction: Transaction): Unit = {}
+  override def bindToThread(transaction: KernelTransaction): Unit = {}
   override def unbindFromThread(): Unit = {}
 }
 

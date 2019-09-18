@@ -13,8 +13,9 @@ import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.graphdb.{QueryExecutionException, TransactionFailureException}
 import org.neo4j.internal.cypher.acceptance.TestResourceProcedure._
-import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.kernel.api.KernelTransaction
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 import scala.collection.mutable.ArrayBuffer
@@ -76,7 +77,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   test("should close resources on mid-stream transaction close") {
     val counters = setUpProcedures()
 
-    val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(Type.`implicit`, LoginContext.AUTH_DISABLED)
     val result = tx.execute(defaultQuery)
 
     // Pull one row and then close the transaction
@@ -104,7 +105,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   test("should not leave any resources open on transaction close before pulling on the result") {
     val counters = setUpProcedures()
 
-    val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(KernelTransaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
     tx.execute(defaultQuery)
 
     // Close the transaction directly without pulling the result
@@ -119,7 +120,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
     val counters = setUpProcedures()
     val numberOfRows = 100
 
-    val tx = graph.beginTransaction(Transaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(KernelTransaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
     val result = tx.execute(s"UNWIND range(1,$numberOfRows) as i CALL org.neo4j.test.testResourceProcedure(1) YIELD value RETURN value")
 
     // Pull one row and then close the transaction

@@ -24,8 +24,8 @@ import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
-import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.io.fs.FileUtils
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.coreapi.TransactionImpl

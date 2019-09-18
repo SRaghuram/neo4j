@@ -26,13 +26,13 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.TokenRead;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexOrder;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -102,7 +102,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // given
         String label = "MyLabel";
         String propKey = "myKey";
-        Transaction transaction = newTransaction( AnonymousContext.read() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.read() );
         assertEquals( TokenRead.NO_TOKEN, transaction.tokenRead().nodeLabel( label ), "label token should not exist" );
         assertEquals( TokenRead.NO_TOKEN, transaction.tokenRead().propertyKey( propKey ), "property token should not exist" );
         commit();
@@ -125,7 +125,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     {
         init( uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         transaction.tokenWrite().labelGetOrCreateForName( "Person" );
         createProperties( transaction, "name" );
         commit();
@@ -147,7 +147,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     {
         init( uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         transaction.tokenWrite().labelGetOrCreateForName( "Person" );
         createProperties( transaction, "name" );
         commit();
@@ -194,7 +194,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         this.expectedSuccessfulCreationStatus = expectedSuccessfulCreationStatus;
     }
 
-    private static int[] createProperties( Transaction transaction, String... properties ) throws KernelException
+    private static int[] createProperties( KernelTransaction transaction, String... properties ) throws KernelException
     {
         int[] propertyKeyIds = new int[properties.length];
         for ( int i = 0; i < properties.length; i++ )
@@ -204,7 +204,8 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return propertyKeyIds;
     }
 
-    private static long createNodeWithPropertiesAndLabel( Transaction transaction, int labelId, int[] propertyKeyIds, TextValue value ) throws KernelException
+    private static long createNodeWithPropertiesAndLabel( KernelTransaction transaction, int labelId, int[] propertyKeyIds, TextValue value )
+            throws KernelException
     {
         long node = transaction.dataWrite().nodeCreate();
         transaction.dataWrite().nodeAddLabel( node, labelId );
@@ -251,7 +252,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     private void testCreateIndexWithGivenProvider( String label, String... properties ) throws KernelException
     {
         // given
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         int labelId = transaction.tokenWrite().labelGetOrCreateForName( label );
         int[] propertyKeyIds = createProperties( transaction, properties );
         TextValue value = stringValue( "some value" );
@@ -278,7 +279,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         commit();
     }
 
-    private static void assertIndexData( Transaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexDescriptor index )
+    private static void assertIndexData( KernelTransaction transaction, int[] propertyKeyIds, TextValue value, long node, IndexDescriptor index )
             throws KernelException
     {
         try ( NodeValueIndexCursor indexCursor = transaction.cursors().allocateNodeValueIndexCursor() )
@@ -337,7 +338,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // given
         String label = "SomeLabel";
         String[] properties = new String[]{"key1", "key2"};
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         int labelId = transaction.tokenWrite().labelGetOrCreateForName( label );
         int[] propertyKeyIds = createProperties( transaction, properties );
         TextValue value = stringValue( "some value" );
@@ -356,7 +357,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         assumeTrue( uniquenessConstraint, "Only relevant for uniqueness constraints" );
 
         // given
-        Transaction transaction = newTransaction( AnonymousContext.writeToken() );
+        KernelTransaction transaction = newTransaction( AnonymousContext.writeToken() );
         int labelId = transaction.tokenWrite().labelGetOrCreateForName( label );
         int[] propertyKeyIds = createProperties( transaction, properties );
         TextValue value = stringValue( "some value" );

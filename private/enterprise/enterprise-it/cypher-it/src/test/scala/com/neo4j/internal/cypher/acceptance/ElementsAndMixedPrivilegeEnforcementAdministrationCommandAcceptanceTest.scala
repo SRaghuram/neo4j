@@ -10,8 +10,8 @@ import java.util
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.kernel.api.KernelTransaction.Type
 
 // Tests for actual behaviour of authorization rules for restricted users based on element privileges
 class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -123,7 +123,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should rollback transaction") {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    val tx = graph.beginTransaction(Transaction.Type.explicit, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
     try {
       val result: Result = tx.execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
       result.accept(_ => true)

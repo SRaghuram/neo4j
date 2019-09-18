@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
-import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 public enum KernelImplementation

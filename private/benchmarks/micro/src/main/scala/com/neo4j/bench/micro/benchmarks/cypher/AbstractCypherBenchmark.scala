@@ -10,7 +10,7 @@ import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.internal.ir.{SinglePlannerQuery, ProvidedOrder}
+import org.neo4j.cypher.internal.ir.{ProvidedOrder, SinglePlannerQuery}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
@@ -30,20 +30,20 @@ import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, EnterpriseRuntimeFac
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
 import org.neo4j.internal.kernel.api.security.SecurityContext
-import org.neo4j.internal.kernel.api.{CursorFactory, Kernel, SchemaRead, Transaction}
+import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
-import org.neo4j.kernel.api.Statement
+import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.query.ExecutingQuery
+import org.neo4j.kernel.api.{Kernel, Statement}
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
-import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.monitoring.Monitors
-import org.neo4j.resources.{CpuClock, HeapAllocation}
+import org.neo4j.resources.CpuClock
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.time.Clocks
 import org.neo4j.values.AnyValue
@@ -86,7 +86,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     } else visitor.count
 
   def beginInternalTransaction(): InternalTransaction =
-    new GraphDatabaseCypherService(db).beginTransaction(Transaction.Type.explicit, SecurityContext.AUTH_DISABLED)
+    new GraphDatabaseCypherService(db).beginTransaction(Type.explicit, SecurityContext.AUTH_DISABLED)
 
   private def solve(logicalPlan: LogicalPlan) {
     solveds.set(logicalPlan.id, SinglePlannerQuery.empty)

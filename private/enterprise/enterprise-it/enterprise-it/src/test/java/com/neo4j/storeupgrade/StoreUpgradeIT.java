@@ -48,7 +48,7 @@ import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.api.InwardKernel;
+import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -91,7 +91,7 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 @RunWith( Enclosed.class )
 public class StoreUpgradeIT
@@ -460,7 +460,7 @@ public class StoreUpgradeIT
 
     private static void checkIndexCounts( Store store, GraphDatabaseAPI db ) throws KernelException
     {
-        InwardKernel kernel = db.getDependencyResolver().resolveDependency( InwardKernel.class );
+        Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
         try ( KernelTransaction tx = kernel.beginTransaction( implicit, AnonymousContext.read() );
               Statement ignore = tx.acquireStatement() )
         {
