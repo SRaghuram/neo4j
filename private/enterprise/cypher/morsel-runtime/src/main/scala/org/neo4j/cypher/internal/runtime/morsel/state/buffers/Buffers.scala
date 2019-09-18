@@ -213,15 +213,14 @@ class Buffers(numBuffers: Int,
   }
 
   // Specialization to remove overheads from scala collection `++`
-  private def concatWithoutCopy[T <: AnyVal](a: Array[T], b: Array[T]): Array[T] = {
+  private def concatWithoutCopy(a: Array[ArgumentStateMapId], b: Array[ArgumentStateMapId]): Array[ArgumentStateMapId] = {
     if (a.length == 0) return b
     if (b.length == 0) return a
 
-    val result = new Array[AnyVal](a.length + b.length)
+    val result = new Array[ArgumentStateMapId](a.length + b.length)
     System.arraycopy(a, 0, result, 0, a.length)
     System.arraycopy(b, 0, result, a.length, b.length)
-
-    result.asInstanceOf[Array[T]]
+    result
   }
 
   // Specialization to remove overheads from scala collection `map`
