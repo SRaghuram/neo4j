@@ -44,6 +44,7 @@ import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.Arabic;
 import org.neo4j.kernel.api.impl.fulltext.analyzer.providers.UrlOrEmail;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -226,15 +227,15 @@ class FulltextIndexCausalClusterIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Map<String,Value> actualIndexConfig = getIndexConfig( db, indexName );
+            Map<String,Value> actualIndexConfig = getIndexConfig( db, (InternalTransaction) tx, indexName );
             assertEquals( expectedIndexConfig, actualIndexConfig );
             tx.commit();
         }
     }
 
-    private Map<String,Value> getIndexConfig( GraphDatabaseFacade db, String indexName ) throws IndexNotFoundKernelException
+    private Map<String,Value> getIndexConfig( GraphDatabaseFacade db, InternalTransaction transaction, String indexName ) throws IndexNotFoundKernelException
     {
-        IndexDescriptor indexReference = db.kernelTransaction().schemaRead().indexGetForName( indexName );
+        IndexDescriptor indexReference = transaction.kernelTransaction().schemaRead().indexGetForName( indexName );
         IndexingService indexingService = db.getDependencyResolver().resolveDependency( IndexingService.class );
         IndexProxy indexProxy = indexingService.getIndexProxy( indexReference.schema() );
         return indexProxy.indexConfig();
