@@ -30,6 +30,15 @@ object PipelineId {
 
 /**
   * Maps to one ExecutablePipeline
+  *
+  * @param id               the id of the pipeline
+  * @param headPlan         the first plan of the pipeline
+  * @param fusedPlans       plans that can be fused together, contains head plan (if fuseable) and all consecutively fuseable middlePlans.
+  *                         If a plan appears in the list of fuseable plans it will not appear in the list of middlePlans.
+  * @param inputBuffer      The input buffer to the pipeline
+  * @param outputDefinition The output of the pipeline
+  * @param middlePlans      Contains all non-fused middle plans of the pipeline
+  * @param serial           `true` if the pipeline should be executed serially otherwise `false`
   */
 case class PipelineDefinition(id: PipelineId,
                               headPlan: LogicalPlan,
