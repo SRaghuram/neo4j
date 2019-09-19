@@ -267,7 +267,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                         source: PipelineDefinitionBuild,
                                         argument: ApplyBufferDefinitionBuild): PipelineDefinitionBuild = {
 
-    def canFuseMiddle: Boolean = source.fusedPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuseMiddle(plan)
+    def canFuseOverPipeline: Boolean = source.fusedPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuseOverPipeline(plan)
     def canFuse: Boolean = source.fusedPlans.nonEmpty && source.middlePlans.isEmpty && operatorFusionPolicy.canFuse(plan)
 
     plan match {
@@ -296,10 +296,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Optional =>
-        if (canFuseMiddle) {
-          source.fusedPlans += plan
-          source
-        } else if (breakingPolicy.breakOn(plan)) {
+        if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           val optionalMorselBuffer = outputToOptionalMorselBuffer(source, plan, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = optionalMorselBuffer
@@ -314,7 +311,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: OptionalExpand |
            _: FindShortestPaths |
            _: UnwindCollection =>
-        if (canFuseMiddle) {
+        if (canFuseOverPipeline) {
           source.fusedPlans += plan
           source
         } else if (breakingPolicy.breakOn(plan)) {
@@ -329,7 +326,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       case _: Limit =>
         val asm = stateDefinition.newArgumentStateMap(plan.id, argument.argumentSlotOffset, counts = false)
         markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
-        if (canFuseMiddle) {
+        if (canFuseOverPipeline) {
           source.fusedPlans += plan
           source
         } else {

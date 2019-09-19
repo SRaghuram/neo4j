@@ -128,8 +128,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
         output match {
           case ProduceResultOutput(p) =>
             innermostTemplate.shouldWriteToContext = false // No need to write if we have ProduceResult
-            innermostTemplate
-              .shouldCheckDemand = true // The produce pipeline should follow subscription demand for reactive result support
+            innermostTemplate.shouldCheckDemand = true // The produce pipeline should follow subscription demand for reactive result support
           val template = new ProduceResultOperatorTaskTemplate(innermostTemplate, p.id, p.columns, slots)(
             expressionCompiler)
             (template, List(p), NoOutput)
@@ -137,11 +136,9 @@ class FuseOperators(operatorFactory: OperatorFactory,
           case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions,
                                                           aggregationExpressionsMap)) if groupingExpressions.nonEmpty =>
             innermostTemplate.shouldWriteToContext = false // No need to write if we have Aggregation
-            innermostTemplate
-              .shouldCheckDemand = false // No need to check subscription demand when not in final pipeline
-            innermostTemplate
-              .shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
-          val applyPlanId = physicalPlan.applyPlans(id)
+            innermostTemplate.shouldCheckDemand = false // No need to check subscription demand when not in final pipeline
+            innermostTemplate.shouldCheckOutputCounter = true // Use a simple counter of number of outputs to bound the work unit execution
+            val applyPlanId = physicalPlan.applyPlans(id)
             val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
 
             // To order the elements inside the computed grouping key correctly we use their slot offsets in the downstream pipeline slot configuration
@@ -163,11 +160,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                         argumentSlotOffset,
                                                         aggregators.result(),
                                                         bufferId,
-                                                        aggregationExpressionsCreator = () => aggregationAstExpressions
-                                                          .map(e => compileExpression(e)()),
-                                                        groupingKeyExpressionCreator = compileGroupingKey(
-                                                          groupingExpressions, outputSlots,
-                                                          orderToLeverage = Seq.empty),
+                                                        aggregationExpressionsCreator = () => aggregationAstExpressions.map(e => compileExpression(e)()),
+                                                        groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
                                                         aggregationAstExpressions)(expressionCompiler)
             (template, List(p), NoOutput)
 

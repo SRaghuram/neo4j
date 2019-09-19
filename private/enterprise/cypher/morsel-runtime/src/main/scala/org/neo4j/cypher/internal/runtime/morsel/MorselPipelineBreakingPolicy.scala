@@ -13,8 +13,16 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 
-    def canFuseOneChildOperator: Boolean = fusionPolicy.canFuseMiddle(lp) &&
-      fusionPolicy.canFuse(lp.lhs.getOrElse(throw new IllegalStateException("Must be called from a one-child operator")))
+    /**
+      * Checks if the current one-child operator can be fused.
+      *
+      * An operator is deemed fusable iff the the fusion policy allows the operator and its child operator to be fused.
+      * For example if we have a plan like `UNFUSABLE -> Expand` we will say that `Expand` can't be fused and instead
+      * insert a pipeline break, whereas for `AllNodesScan -> Expand` we might be able to fuse them together and don't
+      * have to insert a pipeline break.
+      */
+    def canFuseOneChildOperator(plan: LogicalPlan): Boolean = fusionPolicy.canFuseOverPipeline(plan) &&
+      fusionPolicy.canFuse(plan.lhs.getOrElse(throw new IllegalStateException("Must be called from a one-child operator")))
 
     lp match {
       // leaf operators
@@ -36,7 +44,7 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
 
       // 1 child operators
       case e: Expand =>
-        if (e.mode == ExpandAll) !canFuseOneChildOperator
+        if (e.mode == ExpandAll) !canFuseOneChildOperator(e)
         else
           throw unsupported("ExpandInto")
       case _: UnwindCollection |
@@ -45,7 +53,7 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
            _: Aggregation |
            _: Optional |
            _: VarExpand
-    => !canFuseOneChildOperator
+    => !canFuseOneChildOperator(lp)
 
       case _: ProduceResult |
            _: Limit |

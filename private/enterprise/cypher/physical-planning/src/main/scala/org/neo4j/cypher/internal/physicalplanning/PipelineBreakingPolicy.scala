@@ -37,9 +37,25 @@ trait PipelineBreakingPolicy {
     } else slots
 }
 
+/**
+  * Policy that determines if a plan can be fused or not.
+  */
 sealed trait OperatorFusionPolicy {
+
+  /**
+    * `true` if plan is fusable otherwise `false`
+    * @param lp the plan to check
+    * @return `true` if plan is fusable otherwise `false`
+    */
   def canFuse(lp: LogicalPlan): Boolean
-  def canFuseMiddle(lp: LogicalPlan): Boolean
+
+
+  /**
+    * `true` if plan is can be fused over pipeline break otherwise `false`
+    * @param lp the plan to check
+    * @return `true` if plan is fusable otherwise `false`
+    */
+  def canFuseOverPipeline(lp: LogicalPlan): Boolean
 }
 
 object OperatorFusionPolicy {
@@ -54,7 +70,7 @@ object OperatorFusionPolicy {
 
     override def canFuse(lp: LogicalPlan): Boolean = false
 
-    override def canFuseMiddle(lp: LogicalPlan): Boolean = false
+    override def canFuseOverPipeline(lp: LogicalPlan): Boolean = false
   }
 
   private case object OPERATOR_FUSION_OVER_PIPELINES extends OperatorFusionPolicy {
@@ -87,6 +103,7 @@ object OperatorFusionPolicy {
              _: Limit
         => true
 
+        // two child operators
         case _: Apply =>
           true
 
@@ -95,14 +112,14 @@ object OperatorFusionPolicy {
       }
     }
 
-    override def canFuseMiddle(lp: LogicalPlan): Boolean = canFuse(lp)
+    override def canFuseOverPipeline(lp: LogicalPlan): Boolean = canFuse(lp)
   }
 
   private case object OPERATOR_FUSION_WITHIN_PIPELINE extends OperatorFusionPolicy {
 
     override def canFuse(lp: LogicalPlan): Boolean = OPERATOR_FUSION_OVER_PIPELINES.canFuse(lp)
 
-    override def canFuseMiddle(lp: LogicalPlan): Boolean = false
+    override def canFuseOverPipeline(lp: LogicalPlan): Boolean = false
   }
 }
 
