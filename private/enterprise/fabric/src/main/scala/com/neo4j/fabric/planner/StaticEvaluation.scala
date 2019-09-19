@@ -15,17 +15,17 @@ import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.evaluator.SimpleInternalExpressionEvaluator
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.planner.spi.IdempotentResult
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
-import org.neo4j.graphdb.{Path, PropertyContainer}
+import org.neo4j.graphdb.{Entity, Path}
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{QueryContext => _, _}
 import org.neo4j.internal.schema.IndexDescriptor
-import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.procedure.{Context, GlobalProcedures}
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.values.storable.{TextValue, Value}
@@ -70,17 +70,17 @@ object StaticEvaluation {
 
     override def thread(): Thread = notAvailable()
 
-    override def kernelTransaction(): KernelTransaction = notAvailable()
-
-    override def kernelTransactionOrNull(): KernelTransaction = notAvailable()
-
     override def systemClock(): Clock = notAvailable()
 
     override def statementClock(): Clock = notAvailable()
 
     override def transactionClock(): Clock = notAvailable()
-    
+
     override def procedureCallContext(): ProcedureCallContext = notAvailable()
+
+    override def internalTransaction(): InternalTransaction = notAvailable()
+
+    override def internalTransactionOrNull(): InternalTransaction = notAvailable()
   }
 
   private trait EmptyQueryContext extends QueryContext {
@@ -161,9 +161,9 @@ object StaticEvaluation {
 
     override def variableLengthPathExpand(realNode: Long, minHops: Option[Int], maxHops: Option[Int], direction: SemanticDirection, relTypes: Seq[String]): Iterator[Path] = notAvailable()
 
-    override def singleShortestPath(left: Long, right: Long, depth: Int, expander: Expander, pathPredicate: KernelPredicate[Path], filters: Seq[KernelPredicate[PropertyContainer]]): Option[Path] = notAvailable()
+    override def singleShortestPath(left: Long, right: Long, depth: Int, expander: Expander, pathPredicate: KernelPredicate[Path], filters: Seq[KernelPredicate[Entity]]): Option[Path] = notAvailable()
 
-    override def allShortestPath(left: Long, right: Long, depth: Int, expander: Expander, pathPredicate: KernelPredicate[Path], filters: Seq[KernelPredicate[PropertyContainer]]): Iterator[Path] = notAvailable()
+    override def allShortestPath(left: Long, right: Long, depth: Int, expander: Expander, pathPredicate: KernelPredicate[Path], filters: Seq[KernelPredicate[Entity]]): Iterator[Path] = notAvailable()
 
     override def nodeCountByCountStore(labelId: Int): Long = notAvailable()
 
