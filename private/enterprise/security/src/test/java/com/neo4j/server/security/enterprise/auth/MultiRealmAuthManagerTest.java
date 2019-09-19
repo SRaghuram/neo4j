@@ -6,8 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
+import com.neo4j.server.security.enterprise.systemgraph.InMemoryUserManager;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Map;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -24,9 +24,7 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.SecureHasher;
-import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -46,7 +44,7 @@ class MultiRealmAuthManagerTest
     private AuthenticationStrategy authStrategy;
     private MultiRealmAuthManager manager;
     private AssertableLogProvider logProvider;
-    private SystemGraphRealm realm;
+    private InMemoryUserManager realm;
 
     @BeforeEach
     void setUp() throws Throwable
@@ -60,8 +58,7 @@ class MultiRealmAuthManagerTest
     private MultiRealmAuthManager createAuthManager( boolean logSuccessfulAuthentications ) throws Throwable
     {
         SecureHasher secureHasher = new SecureHasher();
-        InMemorySystemGraphOperations operations = new InMemorySystemGraphOperations( secureHasher );
-        realm = new SystemGraphRealm( operations, SecurityGraphInitializer.NO_OP, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );
+        realm = new InMemoryUserManager( Config.defaults(), secureHasher, authStrategy );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
                 new MemoryConstrainedCacheManager(), new SecurityLog( logProvider.getLog( this.getClass() ) ),

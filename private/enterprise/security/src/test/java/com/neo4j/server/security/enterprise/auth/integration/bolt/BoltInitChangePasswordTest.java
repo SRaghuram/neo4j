@@ -29,28 +29,28 @@ public class BoltInitChangePasswordTest
     public void setup() throws Throwable
     {
         authentication = new BasicAuthentication( authManagerRule.getManager(), authManagerRule.getManager() );
-        authManagerRule.getManager().getUserManager().newUser( "neo4j", password( "123" ), true );
+        authManagerRule.getManager().getUserManager().newUser( "user", password( "123" ), true );
     }
 
     @Test
     public void shouldLogInitPasswordChange() throws Throwable
     {
-        authentication.authenticate( authToken( "neo4j", "123", "secret" ) );
+        authentication.authenticate( authToken( "user", "123", "secret" ) );
 
         MultiRealmAuthManagerRule.FullSecurityLog fullLog = authManagerRule.getFullSecurityLog();
-        fullLog.assertHasLine( "neo4j", "logged in (password change required)" );
-        fullLog.assertHasLine( "neo4j", "changed password" );
+        fullLog.assertHasLine( "user", "logged in (password change required)" );
+        fullLog.assertHasLine( "user", "changed password" );
     }
 
     @Test
     public void shouldLogFailedInitPasswordChange()
     {
-        assertException( () -> authentication.authenticate( authToken( "neo4j", "123", "123" ) ),
+        assertException( () -> authentication.authenticate( authToken( "user", "123", "123" ) ),
                 AuthenticationException.class, "Old password and new password cannot be the same." );
 
         MultiRealmAuthManagerRule.FullSecurityLog fullLog = authManagerRule.getFullSecurityLog();
-        fullLog.assertHasLine( "neo4j", "logged in (password change required)" );
-        fullLog.assertHasLine( "neo4j", "tried to change password: Old password and new password cannot be the same." );
+        fullLog.assertHasLine( "user", "logged in (password change required)" );
+        fullLog.assertHasLine( "user", "tried to change password: Old password and new password cannot be the same." );
     }
 
     private Map<String,Object> authToken( String username, String password, String newPassword )
