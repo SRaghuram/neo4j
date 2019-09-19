@@ -20,7 +20,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.core.NodeProxy;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -64,9 +64,9 @@ class MultiDatabaseLockManagerIT
     void databasesHaveDifferentLockManagers() throws DatabaseExistsException
     {
 
-        GraphDatabaseFacade secondFacade = startSecondDatabase();
+        GraphDatabaseService secondDatabase = startSecondDatabase();
         Locks firstDbLocks = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( Locks.class );
-        Locks secondDbLocks = secondFacade.getDependencyResolver().resolveDependency( Locks.class );
+        Locks secondDbLocks = ((GraphDatabaseAPI) secondDatabase).getDependencyResolver().resolveDependency( Locks.class );
         assertNotSame( firstDbLocks, secondDbLocks );
     }
 
@@ -75,15 +75,14 @@ class MultiDatabaseLockManagerIT
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         try
         {
-            GraphDatabaseFacade secondFacade = startSecondDatabase();
+            GraphDatabaseService secondDatabase = startSecondDatabase();
             CountDownLatch lockAcquiredLatch = new CountDownLatch( 1 );
 
-            GraphDatabaseFacade firstFacade = (GraphDatabaseFacade) database;
-            try ( Transaction transaction = firstFacade.beginTx() )
+            try ( Transaction transaction = database.beginTx() )
             {
-                NodeProxy nodeProxy = firstFacade.newNodeProxy( NODE_ID );
+                NodeProxy nodeProxy = ((InternalTransaction) transaction).newNodeProxy( NODE_ID );
                 transaction.acquireWriteLock( nodeProxy );
-                lockNodeWithSameIdInAnotherDatabase( transactionExecutor, secondFacade, lockAcquiredLatch );
+                lockNodeWithSameIdInAnotherDatabase( transactionExecutor, secondDatabase, lockAcquiredLatch );
                 lockAcquiredLatch.await();
             }
         }
@@ -93,19 +92,19 @@ class MultiDatabaseLockManagerIT
         }
     }
 
-    private GraphDatabaseFacade startSecondDatabase() throws DatabaseExistsException
+    private GraphDatabaseService startSecondDatabase() throws DatabaseExistsException
     {
         String secondDb = "second";
         managementService.createDatabase( secondDb );
-        return (GraphDatabaseFacade) managementService.database( secondDb );
+        return managementService.database( secondDb );
     }
 
-    private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )
+    private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseService databaseService, CountDownLatch latch )
     {
         transactionExecutor.execute( () -> {
-            try ( Transaction transaction = facade.beginTx() )
+            try ( Transaction transaction = databaseService.beginTx() )
             {
-                NodeProxy nodeProxy = facade.newNodeProxy( NODE_ID );
+                NodeProxy nodeProxy = ((InternalTransaction) transaction).newNodeProxy( NODE_ID );
                 transaction.acquireWriteLock( nodeProxy );
                 latch.countDown();
             }

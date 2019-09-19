@@ -61,8 +61,6 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
   })
   when(transactionalContext.dataRead).thenReturn(dataRead)
   when(transactionalContext.cursors).thenReturn(cursors)
-  when(queryContext.entityAccessor).thenReturn(entityAccessor)
-
 
   override protected def beforeEach() = allNodeIds.clear()
 

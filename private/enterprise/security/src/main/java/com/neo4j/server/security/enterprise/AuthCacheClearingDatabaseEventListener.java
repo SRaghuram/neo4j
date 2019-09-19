@@ -10,11 +10,11 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.graphdb.event.TransactionEventListener;
+import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 
-class AuthCacheClearingDatabaseEventListener implements ReplicatedDatabaseEventListener, TransactionEventListener<Object>
+class AuthCacheClearingDatabaseEventListener extends TransactionEventListenerAdapter<Object> implements ReplicatedDatabaseEventListener
 {
-    private EnterpriseAuthManager authManager;
+    private final EnterpriseAuthManager authManager;
 
     AuthCacheClearingDatabaseEventListener( EnterpriseAuthManager authManager )
     {
@@ -37,16 +37,5 @@ class AuthCacheClearingDatabaseEventListener implements ReplicatedDatabaseEventL
     public void afterCommit( TransactionData data, Object state, GraphDatabaseService databaseService )
     {
         authManager.clearAuthCache();
-    }
-
-    @Override
-    public Object beforeCommit( TransactionData data, GraphDatabaseService databaseService )
-    {
-        return null;
-    }
-
-    @Override
-    public void afterRollback( TransactionData data, Object state, GraphDatabaseService databaseService )
-    {
     }
 }

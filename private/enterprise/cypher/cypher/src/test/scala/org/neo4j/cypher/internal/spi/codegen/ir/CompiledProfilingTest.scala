@@ -54,7 +54,6 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     when(transactionalContext.cursors).thenReturn(cursors)
     when(transactionalContext.dataRead).thenReturn(dataRead)
     when(entityAccessor.newNodeProxy(anyLong())).thenReturn(mock[NodeProxy])
-    when(queryContext.entityAccessor).thenReturn(entityAccessor)
 
     // when
     val tracer = new ProfilingTracer(transactionalContext.kernelStatisticProvider)

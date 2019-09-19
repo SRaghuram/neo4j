@@ -25,7 +25,7 @@ class AuthCacheClearingDatabaseEventListenerTest
     }
 
     @Test
-    void shouldNotClearCacheOnStandaloneBeforeCommit()
+    void shouldNotClearCacheOnStandaloneBeforeCommit() throws Exception
     {
         databaseEventListener.beforeCommit( null, null );
         verify( authManager, never() ).clearAuthCache();
