@@ -42,6 +42,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.RandomExtension;
@@ -84,6 +85,7 @@ class TransactionLogAnalyzerTest
         logFiles = LogFilesBuilder.builder( directory.databaseLayout(), fs )
                 .withLogVersionRepository( logVersionRepository )
                 .withTransactionIdStore( new SimpleTransactionIdStore() )
+                .withStoreId( new StoreId( 0 ) )
                 .build();
         life.add( logFiles );
         logFile = logFiles.getLogFile();

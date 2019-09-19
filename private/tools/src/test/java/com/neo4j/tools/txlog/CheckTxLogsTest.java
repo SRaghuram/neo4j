@@ -38,10 +38,11 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
-import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter;
+import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
@@ -59,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 
 @EphemeralTestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -872,7 +874,10 @@ class CheckTxLogsTest
     {
         if ( !fs.fileExists( logFile ) )
         {
-            LogHeaderWriter.writeLogHeader( fs, logFile, getLogFiles().getLogVersion( logFile ), 0 );
+            try ( StoreChannel channel = fs.write( logFile ) )
+            {
+                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.DEFAULT ) );
+            }
         }
     }
 
