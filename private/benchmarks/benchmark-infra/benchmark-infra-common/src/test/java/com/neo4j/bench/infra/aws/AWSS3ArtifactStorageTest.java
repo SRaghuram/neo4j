@@ -22,9 +22,12 @@ import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -34,18 +37,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-class AWSS3ArtifactStorageTest
+public class AWSS3ArtifactStorageTest
 {
     private S3Mock api;
     private Path s3Dir;
     private EndpointConfiguration endpointConfiguration;
     private AmazonS3 amazonS3;
 
-    @BeforeEach
-    void setUp() throws Exception
+    @Before
+    public void setUp() throws Exception
     {
         s3Dir = Files.createTempDirectory( "s3" );
         api = new S3Mock.Builder().withPort( 8001 ).withFileBackend( s3Dir.toString() ).build();
@@ -61,14 +61,14 @@ class AWSS3ArtifactStorageTest
 
     }
 
-    @AfterEach
-    void tearDown()
+    @After
+    public void tearDown()
     {
         api.shutdown();
     }
 
     @Test
-    void transferBuildArtifactWorkspace() throws Exception
+    public void transferBuildArtifactWorkspace() throws Exception
     {
         // given
         Path directory = Files.createTempDirectory( "build" );
@@ -94,11 +94,8 @@ class AWSS3ArtifactStorageTest
 
         System.out.println( s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( artifact0.getFileName() ).toFile().toString() );
 
-        assertTrue( Files
-                .isRegularFile(
-                        s3Dir
-                                .resolve( "benchmarking.neo4j.com/artifacts/buildID" )
-                                .resolve( artifact0.getFileName() ) ) );
+        assertTrue( Files.isRegularFile(
+                        s3Dir.resolve( "benchmarking.neo4j.com/artifacts/buildID" ).resolve( artifact0.getFileName() ) ) );
         // when
         Path downloadDir = Files.createTempDirectory( "download" );
         artifactStorage.downloadBuildArtifacts( downloadDir, uri );
@@ -108,7 +105,7 @@ class AWSS3ArtifactStorageTest
     }
 
     @Test
-    void dowloadDataset() throws Exception
+    public void downloadDataset() throws Exception
     {
         // given
         Path tempArchiveFile = createDatasetArchive();
@@ -128,7 +125,7 @@ class AWSS3ArtifactStorageTest
     }
 
     @Test
-    void extractDataset() throws Exception
+    public void extractDataset() throws Exception
     {
         // given
         Path tempArchiveFile = createDatasetArchive();
