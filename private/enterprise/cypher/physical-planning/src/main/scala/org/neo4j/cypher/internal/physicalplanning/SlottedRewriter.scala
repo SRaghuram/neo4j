@@ -246,6 +246,39 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => relType // Don't know how to specialize this
         }
 
+      case count: FunctionInvocation if count.function == frontendFunctions.Count =>
+        // Specialize counting of primitive nodes/relationships to avoid unnecessarily creating NodeValue/RelationshipValue objects
+        count.args.head match {
+          case v @ Variable(key) =>
+            val slot = slotConfiguration(key)
+            val maybeNewInnerExpression =
+              if (count.distinct) {
+                // If using DISTINCT we need the id value. Use IdFromSlot()
+                slot match {
+                  case LongSlot(offset, true, CTNode) => Some(NullCheck(offset, IdFromSlot(offset)))
+                  case LongSlot(offset, false, CTNode) => Some(IdFromSlot(offset))
+                  case LongSlot(offset, true, CTRelationship) => Some(NullCheck(offset, IdFromSlot(offset)))
+                  case LongSlot(offset, false, CTRelationship) => Some(IdFromSlot(offset))
+                  case _ => None // Don't know how to specialize this
+                }
+              } else {
+                // Else if not using DISTINCT, the Count() function only cares if the value != Values.NO_VALUE, so we just use a static Literal expression in place of the entity
+                slot match {
+                  case LongSlot(offset, true, CTNode) => Some(NullCheck(offset, True()(v.position)))
+                  case LongSlot(_,      false, CTNode) => Some(True()(v.position)) // Can never be null so we do not even have to check the slot
+                  case LongSlot(offset, true, CTRelationship) => Some(NullCheck(offset, True()(v.position)))
+                  case LongSlot(_,      false, CTRelationship) => Some(True()(v.position)) // Can never be null so we do not even have to check the slot
+                  case _ => None // Don't know how to specialize this
+                }
+              }
+            if (maybeNewInnerExpression.isDefined) {
+              count.copy(args = IndexedSeq(maybeNewInnerExpression.get))(count.position)
+            } else {
+              count
+            }
+          case _ => count // Don't know how to specialize this
+        }
+
       case e@HasLabels(Variable(k), labels) =>
         def resolveLabelTokens(labels: Seq[LabelName]): (Seq[Int], Seq[String]) = {
           val maybeTokens = labels.map(l => (tokenContext.getOptLabelId(l.name), l.name))
