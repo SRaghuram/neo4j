@@ -8,19 +8,21 @@ package com.neo4j.backup.clusteringsupport;
 import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 
 import java.io.File;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class FileCopyDetector implements FileCopyMonitor
 {
-    private volatile boolean hasCopiedFile;
+    private Set<File> copiedFiles = ConcurrentHashMap.newKeySet();
 
     @Override
     public void copyFile( File file )
     {
-        hasCopiedFile = true;
+        copiedFiles.add( file );
     }
 
-    boolean hasDetectedAnyFileCopied()
+    public boolean anyFileInDirectoryWithName( String directory )
     {
-        return hasCopiedFile;
+        return copiedFiles.stream().anyMatch( file -> file.getParentFile().getName().equals( directory ) );
     }
 }

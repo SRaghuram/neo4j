@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -40,6 +39,8 @@ import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertFalse;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
 public class NewMemberSeedingIT
@@ -126,8 +127,8 @@ public class NewMemberSeedingIT
         if ( backupsOpt.isPresent() )
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
-            restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-            restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+            restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, SYSTEM_DATABASE_NAME );
+            restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, DEFAULT_DATABASE_NAME );
         }
 
         // we want the new instance to seed from backup and not delete and re-download the store
@@ -137,6 +138,6 @@ public class NewMemberSeedingIT
         // then
         intermediateLoad.stop();
         dataMatchesEventually( newCoreClusterMember, cluster.coreMembers() );
-        assertFalse( fileCopyDetector.hasDetectedAnyFileCopied() );
+        assertFalse( fileCopyDetector.anyFileInDirectoryWithName( DEFAULT_DATABASE_NAME ) );
     }
 }

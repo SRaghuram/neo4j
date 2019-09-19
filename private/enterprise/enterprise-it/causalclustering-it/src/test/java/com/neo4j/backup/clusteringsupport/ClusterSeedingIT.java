@@ -132,6 +132,6 @@ public class ClusterSeedingIT
             Config config = Config.defaults( GraphDatabaseSettings.default_database, backups.defaultDb().getName() );
             dataMatchesEventually( DbRepresentation.of( DatabaseLayout.of( backups.defaultDb() ), config ), DEFAULT_DATABASE_NAME, cluster.coreMembers() );
         }
-        assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
+        assertEquals( shouldStoreCopy, fileCopyDetector.anyFileInDirectoryWithName( DEFAULT_DATABASE_NAME ) );
     }
 }
