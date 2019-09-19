@@ -8,6 +8,8 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.SortedMap;
 
@@ -16,6 +18,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -44,6 +48,20 @@ class SystemGraphRealmTestHelper
         DatabaseManagementService getManagementService()
         {
             return managementService;
+        }
+
+        boolean userHasRole( String user, String role )
+        {
+            List<Object> usersWithRole = new LinkedList<>();
+            try ( Transaction tx = testSystemDb.beginTx() )
+            {
+                Result result = tx.execute( "SHOW USERS" );
+                result.stream().filter( u -> ((List) u.get( "roles" )).contains( role ) ).map( u -> u.get( "user" ) ).forEach( usersWithRole::add );
+                tx.commit();
+                result.close();
+            }
+
+            return usersWithRole.contains( user );
         }
 
         @Override

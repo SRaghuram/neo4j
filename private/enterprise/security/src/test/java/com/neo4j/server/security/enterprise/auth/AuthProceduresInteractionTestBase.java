@@ -5,14 +5,18 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.server.security.auth.AuthProcedures;
 import org.neo4j.test.DoubleLatch;
 
@@ -24,6 +28,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -545,8 +550,18 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
         assertSystemCommandFail( adminSubject, format( "CALL dbms.security.deleteRole('%s')", PUBLISHER ), "Permission denied" );
 
-        //TODO: cannot use administration command here since no admin exists
-        assertThat( userManager.getAllRoleNames(), equalTo( Set.of( READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE ) ) );
+        // Needs to run SHOW ROLES with auth disabled since we removed the admin
+        List<Object> roles = new LinkedList<>();
+        try ( Transaction tx = neo.getSystemGraph().beginTx() )
+        {
+            Result result = tx.execute( "SHOW ROLES" );
+            result.stream().map( r -> r.get( "role" ) ).forEach( roles::add );
+            tx.commit();
+            result.close();
+        }
+        Assert.assertEquals( "Didn't get expected number of results", 5, roles.size() );
+        assertThat( roles, containsInAnyOrder( new String[]{ READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE } ) );
+
     }
 
     @Test

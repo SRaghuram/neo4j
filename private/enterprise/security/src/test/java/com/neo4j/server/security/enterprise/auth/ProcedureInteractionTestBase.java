@@ -81,7 +81,6 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_RELT
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @ExtendWith( {TestDirectorySupportExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>
@@ -126,8 +125,6 @@ public abstract class ProcedureInteractionTestBase<S>
     @Inject
     ThreadingRule threading;
 
-    protected EnterpriseUserManager userManager;
-
     protected NeoInteractionLevel<S> neo;
     protected final TransportTestUtil util = new TransportTestUtil();
     File securityLog;
@@ -156,20 +153,21 @@ public abstract class ProcedureInteractionTestBase<S>
         GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( ClassWithProcedures.class );
         globalProcedures.registerFunction( ClassWithFunctions.class );
-        userManager = neo.getLocalUserManager();
-        userManager.newUser( "noneSubject", password( "abc" ), false );
-        userManager.newUser( "pwdSubject", password( "abc" ), true );
-        userManager.newUser( "adminSubject", password( "abc" ), false );
-        userManager.newUser( "schemaSubject", password( "abc" ), false );
-        userManager.newUser( "writeSubject", password( "abc" ), false );
-        userManager.newUser( "editorSubject", password( "abc" ), false );
-        userManager.newUser( "readSubject", password( "123" ), false );
-        // Currently admin role is created by default
-        userManager.addRoleToUser( ADMIN, "adminSubject" );
-        userManager.addRoleToUser( ARCHITECT, "schemaSubject" );
-        userManager.addRoleToUser( PUBLISHER, "writeSubject" );
-        userManager.addRoleToUser( EDITOR, "editorSubject" );
-        userManager.addRoleToUser( READER, "readSubject" );
+
+        newUser( "noneSubject", "abc", false );
+        newUser( "pwdSubject", "abc", true );
+        newUser( "adminSubject", "abc", false );
+        newUser( "schemaSubject", "abc", false );
+        newUser( "writeSubject", "abc", false );
+        newUser( "editorSubject", "abc", false );
+        newUser( "readSubject", "123", false );
+
+        grantRoleToUser( ADMIN, "adminSubject" );
+        grantRoleToUser( ARCHITECT, "schemaSubject" );
+        grantRoleToUser( PUBLISHER, "writeSubject" );
+        grantRoleToUser( EDITOR, "editorSubject" );
+        grantRoleToUser( READER, "readSubject" );
+
         noneSubject = neo.login( "noneSubject", "abc" );
         pwdSubject = neo.login( "pwdSubject", "abc" );
         readSubject = neo.login( "readSubject", "123" );
@@ -179,6 +177,36 @@ public abstract class ProcedureInteractionTestBase<S>
         adminSubject = neo.login( "adminSubject", "abc" );
         createRoleWithAccess( EMPTY_ROLE );
         setupTokensAndNodes();
+    }
+
+    private void newUser( String username, String password, boolean pwdChangeRequired )
+    {
+        String query;
+
+        if ( pwdChangeRequired )
+        {
+            query = "CREATE USER %s SET PASSWORD '%s'";
+        }
+        else
+        {
+            query = "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED";
+        }
+
+        authDisabledAdminstrationCommand( String.format(query, username, password) );
+    }
+
+    private void grantRoleToUser( String role, String user)
+    {
+        authDisabledAdminstrationCommand( String.format( "GRANT ROLE %s TO %s", role, user ) );
+    }
+
+    private void authDisabledAdminstrationCommand( String query )
+    {
+        try ( Transaction tx = neo.getSystemGraph().beginTx() )
+        {
+            tx.execute( query );
+            tx.commit();
+        }
     }
 
     private void setupTokensAndNodes()

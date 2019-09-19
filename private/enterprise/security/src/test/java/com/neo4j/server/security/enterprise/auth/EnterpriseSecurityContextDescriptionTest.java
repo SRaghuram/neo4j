@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.server.security.enterprise.systemgraph.InMemoryUserManager;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,14 +30,14 @@ public class EnterpriseSecurityContextDescriptionTest
     @Rule
     public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
 
-    private EnterpriseUserManager manager;
+    private InMemoryUserManager manager;
     private final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
 
     @Before
     public void setUp() throws Throwable
     {
         authManagerRule.getManager().start();
-        manager = authManagerRule.getManager().getUserManager();
+        manager = (InMemoryUserManager) authManagerRule.getManager().getUserManager();
         manager.newUser( "mats", password( "foo" ), false );
     }
 

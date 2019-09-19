@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth.plugin;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -50,7 +49,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.api.KernelTransaction.Type.explicit;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @TestDirectoryExtension
 class PropertyLevelSecurityIT
@@ -78,24 +76,42 @@ class PropertyLevelSecurityIT
         EnterpriseAuthAndUserManager authManager = (EnterpriseAuthAndUserManager) db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
         GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( TestProcedure.class );
-        EnterpriseUserManager userManager = authManager.getUserManager();
-        userManager.newUser( "Neo", password( "eon" ), false );
-        userManager.newUser( "Smith", password( "mr" ), false );
-        userManager.newUser( "Jones", password( "mr" ), false );
-        userManager.newUser( "Morpheus", password( "dealwithit" ), false );
 
-        userManager.newRole( "procRole", "Jones" );
-        userManager.newRole( "Agent", "Smith", "Jones" );
+        newUser( "Neo", "eon" );
+        newUser( "Smith","mr" );
+        newUser( "Jones", "mr" );
+        newUser( "Morpheus", "dealwithit" );
 
-        userManager.addRoleToUser( PredefinedRoles.ARCHITECT, "Neo" );
-        userManager.addRoleToUser( PredefinedRoles.EDITOR, "Smith" );
-        userManager.addRoleToUser( PredefinedRoles.READER, "Morpheus" );
+        newRole( "procRole" );
+        newRole( "Agent" );
+
+        grantRoleToUser( "procRole", "Jones" );
+        grantRoleToUser( "Agent", "Smith" );
+        grantRoleToUser( "Agent", "Jones" );
+        grantRoleToUser( PredefinedRoles.ARCHITECT, "Neo" );
+        grantRoleToUser( PredefinedRoles.EDITOR, "Smith" );
+        grantRoleToUser( PredefinedRoles.READER, "Morpheus" );
 
         neo = authManager.login( authToken( "Neo", "eon" ) );
         smith = authManager.login( authToken( "Smith", "mr" ) );
         jones = authManager.login( authToken( "Jones", "mr" ) );
         morpheus = authManager.login( authToken( "Morpheus", "dealwithit" ) );
         executeOnSystem( "GRANT ACCESS ON DATABASE * TO Agent, procRole" );
+    }
+
+    private void newUser( String username, String password )
+    {
+        executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, password ) );
+    }
+
+    private void newRole( String name )
+    {
+        executeOnSystem( String.format( "CREATE ROLE %s", name ) );
+    }
+
+    private void grantRoleToUser( String role, String user )
+    {
+        executeOnSystem( String.format( "GRANT ROLE %s TO %s", role, user ) );
     }
 
     @AfterEach

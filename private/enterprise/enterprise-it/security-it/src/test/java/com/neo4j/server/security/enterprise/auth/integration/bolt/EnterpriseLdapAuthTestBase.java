@@ -55,6 +55,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     void startDatabase()
     {
         startDatabaseWithSettings( Collections.emptyMap() );
+        systemDb = (GraphDatabaseFacade) dbRule.getManagementService().database( SYSTEM_DATABASE_NAME );
     }
 
     void startDatabaseWithSettings( Map<Setting<?>,Object> settings )
@@ -167,7 +168,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         }
     }
 
-    private void executeOnSystem( String query )
+    void executeOnSystem( String query )
     {
         try ( Transaction tx = systemDb.beginTx() )
         {

@@ -5,8 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
@@ -316,25 +314,23 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Before
-    public void setup() throws Exception
+    public void setup()
     {
         startDatabase();
         LdapServer ldapServer = ldapServerRule.getLdapServer();
         ldapServer.setConfidentialityRequired( confidentialityRequired );
 
-        EnterpriseAuthAndUserManager authManager = dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
-        EnterpriseUserManager userManager = authManager.getUserManager();
         createRole( "role1", true );
         if ( createUsers )
         {
-            userManager.newUser( NONE_USER, password.getBytes(), false );
-            userManager.newUser( PROC_USER, password.getBytes(), false );
-            userManager.newUser( READ_USER, password.getBytes(), false );
-            userManager.newUser( WRITE_USER, password.getBytes(), false );
-            userManager.setUserPassword( ADMIN_USER, password.getBytes(), false );
-            userManager.addRoleToUser( PredefinedRoles.READER, READ_USER );
-            userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
-            userManager.addRoleToUser( "role1", PROC_USER );
+            executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", NONE_USER, password ) );
+            executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", PROC_USER, password ) );
+            executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", READ_USER, password ) );
+            executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", WRITE_USER, password ) );
+            executeOnSystem( String.format( "ALTER USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", ADMIN_USER, password ) );
+            executeOnSystem( String.format( "GRANT ROLE %s TO %s", PredefinedRoles.READER, READ_USER ) );
+            executeOnSystem( String.format( "GRANT ROLE %s TO %s", PredefinedRoles.PUBLISHER, WRITE_USER ) );
+            executeOnSystem( String.format( "GRANT ROLE %s TO %s", "role1", PROC_USER ) );
         }
         checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapServer.getPort() );
     }

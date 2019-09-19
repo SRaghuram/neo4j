@@ -77,7 +77,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo.EMBEDDED_CONNECTION;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @TestDirectoryExtension
 class QueryLoggerIT
@@ -93,6 +92,7 @@ class QueryLoggerIT
     private File logsDirectory;
     private File logFilename;
     private GraphDatabaseFacade db;
+    private GraphDatabaseFacade systemDb;
     private GraphDatabaseService database;
     private DatabaseManagementService databaseManagementService;
     private DatabaseManagementService dbManagementService;
@@ -131,13 +131,13 @@ class QueryLoggerIT
                        .setConfig( log_queries, LogQueryLevel.INFO );
         dbManagementService = databaseBuilder.build();
         db = (GraphDatabaseFacade) dbManagementService.database( DEFAULT_DATABASE_NAME );
-        EnterpriseUserManager userManager = getUserManager();
-        // create users
-        userManager.newUser( "mats", password( "neo4j" ), false );
-        userManager.newUser( "andres", password( "neo4j" ), false );
-        userManager.addRoleToUser( "architect", "mats" );
-        userManager.addRoleToUser( "reader", "andres" );
+        systemDb = (GraphDatabaseFacade) dbManagementService.database( SYSTEM_DATABASE_NAME );
 
+        // create users
+        executeOnSystem( "CREATE USER mats SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
+        executeOnSystem( "CREATE USER andres SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
+        executeOnSystem( "GRANT ROLE architect TO mats" );
+        executeOnSystem( "GRANT ROLE reader TO andres" );
         EnterpriseLoginContext mats = login( "mats", "neo4j" );
 
         // run query
@@ -168,8 +168,9 @@ class QueryLoggerIT
         databaseBuilder.setConfig( auth_enabled, true );
         dbManagementService = databaseBuilder.build();
         db = (GraphDatabaseFacade) dbManagementService.database( DEFAULT_DATABASE_NAME );
+        systemDb = (GraphDatabaseFacade) dbManagementService.database( SYSTEM_DATABASE_NAME );
 
-        getUserManager().setUserPassword( "neo4j", password( "123" ), false );
+        executeOnSystem( "ALTER USER neo4j SET PASSWORD '123' CHANGE NOT REQUIRED" );
 
         EnterpriseLoginContext subject = login( "neo4j", "123" );
         executeQuery( subject, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap() );
@@ -772,6 +773,15 @@ class QueryLoggerIT
         {
             Map<String,Object> p = (params == null) ? emptyMap() : params;
             resultConsumer.accept( tx.execute( call, p ) );
+            tx.commit();
+        }
+    }
+
+    void executeOnSystem( String query )
+    {
+        try ( Transaction tx = systemDb.beginTx() )
+        {
+            tx.execute( query);
             tx.commit();
         }
     }

@@ -29,7 +29,9 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -58,6 +60,8 @@ public class NativeAuthIT
 
     private final String password = "secret";
 
+    private GraphDatabaseFacade systemDb;
+
     private String boltUri;
 
     protected String getPassword()
@@ -77,14 +81,22 @@ public class NativeAuthIT
         dbRule.ensureStarted();
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
 
-        EnterpriseAuthAndUserManager authManager = dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
-        EnterpriseUserManager userManager = authManager.getUserManager();
-        userManager.newUser( READ_USER, password.getBytes(), false );
-        userManager.newUser( WRITE_USER, password.getBytes(), false );
-        userManager.setUserPassword( ADMIN_USER, password.getBytes(), false );
-        userManager.addRoleToUser( PredefinedRoles.READER, READ_USER );
-        userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
+        systemDb = (GraphDatabaseFacade) dbRule.getManagementService().database( SYSTEM_DATABASE_NAME );
+        executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", READ_USER, password ) );
+        executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", WRITE_USER, password ) );
+        executeOnSystem( String.format( "ALTER USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", ADMIN_USER, password ) );
+        executeOnSystem( String.format( "GRANT ROLE %s TO %s", PredefinedRoles.READER, READ_USER ) );
+        executeOnSystem( String.format( "GRANT ROLE %s TO %s", PredefinedRoles.PUBLISHER, WRITE_USER ) );
         boltUri = DriverAuthHelper.boltUri( dbRule );
+    }
+
+    private void executeOnSystem( String query )
+    {
+        try ( Transaction tx = systemDb.beginTx() )
+        {
+            tx.execute( query);
+            tx.commit();
+        }
     }
 
     @Test

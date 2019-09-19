@@ -35,7 +35,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,7 +97,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
+        assertTrue( dbManager.userHasRole( "alice", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, "alice" );
         log.assertExactly(
                 info( "Completed import of %s %s into system graph.", "1", "user" ),
@@ -118,8 +117,8 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "alice" ) );
-        assertThat( realm.getUsernamesForRole( "goon" ), contains( "bob" ) );
+        assertTrue( dbManager.userHasRole( "alice", PredefinedRoles.ADMIN ) );
+        assertTrue( dbManager.userHasRole( "bob", "goon" ) );
         assertAuthenticationSucceeds( realm, "alice" );
         assertAuthenticationSucceeds( realm, "bob" );
         log.assertExactly(
@@ -138,7 +137,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
+        assertTrue( dbManager.userHasRole( UserManager.INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME );
         log.assertExactly(
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )
@@ -155,7 +154,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
+        assertTrue( dbManager.userHasRole( UserManager.INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
         assertIncorrectCredentials( realm, UserManager.INITIAL_USER_NAME, UserManager.INITIAL_PASSWORD );
         assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME,  SIMULATED_INITIAL_PASSWORD  );
     }
@@ -235,7 +234,7 @@ class SystemGraphRealmIT
         );
 
         // Only the default user should have been created instead
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "neo4j" ) );
+        assertTrue( dbManager.userHasRole( "neo4j", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, "neo4j" );
         assertAuthenticationFails( realm, "jane" );
         assertAuthenticationFails( realm, "joe" );
@@ -254,7 +253,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "jane" ) );
+        assertTrue( dbManager.userHasRole( "jane", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, "jane" );
         log.assertExactly(
                 info( "Completed import of %s %s into system graph.", "1", "user" ),
@@ -287,7 +286,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "neo4j" ) );
+        assertTrue( dbManager.userHasRole( "neo4j", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, "jane" );
         log.assertExactly(
                 info( "Completed import of %s %s into system graph.", "3", "users" ),
@@ -312,7 +311,7 @@ class SystemGraphRealmIT
         );
 
         // Then
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "trinity" ) );
+        assertTrue( dbManager.userHasRole( "trinity", PredefinedRoles.ADMIN ) );
         log.assertExactly(
                 info( "Completed import of %s %s into system graph.", "3", "users" ),
                 info( "Completed import of %s %s into system graph.", "0", "roles" ),
@@ -331,8 +330,10 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( "not_admin" ), contains( "alice" ) );
-        assertTrue( realm.silentlyGetUsernamesForRole( PredefinedRoles.ADMIN ).isEmpty() );
+        assertTrue( dbManager.userHasRole( "alice", "not_admin" ) );
+        assertFalse( dbManager.userHasRole( "alice", PredefinedRoles.ADMIN ) );
+        assertFalse( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
+
         log.assertExactly(
                 info( "Completed import of %s %s into system graph.", "1", "user" ),
                 info( "Completed import of %s %s into system graph.", "1", "role" )
@@ -410,7 +411,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( UserManager.INITIAL_USER_NAME ) );
+        assertTrue( dbManager.userHasRole( UserManager.INITIAL_USER_NAME, PredefinedRoles.ADMIN  ));
         assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME );
         log.assertExactly(
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )

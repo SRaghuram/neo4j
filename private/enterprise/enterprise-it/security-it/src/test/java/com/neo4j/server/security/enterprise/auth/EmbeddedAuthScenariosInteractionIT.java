@@ -79,7 +79,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     {
         // Given
         String roleName = "CustomRole";
-        userManager.newUser( "Alice", password( PASSWORD ), false );
+        assertDDLCommandSuccess( adminSubject, String.format( "CREATE USER Alice SET PASSWORD '%s' CHANGE NOT REQUIRED", PASSWORD ) );
         createRole( roleName, "Alice" );
 
         // When
