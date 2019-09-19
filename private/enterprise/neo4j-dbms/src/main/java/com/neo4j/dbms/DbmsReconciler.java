@@ -45,7 +45,6 @@ import static com.neo4j.dbms.OperatorState.STOPPED;
 import static java.lang.String.format;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.CompletableFuture.delayedExecutor;
-import static org.apache.commons.lang3.StringUtils.left;
 
 /**
  * Responsible for controlling the lifecycles of *all* databases in this neo4j instance, via the {@link DatabaseManager}.
@@ -76,8 +75,6 @@ import static org.apache.commons.lang3.StringUtils.left;
  */
 public class DbmsReconciler
 {
-    private static final int MAX_THREAD_DBNAME_LENGTH = 64;
-
     private final ExponentialBackoffStrategy backoffStrategy;
     private final Executor executor;
     private final Set<String> reconciling;
@@ -135,7 +132,7 @@ public class DbmsReconciler
         String oldThreadName = currentThread().getName();
         try
         {
-            currentThread().setName( oldThreadName + "-" + left( desiredState.databaseId().name(), MAX_THREAD_DBNAME_LENGTH ) );
+            currentThread().setName( oldThreadName + "-" + desiredState.databaseId().name() );
             return reconcileSteps0( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
         }
         finally
