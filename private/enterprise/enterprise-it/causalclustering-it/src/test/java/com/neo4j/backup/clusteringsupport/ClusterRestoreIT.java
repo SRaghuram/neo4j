@@ -12,6 +12,7 @@ import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,11 +63,18 @@ class ClusterRestoreIT
     private TestDirectory testDirectory;
 
     private File backupsDirectory;
+    private Cluster cluster;
 
     @BeforeEach
-    void before()
+    void before() throws IOException
     {
-        backupsDirectory = testDirectory.directory( "backups" );
+        backupsDirectory = testDirectory.cleanDirectory( "backups" );
+    }
+
+    @AfterEach
+    void after()
+    {
+        cluster.shutdown();
     }
 
     private void prepare( ThrowingConsumer<Cluster,Exception> preparation ) throws Exception
@@ -78,11 +86,15 @@ class ClusterRestoreIT
         clusterConfig.withSharedCoreParam( SecuritySettings.authorization_providers, NATIVE_REALM_NAME );
 
         Cluster cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
-
-        preparation.accept( cluster );
-
-        cluster.shutdown();
+        try
+        {
+            cluster.start();
+            preparation.accept( cluster );
+        }
+        finally
+        {
+            cluster.shutdown();
+        }
     }
 
     @Test
@@ -92,7 +104,7 @@ class ClusterRestoreIT
         prepare( cluster -> backup( cluster, SYSTEM_DATABASE_NAME ) );
 
         // when
-        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
+        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
         restore( cluster );
 
         cluster.start();
@@ -120,7 +132,7 @@ class ClusterRestoreIT
         } );
 
         // when
-        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
+        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
         restore( cluster );
 
         cluster.start();
@@ -143,7 +155,7 @@ class ClusterRestoreIT
         } );
 
         // when
-        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
+        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
         restore( cluster, "foo" );
 
         cluster.start();
@@ -174,7 +186,7 @@ class ClusterRestoreIT
         } );
 
         // when
-        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
+        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
         restore( cluster, DEFAULT_DATABASE_NAME, "foo" );
 
         cluster.start();
