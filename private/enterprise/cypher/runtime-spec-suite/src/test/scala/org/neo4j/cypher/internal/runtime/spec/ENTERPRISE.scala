@@ -18,8 +18,6 @@ import org.neo4j.scheduler.JobScheduler
 
 //noinspection TypeAnnotation
 object ENTERPRISE {
-  //TODO
-  //val provider = new AssertableLogProvider()
   private val edition = new Edition[EnterpriseRuntimeContext](
     () => new TestEnterpriseDatabaseManagementServiceBuilder(),
     (runtimeConfig, resolver, lifeSupport, logProvider) => {

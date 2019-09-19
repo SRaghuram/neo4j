@@ -120,6 +120,7 @@ class MorselRuntime(parallelExecution: Boolean,
     } catch {
       case e: CantCompileQueryException if shouldFuseOperators =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
+        context.log.debug("Retrying physical planning", e)
         DebugLog.log("Could not compile pipeline because of %s", e)
         compilePlan(shouldFuseOperators = false, query, context, queryIndexRegistrator)
     }
