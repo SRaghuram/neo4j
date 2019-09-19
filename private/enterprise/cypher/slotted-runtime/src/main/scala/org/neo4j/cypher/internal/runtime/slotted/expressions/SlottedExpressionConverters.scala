@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, SlotConfigurati
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{predicates, expressions => commands}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.{predicates => commandPredicates, expressions => commands}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPat
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
 import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.v4_0.expressions.functions.{Count, Function}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 
@@ -128,15 +129,15 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         None
     }
 
-  private def hasLabelsFromSlot(id: Id, e: runtimeAst.HasLabelsFromSlot, self: ExpressionConverters) = {
-    e.resolvedLabelTokens.map { labelId =>
-      HasLabelFromSlot(e.offset, labelId)
-    } ++
-    e.lateLabels.map { labelName =>
-      HasLabelFromSlotLate(e.offset, labelName): Predicate
-    } reduceLeft {
-      predicates.And(_, _)
-    }
+  private def hasLabelsFromSlot(id: Id, e: runtimeAst.HasLabelsFromSlot, self: ExpressionConverters): Predicate = {
+    val preds =
+      e.resolvedLabelTokens.map { labelId =>
+        HasLabelFromSlot(e.offset, labelId)
+      } ++
+      e.lateLabels.map { labelName =>
+        HasLabelFromSlotLate(e.offset, labelName): Predicate
+      }
+    commandPredicates.Ands(preds: _*)
   }
 
   def toCommandProjectedPath(id:Id, e: ast.PathExpression, self: ExpressionConverters): SlottedProjectedPath = {
