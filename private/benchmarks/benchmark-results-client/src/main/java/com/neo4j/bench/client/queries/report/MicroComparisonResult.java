@@ -10,21 +10,30 @@ import java.util.Objects;
 
 import static java.lang.String.format;
 
-public class MicroComparisonResult
+public class MicroComparisonResult implements CsvRow
 {
+    static final String HEADER = "group,bench,old,new,unit,improvement";
     private static DecimalFormat NUMBER = new DecimalFormat( "#.00" );
 
     private final String group;
-    private final String bench;
+    private final String benchSimple;
+    private final String benchFull;
     private final double oldResult;
     private final double newResult;
     private final String unit;
     private final double improvement;
 
-    MicroComparisonResult( String group, String bench, double oldResult, double newResult, String unit, double improvement )
+    MicroComparisonResult( String group,
+                           String benchSimple,
+                           String benchFull,
+                           double oldResult,
+                           double newResult,
+                           String unit,
+                           double improvement )
     {
         this.group = group;
-        this.bench = bench;
+        this.benchSimple = benchSimple;
+        this.benchFull = benchFull;
         this.oldResult = oldResult;
         this.newResult = newResult;
         this.unit = unit;
@@ -36,9 +45,14 @@ public class MicroComparisonResult
         return group;
     }
 
-    public String bench()
+    public String benchSimple()
     {
-        return bench;
+        return benchSimple;
+    }
+
+    public String benchFull()
+    {
+        return benchFull;
     }
 
     public double oldResult()
@@ -77,25 +91,33 @@ public class MicroComparisonResult
                Double.compare( that.newResult, newResult ) == 0 &&
                Double.compare( that.improvement, improvement ) == 0 &&
                Objects.equals( group, that.group ) &&
-               Objects.equals( bench, that.bench ) &&
+               Objects.equals( benchSimple, that.benchSimple ) &&
+               Objects.equals( benchFull, that.benchFull ) &&
                Objects.equals( unit, that.unit );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( group, bench, oldResult, newResult, unit, improvement );
+        return Objects.hash( group, benchSimple, benchFull, oldResult, newResult, unit, improvement );
     }
 
     @Override
     public String toString()
     {
-        return format( "%s, %s, %s, %s, %s, %s",
+        return row();
+    }
+
+    @Override
+    public String row()
+    {
+        return format( "%s,%s,%s,%s,%s,%s",
                        group,
-                       bench,
+                       benchFull.replace( ",", ":" ),
                        NUMBER.format( oldResult ),
                        NUMBER.format( newResult ),
                        unit,
-                       NUMBER.format( improvement ) + "x" );
+                       NUMBER.format( improvement )
+        );
     }
 }

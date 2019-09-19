@@ -30,7 +30,8 @@ ORDER BY tr.date DESC
 WITH bg, b, head(collect({m_old:m_old,m_new:m})) AS m
 
 RETURN bg.name AS group,
-       split(b.name,'_(mode,')[0] AS bench,
+       b.simple_name AS bench_simple,
+       split(b.name,'_(mode,')[0] AS bench_full,
        b.mode AS mode,
        m.m_old.mean AS old,
        m.m_old.unit AS old_unit,
