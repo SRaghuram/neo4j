@@ -10,8 +10,11 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.queries.Query;
+import com.neo4j.bench.client.queries.report.CsvHeader;
+import com.neo4j.bench.client.queries.report.CsvRow;
 import com.neo4j.bench.client.queries.report.MicroComparison;
-import com.neo4j.bench.client.queries.report.MicroComparisonResult;
+import com.neo4j.bench.client.queries.report.MicroCoverage;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.File;
@@ -20,14 +23,14 @@ import java.io.PrintWriter;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.DecimalFormat;
 import java.util.List;
-
-import static java.lang.String.format;
 
 @Command( name = "compare-versions" )
 public class CompareVersionsCommand implements Runnable
 {
+    public static final String MICRO_COMPARISON_FILENAME = "micro_comparison.csv";
+    public static final String MICRO_COVERAGE_FILENAME = "micro_coverage.csv";
+
     private static final String CMD_RESULTS_STORE_USER = "--results_store_user";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_USER},
@@ -90,11 +93,14 @@ public class CompareVersionsCommand implements Runnable
         try ( StoreClient client = StoreClient.connect( resultsStoreUri, resultsStoreUsername, resultsStorePassword ) )
         {
             System.out.println( "Writing results to: " + outputDir.getAbsolutePath() );
-            toCsv( outputDir.toPath(),
-                   client.execute( new MicroComparison( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) ) );
 
-            // TODO many other comparisons
+            toCsv( outputDir.toPath().resolve( MICRO_COMPARISON_FILENAME ),
+                   client,
+                   new MicroComparison( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) );
 
+            toCsv( outputDir.toPath().resolve( MICRO_COVERAGE_FILENAME ),
+                   client,
+                   new MicroCoverage( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) );
         }
         catch ( Exception e )
         {
@@ -128,27 +134,23 @@ public class CompareVersionsCommand implements Runnable
                                    outputDir.toAbsolutePath().toString() );
     }
 
-    private void toCsv( Path outputDir, List<MicroComparisonResult> results ) throws IOException
+    private <CSV_ROW extends CsvRow, QUERY extends Query<List<CSV_ROW>> & CsvHeader> void toCsv( Path csvFile,
+                                                                                                 StoreClient client,
+                                                                                                 QUERY query ) throws IOException
     {
-        Path csvFile = Files.createFile( outputDir.resolve( "micro_comparison.csv" ) );
+        BenchmarkUtil.assertDoesNotExist( csvFile );
+        Files.createFile( csvFile );
         BenchmarkUtil.assertFileExists( csvFile );
         try ( PrintWriter csvWriter = new PrintWriter( Files.newOutputStream( csvFile ), true /*auto flush*/ ) )
         {
-            String header = format( "group,bench,%s,%s,unit,improvement", oldNeo4jVersion, newNeo4jVersion );
-            csvWriter.println( header );
-            DecimalFormat numberFormatter = new DecimalFormat( "#.00" );
-            results.forEach( result ->
-                             {
-                                 String line = format( "%s,%s,%s,%s,%s,%s",
-                                                       result.group(),
-                                                       result.bench().replace( ",", ":" ),
-                                                       numberFormatter.format( result.oldResult() ),
-                                                       numberFormatter.format( result.newResult() ),
-                                                       result.unit(),
-                                                       numberFormatter.format( result.improvement() )
-                                 );
-                                 csvWriter.println( line );
-                             } );
+            csvWriter.println( query.header() );
+            List<CSV_ROW> csvRows = client.execute( query );
+            if ( csvRows.isEmpty() )
+            {
+                throw new RuntimeException( "Results were unexpectedly empty!\n" +
+                                            "Can not create: " + csvFile.toAbsolutePath().toString() );
+            }
+            csvRows.forEach( csvWriter::println );
         }
     }
 }
