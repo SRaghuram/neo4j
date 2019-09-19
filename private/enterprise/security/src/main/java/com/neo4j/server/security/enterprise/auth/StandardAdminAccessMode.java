@@ -9,7 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.AdminAccessMode;
 
 import java.util.HashSet;
 
-import org.neo4j.internal.kernel.api.security.AdminAction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 
 public class StandardAdminAccessMode implements AdminAccessMode
@@ -48,7 +48,7 @@ public class StandardAdminAccessMode implements AdminAccessMode
 
         public Builder full()
         {
-            for ( AdminAction a : AdminAction.values() )
+            for ( PrivilegeAction a : PrivilegeAction.values() )
             {
                 whitelist.add( new AdminActionOnResource( a, AdminActionOnResource.DatabaseScope.ALL ) );
             }

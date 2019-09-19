@@ -26,7 +26,7 @@ import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
-import org.neo4j.internal.kernel.api.security.SecurityContext
+import org.neo4j.internal.kernel.api.security.{PrivilegeAction, SecurityContext}
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
 import org.neo4j.kernel.api.exceptions.{InvalidArgumentsException, Status}
@@ -292,55 +292,58 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // GRANT/DENY/REVOKE ACCESS ON DATABASE foo TO role
-    case GrantAccess(source, database, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.ACCESS.toString, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName,
+    case GrantDatabaseAction(source, action, database, roleName) => (context, parameterMapping, securityContext) =>
+      val databaseAction = AdminActionMapper.asKernelAction(action).toString
+      makeGrantOrDenyExecutionPlan(databaseAction, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant access privilege to role '$roleName'")
 
-    case DenyAccess(source, database, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.ACCESS.toString, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName,
+    case DenyDatabaseAction(source, action, database, roleName) => (context, parameterMapping, securityContext) =>
+      val databaseAction = AdminActionMapper.asKernelAction(action).toString
+      makeGrantOrDenyExecutionPlan(databaseAction, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny access privilege to role '$roleName'")
 
-    case RevokeAccess(source, database, roleName, revokeType) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.ACCESS.toString, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName, revokeType,
+    case RevokeDatabaseAction(source, action, database, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+      val databaseAction = AdminActionMapper.asKernelAction(action).toString
+      makeRevokeExecutionPlan(databaseAction, ast.DatabaseResource()(InputPosition.NONE), database, ast.AllQualifier()(InputPosition.NONE), roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke access privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE.toString, ast.NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName'")
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName'")
 
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.READ.toString, resource, database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE WRITE {*} ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, resource, database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName'")
 
     case DenyWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeGrantOrDenyExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, resource, database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName'")
 
     case RevokeWrite(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
-      makeRevokeExecutionPlan(ResourcePrivilege.Action.WRITE.toString, resource, database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, resource, database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES

@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.AdminAccessMode;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.apache.shiro.authz.AuthorizationInfo;
@@ -30,14 +31,18 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 
 public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 {
@@ -68,8 +73,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         Set<ResourcePrivilege> privileges = authManager.getPermissions( roles );
         for ( ResourcePrivilege privilege : privileges )
         {
-            String privilegeDbName = privilege.getDbName();
-            if ( privilege.isAllDatabases() || privilegeDbName.equals( dbName ) )
+            if ( privilege.appliesTo( dbName ) )
             {
                 accessModeBuilder.addPrivilege( privilege );
             }
@@ -79,8 +83,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             try
             {
                 accessModeBuilder.addPrivilege(
-                        new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, ResourcePrivilege.Action.ACCESS, new Resource.DatabaseResource(),
-                                DatabaseSegment.ALL, dbName ) );
+                        new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(),
+                                               DatabaseSegment.ALL, dbName ) );
             }
             catch ( InvalidArgumentsException e )
             {
@@ -107,13 +111,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED, Status.Security.Unauthorized );
         }
         StandardAccessMode mode = mode( idLookup, dbName );
-        // TODO implement fine-grained admin check
-        StandardAdminAccessMode.Builder admin = new StandardAdminAccessMode.Builder();
-        if ( mode.isAdmin )
-        {
-            admin.full();
-        }
-        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles, admin.build() );
+        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles, mode.adminAccessMode );
     }
 
     @Override
@@ -142,7 +140,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         private final boolean allowsWrites;
         private final boolean allowsTokenCreates;
         private final boolean allowsSchemaWrites;
-        private final boolean isAdmin;
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
 
@@ -174,13 +171,14 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         private final IntObjectMap<IntSet> blacklistedLabelsForProperty;
         private final IntObjectMap<IntSet> blacklistedRelTypesForProperty;
 
+        private AdminAccessMode adminAccessMode;
+
         StandardAccessMode(
                 boolean allowsAccess,
                 boolean allowsReads,
                 boolean allowsWrites,
                 boolean allowsTokenCreates,
                 boolean allowsSchemaWrites,
-                boolean isAdmin,
                 boolean passwordChangeRequired,
                 Set<String> roles,
 
@@ -210,7 +208,9 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 IntSet blacklistedNodeProperties,
                 IntSet blacklistedRelationshipProperties,
                 IntObjectMap<IntSet> blacklistedLabelsForProperty,
-                IntObjectMap<IntSet> blacklistedRelTypesForProperty
+                IntObjectMap<IntSet> blacklistedRelTypesForProperty,
+
+                AdminAccessMode adminAccessMode
         )
         {
             this.allowsAccess = allowsAccess;
@@ -218,7 +218,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             this.allowsWrites = allowsWrites;
             this.allowsTokenCreates = allowsTokenCreates;
             this.allowsSchemaWrites = allowsSchemaWrites;
-            this.isAdmin = isAdmin;
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
 
@@ -249,6 +248,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             this.blacklistedRelationshipProperties = blacklistedRelationshipProperties;
             this.blacklistedLabelsForProperty = blacklistedLabelsForProperty;
             this.blacklistedRelTypesForProperty = blacklistedRelTypesForProperty;
+
+            this.adminAccessMode = adminAccessMode;
         }
 
         @Override
@@ -485,17 +486,12 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             return false;
         }
 
-        public boolean isAdmin()
-        {
-            return isAdmin;
-        }
-
         @Override
         public AuthorizationViolationException onViolation( String msg )
         {
             if ( passwordChangeRequired )
             {
-                return AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( "Permission denied."  );
+                return AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( "Permission denied." );
             }
             else
             {
@@ -517,26 +513,27 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             private final Set<String> roles;
             private final IdLookup resolver;
 
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyAccess = new HashMap<>();  // track any access rights
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> anyWrite = new HashMap<>(); // track any writes because we only support global write GRANT/DENY
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyWrite = new HashMap<>(); // track any writes because we only support global write GRANT/DENY
             private boolean token;  // TODO - still to support GRANT/DENY
             private boolean schema; // TODO - still to support GRANT/DENY
-            private boolean admin;  // TODO - still to support GRANT/DENY
 
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> traverseAllLabels = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> traverseAllRelTypes = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> traverseLabels = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> traverseRelTypes = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllLabels = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> traverseAllRelTypes = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseLabels = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseRelTypes = new HashMap<>();
 
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> readAllPropertiesAllLabels = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> relationshipSegmentForAllProperties = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> nodeProperties = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntSet> relationshipProperties = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntObjectMap<IntSet>> nodeSegmentForProperty = new HashMap<>();
-            private Map<ResourcePrivilege.GrantOrDeny, MutableIntObjectMap<IntSet>> relationshipSegmentForProperty = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllLabels = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipSegmentForAllProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipProperties = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> nodeSegmentForProperty = new HashMap<>();
+            private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> relationshipSegmentForProperty = new HashMap<>();
+
+            private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
             Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
@@ -574,7 +571,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                         isAuthenticated && anyWrite.getOrDefault( GRANT, false ) && !anyWrite.getOrDefault( DENY, false ),
                         isAuthenticated && token,
                         isAuthenticated && schema,
-                        isAuthenticated && admin,
                         passwordChangeRequired,
                         roles,
 
@@ -604,7 +600,9 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                         nodeProperties.get( DENY ),
                         relationshipProperties.get( DENY ),
                         nodeSegmentForProperty.get( DENY ),
-                        relationshipSegmentForProperty.get( DENY ) );
+                        relationshipSegmentForProperty.get( DENY ),
+
+                        adminModeBuilder.build() );
             }
 
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
@@ -612,12 +610,14 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 Resource resource = privilege.getResource();
                 Segment segment = privilege.getSegment();
                 ResourcePrivilege.GrantOrDeny privilegeType = privilege.getPrivilegeType();
+                PrivilegeAction action = privilege.getAction();
 
-                switch ( privilege.getAction() )
+                switch ( action )
                 {
                 case ACCESS:
                     anyAccess.put( privilegeType, true );
                     break;
+
                 case TRAVERSE:
                     anyRead.put( privilegeType, true );
                     if ( segment instanceof LabelSegment )
@@ -648,8 +648,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     {
                         throw new IllegalStateException( "Unsupported segment qualifier for traverse privilege: " + segment.getClass().getSimpleName() );
                     }
-
                     break;
+
                 case READ:
                     anyRead.put( privilegeType, true );
                     switch ( resource.type() )
@@ -721,6 +721,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     default:
                     }
                     break;
+
                 case WRITE:
                     switch ( resource.type() )
                     {
@@ -729,18 +730,10 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     case ALL_PROPERTIES:
                         anyWrite.put( privilegeType, true );
                         break;
-                    case TOKEN:
-                        token = true;
-                        break;
-                    case SCHEMA:
-                        schema = true;
-                        break;
-                    case SYSTEM:
-                        admin = true;
-                        break;
                     default:
                     }
                     break;
+
                 case EXECUTE:
                     switch ( resource.type() )
                     {
@@ -750,7 +743,31 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     default:
                     }
                     break;
+
                 default:
+                    if ( TOKEN.satisfies( action ) )
+                    {
+                        token = true;
+                    }
+                    else if ( SCHEMA.satisfies( action ) )
+                    {
+                        schema = true;
+                    }
+                    else if ( action.isAdminAction() )
+                    {
+                        var dbScope = privilege.isAllDatabases() ?
+                                      AdminActionOnResource.DatabaseScope.ALL :
+                                      new AdminActionOnResource.DatabaseScope( privilege.getDbName() );
+                        var adminAction = new AdminActionOnResource( action, dbScope );
+                        if ( privilegeType.isGrant() )
+                        {
+                            adminModeBuilder.allow( adminAction );
+                        }
+                        else
+                        {
+                            adminModeBuilder.deny( adminAction );
+                        }
+                    }
                 }
             }
 

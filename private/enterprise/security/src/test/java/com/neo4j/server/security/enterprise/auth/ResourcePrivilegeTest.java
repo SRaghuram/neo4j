@@ -5,42 +5,42 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
 import com.neo4j.server.security.enterprise.auth.Resource.ProcedureResource;
-import com.neo4j.server.security.enterprise.auth.Resource.SchemaResource;
-import com.neo4j.server.security.enterprise.auth.Resource.SystemResource;
-import com.neo4j.server.security.enterprise.auth.Resource.TokenResource;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ResourcePrivilegeTest
 {
+    // TODO expand these tests
     @Test
     void shouldConstructValidPrivileges() throws InvalidArgumentsException
     {
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
-            new ResourcePrivilege( privilegeType, Action.TRAVERSE, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.TRAVERSE, new GraphResource(), RelTypeSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.ACCESS, new DatabaseResource(), DatabaseSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.START_DATABASE, new DatabaseResource(), DatabaseSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.STOP_DATABASE, new DatabaseResource(), DatabaseSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.ADMIN, new DatabaseResource(), DatabaseSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.SCHEMA, new DatabaseResource(), DatabaseSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.TOKEN, new DatabaseResource(), DatabaseSegment.ALL );
 
-            new ResourcePrivilege( privilegeType, Action.READ, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.READ, new GraphResource(), RelTypeSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new GraphResource(), LabelSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new GraphResource(), RelTypeSegment.ALL );
 
-            new ResourcePrivilege( privilegeType, Action.WRITE, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new TokenResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new SchemaResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new SystemResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new GraphResource(), RelTypeSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new TokenResource(), RelTypeSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new SchemaResource(), RelTypeSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.WRITE, new SystemResource(), RelTypeSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new GraphResource(), LabelSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new GraphResource(), RelTypeSegment.ALL );
 
-            new ResourcePrivilege( privilegeType, Action.EXECUTE, new ProcedureResource( "", "" ), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, Action.EXECUTE, new ProcedureResource( "", "" ), RelTypeSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new GraphResource(), LabelSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new GraphResource(), RelTypeSegment.ALL );
+
+            new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new ProcedureResource( "", "" ), LabelSegment.ALL );
+            new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new ProcedureResource( "", "" ), RelTypeSegment.ALL );
         }
     }
 
@@ -50,56 +50,24 @@ class ResourcePrivilegeTest
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), LabelSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SystemResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new TokenResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SchemaResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new SystemResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.TRAVERSE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
-
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.READ, new TokenResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.READ, new SchemaResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.READ, new SystemResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.READ, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, Action.READ, new TokenResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.READ, new SchemaResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.READ, new SystemResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.READ, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
 
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.WRITE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.WRITE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
 
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new GraphResource(), LabelSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new TokenResource(), LabelSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
+
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new SchemaResource(), LabelSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new GraphResource(), LabelSegment.ALL ) );
             assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new SystemResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new GraphResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new TokenResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new SchemaResource(), RelTypeSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                    () -> new ResourcePrivilege( privilegeType, Action.EXECUTE, new SystemResource(), RelTypeSegment.ALL ) );
+                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new GraphResource(), RelTypeSegment.ALL ) );
         }
     }
 }

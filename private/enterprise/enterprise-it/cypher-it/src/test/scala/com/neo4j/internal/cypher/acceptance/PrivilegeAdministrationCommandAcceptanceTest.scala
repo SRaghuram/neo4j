@@ -207,7 +207,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       write().role("admin").user("neo4j").relationship("*").map,
       grantToken().role("admin").user("neo4j").map,
       grantSchema().role("admin").user("neo4j").map,
-      grantSystem().role("admin").user("neo4j").map,
+      grantAdmin().role("admin").user("neo4j").map,
     )
 
     result.toSet should be(expected)

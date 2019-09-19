@@ -5,18 +5,21 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class ResourcePrivilege
 {
     private final GrantOrDeny privilegeType;
-    private final Action action;
+    private final PrivilegeAction action;
     private final Resource resource;
     private final Segment segment;
     private final String dbName;
     private final boolean allDatabases;
 
-    public ResourcePrivilege( GrantOrDeny privilegeType, Action action, Resource resource, Segment segment ) throws InvalidArgumentsException
+    public ResourcePrivilege( GrantOrDeny privilegeType, PrivilegeAction action, Resource resource, Segment segment ) throws InvalidArgumentsException
     {
         this.privilegeType = privilegeType;
         this.action = action;
@@ -27,7 +30,8 @@ public class ResourcePrivilege
         resource.assertValidCombination( action );
     }
 
-    public ResourcePrivilege( GrantOrDeny privilegeType, Action action, Resource resource, Segment segment, String dbName ) throws InvalidArgumentsException
+    public ResourcePrivilege( GrantOrDeny privilegeType, PrivilegeAction action, Resource resource, Segment segment, String dbName )
+            throws InvalidArgumentsException
     {
         this.privilegeType = privilegeType;
         this.action = action;
@@ -38,7 +42,19 @@ public class ResourcePrivilege
         resource.assertValidCombination( action );
     }
 
-    public GrantOrDeny getPrivilegeType()
+    boolean appliesTo( String database )
+    {
+        if ( database.equals( SYSTEM_DATABASE_NAME ) )
+        {
+            if ( action.isAdminAction() )
+            {
+                return true;
+            }
+        }
+        return allDatabases || database.equals( dbName );
+    }
+
+    GrantOrDeny getPrivilegeType()
     {
         return privilegeType;
     }
@@ -48,7 +64,7 @@ public class ResourcePrivilege
         return resource;
     }
 
-    public Action getAction()
+    public PrivilegeAction getAction()
     {
         return action;
     }
@@ -87,11 +103,11 @@ public class ResourcePrivilege
         {
             ResourcePrivilege other = (ResourcePrivilege) obj;
             return other.action.equals( this.action )
-                    && other.resource.equals( this.resource )
-                    && other.segment.equals( this.segment )
-                    && other.dbName.equals( this.dbName )
-                    && other.privilegeType == this.privilegeType
-                    && other.allDatabases == this.allDatabases;
+                   && other.resource.equals( this.resource )
+                   && other.segment.equals( this.segment )
+                   && other.dbName.equals( this.dbName )
+                   && other.privilegeType == this.privilegeType
+                   && other.allDatabases == this.allDatabases;
         }
         return false;
     }
@@ -138,36 +154,6 @@ public class ResourcePrivilege
         public String toString()
         {
             return name;
-        }
-    }
-
-    public enum Action
-    {
-        /** ACCESS database */
-        ACCESS,
-
-        /** START database */
-        START,
-
-        /** STOP database */
-        STOP,
-
-        /** MATCH element and read labels */
-        TRAVERSE,
-
-        /** Read properties of element */
-        READ,
-
-        /** Create, update and delete elements and properties */
-        WRITE,
-
-        /** Execute procedure/view with elevated access */
-        EXECUTE;
-
-        @Override
-        public String toString()
-        {
-            return super.toString().toLowerCase();
         }
     }
 }

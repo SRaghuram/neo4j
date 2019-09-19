@@ -5,13 +5,16 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 
 public interface Resource
 {
-    void assertValidCombination( Action action ) throws InvalidArgumentsException;
+    void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException;
 
     default String getArg1()
     {
@@ -28,9 +31,9 @@ public interface Resource
     class GraphResource implements Resource
     {
         @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ ) || action.equals( Action.TRAVERSE )) )
+            if ( !(action.equals( PrivilegeAction.WRITE ) || action.equals( PrivilegeAction.READ ) || action.equals( PrivilegeAction.TRAVERSE )) )
             {
                 throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }
@@ -64,9 +67,12 @@ public interface Resource
     class DatabaseResource implements Resource
     {
         @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( Action.ACCESS ) || action.equals( Action.START ) || action.equals( Action.STOP )) )
+            if ( !(action.equals( PrivilegeAction.ACCESS ) ||
+                   SCHEMA.satisfies( action ) ||
+                   TOKEN.satisfies( action ) ||
+                   ADMIN.satisfies( action )) )
             {
                 throw new InvalidArgumentsException( String.format( "Database resource cannot be combined with action '%s'", action.toString() ) );
             }
@@ -104,9 +110,9 @@ public interface Resource
         }
 
         @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
+            if ( !(action.equals( PrivilegeAction.WRITE ) || action.equals( PrivilegeAction.READ )) )
             {
                 throw new InvalidArgumentsException( String.format( "Property resource cannot be combined with action `%s`", action.toString() ) );
             }
@@ -147,9 +153,9 @@ public interface Resource
         }
 
         @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( Action.WRITE ) || action.equals( Action.READ )) )
+            if ( !(action.equals( PrivilegeAction.WRITE ) || action.equals( PrivilegeAction.READ )) )
             {
                 throw new InvalidArgumentsException( String.format( "Property resource cannot be combined with action `%s`", action.toString() ) );
             }
@@ -196,114 +202,6 @@ public interface Resource
         }
     }
 
-    class TokenResource implements Resource
-    {
-        @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
-        {
-            if ( !action.equals( Action.WRITE ) )
-            {
-                throw new InvalidArgumentsException( String.format( "Token resource cannot be combined with action '%s'", action.toString() ) );
-            }
-        }
-
-        @Override
-        public Type type()
-        {
-            return Type.TOKEN;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "token";
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Type.TOKEN.hashCode();
-        }
-
-        @Override
-        public boolean equals( Object obj )
-        {
-            return obj instanceof TokenResource;
-        }
-    }
-
-    class SchemaResource implements Resource
-    {
-        @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
-        {
-            if ( !action.equals( Action.WRITE ) )
-            {
-                throw new InvalidArgumentsException( String.format( "Schema resource cannot be combined with action '%s'", action.toString() ) );
-            }
-        }
-
-        @Override
-        public Type type()
-        {
-            return Type.SCHEMA;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "schema";
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Type.SCHEMA.hashCode();
-        }
-
-        @Override
-        public boolean equals( Object obj )
-        {
-            return obj instanceof SchemaResource;
-        }
-    }
-
-    class SystemResource implements Resource
-    {
-        @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
-        {
-            if ( !action.equals( Action.WRITE ) )
-            {
-                throw new InvalidArgumentsException( String.format( "System resource cannot be combined with action '%s'", action.toString() ) );
-            }
-        }
-
-        @Override
-        public Type type()
-        {
-            return Type.SYSTEM;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "system";
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Type.SYSTEM.hashCode();
-        }
-
-        @Override
-        public boolean equals( Object obj )
-        {
-            return obj instanceof SystemResource;
-        }
-    }
-
     class ProcedureResource implements Resource
     {
         private final String nameSpace;
@@ -316,9 +214,9 @@ public interface Resource
         }
 
         @Override
-        public void assertValidCombination( Action action ) throws InvalidArgumentsException
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !action.equals( Action.EXECUTE ) )
+            if ( !action.equals( PrivilegeAction.EXECUTE ) )
             {
                 throw new InvalidArgumentsException( String.format( "Procedure resource cannot be combined with action '%s'", action.toString() ) );
             }
@@ -379,9 +277,6 @@ public interface Resource
         PROPERTY,
         GRAPH,
         DATABASE,
-        TOKEN,
-        SCHEMA,
-        SYSTEM,
         PROCEDURE;
 
         @Override

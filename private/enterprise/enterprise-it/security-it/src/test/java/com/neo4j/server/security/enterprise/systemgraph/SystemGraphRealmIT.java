@@ -10,7 +10,6 @@ import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
@@ -50,6 +49,13 @@ import static org.neo4j.cypher.security.BasicSystemGraphRealmIT.SIMULATED_INITIA
 import static org.neo4j.cypher.security.BasicSystemGraphRealmIT.simulateSetInitialPasswordCommand;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.assertAuthenticationSucceeds;
 import static org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper.testAuthenticationToken;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -341,16 +347,16 @@ class SystemGraphRealmIT
                 .mayPerformMigration()
                 .build(), securityLog, dbManager, defaultConfig );
 
-        ResourcePrivilege accessPrivilege = new ResourcePrivilege( GRANT, Action.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
-        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL );
-        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL );
-        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
-        ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.TokenResource(), LabelSegment.ALL );
-        ResourcePrivilege schemaNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.SchemaResource(), LabelSegment.ALL );
-        ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( GRANT, Action.WRITE, new Resource.SystemResource(), LabelSegment.ALL );
+        ResourcePrivilege accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL );
+        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
+        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
+        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL );
+        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL );
+        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
+        ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
+        ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), DatabaseSegment.ALL );
+        ResourcePrivilege schemaNodePrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), DatabaseSegment.ALL );
+        ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), DatabaseSegment.ALL );
 
         // When
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
@@ -423,10 +429,8 @@ class SystemGraphRealmIT
         );
 
         // Give Alice match privileges in 'neo4j'
-        ResourcePrivilege readPrivilege = new ResourcePrivilege( GRANT, Action.READ,
-                new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, Action.TRAVERSE,
-                new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege readPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDB.beginTx() )
         {
@@ -454,8 +458,8 @@ class SystemGraphRealmIT
         assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
 
         // Alice should NOT have read privileges in 'foo'
-        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
-        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, Action.TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, "foo" ) ) );
 
         realm.stop();
 

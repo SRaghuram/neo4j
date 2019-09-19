@@ -12,6 +12,7 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
 
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.values.storable.StringValue;
 import org.neo4j.values.storable.TextValue;
@@ -21,7 +22,7 @@ class PrivilegeBuilder
 {
     private final ResourcePrivilege.GrantOrDeny privilegeType;
     private Segment segment;
-    private ResourcePrivilege.Action action;
+    private PrivilegeAction action;
     private Resource resource;
     private String dbName = "";
     private boolean allDatabases;
@@ -29,7 +30,7 @@ class PrivilegeBuilder
     PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
         this.privilegeType = privilegeType;
-        this.action = ResourcePrivilege.Action.valueOf( action.toUpperCase() );
+        this.action = PrivilegeAction.valueOf( action.toUpperCase() );
     }
 
     PrivilegeBuilder forAllDatabases()
@@ -97,15 +98,6 @@ class PrivilegeBuilder
             break;
         case ALL_PROPERTIES:
             this.resource = new Resource.AllPropertiesResource();
-            break;
-        case TOKEN:
-            this.resource = new Resource.TokenResource();
-            break;
-        case SCHEMA:
-            this.resource = new Resource.SchemaResource();
-            break;
-        case SYSTEM:
-            this.resource = new Resource.SystemResource();
             break;
         case PROCEDURE:
             String namespace = ((TextValue) resource.properties().get( "arg1" )).stringValue();

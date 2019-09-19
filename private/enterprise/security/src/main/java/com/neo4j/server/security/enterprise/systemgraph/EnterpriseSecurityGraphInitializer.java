@@ -13,11 +13,7 @@ import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource.AllPropertiesResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
 import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
-import com.neo4j.server.security.enterprise.auth.Resource.SchemaResource;
-import com.neo4j.server.security.enterprise.auth.Resource.SystemResource;
-import com.neo4j.server.security.enterprise.auth.Resource.TokenResource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
@@ -33,6 +29,7 @@ import java.util.stream.Collectors;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
@@ -215,39 +212,42 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SystemResource(), DatabaseSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( GRANT, PrivilegeAction.ADMIN, new DatabaseResource(), DatabaseSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new SchemaResource(), DatabaseSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( GRANT, PrivilegeAction.SCHEMA, new DatabaseResource(), DatabaseSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( GRANT, Action.WRITE, new TokenResource(), DatabaseSegment.ALL ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName,
+                        new ResourcePrivilege( GRANT, PrivilegeAction.TOKEN, new DatabaseResource(), DatabaseSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
                 // The segment part is ignored for this action
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.WRITE, new AllPropertiesResource(), LabelSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.WRITE, new AllPropertiesResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.TRAVERSE, new GraphResource(), LabelSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.TRAVERSE, new GraphResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.TRAVERSE, new GraphResource(), RelTypeSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.TRAVERSE, new GraphResource(), RelTypeSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.ACCESS ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, Action.ACCESS, new DatabaseResource(), DatabaseSegment.ALL ) );
+                        new ResourcePrivilege( GRANT, PrivilegeAction.ACCESS, new DatabaseResource(), DatabaseSegment.ALL ) );
             }
         }
     }
