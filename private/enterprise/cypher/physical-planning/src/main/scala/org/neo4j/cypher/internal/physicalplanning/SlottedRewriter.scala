@@ -246,6 +246,25 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => relType // Don't know how to specialize this
         }
 
+      case e@HasLabels(Variable(k), labels) =>
+        def resolveLabelTokens(labels: Seq[LabelName]): (Seq[Int], Seq[String]) = {
+          val maybeTokens = labels.map(l => (tokenContext.getOptLabelId(l.name), l.name))
+          val (resolvedLabelTokens, lateLabels) = maybeTokens.partition(_._1.isDefined)
+          (resolvedLabelTokens.flatMap(_._1), lateLabels.map(_._2))
+        }
+
+        slotConfiguration(k) match {
+          case LongSlot(offset, false, CTNode) =>
+            val (resolvedLabelTokens, lateLabels) = resolveLabelTokens(labels)
+            HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels)
+
+          case LongSlot(offset, true, CTNode) =>
+            val (resolvedLabelTokens, lateLabels) = resolveLabelTokens(labels)
+            NullCheck(offset, HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels))
+
+          case _ => e // Don't know how to specialize this
+        }
+
       case e@IsNull(prop@Property(Variable(key), PropertyKeyName(propKey))) =>
         val slot = slotConfiguration(key)
         val maybeSpecializedExpression = specializeCheckIfPropertyExists(slotConfiguration, key, propKey, prop, slot)

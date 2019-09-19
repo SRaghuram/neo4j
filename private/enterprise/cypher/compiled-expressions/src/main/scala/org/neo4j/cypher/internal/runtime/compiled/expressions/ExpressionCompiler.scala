@@ -1440,23 +1440,33 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
         trueValue,
         falseValue)), Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
-    case HasLabels(nodeExpression, labels)  if labels.nonEmpty =>
+    case HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels) if resolvedLabelTokens.nonEmpty || lateLabels.nonEmpty =>
+      val (tokenFields, inits) = tokenFieldsForLabels(lateLabels)
+
+      val predicate: IntermediateRepresentation = ternary(
+        (resolvedLabelTokens.map { tokenId =>
+          invoke(DB_ACCESS, method[DbAccess, Boolean, Int, Long, NodeCursor]("isLabelSetOnNode"),
+            constant(tokenId), getLongAt(offset), NODE_CURSOR)
+        } ++
+        tokenFields.map { tokenField =>
+          invoke(DB_ACCESS, method[DbAccess, Boolean, Int, Long, NodeCursor]("isLabelSetOnNode"),
+            loadField(tokenField), getLongAt(offset), NODE_CURSOR)
+        }).reduceLeft(and), trueValue, falseValue)
+
+      Some(IntermediateExpression(block(inits :+ predicate:_*),
+        tokenFields, Seq(vNODE_CURSOR), Set.empty, requireNullCheck = false))
+
+    case HasLabels(nodeExpression, labels) if labels.nonEmpty =>
       for (node <- intermediateCompileExpression(nodeExpression)) yield {
-        val tokensAndNames = labels.map(l => field[Int](namer.variableName(l.name), constant(-1)) -> l.name)
+        val (tokenFields, inits) = tokenFieldsForLabels(labels.map(_.name))
 
-        val init = tokensAndNames.map {
-          case (token, labelName) =>
-            condition(equal(loadField(token), constant(-1)))(setField(
-              token, invoke(DB_ACCESS, method[DbAccess, Int, String]("nodeLabel"), constant(labelName))))
-        }
-
-        val predicate: IntermediateRepresentation = ternary(tokensAndNames.map { token =>
+        val predicate: IntermediateRepresentation = ternary(tokenFields.map { token =>
           invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
-                       node.ir, loadField(token._1), DB_ACCESS, NODE_CURSOR)
+                       node.ir, loadField(token), DB_ACCESS, NODE_CURSOR)
         }.reduceLeft(and), trueValue, falseValue)
 
-        IntermediateExpression(block(init :+ predicate:_*),
-                               node.fields ++ tokensAndNames.map(_._1), node.variables :+ vNODE_CURSOR, node.nullChecks)
+        IntermediateExpression(block(inits :+ predicate:_*),
+                               node.fields ++ tokenFields, node.variables :+ vNODE_CURSOR, node.nullChecks)
       }
 
     case NodeFromSlot(offset, name) =>
@@ -1590,6 +1600,16 @@ abstract class ExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, v
                                   Seq.empty, Seq.empty, Set.empty))
 
     case _ => None
+  }
+
+  private def tokenFieldsForLabels(labels: Seq[String]): (Seq[InstanceField], Seq[IntermediateRepresentation]) = {
+    val tokensAndInits = labels.map(label => {
+      val tokenField = field[Int](namer.variableName(label), constant(-1))
+      val init = condition(equal(loadField(tokenField), constant(-1)))(setField(tokenField,
+        invoke(DB_ACCESS, method[DbAccess, Int, String]("nodeLabel"), constant(label))))
+      (tokenField, init)
+    })
+    tokensAndInits.unzip
   }
 
   def compileFunction(c: FunctionInvocation): Option[IntermediateExpression] = c.function match {

@@ -8,7 +8,8 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, SlotConfiguration, ast => runtimeAst}
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
+import org.neo4j.cypher.internal.runtime.interpreted.commands.{predicates, expressions => commands}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -77,6 +78,8 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(runtimeExpression.IdFromSlot(offset))
       case runtimeAst.LabelsFromSlot(offset) =>
         Some(runtimeExpression.LabelsFromSlot(offset))
+      case e: runtimeAst.HasLabelsFromSlot =>
+        Some(hasLabelsFromSlot(id, e, self))
       case runtimeAst.RelationshipTypeFromSlot(offset) =>
         Some(runtimeExpression.RelationshipTypeFromSlot(offset))
       case runtimeAst.NodePropertyLate(offset, propKey, _) =>
@@ -124,6 +127,17 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
       case _ =>
         None
     }
+
+  private def hasLabelsFromSlot(id: Id, e: runtimeAst.HasLabelsFromSlot, self: ExpressionConverters) = {
+    e.resolvedLabelTokens.map { labelId =>
+      HasLabelFromSlot(e.offset, labelId)
+    } ++
+    e.lateLabels.map { labelName =>
+      HasLabelFromSlotLate(e.offset, labelName): Predicate
+    } reduceLeft {
+      predicates.And(_, _)
+    }
+  }
 
   def toCommandProjectedPath(id:Id, e: ast.PathExpression, self: ExpressionConverters): SlottedProjectedPath = {
     def project(pathStep: PathStep): Projector = pathStep match {
