@@ -14,14 +14,15 @@ import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
 //noinspection TypeAnnotation
 object ENTERPRISE {
+  //TODO
+  //val provider = new AssertableLogProvider()
   private val edition = new Edition[EnterpriseRuntimeContext](
     () => new TestEnterpriseDatabaseManagementServiceBuilder(),
-    (runtimeConfig, resolver, lifeSupport) => {
+    (runtimeConfig, resolver, lifeSupport, logProvider) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
@@ -31,7 +32,7 @@ object ENTERPRISE {
 
       TracingRuntimeContextManager(
         GeneratedQueryStructure,
-        NullLog.getInstance(),
+        logProvider.getLog("test"),
         runtimeConfig,
         runtimeEnvironment,
         kernel.cursors(),
