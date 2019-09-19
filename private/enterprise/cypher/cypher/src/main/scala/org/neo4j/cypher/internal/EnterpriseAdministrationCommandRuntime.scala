@@ -110,6 +110,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // ALTER USER foo
     case AlterUser(source, userName, initialPassword, None, requirePasswordChange, suspended) => (context, parameterMapping, securityContext) =>
+      if (suspended.isDefined && securityContext.subject().hasUsername(userName))
+        throw new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Changing your own activation status is not allowed.")
       val params = Seq(
         initialPassword -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
