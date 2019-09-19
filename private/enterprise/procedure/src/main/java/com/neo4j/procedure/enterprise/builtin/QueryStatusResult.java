@@ -20,7 +20,7 @@ import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
-import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
+import org.neo4j.kernel.impl.core.TransactionalProxyFactory;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.virtual.MapValue;
@@ -70,12 +70,12 @@ public class QueryStatusResult
     /** @since Neo4j 3.5 */
     public final String connectionId;
 
-    QueryStatusResult( ExecutingQuery query, EmbeddedProxySPI manager, ZoneId zoneId ) throws InvalidArgumentsException
+    QueryStatusResult( ExecutingQuery query, TransactionalProxyFactory manager, ZoneId zoneId ) throws InvalidArgumentsException
     {
         this( query.snapshot(), manager, zoneId );
     }
 
-    private QueryStatusResult( QuerySnapshot query, EmbeddedProxySPI manager, ZoneId zoneId ) throws InvalidArgumentsException
+    private QueryStatusResult( QuerySnapshot query, TransactionalProxyFactory manager, ZoneId zoneId ) throws InvalidArgumentsException
     {
         this.queryId = QueryId.ofInternalId( query.internalQueryId() ).toString();
         this.username = query.username();
@@ -121,9 +121,9 @@ public class QueryStatusResult
 
     private static class ParameterWriter extends BaseToObjectValueWriter<RuntimeException>
     {
-        private final EmbeddedProxySPI nodeManager;
+        private final TransactionalProxyFactory nodeManager;
 
-        private ParameterWriter( EmbeddedProxySPI nodeManager )
+        private ParameterWriter( TransactionalProxyFactory nodeManager )
         {
             this.nodeManager = nodeManager;
         }

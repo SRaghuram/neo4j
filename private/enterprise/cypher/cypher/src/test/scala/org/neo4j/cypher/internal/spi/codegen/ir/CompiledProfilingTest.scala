@@ -24,7 +24,7 @@ import org.neo4j.internal.kernel.api.helpers.{StubNodeCursor, StubRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
-import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy}
+import org.neo4j.kernel.impl.core.{NodeProxy, TransactionalProxyFactory}
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
@@ -46,7 +46,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     nodeCursor.withNode(1)
     nodeCursor.withNode(2)
     when(cursors.allocateNodeCursor()).thenReturn(nodeCursor)
-    val entityAccessor = mock[EmbeddedProxySPI]
+    val entityAccessor = mock[TransactionalProxyFactory]
     val queryContext = mock[QueryContext]
     val transactionalContext = mock[TransactionalContextWrapper]
     when(queryContext.transactionalContext).thenReturn(transactionalContext.asInstanceOf[QueryTransactionalContext])

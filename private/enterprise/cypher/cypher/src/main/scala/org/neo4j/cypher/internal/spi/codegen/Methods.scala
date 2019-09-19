@@ -22,7 +22,7 @@ import org.neo4j.internal.helpers.collection.MapUtil
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{Read, TokenRead, _}
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
-import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy, RelationshipProxy}
+import org.neo4j.kernel.impl.core.{NodeProxy, RelationshipProxy, TransactionalProxyFactory}
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
@@ -91,13 +91,13 @@ object Methods {
   val countsForRel: MethodReference = method[Read, Long]("countsForRelationship", typeRef[Int], typeRef[Int], typeRef[Int])
   val nextLong: MethodReference = method[LongIterator, Long]("next")
   val fetchNextRelationship: MethodReference = method[RelationshipIterator, Long]("next")
-  val newNodeProxyById: MethodReference = method[EmbeddedProxySPI, NodeProxy]("newNodeProxy", typeRef[Long])
-  val newRelationshipProxyById: MethodReference = method[EmbeddedProxySPI, RelationshipProxy]("newRelationshipProxy", typeRef[Long])
-  val materializeAnyResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyResult", typeRef[EmbeddedProxySPI], typeRef[Object])
-  val materializeAnyValueResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyValueResult", typeRef[EmbeddedProxySPI], typeRef[Object])
-  val materializeNodeValue: MethodReference = method[CompiledConversionUtils, NodeValue]("materializeNodeValue", typeRef[EmbeddedProxySPI], typeRef[Object])
+  val newNodeProxyById: MethodReference = method[TransactionalProxyFactory, NodeProxy]("newNodeProxy", typeRef[Long])
+  val newRelationshipProxyById: MethodReference = method[TransactionalProxyFactory, RelationshipProxy]("newRelationshipProxy", typeRef[Long])
+  val materializeAnyResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyResult", typeRef[TransactionalProxyFactory], typeRef[Object])
+  val materializeAnyValueResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyValueResult", typeRef[TransactionalProxyFactory], typeRef[Object])
+  val materializeNodeValue: MethodReference = method[CompiledConversionUtils, NodeValue]("materializeNodeValue", typeRef[TransactionalProxyFactory], typeRef[Object])
   val materializeRelationshipValue: MethodReference =
-    method[CompiledConversionUtils, RelationshipValue]("materializeRelationshipValue", typeRef[EmbeddedProxySPI], typeRef[Object])
+    method[CompiledConversionUtils, RelationshipValue]("materializeRelationshipValue", typeRef[TransactionalProxyFactory], typeRef[Object])
   val nodeId: MethodReference = method[VirtualNodeValue, Long]("id")
   val relId: MethodReference = method[VirtualRelationshipValue, Long]("id")
   val set: MethodReference = method[ResultRecord, Unit]("set", typeRef[Int], typeRef[AnyValue])

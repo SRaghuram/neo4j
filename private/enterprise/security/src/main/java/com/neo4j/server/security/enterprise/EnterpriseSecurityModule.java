@@ -64,8 +64,8 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
-import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.core.TransactionalProxyFactory;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
@@ -639,7 +639,7 @@ public class EnterpriseSecurityModule extends SecurityModule
             this.engine = resolver.resolveDependency( QueryExecutionEngine.class );
             var bridge = resolver.resolveDependency( ThreadToStatementContextBridge.class );
             var transactionFactory = resolver.resolveDependency( KernelTransactionFactory.class );
-            var embeddedProxySPI = resolver.resolveDependency( EmbeddedProxySPI.class );
+            var embeddedProxySPI = resolver.resolveDependency( TransactionalProxyFactory.class );
             this.contextFactory = Neo4jTransactionalContextFactory.create( embeddedProxySPI,
                     () -> resolver.resolveDependency( GraphDatabaseQueryService.class ), transactionFactory, bridge );
         }

@@ -47,7 +47,7 @@ import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.KernelTransactions;
-import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
+import org.neo4j.kernel.impl.core.TransactionalProxyFactory;
 import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -303,7 +303,7 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         securityContext.assertCredentialsNotExpired();
 
-        EmbeddedProxySPI nodeManager = resolver.resolveDependency( EmbeddedProxySPI.class );
+        TransactionalProxyFactory nodeManager = resolver.resolveDependency( TransactionalProxyFactory.class );
         ZoneId zoneId = getConfiguredTimeZone();
         try
         {

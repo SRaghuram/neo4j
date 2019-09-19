@@ -24,7 +24,7 @@ import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{QueryContext => _, _}
 import org.neo4j.internal.schema.IndexDescriptor
 import org.neo4j.kernel.api.procedure.{Context, GlobalProcedures}
-import org.neo4j.kernel.impl.core.EmbeddedProxySPI
+import org.neo4j.kernel.impl.core.TransactionalProxyFactory
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.internal.GraphDatabaseAPI
@@ -85,7 +85,7 @@ object StaticEvaluation {
 
   private trait EmptyQueryContext extends QueryContext {
 
-    override def entityAccessor: EmbeddedProxySPI = notAvailable()
+    override def entityAccessor: TransactionalProxyFactory = notAvailable()
 
     override def transactionalContext: QueryTransactionalContext = notAvailable()
 
