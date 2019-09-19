@@ -25,6 +25,10 @@ public class DataMatching
 {
     private static final int DEFAULT_TIMEOUT_MS = (int) MINUTES.toMillis( 3 );
 
+    private DataMatching()
+    {
+    }
+
     public static void dataMatchesEventually( ClusterMember expectedMember, Collection<? extends ClusterMember> targets ) throws TimeoutException
     {
         String databaseName = expectedMember.config().get( default_database );
