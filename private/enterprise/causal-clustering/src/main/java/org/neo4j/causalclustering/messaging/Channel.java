@@ -11,10 +11,6 @@ public interface Channel
 {
     void dispose();
 
-    boolean isDisposed();
-
-    boolean isOpen();
-
     Future<Void> write( Object msg );
 
     Future<Void> writeAndFlush( Object msg );

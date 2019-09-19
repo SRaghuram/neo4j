@@ -159,7 +159,7 @@ public class SenderServiceIT
                 logProvider,
                 logProvider );
 
-        return new SenderService( channelInitializer, logProvider );
+        return new SenderService( channelInitializer, Duration.ofSeconds( 5 ), logProvider );
     }
 
     private ApplicationProtocolRepository clientRepository()

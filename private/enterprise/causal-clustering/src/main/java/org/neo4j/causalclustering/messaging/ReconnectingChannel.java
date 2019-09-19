@@ -7,119 +7,129 @@ package org.neo4j.causalclustering.messaging;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
-import java.time.Clock;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 
-import org.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
-import org.neo4j.causalclustering.helper.TimeoutStrategy;
+import org.neo4j.causalclustering.helper.CountdownTimer;
 import org.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.internal.CappedLogger;
 
+import static java.util.Optional.ofNullable;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class ReconnectingChannel implements Channel
 {
     public static final AttributeKey<ProtocolStack> PROTOCOL_STACK_KEY = AttributeKey.valueOf( "PROTOCOL_STACK" );
 
-    private final Log log;
     private final Bootstrap bootstrap;
     private final EventLoop eventLoop;
     private final SocketAddress destination;
-    private final TimeoutStrategy connectionBackoffStrategy;
+    private final Duration reconnectionBackoff;
+    private final Log log;
 
-    private volatile io.netty.channel.Channel channel;
-    private volatile ChannelFuture fChannel;
+    private final CountdownTimer reconnectionTimer = new CountdownTimer();
+    private boolean disposed;
 
-    private volatile boolean disposed;
+    private volatile Promise<io.netty.channel.Channel> fChannel;
 
-    private TimeoutStrategy.Timeout connectionBackoff;
-    private CappedLogger cappedLogger;
-
-    ReconnectingChannel( Bootstrap bootstrap, EventLoop eventLoop, SocketAddress destination, final Log log )
-    {
-        this( bootstrap, eventLoop, destination, log, new ExponentialBackoffStrategy( 100, 1600, MILLISECONDS ) );
-    }
-
-    private ReconnectingChannel( Bootstrap bootstrap, EventLoop eventLoop, SocketAddress destination, final Log log,
-            TimeoutStrategy connectionBackoffStrategy )
+    ReconnectingChannel( Bootstrap bootstrap, EventLoop eventLoop, SocketAddress destination, Duration reconnectionBackoff, Log log )
     {
         this.bootstrap = bootstrap;
         this.eventLoop = eventLoop;
         this.destination = destination;
+        this.reconnectionBackoff = reconnectionBackoff;
         this.log = log;
-        this.cappedLogger = new CappedLogger( log ).setTimeLimit( 20, TimeUnit.SECONDS, Clock.systemUTC() );
-        this.connectionBackoffStrategy = connectionBackoffStrategy;
-        this.connectionBackoff = connectionBackoffStrategy.newTimeout();
     }
 
-    void start()
-    {
-        tryConnect();
-    }
-
-    private synchronized void tryConnect()
+    /**
+     * Ensures that there either is an open connection or that a connection attempt is in progress.
+     */
+    private synchronized Promise<io.netty.channel.Channel> ensureConnect()
     {
         if ( disposed )
         {
-            return;
+            throw new IllegalStateException( "sending on disposed channel" );
         }
-        else if ( fChannel != null && !fChannel.isDone() )
+        else if ( fChannel != null )
         {
-            return;
-        }
-
-        fChannel = bootstrap.connect( destination.socketAddress() );
-        channel = fChannel.channel();
-
-        fChannel.addListener( ( ChannelFuture f ) ->
-        {
-            if ( !f.isSuccess() )
+            if ( !fChannel.isDone() )
             {
-                long millis = connectionBackoff.getMillis();
-                cappedLogger.warn( "Failed to connect to: " + destination.socketAddress() + ". Retrying in " + millis + " ms" );
-                f.channel().eventLoop().schedule( this::tryConnect, millis, MILLISECONDS );
-                connectionBackoff.increment();
+                return fChannel;
             }
-            else
+
+            io.netty.channel.Channel channel = fChannel.getNow();
+            if ( channel != null )
             {
-                log.info( "Connected: " + f.channel() );
-                f.channel().closeFuture().addListener( closed ->
+                if ( channel.isOpen() )
                 {
-                    log.warn( String.format( "Lost connection to: %s (%s)", destination, channel.remoteAddress() ) );
-                    connectionBackoff = connectionBackoffStrategy.newTimeout();
-                    f.channel().eventLoop().schedule( this::tryConnect, 0, MILLISECONDS );
-                } );
+                    // channel open or active, so no need to set up a new channel
+                    return fChannel;
+                }
+                else
+                {
+                    channel.close(); // should not happen, but defensive against netty
+                }
             }
-        } );
+        }
+
+        fChannel = eventLoop.newPromise();
+        Duration timeToConnect = reconnectionTimer.timeToExpiry();
+        eventLoop.schedule( this::connect, timeToConnect.toMillis(), MILLISECONDS );
+
+        return fChannel;
+    }
+
+    private void connect()
+    {
+        reconnectionTimer.set( reconnectionBackoff );
+        bootstrap.connect( destination.socketAddress() ).addListener( (GenericFutureListener<ChannelFuture>) this::finishAttempt );
+    }
+
+    private synchronized void finishAttempt( ChannelFuture cf )
+    {
+        if ( disposed )
+        {
+            // fChannel cancelled in dispose
+            cf.channel().close();
+        }
+        else if ( !cf.isSuccess() )
+        {
+            fChannel.setFailure( cf.cause() );
+            log.warn( "Failed to connect to: " + destination.socketAddress() );
+        }
+        else
+        {
+            io.netty.channel.Channel channel = cf.channel();
+            fChannel.setSuccess( channel );
+            log.info( "Connected: " + channel );
+
+            channel.closeFuture().addListener(
+                    ignored -> log.warn( String.format( "Lost connection to: %s (%s)", destination, channel.remoteAddress() ) ) );
+        }
     }
 
     @Override
     public synchronized void dispose()
     {
         disposed = true;
-        channel.close();
-    }
 
-    @Override
-    public boolean isDisposed()
-    {
-        return disposed;
-    }
+        if ( fChannel != null )
+        {
+            fChannel.cancel( true );
 
-    @Override
-    public boolean isOpen()
-    {
-        return channel.isOpen();
+            io.netty.channel.Channel channel = fChannel.getNow();
+            if ( channel != null )
+            {
+                channel.close();
+            }
+        }
     }
 
     @Override
@@ -136,39 +146,34 @@ public class ReconnectingChannel implements Channel
 
     private Future<Void> write( Object msg, boolean flush )
     {
-        if ( disposed )
-        {
-            throw new IllegalStateException( "sending on disposed channel" );
-        }
+        io.netty.channel.Channel activeChannel = activeChannel();
 
-        if ( channel.isActive() )
+        if ( activeChannel != null )
         {
             if ( flush )
             {
-                return channel.writeAndFlush( msg );
+                return activeChannel.writeAndFlush( msg );
             }
             else
             {
-                return channel.write( msg );
+                return activeChannel.write( msg );
             }
         }
-        else
+
+        Promise<Void> writePromise = eventLoop.newPromise();
+        ensureConnect().addListener( (GenericFutureListener<io.netty.util.concurrent.Future<io.netty.channel.Channel>>) future ->
         {
-            Promise<Void> promise = eventLoop.newPromise();
-            BiConsumer<io.netty.channel.Channel,Object> writer;
-
-            if ( flush )
+            if ( future.isSuccess() )
             {
-                writer = ( channel, message ) -> chain( channel.writeAndFlush( msg ), promise );
+                io.netty.channel.Channel channel = future.getNow();
+                chain( flush ? channel.writeAndFlush( msg ) : channel.write( msg ), writePromise );
             }
             else
             {
-                writer = ( channel, message ) -> chain( channel.write( msg ), promise );
+                writePromise.setFailure( future.cause() );
             }
-
-            deferredWrite( msg, fChannel, promise, true, writer );
-            return promise;
-        }
+        } );
+        return writePromise;
     }
 
     /**
@@ -176,55 +181,51 @@ public class ReconnectingChannel implements Channel
      * was not allocated through the channel and cannot be used as the
      * first-hand promise for the I/O operation.
      */
-    private static void chain( ChannelFuture when, Promise<Void> then )
+    private static void chain( ChannelFuture channelFuture, Promise<Void> externalPromise )
     {
-        when.addListener( f -> {
-            if ( f.isSuccess() )
-            {
-                then.setSuccess( when.get() );
-            }
-            else
-            {
-                then.setFailure( when.cause() );
-            }
-        } );
-    }
-
-    /**
-     * Will try to reconnect once before giving up on a send. The reconnection *must* happen
-     * after write was scheduled. This is necessary to provide proper ordering when a message
-     * is sent right after the non-blocking channel was setup and before the server is ready
-     * to accept a connection. This happens frequently in tests.
-     */
-    private void deferredWrite( Object msg, ChannelFuture channelFuture, Promise<Void> promise, boolean firstAttempt,
-            BiConsumer<io.netty.channel.Channel,Object> writer )
-    {
-        channelFuture.addListener( (ChannelFutureListener) f ->
+        channelFuture.addListener( f ->
         {
             if ( f.isSuccess() )
             {
-                writer.accept( f.channel(), msg );
-            }
-            else if ( firstAttempt )
-            {
-                tryConnect();
-                deferredWrite( msg, fChannel, promise, false, writer );
+                externalPromise.setSuccess( channelFuture.get() );
             }
             else
             {
-                promise.setFailure( f.cause() );
+                externalPromise.setFailure( channelFuture.cause() );
             }
         } );
     }
 
-    public Optional<ProtocolStack> installedProtocolStack()
+    private io.netty.channel.Channel activeChannel()
     {
-        return Optional.ofNullable( channel.attr( PROTOCOL_STACK_KEY ).get() );
+        if ( fChannel == null )
+        {
+            return null;
+        }
+
+        io.netty.channel.Channel channel = fChannel.getNow();
+
+        if ( channel != null && channel.isActive() )
+        {
+            return channel;
+        }
+
+        return null;
+    }
+
+    private Optional<io.netty.channel.Channel> channel()
+    {
+        return ofNullable( fChannel ).map( io.netty.util.concurrent.Future::getNow );
+    }
+
+    Optional<ProtocolStack> installedProtocolStack()
+    {
+        return channel().map( ch -> ch.attr( PROTOCOL_STACK_KEY ).get() );
     }
 
     @Override
     public String toString()
     {
-        return "ReconnectingChannel{" + "channel=" + channel + ", disposed=" + disposed + '}';
+        return "ReconnectingChannel{" + "destination=" + destination + ", fChannel=" + fChannel + ", disposed=" + disposed + '}';
     }
 }

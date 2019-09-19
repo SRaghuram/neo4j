@@ -20,6 +20,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +74,7 @@ public class ReconnectingChannelIT
     {
         elg = new NioEventLoopGroup( 0 );
         Bootstrap bootstrap = new Bootstrap().channel( NioSocketChannel.class ).group( elg ).handler( childCounter );
-        channel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, log );
+        channel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, Duration.ofSeconds( 5 ), log );
     }
 
     @After
@@ -90,9 +91,6 @@ public class ReconnectingChannelIT
         server.start();
 
         // when
-        channel.start();
-
-        // when
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
 
         // then will be successfully completed
@@ -103,7 +101,6 @@ public class ReconnectingChannelIT
     public void shouldAllowDeferredSend() throws Throwable
     {
         // given
-        channel.start();
         server.start();
 
         // this is slightly racy, but generally we will send before the channel was connected
@@ -119,9 +116,6 @@ public class ReconnectingChannelIT
     @Test( expected = ExecutionException.class )
     public void shouldFailSendWhenNoServer() throws Exception
     {
-        // given
-        channel.start();
-
         // when
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
 
@@ -134,7 +128,6 @@ public class ReconnectingChannelIT
     {
         // given
         server.start();
-        channel.start();
 
         // when
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
@@ -170,7 +163,6 @@ public class ReconnectingChannelIT
     {
         // given
         server.start();
-        channel.start();
 
         // ensure we are connected
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
