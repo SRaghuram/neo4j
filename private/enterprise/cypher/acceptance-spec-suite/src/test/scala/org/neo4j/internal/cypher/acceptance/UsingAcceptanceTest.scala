@@ -184,7 +184,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING INDEX' which can be fulfilled") {
     runWithConfig() {
       db =>
-        graph.withTx( tx => tx.execute("CREATE INDEX ON :Person(name)"))
+        graph.withTx( tx => tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)"))
         graph.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
         db.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
@@ -196,7 +196,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING INDEX' which can be fulfilled (named index)") {
     runWithConfig() {
       db =>
-        graph.withTx( tx => tx.execute("CREATE INDEX my_index ON :Person(name)"))
+        graph.withTx( tx => tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)"))
         graph.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
         db.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
@@ -248,7 +248,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig(GraphDatabaseSettings.cypher_hints_error -> TRUE) {
       db =>
         db.withTx( tx => {
-          tx.execute("CREATE INDEX ON :Person(email)")
+          tx.execute("CREATE INDEX FOR (n:Person) ON (n.email)")
           intercept[QueryExecutionException](
             tx.execute(s"MATCH (n:Person) USING INDEX n:Person(email) WHERE n.name = 'John' RETURN n")
           ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
@@ -260,7 +260,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       db =>
         db.withTx( tx => {
-          tx.execute("CREATE INDEX ON :Person(email)")
+          tx.execute("CREATE INDEX FOR (n:Person) ON (n.email)")
           intercept[QueryExecutionException](
             tx.execute(s"MATCH (n:Person) USING INDEX n:Person(email) WHERE n.name = 'John' RETURN n")
           ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
@@ -419,7 +419,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed if executing a query using both 'USING SCAN' and 'USING INDEX' if index exists") {
     runWithConfig() {
       engine =>
-        engine.withTx( tx => tx.execute("CREATE INDEX ON :Person(name)"))
+        engine.withTx( tx => tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)"))
         engine.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
         engine.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
@@ -430,7 +430,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
   test("should succeed if executing a query using both 'USING SCAN' and 'USING INDEX' if named index exists") {
     runWithConfig() {
       engine =>
-        engine.withTx( tx => tx.execute("CREATE INDEX my_index ON :Person(name)"))
+        engine.withTx( tx => tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)"))
         engine.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
         engine.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
@@ -442,7 +442,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       engine =>
         engine.withTx( tx => {
-          tx.execute("CREATE INDEX ON :Person(name)")
+          tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)")
           intercept[QueryExecutionException](
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
           ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")
@@ -454,7 +454,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       engine =>
         engine.withTx( tx => {
-          tx.execute("CREATE INDEX my_index ON :Person(name)")
+          tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
           intercept[QueryExecutionException](
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) USING SCAN n:Person WHERE n.name = 'John' RETURN n")
           ).getStatusCode should equal("Neo.ClientError.Statement.SyntaxError")

@@ -254,7 +254,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an index (named constraint)") {
     // Given
-    executeSingle("CREATE INDEX ON :Person(firstname, lastname)".fixNewLines)
+    executeSingle("CREATE INDEX ON FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,
@@ -265,7 +265,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an named index") {
     // Given
-    executeSingle("CREATE INDEX my_index ON :Person(firstname, lastname)".fixNewLines)
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,
@@ -276,7 +276,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an named index (named constraint)") {
     // Given
-    executeSingle("CREATE INDEX my_index ON :Person(firstname, lastname)".fixNewLines)
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,
@@ -287,7 +287,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an named index (same name and schema for constraint)") {
     // Given
-    executeSingle("CREATE INDEX my_person ON :Person(firstname, lastname)".fixNewLines)
+    executeSingle("CREATE INDEX my_person FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,
@@ -297,7 +297,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an named index (same name for constraint, different schema)") {
     // Given
-    executeSingle("CREATE INDEX my_person ON :Person(firstname, lastname)".fixNewLines)
+    executeSingle("CREATE INDEX my_person FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,
@@ -312,7 +312,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(
       Configs.All,
-      "CREATE INDEX ON :Person(firstname, lastname)",
+      "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on :Person(firstname, lastname), " +
                   "so an index is already created that matches this."))
   }
@@ -324,7 +324,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(
       Configs.All,
-      "CREATE INDEX ON :Person(firstname, lastname)",
+      "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on :Person(firstname, lastname), " +
                   "so an index is already created that matches this."))
   }
@@ -336,7 +336,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(
       Configs.All,
-      "CREATE INDEX my_index ON :Person(firstname, lastname)",
+      "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on :Person(firstname, lastname), " +
                   "so an index is already created that matches this."))
   }
@@ -348,7 +348,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(
       Configs.All,
-      "CREATE INDEX my_index ON :Person(firstname, lastname)",
+      "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on :Person(firstname, lastname), " +
                   "so an index is already created that matches this."))
   }
@@ -360,7 +360,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(
       Configs.All,
-      "CREATE INDEX my_person ON :Person(firstname, lastname)",
+      "CREATE INDEX my_person FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There already exists a constraint called 'my_person'."))
   }
 
@@ -372,7 +372,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(
       Configs.All,
-      "CREATE INDEX my_person ON :Person(firstname, surname)",
+      "CREATE INDEX my_person FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There already exists a constraint called 'my_person'."))
   }
 

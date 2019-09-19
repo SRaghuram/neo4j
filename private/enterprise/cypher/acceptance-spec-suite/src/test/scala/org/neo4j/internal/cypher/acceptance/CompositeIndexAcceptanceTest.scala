@@ -728,17 +728,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should not fail on multiple attempts to create a named composite index") {
     // Given
-    executeWith(Configs.All, "CREATE INDEX my_index ON :Person(name, surname)")
-    executeWith(Configs.All, "CREATE INDEX my_index ON :Person(name, surname)")
+    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
+    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
   }
 
   test("should fail on multiple attempts to create a named composite index with different name") {
     // Given
-    executeWith(Configs.All, "CREATE INDEX my_index ON :Person(name, surname)")
+    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
 
     // When
     val exception = the[TestFailedException] thrownBy {
-      executeWith(Configs.All, "CREATE INDEX your_index ON :Person(name, surname)")
+      executeWith(Configs.All, "CREATE INDEX your_index FOR (n:Person) ON (n.name, n.surname)")
     }
 
     // Then (gets wrapped to TestFailedException)
@@ -747,11 +747,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should fail on multiple attempts to create a named composite index with different schema") {
     // Given
-    executeWith(Configs.All, "CREATE INDEX my_index ON :Person(name, surname)")
+    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
 
     // When
     val exception = the[TestFailedException] thrownBy {
-    executeWith(Configs.All, "CREATE INDEX my_index ON :Person(name, age)")
+    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.age)")
     }
 
     // Then (gets wrapped to TestFailedException)

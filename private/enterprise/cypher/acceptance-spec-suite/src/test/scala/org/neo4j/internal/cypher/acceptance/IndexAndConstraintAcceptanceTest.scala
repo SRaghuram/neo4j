@@ -30,6 +30,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
+  test("should create index (new syntax)") {
+    // WHEN
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // get by schema
+    graph.getIndex("Person", Seq("name")).getName should be("Index on :Person (name)")
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("Index on :Person (name)")
+    label should be("Person")
+    properties should be(Seq("name"))
+  }
+
   test("should create composite index") {
     // WHEN
     executeSingle("CREATE INDEX ON :Person(name,age)")
@@ -46,9 +62,25 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name", "age"))
   }
 
+  test("should create composite index (new syntax)") {
+    // WHEN
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name, n.age)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+
+    // get by schema
+    graph.getIndex("Person", Seq("name", "age")).getName should be("Index on :Person (name,age)")
+
+    // get by name
+    val (label, properties) = graph.getIndexSchemaByName("Index on :Person (name,age)")
+    label should be("Person")
+    properties should be(Seq("name", "age"))
+  }
+
   test("should create named index") {
     // WHEN
-    executeSingle("CREATE INDEX my_index ON :Person(name)")
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
     graph.awaitIndexesOnline()
 
     // THEN
@@ -64,7 +96,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   test("should create named composite index") {
     // WHEN
-    executeSingle("CREATE INDEX my_index ON :Person(name,age)")
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name, n.age)")
     graph.awaitIndexesOnline()
 
     // THEN
@@ -87,35 +119,44 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE INDEX ON :Person(name)")
   }
 
-  test("should not fail to create multiple named indexes with same name and schema") {
+  test("should not fail to create multiple indexes with same schema (new syntax)") {
     // GIVEN
-    executeSingle("CREATE INDEX my_index ON :Person(name)")
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
     graph.awaitIndexesOnline()
 
     // THEN
-    executeSingle("CREATE INDEX my_index ON :Person(name)")
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+  }
+
+  test("should not fail to create multiple named indexes with same name and schema") {
+    // GIVEN
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
+    graph.awaitIndexesOnline()
+
+    // THEN
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
   }
 
   test("should fail to create multiple named indexes with different names but same schema") {
     // GIVEN
-    executeSingle("CREATE INDEX my_index ON :Person(name)")
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX your_index ON :Person(name)")
+      executeSingle("CREATE INDEX your_index FOR (n:Person) ON (n.name)")
       // THEN
     } should have message "There already exists an index :Person(name)."
   }
 
   test("should fail to create multiple named indexes with same name") {
     // GIVEN
-    executeSingle("CREATE INDEX my_index ON :Person(name)")
+    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
     graph.awaitIndexesOnline()
 
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX my_index ON :Person(age)")
+      executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.age)")
       // THEN
     } should have message "There already exists an index called 'my_index'."
   }
@@ -983,8 +1024,8 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     import scala.collection.JavaConverters._
 
     // WHEN
-    executeSingle("CREATE INDEX ON :Label(prop1)")
-    executeSingle("CREATE INDEX index1 ON :Label(namedProp1)")
+    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop1)")
+    executeSingle("CREATE INDEX index1 FOR (n:Label) ON (n.namedProp1)")
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop2) IS NODE KEY")
     executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label) ASSERT (n.namedProp2) IS NODE KEY")
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop3) IS UNIQUE")
@@ -1142,24 +1183,24 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX ON :Label(prop1)")
+      executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop1)")
       // THEN
     } should have message "There is a uniqueness constraint on :Label(prop1), so an index is already created that matches this."
 
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX ON :Label(prop2)")
+      executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop2)")
       // THEN
     } should have message "There is a uniqueness constraint on :Label(prop2), so an index is already created that matches this."
 
     // Node property existence constraint
     // THEN
-    executeSingle("CREATE INDEX ON :Label(prop3)")
+    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop3)")
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    executeSingle("CREATE INDEX ON :Label(prop4)")
+    executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop4)")
   }
 
   test("creating named index on same schema as existing named constraint") {
@@ -1173,24 +1214,24 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX my_index1 ON :Label(prop1)")
+      executeSingle("CREATE INDEX my_index1 FOR (n:Label) ON (n.prop1)")
       // THEN
     } should have message "There is a uniqueness constraint on :Label(prop1), so an index is already created that matches this."
 
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX my_index2 ON :Label(prop2)")
+      executeSingle("CREATE INDEX my_index2 FOR (n:Label) ON (n.prop2)")
       // THEN
     } should have message "There is a uniqueness constraint on :Label(prop2), so an index is already created that matches this."
 
     // Node property existence constraint
     // THEN
-    executeSingle("CREATE INDEX my_index3 ON :Label(prop3)")
+    executeSingle("CREATE INDEX my_index3 FOR (n:Label) ON (n.prop3)")
 
     // Relationship property existence constraint (close as can get to same schema)
     // THEN
-    executeSingle("CREATE INDEX my_index4 ON :Label(prop4)")
+    executeSingle("CREATE INDEX my_index4 FOR (n:Label) ON (n.prop4)")
   }
 
   test("should fail when creating index with same name as existing constraint") {
@@ -1204,28 +1245,28 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine1 ON :Label(prop5)")
+      executeSingle("CREATE INDEX mine1 FOR (n:Label) ON (n.prop5)")
       // THEN
     } should have message "There already exists a constraint called 'mine1'."
 
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine2 ON :Label(prop6)")
+      executeSingle("CREATE INDEX mine2 FOR (n:Label) ON (n.prop6)")
       // THEN
     } should have message "There already exists a constraint called 'mine2'."
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine3 ON :Label(prop7)")
+      executeSingle("CREATE INDEX mine3 FOR (n:Label) ON (n.prop7)")
       // THEN
     } should have message "There already exists a constraint called 'mine3'."
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine4 ON :Label(prop8)")
+      executeSingle("CREATE INDEX mine4 FOR (n:Label) ON (n.prop8)")
       // THEN
     } should have message "There already exists a constraint called 'mine4'."
   }
@@ -1241,28 +1282,28 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine1 ON :Label(prop1)")
+      executeSingle("CREATE INDEX mine1 FOR (n:Label) ON (n.prop1)")
       // THEN
     } should have message "There already exists a constraint called 'mine1'."
 
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine2 ON :Label(prop2)")
+      executeSingle("CREATE INDEX mine2 FOR (n:Label) ON (n.prop2)")
       // THEN
     } should have message "There already exists a constraint called 'mine2'."
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine3 ON :Label(prop3)")
+      executeSingle("CREATE INDEX mine3 FOR (n:Label) ON (n.prop3)")
       // THEN
     } should have message "There already exists a constraint called 'mine3'."
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
       // WHEN
-      executeSingle("CREATE INDEX mine4 ON :Label(prop4)")
+      executeSingle("CREATE INDEX mine4 FOR (n:Label) ON (n.prop4)")
       // THEN
     } should have message "There already exists a constraint called 'mine4'."
   }

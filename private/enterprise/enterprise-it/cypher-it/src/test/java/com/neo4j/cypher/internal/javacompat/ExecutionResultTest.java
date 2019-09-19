@@ -375,7 +375,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = transaction.execute( "EXPLAIN CREATE INDEX ON :L(prop)" );
+            Result result = transaction.execute( "EXPLAIN CREATE INDEX FOR (n:L) ON (n.prop)" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -393,7 +393,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = transaction.execute( "EXPLAIN CREATE INDEX my_index ON :L(prop)" );
+            Result result = transaction.execute( "EXPLAIN CREATE INDEX my_index FOR (n:L) ON (n.prop)" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
