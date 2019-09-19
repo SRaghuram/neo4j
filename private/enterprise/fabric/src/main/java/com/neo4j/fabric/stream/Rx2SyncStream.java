@@ -5,14 +5,18 @@
  */
 package com.neo4j.fabric.stream;
 
+import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.stream.summary.Summary;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Exceptions;
 
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.neo4j.kernel.api.exceptions.Status;
 
 public class Rx2SyncStream
 {
@@ -69,7 +73,12 @@ public class Rx2SyncStream
 
         if ( recordOrError.error != null )
         {
-            throw new IllegalStateException( recordOrError.error );
+            if (recordOrError.error instanceof FabricException ) {
+                throw (FabricException) recordOrError.error;
+            } else {
+                throw new FabricException( Status.Statement.ExecutionFailed, recordOrError.error );
+            }
+
         }
 
         return recordOrError.record;

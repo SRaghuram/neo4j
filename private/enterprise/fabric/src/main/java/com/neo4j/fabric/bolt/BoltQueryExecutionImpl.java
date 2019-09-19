@@ -11,6 +11,7 @@ import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.EmptySummary;
+import reactor.core.Exceptions;
 
 import java.util.List;
 
@@ -127,9 +128,10 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
             }
             catch ( Exception e )
             {
-                if ( e instanceof FabricException )
+                var unwrapped = Exceptions.unwrap( e );
+                if ( unwrapped instanceof FabricException )
                 {
-                    throw e;
+                    throw (FabricException) unwrapped;
                 }
                 else
                 {
