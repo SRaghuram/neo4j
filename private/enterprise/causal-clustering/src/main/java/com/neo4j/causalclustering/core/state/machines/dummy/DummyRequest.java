@@ -35,7 +35,7 @@ public class DummyRequest implements CoreReplicatedContent
     @Override
     public OptionalLong size()
     {
-        return OptionalLong.of( (long) data.length );
+        return OptionalLong.of( data.length );
     }
 
     @Override

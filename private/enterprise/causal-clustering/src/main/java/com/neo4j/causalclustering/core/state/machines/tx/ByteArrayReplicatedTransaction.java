@@ -28,7 +28,7 @@ public class ByteArrayReplicatedTransaction extends ReplicatedTransaction
     @Override
     public OptionalLong size()
     {
-        return OptionalLong.of( (long) txBytes.length );
+        return OptionalLong.of( txBytes.length );
     }
 
     @Override
