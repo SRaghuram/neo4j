@@ -167,7 +167,7 @@ class ClusterRestoreIT
             cluster.coreTx( "foo", ( db, tx ) -> randomData( tx ) );
             cluster.coreTx( DEFAULT_DATABASE_NAME, ( db, tx ) -> randomData( tx ) );
 
-            cluster.systemTx( ( db, tx ) -> newUser( db, "bat", "man" ) );
+            cluster.systemTx( ( db, tx ) -> newUser( tx, "bat", "man" ) );
 
             backup( cluster, SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME, "foo" );
             populateSnapshots( cluster, dbSnapshots, DEFAULT_DATABASE_NAME, "foo" );

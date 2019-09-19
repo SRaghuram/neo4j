@@ -7,42 +7,41 @@ package com.neo4j.security;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 
+import java.util.HashSet;
 import java.util.Set;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.string.UTF8;
 
+import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 public class SecurityHelpers
 {
-    public static void newUser( GraphDatabaseFacade db, String username, String password )
+    private SecurityHelpers()
     {
-        try
-        {
-            userManager( db ).newUser( username, UTF8.encode( password ), false );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
-        }
     }
 
-    public static Set<String> getAllRoleNames( GraphDatabaseFacade db )
+    public static void newUser( Transaction tx, String username, String password )
     {
-        try
+        tx.execute( format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, password ) );
+    }
+
+    public static Set<String> getAllRoleNames( DatabaseManagementService dbms )
+    {
+        try ( Transaction tx = dbms.database( SYSTEM_DATABASE_NAME ).beginTx() )
         {
-            return userManager( db ).getAllRoleNames();
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
+            Result result = tx.execute( "SHOW ROLES" );
+            var roles = new HashSet<String>();
+            result.forEachRemaining( r -> roles.add( (String) r.get( "role" ) ) );
+            return roles;
         }
     }
 
@@ -65,16 +64,6 @@ public class SecurityHelpers
             throw new RuntimeException( e );
         }
         return loginContext.subject();
-    }
-
-    private static EnterpriseUserManager userManager( GraphDatabaseFacade db )
-    {
-        EnterpriseAuthManager commercialAuthManager = authManager( db );
-        if ( commercialAuthManager instanceof EnterpriseAuthAndUserManager )
-        {
-            return ((EnterpriseAuthAndUserManager) commercialAuthManager).getUserManager();
-        }
-        throw new RuntimeException( "The configuration used does not have a user manager" );
     }
 
     private static EnterpriseAuthManager authManager( GraphDatabaseFacade db )

@@ -89,12 +89,12 @@ class SystemGraphSecurityReplicationIT
 
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
-            await( () -> getAllRoleNames( core.defaultDatabase() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> getAllRoleNames( core.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
 
         for ( ReadReplica replica : cluster.readReplicas() )
         {
-            await( () -> getAllRoleNames( replica.defaultDatabase() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> getAllRoleNames( replica.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
         }
     }
 
@@ -106,7 +106,7 @@ class SystemGraphSecurityReplicationIT
 
         cluster.systemTx( ( db, tx ) ->
         {
-            newUser( db, username, password );
+            newUser( tx, username, password );
             tx.commit();
         } );
 
