@@ -17,11 +17,11 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.cypher.internal.runtime.InputDataStream;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -79,7 +79,7 @@ public class FabricLocalExecutor
     private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
     {
         InternalTransaction internalTransaction;
-        Transaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
+        KernelTransaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
         FabricLocalLoginContext loginContext = new FabricLocalLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext() );
         if ( transactionInfo.getTxTimeout() == null )
         {
