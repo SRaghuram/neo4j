@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
-import org.neo4j.cypher.internal.{CypherPreParser, FullyParsedQuery, PeriodicCommitHint, QueryOptions}
+import org.neo4j.cypher.internal.{CypherPreParser, FullyParsedQuery, PreParser, QueryOptions}
 import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
@@ -284,7 +284,7 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
   /** Extracted from PreParser */
   def isPeriodicCommit(query: String): Boolean = {
     val preParsedStatement = CypherPreParser(query)
-    PeriodicCommitHint.r.findFirstIn(preParsedStatement.statement.toUpperCase).nonEmpty
+    PreParser.periodicCommitHintRegex.findFirstIn(preParsedStatement.statement.toUpperCase).nonEmpty
   }
 
 }
