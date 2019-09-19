@@ -20,11 +20,9 @@ import java.util.Optional;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
-import org.neo4j.bolt.dbapi.BoltQueryExecutor;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.Bookmark;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -35,7 +33,6 @@ import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.values.virtual.MapValue;
 
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.InvalidBookmark;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
@@ -64,7 +61,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
             AccessMode accessMode, Map<String,Object> txMetadata )
     {
         // for transactions started by Bolt it holds that implicit transaction = periodic commit
-        if ( type == Transaction.Type.implicit )
+        if ( type == KernelTransaction.Type.implicit )
         {
             throw new FabricException( SemanticError, "Periodic commit is not supported in Fabric" );
         }
@@ -78,7 +75,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
                 loginContext,
                 clientInfo,
                 databaseId.name(),
-                type == implicit,
+                false,
                 txTimeout,
                 txMetadata
         );
