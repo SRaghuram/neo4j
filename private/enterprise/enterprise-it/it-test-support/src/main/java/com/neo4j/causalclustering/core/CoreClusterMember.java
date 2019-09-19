@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
@@ -145,7 +146,7 @@ public class CoreClusterMember implements ClusterMember
 
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), memberConfig.get( GraphDatabaseSettings.default_database ) );
     }
 
     @Override
@@ -180,7 +181,7 @@ public class CoreClusterMember implements ClusterMember
     {
         coreGraphDatabase = dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
-        defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        defaultDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( config().get( default_database ) );
         systemDatabase = (GraphDatabaseFacade) coreGraphDatabase.getManagementService().database( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
     }
 
