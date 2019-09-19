@@ -28,6 +28,7 @@ import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Workspace;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
+import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public class AWSS3ArtifactStorage implements ArtifactStorage
@@ -113,7 +115,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 objectMetadata.setContentLength( Files.size( artifact ) );
                 LOG.info( "upload artifact {} to path {}",
                           artifact.toString(),
-                          new URI( artifactBaseURI.getScheme(), artifactBaseURI.getHost(), s3key, null ) );
+                          new URI( artifactBaseURI.getScheme(), artifactBaseURI.getHost(), prependIfMissing( s3key, "/" ), null ) );
                 PutObjectResult result = amazonS3.putObject( bucketName,  s3key,
                                                              Files.newInputStream( artifact ), objectMetadata );
                 // TODO this fails under tests, and works with real implementation
