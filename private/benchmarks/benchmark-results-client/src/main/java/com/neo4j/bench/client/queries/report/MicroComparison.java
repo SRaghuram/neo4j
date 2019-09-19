@@ -25,7 +25,7 @@ import org.neo4j.driver.v1.StatementResult;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.driver.v1.AccessMode.READ;
 
-public class MicroComparison implements Query<List<MicroComparisonResult>>
+public class MicroComparison implements Query<List<MicroComparisonResult>>, CsvHeader
 {
     private static final String QUERY = Resources.fileToString( "/queries/report/micro_comparison.cypher" );
 
@@ -36,6 +36,7 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
     public MicroComparison( String oldNeo4jVersion, String newNeo4jVersion, double minDifference )
     {
         Repository.MICRO_BENCH.assertValidVersion( oldNeo4jVersion );
+        Repository.MICRO_BENCH.assertValidVersion( newNeo4jVersion );
         this.oldNeo4jVersion = oldNeo4jVersion;
         this.newNeo4jVersion = newNeo4jVersion;
         this.minDifference = minDifference;
@@ -54,7 +55,8 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
                          .map( row ->
                                {
                                    String group = row.get( "group" ).asString();
-                                   String bench = row.get( "bench" ).asString();
+                                   String benchSimple = row.get( "bench_simple" ).asString();
+                                   String benchFull = row.get( "bench_full" ).asString();
                                    Benchmark.Mode mode = Benchmark.Mode.valueOf( row.get( "mode" ).asString() );
                                    double oldResult = row.get( "old" ).asDouble();
                                    double newResult = row.get( "new" ).asDouble();
@@ -67,7 +69,8 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
                                    double convertedNewResult = Units.convertValueTo( newResult, newUnit, commonUnit, mode );
                                    double improvement = Units.improvement( convertedOldResult, convertedNewResult, mode );
                                    return new MicroComparisonResult( group,
-                                                                     bench,
+                                                                     benchSimple,
+                                                                     benchFull,
                                                                      convertedOldResult,
                                                                      convertedNewResult,
                                                                      Units.toAbbreviation( commonUnit, mode ),
@@ -87,6 +90,12 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>
     public Optional<String> nonFatalError()
     {
         return Optional.empty();
+    }
+
+    @Override
+    public String header()
+    {
+        return MicroComparisonResult.HEADER;
     }
 
     private static class ResultComparator implements Comparator<MicroComparisonResult>

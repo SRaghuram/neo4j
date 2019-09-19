@@ -25,10 +25,9 @@ import org.neo4j.kernel.configuration.Settings;
 import static com.neo4j.bench.common.model.Repository.MICRO_BENCH;
 import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
-import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
+import static org.junit.Assert.assertTrue;
 
 public class CommandsSmokeTestIT
 {
@@ -63,17 +62,21 @@ public class CommandsSmokeTestIT
                                                                              outputDir );
         Main.main( versionComparisonArgs.stream().toArray( String[]::new ) );
 
-        try ( Stream<Path> files = Files.list( outputDir ) )
-        {
-            List<String> filenames = files.map( file -> file.getFileName().toString() ).collect( toList() );
+        Path microComparisonCsv = outputDir.resolve( CompareVersionsCommand.MICRO_COMPARISON_FILENAME );
+        Path microCoverageCsv = outputDir.resolve( CompareVersionsCommand.MICRO_COVERAGE_FILENAME );
 
-            // Check for existence of Micro comparison output CSV
-            assertThat( filenames, hasItem( "micro_comparison.csv" ) );
-            assertThat( "Micro comparison file should contain correct amount of entries",
-                        lineCount( outputDir.resolve( "micro_comparison.csv" ) ),
-                        equalTo( BENCHMARK_COUNT + 1 /*header*/ ) );
-            System.out.println( filenames );
-        }
+        assertTrue( Files.exists( microComparisonCsv ) );
+        assertTrue( Files.exists( microCoverageCsv ) );
+
+        // Check for Micro comparison CSV
+        assertThat( "Micro comparison file should contain correct number of entries",
+                    lineCount( microComparisonCsv ),
+                    equalTo( BENCHMARK_COUNT + 1 /*header*/ ) );
+
+        // Check Micro coverage CSV
+        assertThat( "Micro coverage file should contain correct number of entries",
+                    lineCount( microCoverageCsv ),
+                    equalTo( BENCHMARK_COUNT + 1 /*header*/ ) );
     }
 
     private static long lineCount( Path file ) throws IOException
