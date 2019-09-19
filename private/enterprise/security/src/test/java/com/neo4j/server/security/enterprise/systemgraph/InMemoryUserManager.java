@@ -47,7 +47,7 @@ public class InMemoryUserManager extends SystemGraphRealm
 
     public InMemoryUserManager( Config config, SecureHasher secureHasher ) throws InvalidArgumentsException
     {
-       this( config, secureHasher, new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config ));
+       this( config, secureHasher, new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config ) );
     }
 
     public InMemoryUserManager( Config config, SecureHasher secureHasher, AuthenticationStrategy authStrategy ) throws InvalidArgumentsException
@@ -58,7 +58,7 @@ public class InMemoryUserManager extends SystemGraphRealm
                 new BasicPasswordPolicy(),
                 authStrategy,
                 true,
-                true);
+                true );
         basic = new BasicInMemoryUserManager( config );
         setupDefaultRolesAndPrivileges();
     }

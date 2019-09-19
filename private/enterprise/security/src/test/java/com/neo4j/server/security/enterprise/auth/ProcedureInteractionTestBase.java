@@ -195,7 +195,7 @@ public abstract class ProcedureInteractionTestBase<S>
         authDisabledAdminstrationCommand( String.format(query, username, password) );
     }
 
-    private void grantRoleToUser( String role, String user)
+    private void grantRoleToUser( String role, String user )
     {
         authDisabledAdminstrationCommand( String.format( "GRANT ROLE %s TO %s", role, user ) );
     }
