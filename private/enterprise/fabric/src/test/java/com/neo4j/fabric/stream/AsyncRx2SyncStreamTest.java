@@ -38,7 +38,7 @@ class AsyncRx2SyncStreamTest
     @AfterEach
     void tearDown()
     {
-        executorService.shutdown();
+        executorService.shutdownNow();
     }
 
     @Test
@@ -46,7 +46,7 @@ class AsyncRx2SyncStreamTest
     {
         RecordPublisher publisher = new RecordPublisher();
         StatementResult statementResult = mockStatementResult( publisher, List.of( "a", "b", "c" ) );
-        Rx2SyncStream stream = new Rx2SyncStream( statementResult, 2, 5, 1 );
+        Rx2SyncStream stream = new Rx2SyncStream( statementResult, 2, 100, 1 );
 
         Reader reader = new Reader( stream, 3 );
 
@@ -82,7 +82,7 @@ class AsyncRx2SyncStreamTest
     {
         RecordPublisher publisher = new RecordPublisher();
         StatementResult statementResult = mockStatementResult( publisher, List.of( "a", "b", "c" ) );
-        Rx2SyncStream stream = new Rx2SyncStream( statementResult, 2, 5, 1 );
+        Rx2SyncStream stream = new Rx2SyncStream( statementResult, 2, 100, 1 );
 
         Reader reader = new Reader( stream, 3 );
 
