@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.common.model;
 
-import java.net.URI;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -79,12 +78,6 @@ public class BenchmarkTool
     public String commit()
     {
         return commit;
-    }
-
-    // TODO add assert that URI exists
-    public URI toURI()
-    {
-        return URI.create( String.format( "https://github.com/%s/%s/commit/%s", owner, repositoryName(), commit ) );
     }
 
     @Override

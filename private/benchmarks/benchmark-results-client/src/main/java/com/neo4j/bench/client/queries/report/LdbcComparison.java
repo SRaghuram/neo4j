@@ -25,15 +25,15 @@ import org.neo4j.driver.v1.StatementResult;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.driver.v1.AccessMode.READ;
 
-public class MicroComparison implements Query<List<MicroComparisonResult>>, CsvHeader
+public class LdbcComparison implements Query<List<LdbcComparisonResult>>, CsvHeader
 {
-    private static final String QUERY = Resources.fileToString( "/queries/report/micro_comparison.cypher" );
+    private static final String QUERY = Resources.fileToString( "/queries/report/ldbc_comparison.cypher" );
 
     private final String oldNeo4jVersion;
     private final String newNeo4jVersion;
     private final double minDifference;
 
-    public MicroComparison( String oldNeo4jVersion, String newNeo4jVersion, double minDifference )
+    public LdbcComparison( String oldNeo4jVersion, String newNeo4jVersion, double minDifference )
     {
         Repository.MICRO_BENCH.assertValidVersion( oldNeo4jVersion );
         Repository.MICRO_BENCH.assertValidVersion( newNeo4jVersion );
@@ -43,7 +43,7 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>, CsvH
     }
 
     @Override
-    public List<MicroComparisonResult> execute( Driver driver )
+    public List<LdbcComparisonResult> execute( Driver driver )
     {
         try ( Session session = driver.session( READ ) )
         {
@@ -55,8 +55,9 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>, CsvH
                          .map( row ->
                                {
                                    String group = row.get( "group" ).asString();
-                                   String benchSimple = row.get( "bench_simple" ).asString();
-                                   String benchFull = row.get( "bench_full" ).asString();
+                                   String bench = row.get( "bench" ).asString();
+                                   String api = row.get( "api" ).asString();
+                                   int scaleFactor = Integer.parseInt( row.get( "scale_factor" ).asString() );
                                    Benchmark.Mode mode = Benchmark.Mode.valueOf( row.get( "mode" ).asString() );
                                    double oldResult = row.get( "old" ).asDouble();
                                    double newResult = row.get( "new" ).asDouble();
@@ -68,13 +69,14 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>, CsvH
                                    double convertedOldResult = Units.convertValueTo( oldResult, oldUnit, commonUnit, mode );
                                    double convertedNewResult = Units.convertValueTo( newResult, newUnit, commonUnit, mode );
                                    double improvement = Units.improvement( convertedOldResult, convertedNewResult, mode );
-                                   return new MicroComparisonResult( group,
-                                                                     benchSimple,
-                                                                     benchFull,
-                                                                     convertedOldResult,
-                                                                     convertedNewResult,
-                                                                     Units.toAbbreviation( commonUnit, mode ),
-                                                                     improvement );
+                                   return new LdbcComparisonResult( group,
+                                                                    bench,
+                                                                    api,
+                                                                    scaleFactor,
+                                                                    convertedOldResult,
+                                                                    convertedNewResult,
+                                                                    Units.toAbbreviation( commonUnit, mode ),
+                                                                    improvement );
                                } )
                          .filter( row -> Math.abs( row.improvement() ) >= minDifference )
                          .sorted( new ResultComparator() )
@@ -95,13 +97,13 @@ public class MicroComparison implements Query<List<MicroComparisonResult>>, CsvH
     @Override
     public String header()
     {
-        return MicroComparisonResult.HEADER;
+        return LdbcComparisonResult.HEADER;
     }
 
-    private static class ResultComparator implements Comparator<MicroComparisonResult>
+    private static class ResultComparator implements Comparator<LdbcComparisonResult>
     {
         @Override
-        public int compare( MicroComparisonResult o1, MicroComparisonResult o2 )
+        public int compare( LdbcComparisonResult o1, LdbcComparisonResult o2 )
         {
             // alphabetic ascending
             int groupCompare = o1.group().compareTo( o2.group() );
