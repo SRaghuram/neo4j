@@ -34,8 +34,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 {
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Create a new user." )
-    @Procedure( name = "dbms.security.createUser", mode = DBMS )
+    @Procedure( name = "dbms.security.createUser", mode = DBMS, deprecatedBy = "Administration command: CREATE USER" )
     public void createUser(
             @Name( "username" ) String username,
             @Name( "password" ) String password,
@@ -58,8 +59,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Change the given user's password." )
-    @Procedure( name = "dbms.security.changeUserPassword", mode = DBMS )
+    @Procedure( name = "dbms.security.changeUserPassword", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
     public void changeUserPassword( @Name( "username" ) String username, @Name( "newPassword" ) String newPassword,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
@@ -71,8 +73,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Assign a role to the user." )
-    @Procedure( name = "dbms.security.addRoleToUser", mode = DBMS )
+    @Procedure( name = "dbms.security.addRoleToUser", mode = DBMS, deprecatedBy = "Administration command: GRANT ROLE TO USER" )
     public void addRoleToUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "GRANT ROLE %s TO %s", escapeParameter( roleName ), escapeParameter( username ) );
@@ -81,8 +84,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Unassign a role from the user." )
-    @Procedure( name = "dbms.security.removeRoleFromUser", mode = DBMS )
+    @Procedure( name = "dbms.security.removeRoleFromUser", mode = DBMS, deprecatedBy = "Administration command: REVOKE ROLE FROM USER" )
     public void removeRoleFromUser( @Name( "roleName" ) String roleName, @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "REVOKE ROLE %s FROM %s", escapeParameter( roleName ), escapeParameter( username ) );
@@ -91,8 +95,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Delete the specified user." )
-    @Procedure( name = "dbms.security.deleteUser", mode = DBMS )
+    @Procedure( name = "dbms.security.deleteUser", mode = DBMS, deprecatedBy = "Administration command: DROP USER" )
     public void deleteUser( @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "DROP USER %s", escapeParameter( username ) );
@@ -101,8 +106,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Suspend the specified user." )
-    @Procedure( name = "dbms.security.suspendUser", mode = DBMS )
+    @Procedure( name = "dbms.security.suspendUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
     public void suspendUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
         if ( isSelf( username ) )
@@ -115,8 +121,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Activate a suspended user." )
-    @Procedure( name = "dbms.security.activateUser", mode = DBMS )
+    @Procedure( name = "dbms.security.activateUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
     public void activateUser( @Name( "username" ) String username,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException, InvalidArgumentsException
@@ -132,8 +139,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "List all native users." )
-    @Procedure( name = "dbms.security.listUsers", mode = DBMS )
+    @Procedure( name = "dbms.security.listUsers", mode = DBMS, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<UserResult> listUsers() throws ProcedureException
     {
         var result = new ArrayList<UserResult>();
@@ -166,8 +174,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "List all available roles." )
-    @Procedure( name = "dbms.security.listRoles", mode = DBMS )
+    @Procedure( name = "dbms.security.listRoles", mode = DBMS, deprecatedBy = "Administration command: SHOW ROLES" )
     public Stream<RoleResult> listRoles() throws ProcedureException
     {
         var result = new HashMap<String,Set<String>>();
@@ -259,8 +268,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Create a new role." )
-    @Procedure( name = "dbms.security.createRole", mode = DBMS )
+    @Procedure( name = "dbms.security.createRole", mode = DBMS, deprecatedBy = "Administration command: CREATE ROLE" )
     public void createRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
         var query = String.format( "CREATE ROLE %s", escapeParameter( roleName ) );
@@ -269,8 +279,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "Delete the specified role. Any role assignments will be removed." )
-    @Procedure( name = "dbms.security.deleteRole", mode = DBMS )
+    @Procedure( name = "dbms.security.deleteRole", mode = DBMS, deprecatedBy = "Administration command: DROP ROLE" )
     public void deleteRole( @Name( "roleName" ) String roleName ) throws ProcedureException
     {
         var query = String.format( "DROP ROLE %s", escapeParameter( roleName ) );
@@ -340,6 +351,6 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     private String escapeParameter( String input )
     {
-        return String.format("`%s`", input == null ? "" : input );
+        return String.format( "`%s`", input == null ? "" : input );
     }
 }

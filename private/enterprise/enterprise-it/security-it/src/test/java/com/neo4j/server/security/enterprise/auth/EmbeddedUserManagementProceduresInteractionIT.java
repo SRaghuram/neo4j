@@ -7,14 +7,27 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.graphdb.InputPosition;
+import org.neo4j.graphdb.Notification;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.api.KernelTransaction;
 
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE;
+import static org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.deprecatedName;
 
 public class EmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<EnterpriseLoginContext>
 {
@@ -36,6 +49,115 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
         {
             return obj;
         }
+    }
+
+    /*
+     * Tests for deprecated notifications.
+     *
+     * Needs to be here since adminSubject needs to be a LoginContext
+     */
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForChangeUserPassword()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.changeUserPassword( 'readSubject', '321', false )",
+                deprecatedProcedureNotification( "dbms.security.changeUserPassword", "Administration command: ALTER USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForCreateUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.createUser('craig', '1234' )",
+                deprecatedProcedureNotification( "dbms.security.createUser", "Administration command: CREATE USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForDeleteUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.deleteUser('noneSubject')",
+                deprecatedProcedureNotification( "dbms.security.deleteUser", "Administration command: DROP USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForSuspendUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.suspendUser('readSubject')",
+                deprecatedProcedureNotification( "dbms.security.suspendUser", "Administration command: ALTER USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForActivateUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.activateUser('readSubject')",
+                deprecatedProcedureNotification( "dbms.security.activateUser", "Administration command: ALTER USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForAddRoleToUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.addRoleToUser('" + PUBLISHER + "', 'readSubject' )",
+                deprecatedProcedureNotification( "dbms.security.addRoleToUser", "Administration command: GRANT ROLE TO USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForRemoveRoleFromUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.removeRoleFromUser('" + READER + "', 'readSubject')",
+                deprecatedProcedureNotification( "dbms.security.removeRoleFromUser", "Administration command: REVOKE ROLE FROM USER" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForCreateRole()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.createRole('new_role')",
+                deprecatedProcedureNotification( "dbms.security.createRole", "Administration command: CREATE ROLE" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForDeleteRole()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.deleteRole('new_role')",
+                deprecatedProcedureNotification( "dbms.security.deleteRole", "Administration command: DROP ROLE" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForListUsers()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.listUsers()",
+                deprecatedProcedureNotification( "dbms.security.listUsers", "Administration command: SHOW USERS" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForListRoles()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.listRoles()",
+                deprecatedProcedureNotification( "dbms.security.listRoles", "Administration command: SHOW ROLES" ) );
+    }
+
+    @SuppressWarnings( "SameParameterValue" )
+    private void assertNotificationForSystemCommand( String call, Notification wantedNotification )
+    {
+        try ( Transaction tx = neo.getSystemGraph().beginTransaction( KernelTransaction.Type.implicit, adminSubject ) )
+        {
+            Result result = tx.execute( call );
+
+            Iterator<Notification> givenNotifications = result.getNotifications().iterator();
+            if ( givenNotifications.hasNext() )
+            {
+                assertEquals( wantedNotification, givenNotifications.next() ); // only checks first notification
+            }
+            else
+            {
+                fail( "Expected notifications from '" + call + "'" );
+            }
+
+            tx.commit();
+        }
+    }
+
+    private Notification deprecatedProcedureNotification( String oldName, String newName )
+    {
+        return DEPRECATED_PROCEDURE.notification( new InputPosition( 8, 1, 9 ), deprecatedName( oldName, newName ) );
     }
 
     /*
