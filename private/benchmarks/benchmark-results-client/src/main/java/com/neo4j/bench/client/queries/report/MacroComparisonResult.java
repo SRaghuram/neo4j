@@ -10,30 +10,30 @@ import java.util.Objects;
 
 import static java.lang.String.format;
 
-public class MicroComparisonResult implements CsvRow
+public class MacroComparisonResult implements CsvRow
 {
-    static final String HEADER = "Suite,Benchmark,Old,New,Unit,Difference";
+    static final String HEADER = "Workload,Query,Old,New,Unit,Difference";
     private static DecimalFormat NUMBER = new DecimalFormat( "#.00" );
 
     private final String group;
-    private final String benchSimple;
-    private final String benchFull;
+    private final String bench;
+    private final String description;
     private final double oldResult;
     private final double newResult;
     private final String unit;
     private final double improvement;
 
-    MicroComparisonResult( String group,
-                           String benchSimple,
-                           String benchFull,
+    MacroComparisonResult( String group,
+                           String bench,
+                           String description,
                            double oldResult,
                            double newResult,
                            String unit,
                            double improvement )
     {
         this.group = group;
-        this.benchSimple = benchSimple;
-        this.benchFull = benchFull;
+        this.bench = bench;
+        this.description = description;
         this.oldResult = oldResult;
         this.newResult = newResult;
         this.unit = unit;
@@ -45,14 +45,14 @@ public class MicroComparisonResult implements CsvRow
         return group;
     }
 
-    public String benchSimple()
+    public String bench()
     {
-        return benchSimple;
+        return bench;
     }
 
-    public String benchFull()
+    public String description()
     {
-        return benchFull;
+        return description;
     }
 
     public double oldResult()
@@ -86,20 +86,20 @@ public class MicroComparisonResult implements CsvRow
         {
             return false;
         }
-        MicroComparisonResult that = (MicroComparisonResult) o;
+        MacroComparisonResult that = (MacroComparisonResult) o;
         return Double.compare( that.oldResult, oldResult ) == 0 &&
                Double.compare( that.newResult, newResult ) == 0 &&
                Double.compare( that.improvement, improvement ) == 0 &&
                Objects.equals( group, that.group ) &&
-               Objects.equals( benchSimple, that.benchSimple ) &&
-               Objects.equals( benchFull, that.benchFull ) &&
+               Objects.equals( bench, that.bench ) &&
+               Objects.equals( description, that.description ) &&
                Objects.equals( unit, that.unit );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( group, benchSimple, benchFull, oldResult, newResult, unit, improvement );
+        return Objects.hash( group, bench, description, oldResult, newResult, unit, improvement );
     }
 
     @Override
@@ -113,7 +113,7 @@ public class MicroComparisonResult implements CsvRow
     {
         return format( "%s,%s,%s,%s,%s,%s",
                        group,
-                       benchFull.replace( ",", ":" ),
+                       bench,
                        NUMBER.format( oldResult ),
                        NUMBER.format( newResult ),
                        unit,
