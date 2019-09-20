@@ -264,7 +264,8 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
         HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, platformModule.logging.getUserLogProvider() );
-        final SenderService raftSender = new SenderService( channelInitializer, logProvider );
+        Duration reconnectionBackoff = config.get( CausalClusteringSettings.reconnection_backoff );
+        final SenderService raftSender = new SenderService( channelInitializer, reconnectionBackoff, logProvider );
         life.add( raftSender );
         this.clientInstalledProtocols = raftSender::installedProtocols;
 

@@ -10,6 +10,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -35,6 +36,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     private ReconnectingChannels channels;
 
     private final ChannelInitializer channelInitializer;
+    private final Duration reconnectionBackoff;
     private final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
     private final Log log;
 
@@ -43,9 +45,10 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     private Bootstrap bootstrap;
     private NioEventLoopGroup eventLoopGroup;
 
-    public SenderService( ChannelInitializer channelInitializer, LogProvider logProvider )
+    public SenderService( ChannelInitializer channelInitializer, Duration reconnectionBackoff, LogProvider logProvider )
     {
         this.channelInitializer = channelInitializer;
+        this.reconnectionBackoff = reconnectionBackoff;
         this.log = logProvider.getLog( getClass() );
         this.channels = new ReconnectingChannels();
     }
@@ -99,8 +102,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
 
         if ( channel == null )
         {
-            channel = new ReconnectingChannel( bootstrap, eventLoopGroup.next(), destination, log );
-            channel.start();
+            channel = new ReconnectingChannel( bootstrap, eventLoopGroup.next(), destination, reconnectionBackoff, log );
             ReconnectingChannel existingNonBlockingChannel = channels.putIfAbsent( destination, channel );
 
             if ( existingNonBlockingChannel != null )

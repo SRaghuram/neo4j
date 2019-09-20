@@ -292,21 +292,9 @@ public class ProtocolHandshakeHappyTest
         private boolean closed;
 
         @Override
-        public boolean isDisposed()
-        {
-            return closed;
-        }
-
-        @Override
         public void dispose()
         {
             closed = true;
-        }
-
-        @Override
-        public boolean isOpen()
-        {
-            return true;
         }
 
         @Override

@@ -22,23 +22,11 @@ public class SimpleNettyChannel implements Channel
     }
 
     @Override
-    public boolean isDisposed()
-    {
-        return disposed;
-    }
-
-    @Override
     public synchronized void dispose()
     {
         log.info( "Disposing channel: " + channel );
         disposed = true;
         channel.close();
-    }
-
-    @Override
-    public boolean isOpen()
-    {
-        return channel.isOpen();
     }
 
     @Override

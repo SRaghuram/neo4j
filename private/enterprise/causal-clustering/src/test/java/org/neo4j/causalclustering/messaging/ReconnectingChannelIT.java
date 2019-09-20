@@ -23,7 +23,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.neo4j.causalclustering.net.Server;
 import org.neo4j.causalclustering.protocol.ClientNettyPipelineBuilder;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilder;
-import org.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
@@ -42,14 +41,11 @@ import org.neo4j.ports.allocation.PortAuthority;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.isA;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -92,7 +88,7 @@ public class ReconnectingChannelIT
     {
         elg = new NioEventLoopGroup( 0 );
         Bootstrap bootstrap = new Bootstrap().channel( NioSocketChannel.class ).group( elg ).handler( childCounter );
-        channel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, log );
+        channel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, Duration.ofSeconds( 5 ), log );
     }
 
     @After
@@ -112,8 +108,7 @@ public class ReconnectingChannelIT
 
         AssertableLogProvider logProvider = new AssertableLogProvider();
         Log log = logProvider.getLog( getClass() );
-        ReconnectingChannel failingChannel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, log );
-        failingChannel.start();
+        ReconnectingChannel failingChannel = new ReconnectingChannel( bootstrap, elg.next(), listenAddress, Duration.ofSeconds( 5 ), log );
 
         ClientNettyPipelineBuilder pipelineBuilder = NettyPipelineBuilder.client( channel.pipeline(), log );
 
@@ -150,9 +145,6 @@ public class ReconnectingChannelIT
         server.start();
 
         // when
-        channel.start();
-
-        // when
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
 
         // then will be successfully completed
@@ -163,7 +155,6 @@ public class ReconnectingChannelIT
     public void shouldAllowDeferredSend() throws Throwable
     {
         // given
-        channel.start();
         server.start();
 
         // this is slightly racy, but generally we will send before the channel was connected
@@ -179,9 +170,6 @@ public class ReconnectingChannelIT
     @Test( expected = ExecutionException.class )
     public void shouldFailSendWhenNoServer() throws Exception
     {
-        // given
-        channel.start();
-
         // when
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
 
@@ -194,7 +182,6 @@ public class ReconnectingChannelIT
     {
         // given
         server.start();
-        channel.start();
 
         // when
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
@@ -230,7 +217,6 @@ public class ReconnectingChannelIT
     {
         // given
         server.start();
-        channel.start();
 
         // ensure we are connected
         Future<Void> fSend = channel.writeAndFlush( emptyBuffer() );
