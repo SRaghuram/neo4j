@@ -13,7 +13,7 @@ package org.neo4j.cypher.internal.physicalplanning
   */
 object TopLevelArgument {
   class TopLevelArgumentException(argument: Long) extends RuntimeException(
-    "The top level argument has to be zero, but got " + argument)
+    "The top level argument has to be 0, but got " + argument)
 
   def assertTopLevelArgument(argument: Long): Unit = {
     if (argument != VALUE) {

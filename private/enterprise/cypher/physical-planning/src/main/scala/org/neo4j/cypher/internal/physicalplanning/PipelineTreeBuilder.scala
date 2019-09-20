@@ -431,11 +431,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       applyBuffer,
       inputBuffer => inputBuffer.downstreamStates += downstreamState,
       lHSAccumulatingRHSStreamingBufferDefinition => lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamState,
-      delegateBuffer => {
-        val b = delegateBuffer.applyBuffer
-        b.downstreamStates += downstreamState
-        delegateBuffer.downstreamStates += downstreamState
-      },
+      delegateBuffer => delegateBuffer.downstreamStates += downstreamState,
       lastDelegateBuffer => {
         val b = lastDelegateBuffer.applyBuffer
         b.downstreamStates += downstreamState

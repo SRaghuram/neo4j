@@ -16,8 +16,8 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
-import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.LazyLimitStateFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
+import org.neo4j.cypher.internal.runtime.morsel.operators.SerialTopLevelLimitOperatorTaskTemplate.StlLimitStateFactory
 import org.neo4j.cypher.internal.runtime.morsel.operators.{Operator, OperatorTaskTemplate, SingleThreadedAllNodeScanTaskTemplate, _}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -627,7 +627,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans,
-              argumentStates = (argumentStateMapId, LazyLimitStateFactory) :: acc.argumentStates
+              argumentStates = (argumentStateMapId, StlLimitStateFactory) :: acc.argumentStates
             )
 
           case _ =>

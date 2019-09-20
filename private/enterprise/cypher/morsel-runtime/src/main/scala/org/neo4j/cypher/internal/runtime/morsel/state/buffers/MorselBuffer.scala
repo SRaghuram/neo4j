@@ -97,8 +97,7 @@ class MorselBuffer(id: BufferId,
       val workCanceller = workCancellers(i)
       val argumentStateMap = argumentStateMaps(workCanceller).asInstanceOf[ArgumentStateMap[WorkCanceller]]
       val cancelledArguments =
-        argumentStateMap.filterCancelledArguments(morsel,
-          canceller => canceller.isCancelled)
+        argumentStateMap.filterCancelledArguments(morsel, canceller => canceller.isCancelled)
 
       decrementArgumentCounts(downstreamArgumentReducers, cancelledArguments)
       i += 1

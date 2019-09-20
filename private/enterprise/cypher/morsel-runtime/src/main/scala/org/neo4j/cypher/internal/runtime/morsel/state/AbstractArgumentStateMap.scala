@@ -139,7 +139,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   override def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
-    controllers.put(argument, newController)
+    val previousValue = controllers.put(argument, newController)
+    if (previousValue != null) {
+      throw new IllegalStateException(s"ArgumentStateMap cannot re-initiate the same argument (argument: $argument)")
+    }
   }
 
   override def increment(argument: Long): Unit = {

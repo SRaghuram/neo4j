@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.{LazyLimitState, LimitState, LimitStateFactory, evaluateCountValue}
+import org.neo4j.cypher.internal.runtime.morsel.operators.LimitOperator.{LimitState, LimitStateFactory, evaluateCountValue}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentStateMap, StateFactory}
@@ -69,31 +69,11 @@ object LimitOperator {
       new ConcurrentLimitState(argumentRowId, count, argumentRowIdsForReducers)
   }
 
-  // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object LazyLimitStateFactory extends ArgumentStateFactory[LazyLimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LazyLimitState =
-      new LazyStandardLimitState(argumentRowId, argumentRowIdsForReducers)
-
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LazyLimitState =
-      // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
-      new LazyStandardLimitState(argumentRowId, argumentRowIdsForReducers)
-  }
-
   /**
    * Query-wide row count for the rows from one argumentRowId.
    */
   abstract class LimitState extends WorkCanceller {
     def reserve(wanted: Long): Long
-  }
-
-  /**
-   * A LimitState that does not need to be initialized in the constructor
-   * It is initialized by calling setCount()
-   */
-  abstract class LazyLimitState extends LimitState {
-    def setCount(count: Long): Unit // Initialize the count. Intended to be called only once.
-    def isUninitialized: Boolean // True iff setCount has never been called
-    def unreserve(unusedCount: Long): Unit // A reserved count that was not fully consumed can be handed back to the state
   }
 
   class StandardLimitState(override val argumentRowId: Long,
@@ -110,36 +90,6 @@ object LimitOperator {
     override def isCancelled: Boolean = countLeft == 0
 
     override def toString: String = s"StandardLimitState($argumentRowId, countLeft=$countLeft)"
-  }
-
-  class LazyStandardLimitState(override val argumentRowId: Long,
-                               override val argumentRowIdsForReducers: Array[Long]) extends LazyLimitState {
-
-    private var countLeft: Long = -1L
-
-    override def isUninitialized: Boolean = countLeft == -1L
-
-    override def setCount(count: Long): Unit = {
-      AssertionRunner.runUnderAssertion{() => countLeft == -1}
-      countLeft = count
-    }
-
-    override def reserve(wanted: Long): Long = {
-      AssertionRunner.runUnderAssertion{() => countLeft != -1}
-      val got = math.min(countLeft, wanted)
-      countLeft -= got
-      got
-    }
-
-    override def unreserve(unusedCount: Long): Unit = {
-      assert(unusedCount >= 0)
-      countLeft += unusedCount
-      AssertionRunner.runUnderAssertion{() => countLeft >= 0}
-    }
-
-    override def isCancelled: Boolean = countLeft == 0
-
-    override def toString: String = s"LazyStandardLimitState($argumentRowId, countLeft=$countLeft)"
   }
 
   class ConcurrentLimitState(override val argumentRowId: Long,
@@ -223,13 +173,15 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                               generateCountExpression: () => IntermediateExpression)
                                              (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
+  import SerialTopLevelLimitOperatorTaskTemplate._
+
   private var countExpression: IntermediateExpression = _
   private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_countLeft", constant(0L))
   private val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_reserved", constant(0L))
-  private val limitStateField = field[LazyLimitState](codeGen.namer.nextVariableName() + "_limitState",
+  private val limitStateField = field[StlLimitState](codeGen.namer.nextVariableName() + "_limitState",
     // Get the limit operator state from the ArgumentStateMaps that is passed to the constructor
     // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
-    cast[LazyLimitState](
+    cast[StlLimitState](
       invoke(
         invoke(load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name), method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
                constant(argumentStateMapId.x)),
@@ -265,8 +217,8 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     // NOTE: We would typically prefer to do this in the constructor, but that is called using reflection, and the error handling
     // does not work so well when exceptions are thrown from evaluateCountValue (which can be expected due to it performing user error checking!)
     block(
-      condition(invoke(loadField(limitStateField), method[LazyLimitState, Boolean]("isUninitialized")))(
-        invoke(loadField(limitStateField), method[LazyLimitState, Unit, Long]("setCount"),
+      condition(invoke(loadField(limitStateField), method[StlLimitState, Boolean]("isUninitialized")))(
+        invoke(loadField(limitStateField), method[StlLimitState, Unit, Long]("setCount"),
           invokeStatic(method[LimitOperator, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
       ),
       assign(reservedVar, invoke(loadField(limitStateField), method[LimitState, Long, Long]("reserve"), howMuchToReserve)),
@@ -287,14 +239,8 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      ifElse(greaterThan(load(countLeftVar), constant(0L)))(
-        block(
-          invoke(loadField(limitStateField), method[LazyLimitState, Unit, Long]("unreserve"), load(countLeftVar)),
-          profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar))))
-        )
-      )(
-        profileRows(id, cast[Int](load(reservedVar)))
-      ),
+      invoke(loadField(limitStateField), method[StlLimitState, Unit, Long]("update"), subtract(load(reservedVar), load(countLeftVar))),
+      profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar)))),
       inner.genOperateExit
     )
   }
@@ -308,4 +254,105 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+}
+
+object SerialTopLevelLimitOperatorTaskTemplate {
+
+  /**
+    * This LimitState is intended for use with `SerialTopLevelLimitOperatorTaskTemplate`.
+    *
+    * The StlLimitState (x) while be used in the following way from compiled code:
+    *
+    * {{{
+    *   def operate() {
+    *     if (x.isUnitialized) x.setCount(<THE_LIMIT_COUNT>) // setCount happens once
+    *     val reserved = x.reserve(<RESERVE_NBR>) // we don't know how many rows we'll get yet, so just
+    *                                             // reserve some number. Note that reserve itself does
+    *                                             // not modify the state, that only happens on update.
+    *
+    *     val countLeft = reserved
+    *     ...
+    *       countLeft -= 1
+    *     ...
+    *
+    *     x.update(reserved - countLeft) // Before returning we update the state.
+    *   }
+    * }}}
+    */
+  abstract class StlLimitState extends LimitState {
+    def setCount(count: Long): Unit // Initialize the count. Intended to be called only once.
+    def isUninitialized: Boolean // True iff setCount has never been called
+    def update(usedCount: Long): Unit // Update this state with the number of rows that passed the limit.
+  }
+
+  // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
+  object StlLimitStateFactory extends ArgumentStateFactory[StlLimitState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): StlLimitState =
+      new StandardStlLimitState(argumentRowId, argumentRowIdsForReducers)
+
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): StlLimitState =
+    // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
+      new VolatileStlLimitState(argumentRowId, argumentRowIdsForReducers)
+  }
+
+  class StandardStlLimitState(override val argumentRowId: Long,
+                              override val argumentRowIdsForReducers: Array[Long]) extends StlLimitState {
+
+    private var countLeft: Long = -1L
+
+    override def isUninitialized: Boolean = countLeft == -1L
+
+    override def setCount(count: Long): Unit = {
+      AssertionRunner.runUnderAssertion{() => countLeft == -1}
+      countLeft = count
+    }
+
+    override def reserve(wanted: Long): Long = {
+      AssertionRunner.runUnderAssertion{() => countLeft != -1}
+      math.min(countLeft, wanted)
+    }
+
+    override def update(usedCount: Long): Unit = {
+      assert(usedCount >= 0)
+      countLeft -= usedCount
+      AssertionRunner.runUnderAssertion{() => countLeft >= 0}
+    }
+
+    override def isCancelled: Boolean = countLeft == 0
+
+    override def toString: String = s"StandardStlLimitState($argumentRowId, countLeft=$countLeft)"
+  }
+
+  /**
+    * The StlLimitState intended for use with `SerialTopLevelLimitOperatorTaskTemplate` when used
+    * in `ParallelRuntime`. It provides thread-safe calls of `isCancelled`, while all other methods have
+    * to be accessed in serial.
+    */
+  class VolatileStlLimitState(override val argumentRowId: Long,
+                              override val argumentRowIdsForReducers: Array[Long]) extends StlLimitState {
+
+    @volatile private var countLeft: Long = -1L
+
+    override def isUninitialized: Boolean = countLeft == -1L
+
+    override def setCount(count: Long): Unit = {
+      AssertionRunner.runUnderAssertion{() => countLeft == -1}
+      countLeft = count
+    }
+
+    override def reserve(wanted: Long): Long = {
+      AssertionRunner.runUnderAssertion{() => countLeft != -1}
+      math.min(countLeft, wanted)
+    }
+
+    override def update(usedCount: Long): Unit = {
+      assert(usedCount >= 0)
+      countLeft -= usedCount
+      AssertionRunner.runUnderAssertion{() => countLeft >= 0}
+    }
+
+    override def isCancelled: Boolean = countLeft == 0
+
+    override def toString: String = s"VolatileStlLimitState($argumentRowId, countLeft=$countLeft)"
+  }
 }
