@@ -10,6 +10,10 @@ import com.neo4j.bench.client.SyntheticStoreGenerator.Group;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.tool.macro.Deployment;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.junit.Rule;
 import org.junit.Test;
@@ -22,6 +26,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -30,6 +35,7 @@ import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static com.neo4j.bench.common.model.Repository.LDBC_BENCH;
+import static com.neo4j.bench.common.model.Repository.MACRO_BENCH;
 import static com.neo4j.bench.common.model.Repository.MICRO_BENCH;
 import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
@@ -40,6 +46,8 @@ import static org.junit.Assert.assertTrue;
 public class CommandsSmokeTestIT
 {
     private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
+    private static final BenchmarkGroup MACRO_COMPAT_GROUP_1 = new BenchmarkGroup( "Group1" );
+    private static final BenchmarkGroup MACRO_COMPAT_GROUP_2 = new BenchmarkGroup( "Group2" );
     private static final BenchmarkGroup LDBC_READ = new BenchmarkGroup( "LdbcSnbInteractive-Read" );
     private static final BenchmarkGroup LDBC_WRITE = new BenchmarkGroup( "LdbcSnbInteractive-Write" );
 
@@ -69,14 +77,16 @@ public class CommandsSmokeTestIT
                                                                              outputDir );
         Main.main( versionComparisonArgs.stream().toArray( String[]::new ) );
 
-        assertThat( fileCount( outputDir ), equalTo( 3L ) );
+        assertThat( fileCount( outputDir ), equalTo( 4L ) );
         Path microComparisonCsv = outputDir.resolve( CompareVersionsCommand.MICRO_COMPARISON_FILENAME );
         Path microCoverageCsv = outputDir.resolve( CompareVersionsCommand.MICRO_COVERAGE_FILENAME );
         Path ldbcComparisonCsv = outputDir.resolve( CompareVersionsCommand.LDBC_COMPARISON_FILENAME );
+        Path macroComparisonCsv = outputDir.resolve( CompareVersionsCommand.MACRO_COMPARISON_FILENAME );
 
         assertTrue( Files.exists( microComparisonCsv ) );
         assertTrue( Files.exists( microCoverageCsv ) );
         assertTrue( Files.exists( ldbcComparisonCsv ) );
+        assertTrue( Files.exists( macroComparisonCsv ) );
 
         // Check for Micro comparison CSV
         assertThat( "Micro comparison file should contain correct number of entries",
@@ -91,7 +101,16 @@ public class CommandsSmokeTestIT
         // Check for LDBC comparison CSV
         assertThat( "LDBC comparison file should contain correct number of entries",
                     lineCount( ldbcComparisonCsv ),
-                    equalTo( generationResult.benchmarksIn( LDBC_BENCH.projectName(), LDBC_WRITE.name(), LDBC_READ.name() ) + 1L /*header*/ ) );
+                    equalTo( generationResult.benchmarksInToolAndGroups( LDBC_BENCH.projectName(),
+                                                                         LDBC_WRITE.name(),
+                                                                         LDBC_READ.name() ) + 1L /*header*/ ) );
+
+        // Check for Macro comparison CSV
+        assertThat( "Macro comparison file should contain correct number of entries",
+                    lineCount( macroComparisonCsv ),
+                    equalTo( generationResult.benchmarksInToolAndGroups( MACRO_BENCH.projectName(),
+                                                                         MACRO_COMPAT_GROUP_1.name(),
+                                                                         MACRO_COMPAT_GROUP_2.name() ) + 1L /*header*/ ) );
     }
 
     private static long fileCount( Path folder ) throws IOException
@@ -116,18 +135,16 @@ public class CommandsSmokeTestIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( Group.from( "group1", 50 ),
-                                      Group.from( "group2", 50 ),
-                                      Group.from( LDBC_WRITE,
-                                                  ldbcBench( "api", "Core API", "scale_factor", "10" ) ),
-                                      Group.from( LDBC_READ,
-                                                  ldbcBench( "api", "Cypher", "scale_factor", "1" ) ) )
+                .withBenchmarkGroups( Group.from( MACRO_COMPAT_GROUP_1, macroCompatBench(), macroCompatBench() ),
+                                      Group.from( MACRO_COMPAT_GROUP_2, macroCompatBench(), macroCompatBench() ),
+                                      Group.from( LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
+                                      Group.from( LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
                 .withNeo4jVersions( "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )
                 .withNeo4jBranchOwners( "neo4j" )
                 .withToolBranchOwners( "neo-technology" )
-                .withTools( MICRO_BENCH, LDBC_BENCH )
+                .withTools( MICRO_BENCH, LDBC_BENCH, MACRO_BENCH )
                 .withProjects( NEO4J )
                 .withPrintout( false )
                 .build();
@@ -138,17 +155,27 @@ public class CommandsSmokeTestIT
         }
     }
 
-    private Benchmark ldbcBench( String... params )
+    private Benchmark ldbcBench( String api, int scaleFactor )
     {
-        assert params.length % 2 == 0;
         Map<String,String> paramsMap = new HashMap<>();
-        for ( int i = 0; i < params.length; i += 2 )
-        {
-            paramsMap.put( params[i], params[i + 1] );
-        }
+        paramsMap.put( "api", api );
+        paramsMap.put( "scale_factor", Integer.toString( scaleFactor ) );
         return Benchmark.benchmarkFor( "Description",
                                        "Summary",
                                        Benchmark.Mode.THROUGHPUT,
+                                       paramsMap );
+    }
+
+    private Benchmark macroCompatBench()
+    {
+        Map<String,String> paramsMap = new HashMap<>();
+        paramsMap.put( "execution_mode", ExecutionMode.EXECUTE.name() );
+        paramsMap.put( "runtime", Runtime.DEFAULT.name() );
+        paramsMap.put( "planner", Planner.DEFAULT.name() );
+        paramsMap.put( "deployment", Deployment.embedded().parsableValue() );
+        return Benchmark.benchmarkFor( "Description",
+                                       "Query " + UUID.randomUUID(),
+                                       Benchmark.Mode.LATENCY,
                                        paramsMap );
     }
 }
