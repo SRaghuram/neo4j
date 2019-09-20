@@ -23,15 +23,19 @@ public class BatchJobCommandParameters
         return JsonPath.parse(
                 new File( "../src/main/stack/aws-batch-formation.json" ))
                 .limit( 1 )
+                // in CloudFormation template find first JobDefinition and extract command
                 .read( "$.Resources.*[?(@.Type == 'AWS::Batch::JobDefinition')].Properties.ContainerProperties.Command", JSONArray.class )
                 .stream()
                 .findFirst()
                 .map( JSONArray.class::cast )
                 .get()
                 .stream()
+                // filter out all non string command line arguments (like references to secrets in SecretManager)
                 .filter( String.class::isInstance )
                 .map( String.class::cast )
+                // filter out all of command arguments which are not parameter references
                 .filter( value -> value.startsWith( "Ref::" ) )
+                // remove prefix to get parameter name
                 .map( value -> StringUtils.substringAfter( value, "Ref::" ) )
                 .collect( toList() );
     }
