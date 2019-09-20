@@ -21,9 +21,13 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.MapValueBuilder;
+import org.neo4j.values.virtual.PathValue;
+import org.neo4j.values.virtual.VirtualNodeValue;
+import org.neo4j.values.virtual.VirtualRelationshipValue;
 
 import static scala.collection.JavaConverters.asJavaIterable;
 import static scala.collection.JavaConverters.mapAsJavaMap;
@@ -120,10 +124,30 @@ public class FabricExecutor
 
     private MapValue addImportParams( MapValue params, Map<String,AnyValue> record, Map<String,String> bindings )
     {
-        MapValueBuilder builder = new MapValueBuilder( params.size() + bindings.size());
+        MapValueBuilder builder = new MapValueBuilder( params.size() + bindings.size() );
         params.foreach( builder::add );
-        bindings.forEach( ( var, par ) -> builder.add( par, record.get( var ) ) );
+        bindings.forEach( ( var, par ) -> builder.add( par, validateValue( record.get( var ) ) ) );
         return builder.build();
+    }
+
+    private AnyValue validateValue( AnyValue value )
+    {
+        if ( value instanceof VirtualNodeValue )
+        {
+            throw new FabricException( Status.Statement.TypeError, "Importing node values in remote subqueries is currently not supported" );
+        }
+        else if ( value instanceof VirtualRelationshipValue )
+        {
+            throw new FabricException( Status.Statement.TypeError, "Importing relationship values in remote subqueries is currently not supported" );
+        }
+        else if ( value instanceof PathValue )
+        {
+            throw new FabricException( Status.Statement.TypeError, "Importing path values in remote subqueries is currently not supported" );
+        }
+        else
+        {
+            return value;
+        }
     }
 
     private Map<String,AnyValue> recordAsMap( FabricQuery.ShardQuery query, Record inputRecord )
