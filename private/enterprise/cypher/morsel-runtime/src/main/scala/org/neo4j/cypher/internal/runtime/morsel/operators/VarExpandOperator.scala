@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api._
+import org.neo4j.codegen.api.{ExtendClass, Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.{NO_ENTITY_FUNCTION, makeGetPrimitiveNodeFromSlotFunctionFor}
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.NO_PREDICATE_OFFSET
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
@@ -22,12 +22,12 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{QueryContext => _, _}
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api.{IndexReadSession, NodeCursor, Read}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
@@ -188,6 +188,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
 class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     id: Id,
                                     innermost: DelegateOperatorTaskTemplate,
+                                    isHead: Boolean,
                                     fromSlot: Slot,
                                     relOffset: Int,
                                     toSlot: Slot,
@@ -202,7 +203,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     tempRelOffset: Int,
                                     genNodePredicate: Option[() => IntermediateExpression],
                                     genRelPredicate: Option[() => IntermediateExpression])
-                                   (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+                                   (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
   import OperatorCodeGenHelperTemplates._
 
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName(),
@@ -459,24 +460,26 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
     case LongSlot(offset, _, _) =>
-      codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
+      codeGen.getLongAtOrElse(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
     case RefSlot(offset, false, _) =>
       invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeIdOrNullFromAnyValue"),
-                   codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+                   codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))))
     case RefSlot(offset, true, _) =>
       ternary(
-        equal(codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)), noValue),
+        equal(codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))), noValue),
         constant(-1L),
         invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeIdOrNullFromAnyValue"),
-                     codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))))
+                     codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))))
     case _ =>
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 
   private def setNode(slot: Slot): IntermediateRepresentation = slot match {
     case LongSlot(offset, _, _) =>
-      codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+      if (codeGen.hasLongAt(offset)) noop()
+      else codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
     case RefSlot(offset, _, _) =>
-      codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+      if (codeGen.hasRefAt(offset)) noop()
+      else codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
   }
 }

@@ -117,7 +117,8 @@ object OperatorFusionPolicy {
         case _: Selection |
              _: Projection |
              _: UnwindCollection |
-             _: Limit
+             _: Limit |
+             _: VarExpand
         => true
 
         // two child operators
