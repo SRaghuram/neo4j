@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning.{OutputDefinition, RefSlot, _}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
@@ -502,6 +503,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
             val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
             }
+            val tempNodeOffset = expressionSlotForPredicate(nodePredicate)
+            val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
             val newTemplate = new VarExpandOperatorTaskTemplate(acc.template,
                                                                 plan.id,
                                                                 innermostTemplate,
@@ -514,7 +517,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                 missingTypes.toArray,
                                                                 length.min,
                                                                 length.max.getOrElse(Int.MaxValue),
-                                                                mode == ExpandAll)(expressionCompiler)
+                                                                mode == ExpandAll,
+                                                                tempNodeOffset,
+                                                                tempRelationshipOffset,
+                                                                nodePredicate.map(x => compileExpression(x.predicate)),
+                                                                relationshipPredicate.map(x => compileExpression(x.predicate))
+                                                                )(expressionCompiler)
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)

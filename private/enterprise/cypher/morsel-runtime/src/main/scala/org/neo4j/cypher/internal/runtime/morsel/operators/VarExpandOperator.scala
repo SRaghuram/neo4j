@@ -6,11 +6,12 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Constructor, Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.{NO_ENTITY_FUNCTION, makeGetPrimitiveNodeFromSlotFunctionFor}
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.NO_PREDICATE_OFFSET
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{RelationshipTypes, VarLengthExpandPipe}
@@ -21,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, NoMemoryTracker, QueryContext}
+import org.neo4j.cypher.internal.runtime.{QueryContext => _, _}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.InternalException
@@ -29,7 +30,7 @@ import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -184,7 +185,6 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
   }
 }
 
-
 class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     id: Id,
                                     innermost: DelegateOperatorTaskTemplate,
@@ -197,7 +197,11 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     missingTypes: Array[String],
                                     minLength: Int,
                                     maxLength: Int,
-                                    shouldExpandAll: Boolean)
+                                    shouldExpandAll: Boolean,
+                                    tempNodeOffset: Int,
+                                    tempRelOffset: Int,
+                                    genNodePredicate: Option[() => IntermediateExpression],
+                                    genRelPredicate: Option[() => IntermediateExpression])
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
   import OperatorCodeGenHelperTemplates._
 
@@ -209,6 +213,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName())
   private val toOffset = toSlot.offset
   private val projectBackwards = VarLengthExpandPipe.projectBackwards(dir, projectedDir)
+  private var nodePredicate: Option[IntermediateExpression] = _
+  private var relPredicate: Option[IntermediateExpression] = _
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
@@ -217,14 +223,36 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
-    localFields
+    localFields ++ nodePredicate.map(_.fields).getOrElse(Seq.empty) ++ relPredicate.map(_.fields).getOrElse(Seq.empty)
   }
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
+  //we don't add nodePredicate and relPredicate since they are evaluated
+  //in a different class and we only pass along its fields
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
+  /**
+    * In here we create an instance of VarExpandCursor that overrides the `satisfyPredicates` method
+    * with the appropriate behavior.
+    *
+    * {{{
+    *   var innerLoop = false
+    *   this.canContinue = false
+    *   val fromNode = [GET FROM INPUT]
+    *   val toNode = [GET FROM INPUT OR -1 if ExpandAll]
+    *   if (fromNode != -1L ) {//for ExandInto we also check toNode
+    *     this.varExpandCursor = [SPECIALIZED CURSOR]
+    *     this.varExpandCursor.enterWorkUnit(cursorPool)
+    *     this.varExpandCursor.setTracer(executionEvent)
+    *   }
+    * }}}
+    *
+    */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    //initialize predicates
+    nodePredicate = genNodePredicate.map(_())
+    relPredicate = genRelPredicate.map(_())
 
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName()
@@ -232,7 +260,6 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     val predicate =
       if (shouldExpandAll) notEqual(load(fromNode), constant(-1L))
       else and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))
-
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
@@ -241,7 +268,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       condition(predicate){
         block(
           loadTypes,
-          setField(varExpandCursorField, newInstance(getCursorConstructor(dir),
+          setField(varExpandCursorField, newInstance(createInnerClass(dir),
                                                      load(fromNode),
                                                      load(toNode),
                                                      ALLOCATE_NODE_CURSOR,
@@ -250,12 +277,14 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                                      constant(minLength),
                                                      constant(maxLength),
                                                      loadField(DATA_READ),
+                                                     OUTPUT_ROW,
                                                      DB_ACCESS,
-                                                     constant(null),
-                                                     constant(null)
-                                                     )),
+                                                     PARAMS,
+                                                     EXPRESSION_CURSORS,
+                                                     EXPRESSION_VARIABLES)),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, CursorPools]("enterWorkUnit"), CURSOR_POOL),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, OperatorProfileEvent]("setTracer"), loadField(executionEventField)),
+
           setField(canContinue, cursorNext[VarExpandCursor](loadField(varExpandCursorField))),
           assign(resultBoolean, constant(true)),
           )
@@ -265,6 +294,16 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       )
   }
 
+  /**
+    * {{{
+    *     while (hasDemand && this.canContinue) {
+    *         outputRow.copyFrom(inputMorsel)
+    *         outputRow.setRefAt(relOffset, this.varExpandCursor.relationships)
+    *         outputRow.setLongAt(toOffset, this.varExpandCursor.toNode)//Only for ExpandAll
+    *          <<< inner.genOperate() >>>
+    *          this.canContinue = relationships.next()
+    * }}}
+    */
   override protected def genInnerLoop: IntermediateRepresentation = {
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
@@ -311,7 +350,6 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *      varExpandCursor.setTracer(event)
     *    }
     * }}}
-    *
     */
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
     block(
@@ -322,60 +360,98 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       )
   }
 
-  private def getCursorConstructor(dir: SemanticDirection): Constructor =  dir match {
-    case SemanticDirection.OUTGOING =>
-      constructor[
-        OutgoingVarExpandCursor,
-        Long,
-        Long,
-        NodeCursor,
-        Boolean,
-        Array[Int],
-        Int,
-        Int,
-        Read,
-        DbAccess,
-        VarExpandPredicate[Long],
-        VarExpandPredicate[RelationshipSelectionCursor]
-        ]
-    case SemanticDirection.INCOMING =>
-      constructor[
-        IncomingVarExpandCursor,
-        Long,
-        Long,
-        NodeCursor,
-        Boolean,
-        Array[Int],
-        Int,
-        Int,
-        Read,
-        DbAccess,
-        VarExpandPredicate[Long],
-        VarExpandPredicate[RelationshipSelectionCursor]
-        ]
-    case SemanticDirection.BOTH =>
-      constructor[
-        AllVarExpandCursor,
-        Long,
-        Long,
-        NodeCursor,
-        Boolean,
-        Array[Int],
-        Int,
-        Int,
-        Read,
-        DbAccess,
-        VarExpandPredicate[Long],
-        VarExpandPredicate[RelationshipSelectionCursor]
-        ]
+  /**
+    * Generate the predicates that are evaluated along the expansion.
+    *
+    * We have two possible contributions one predicate for nodes and one for relationships.
+    *
+    * The node contribution will look something like:
+    *
+    * {{{
+    *   expressionVariables(tempNodeOffset) = dbAccess.nodeById(selectionCursor.otherNodeReference())
+    *   [evaluate predicate] == Values.TRUE
+    * }}}
+    *
+    * {{{
+    *   expressionVariables(tempRelOffset) = VarExpandCursor.relationshipFromCursor(selectionCursor)
+    *   [evaluate predicate] == Values.TRUE
+    * }}}
+    */
+  private def generatePredicate = {
+    val maybeNodePred = if (tempNodeOffset == NO_PREDICATE_OFFSET) None else nodePredicate.map { pred =>
+      block(
+        oneTime(arraySet(EXPRESSION_VARIABLES, tempNodeOffset, invoke(DB_ACCESS,
+                                                                      method[DbAccess, NodeValue, Long]("nodeById"),
+                                                                      invoke(load("selectionCursor"),
+                                                                             method[RelationshipSelectionCursor, Long](
+                                                                               "otherNodeReference"))))),
+        equal(trueValue, nullCheckIfRequired(pred)))
+    }
+    val maybeRelPred = if (tempRelOffset == NO_PREDICATE_OFFSET) None else relPredicate.map { pred =>
+      block(
+        oneTime(arraySet(EXPRESSION_VARIABLES, tempRelOffset,
+                         invokeStatic(
+                           method[VarExpandCursor, RelationshipValue, DbAccess, RelationshipSelectionCursor]("relationshipFromCursor"),
+                           DB_ACCESS, load("selectionCursor")))),
+        equal(trueValue, nullCheckIfRequired(pred)))
+    }
+
+    (maybeNodePred, maybeRelPred) match {
+      case (Some(np), Some(rp)) => and(np, rp)
+      case (Some(np), None) => np
+      case (None, Some(rp)) => rp
+      case (None, None) => constant(true)
+    }
+  }
+
+  /**
+    * Creates an inner class that extends `VarExpandCursor` with the appropriate node and relationship predicates
+    */
+  private def createInnerClass(dir: SemanticDirection) =  {
+
+    //Directions governs what class we are extending
+    val classToExtend = dir match {
+      case SemanticDirection.OUTGOING => typeRefOf[OutgoingVarExpandCursor]
+      case SemanticDirection.INCOMING => typeRefOf[IncomingVarExpandCursor]
+      case SemanticDirection.BOTH => typeRefOf[AllVarExpandCursor]
+    }
+
+    val fields = nodePredicate.map(_.fields).getOrElse(Seq.empty) ++ relPredicate.map(_.fields).getOrElse(Seq.empty)
+    val locals = nodePredicate.map(_.variables).getOrElse(Set.empty) ++ relPredicate.map(_.variables).getOrElse(Set.empty)
+
+    ExtendClass(codeGen.namer.nextVariableName().toUpperCase, classToExtend,
+                Seq(param[Long]("fromNode"),
+                   param[Long]("toNode"),
+                   param[NodeCursor]("nodeCursor"),
+                   param[Boolean]("projectBackwards"),
+                   param[Array[Int]]("types"),
+                   param[Int]("minLength"),
+                   param[Int]("maxLength"),
+                   param[Read]("read"),
+                   param[ExecutionContext]("executionContext"),
+                   param[DbAccess]("dbAccess"),
+                   param[Array[AnyValue]]("params"),
+                   param[ExpressionCursors]("cursors"),
+                   param[Array[AnyValue]]("expressionVariables")),
+                Seq(methodDeclaration[Boolean]("satisfyPredicates",
+                                              generatePredicate,
+                                              () => locals.toSeq,
+                                              param[ExecutionContext]("executionContext"),
+                                              param[DbAccess]("dbAccess"),
+                                              param[Array[AnyValue]]("params"),
+                                              param[ExpressionCursors]("cursors"),
+                                              param[Array[AnyValue]]("expressionVariables"),
+                                              param[RelationshipSelectionCursor]("selectionCursor"))),
+                fields)
   }
 
   private def loadTypes = {
     if (missingTypes.isEmpty) noop()
     else {
-      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
+      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))) {
         setField(typeField,
-                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
+                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess](
+                   "computeTypes"),
                               loadField(typeField), loadField(missingTypeField), DB_ACCESS))
       }
     }
