@@ -584,15 +584,15 @@ public class SyntheticStoreGenerator
     {
         private Set<List<String>> benchmarkGroups = new HashSet<>();
         private Set<List<String>> benchmarks = new HashSet<>();
-        private int testRuns = 0;
+        private int testRuns;
         private Set<Environment> environments = new HashSet<>();
         private Set<Java> javas = new HashSet<>();
         private Set<Project> projects = new HashSet<>();
         private Set<String> tools = new HashSet<>();
         private Set<BenchmarkTool> toolVersions = new HashSet<>();
-        private int metrics = 0;
-        private int testRunAnnotations = 0;
-        private int metricsAnnotations = 0;
+        private int metrics;
+        private int testRunAnnotations;
+        private int metricsAnnotations;
 
         private void addBenchmark( BenchmarkTool tool, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
         {
