@@ -14,6 +14,7 @@ import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.client.queries.report.CsvHeader;
 import com.neo4j.bench.client.queries.report.CsvRow;
 import com.neo4j.bench.client.queries.report.LdbcComparison;
+import com.neo4j.bench.client.queries.report.MacroComparison;
 import com.neo4j.bench.client.queries.report.MicroComparison;
 import com.neo4j.bench.client.queries.report.MicroCoverage;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -32,6 +33,7 @@ public class CompareVersionsCommand implements Runnable
     static final String MICRO_COMPARISON_FILENAME = "micro_comparison.csv";
     static final String MICRO_COVERAGE_FILENAME = "micro_coverage.csv";
     static final String LDBC_COMPARISON_FILENAME = "ldbc_comparison.csv";
+    static final String MACRO_COMPARISON_FILENAME = "macro_comparison.csv";
 
     private static final String CMD_RESULTS_STORE_USER = "--results_store_user";
     @Option( type = OptionType.COMMAND,
@@ -107,6 +109,10 @@ public class CompareVersionsCommand implements Runnable
             toCsv( outputDir.toPath().resolve( LDBC_COMPARISON_FILENAME ),
                    client,
                    new LdbcComparison( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) );
+
+            toCsv( outputDir.toPath().resolve( MACRO_COMPARISON_FILENAME ),
+                   client,
+                   new MacroComparison( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) );
         }
         catch ( Exception e )
         {

@@ -324,11 +324,6 @@ public class SyntheticStoreGenerator
         return days;
     }
 
-    int resultsPerDay()
-    {
-        return resultsPerDay;
-    }
-
     String[] neo4jBranchOwners()
     {
         return neo4jBranchOwners;
@@ -363,93 +358,98 @@ public class SyntheticStoreGenerator
         {
             for ( int dayResult = 0; dayResult < resultsPerDay; dayResult++ )
             {
-                BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-                Group randomGroup = randomFrom( benchmarkGroups );
-                BenchmarkGroup benchmarkGroup = randomGroup.group();
-                BenchmarkTool tool = generateBenchmarkTool();
-                for ( Benchmark benchmark : randomGroup.benchmarks() )
+                for ( Repository toolRepository : tools )
                 {
-                    benchmarkGroupBenchmarkMetrics.add(
-                            benchmarkGroup,
-                            benchmark,
-                            new Metrics( UNIT.get(),
-                                         MIN_NS.get(),
-                                         MAX_NS.get(),
-                                         MEAN_NS.get(),
-                                         ERROR_NS.get(),
-                                         ERROR_CONFIDENCE.get(),
-                                         SAMPLE_SIZE,
-                                         PERC_25_NS.get(),
-                                         PERC_50_NS.get(),
-                                         PERC_75_NS.get(),
-                                         PERC_90_NS.get(),
-                                         PERC_95_NS.get(),
-                                         PERC_99_NS.get(),
-                                         PERC_99_9_NS.get() ),
-                            config );
-                    generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
-                    generationResult.incMetrics();
-                }
-
-                calendar.add( Calendar.MINUTE, minutesBetweenRuns );
-                Project project = generateProject();
-                generationResult.addProject( project );
-                String triggeredBy = randomOwnerFor( project.repository() );
-                TestRun testRun = new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
-                generationResult.incTestRuns();
-
-                Environment environment = new Environment(
-                        randomFrom( operatingSystems ),
-                        randomFrom( servers ) );
-                generationResult.addEnvironments( environment );
-                Java java = new Java(
-                        randomFrom( jvms ),
-                        randomFrom( jvmVersions ),
-                        randomFrom( jvmArgs ) );
-                generationResult.addJavas( java );
-                List<BenchmarkPlan> plans = new ArrayList<>();
-                List<TestRunError> errors = ERRORS.get();
-
-                TestRunReport testRunReport = new TestRunReport(
-                        testRun,
-                        benchmarkConfig,
-                        Sets.newHashSet( project ),
-                        config,
-                        environment,
-                        benchmarkGroupBenchmarkMetrics,
-                        tool,
-                        java,
-                        plans,
-                        errors );
-                SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport, Planner.COST );
-
-                QueryRetrier queryRetrier = new QueryRetrier( withPrintout );
-                queryRetrier.execute( client, submitTestRun, 1 );
-
-                if ( RNG.nextDouble() > TEST_RUN_ANNOTATION_PROBABILITY )
-                {
-                    AttachTestRunAnnotation attachTestRunAnnotation = new AttachTestRunAnnotation(
-                            testRunReport.testRun().id(),
-                            new Annotation( "comment", System.currentTimeMillis(), "author" ) );
-                    generationResult.incTestRunAnnotations();
-                    queryRetrier.execute( client, attachTestRunAnnotation, 1 );
-                }
-
-                for ( BenchmarkGroupBenchmark bgb : testRunReport.benchmarkGroupBenchmarks() )
-                {
-                    if ( RNG.nextDouble() > METRICS_ANNOTATION_PROBABILITY )
+                    BenchmarkTool tool = generateBenchmarkTool( toolRepository );
+                    BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
+                    for ( Group group : benchmarkGroups )
                     {
-                        queryRetrier.execute( client,
-                                              new AttachMetricsAnnotation( testRunReport.testRun().id(),
-                                                                           bgb.benchmark().name(),
-                                                                           bgb.benchmarkGroup().name(),
-                                                                           new Annotation( "comment", System.currentTimeMillis(), "author" ) ),
-                                              1 );
-                        generationResult.incMetricsAnnotations();
+                        BenchmarkGroup benchmarkGroup = group.group();
+                        for ( Benchmark benchmark : group.benchmarks() )
+                        {
+                            benchmarkGroupBenchmarkMetrics.add(
+                                    benchmarkGroup,
+                                    benchmark,
+                                    new Metrics( UNIT.get(),
+                                                 MIN_NS.get(),
+                                                 MAX_NS.get(),
+                                                 MEAN_NS.get(),
+                                                 ERROR_NS.get(),
+                                                 ERROR_CONFIDENCE.get(),
+                                                 SAMPLE_SIZE,
+                                                 PERC_25_NS.get(),
+                                                 PERC_50_NS.get(),
+                                                 PERC_75_NS.get(),
+                                                 PERC_90_NS.get(),
+                                                 PERC_95_NS.get(),
+                                                 PERC_99_NS.get(),
+                                                 PERC_99_9_NS.get() ),
+                                    config );
+                            generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
+                            generationResult.incMetrics();
+                        }
+                    }
+
+                    calendar.add( Calendar.MINUTE, minutesBetweenRuns );
+                    Project project = generateProject();
+                    generationResult.addProject( project );
+                    String triggeredBy = randomOwnerFor( project.repository() );
+                    TestRun testRun = new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
+                    generationResult.incTestRuns();
+
+                    Environment environment = new Environment(
+                            randomFrom( operatingSystems ),
+                            randomFrom( servers ) );
+                    generationResult.addEnvironments( environment );
+                    Java java = new Java(
+                            randomFrom( jvms ),
+                            randomFrom( jvmVersions ),
+                            randomFrom( jvmArgs ) );
+                    generationResult.addJavas( java );
+                    List<BenchmarkPlan> plans = new ArrayList<>();
+                    List<TestRunError> errors = ERRORS.get();
+
+                    TestRunReport testRunReport = new TestRunReport(
+                            testRun,
+                            benchmarkConfig,
+                            Sets.newHashSet( project ),
+                            config,
+                            environment,
+                            benchmarkGroupBenchmarkMetrics,
+                            tool,
+                            java,
+                            plans,
+                            errors );
+                    SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport, Planner.COST );
+
+                    QueryRetrier queryRetrier = new QueryRetrier( withPrintout );
+                    queryRetrier.execute( client, submitTestRun, 1 );
+
+                    if ( RNG.nextDouble() > TEST_RUN_ANNOTATION_PROBABILITY )
+                    {
+                        AttachTestRunAnnotation attachTestRunAnnotation = new AttachTestRunAnnotation(
+                                testRunReport.testRun().id(),
+                                new Annotation( "comment", System.currentTimeMillis(), "author" ) );
+                        generationResult.incTestRunAnnotations();
+                        queryRetrier.execute( client, attachTestRunAnnotation, 1 );
+                    }
+
+                    for ( BenchmarkGroupBenchmark bgb : testRunReport.benchmarkGroupBenchmarks() )
+                    {
+                        if ( RNG.nextDouble() > METRICS_ANNOTATION_PROBABILITY )
+                        {
+                            queryRetrier.execute( client,
+                                                  new AttachMetricsAnnotation( testRunReport.testRun().id(),
+                                                                               bgb.benchmark().name(),
+                                                                               bgb.benchmarkGroup().name(),
+                                                                               new Annotation( "comment", System.currentTimeMillis(), "author" ) ),
+                                                  1 );
+                            generationResult.incMetricsAnnotations();
+                        }
                     }
                 }
 
-                int i = (day * resultsPerDay) + dayResult;
+                int i = generationResult.testRuns();
                 if ( withPrintout && (i + 1) % 100 == 0 )
                 {
                     int count = i + 1;
@@ -474,9 +474,8 @@ public class SyntheticStoreGenerator
         return generationResult;
     }
 
-    private BenchmarkTool generateBenchmarkTool()
+    private BenchmarkTool generateBenchmarkTool( Repository tool )
     {
-        Repository tool = randomFrom( tools );
         String owner = randomOwnerFor( tool );
         String commit = UUID.randomUUID().toString();
         String neo4jVersion = randomFrom( neo4jVersions );
@@ -655,7 +654,7 @@ public class SyntheticStoreGenerator
                                    .count();
         }
 
-        int benchmarksIn( String tool, String... groups )
+        int benchmarksInToolAndGroups( String tool, String... groups )
         {
             return (int) benchmarks.stream()
                                    .filter( b -> b.get( 0 ).equalsIgnoreCase( tool ) && Arrays.stream( groups ).anyMatch( b.get( 1 )::equalsIgnoreCase ) )
