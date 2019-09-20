@@ -5,42 +5,70 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.auth.Resource.AllPropertiesResource;
 import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
 import com.neo4j.server.security.enterprise.auth.Resource.ProcedureResource;
+import com.neo4j.server.security.enterprise.auth.Resource.PropertyResource;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.*;
 
 class ResourcePrivilegeTest
 {
-    // TODO expand these tests
     @Test
     void shouldConstructValidPrivileges() throws InvalidArgumentsException
     {
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
-            new ResourcePrivilege( privilegeType, PrivilegeAction.ACCESS, new DatabaseResource(), DatabaseSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.START_DATABASE, new DatabaseResource(), DatabaseSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.STOP_DATABASE, new DatabaseResource(), DatabaseSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.ADMIN, new DatabaseResource(), DatabaseSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.SCHEMA, new DatabaseResource(), DatabaseSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.TOKEN, new DatabaseResource(), DatabaseSegment.ALL );
-
-            new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new GraphResource(), RelTypeSegment.ALL );
-
-            new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new GraphResource(), RelTypeSegment.ALL );
-
-            new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new GraphResource(), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new GraphResource(), RelTypeSegment.ALL );
-
-            new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new ProcedureResource( "", "" ), LabelSegment.ALL );
-            new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new ProcedureResource( "", "" ), RelTypeSegment.ALL );
+            for ( PrivilegeAction action : PrivilegeAction.values() )
+            {
+                if ( ACCESS.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( TRAVERSE.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
+                }
+                else if ( READ.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
+                    assertOk( privilegeType, action, new AllPropertiesResource() );
+                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
+                }
+                else if ( WRITE.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
+                    assertOk( privilegeType, action, new AllPropertiesResource() );
+                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
+                }
+                else if ( ADMIN.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( SCHEMA.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( TOKEN.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( EXECUTE.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new ProcedureResource( "", "" ) );
+                }
+                else
+                {
+                    fail( "Unhandled PrivilegeAction: " + action );
+                }
+            }
         }
     }
 
@@ -49,25 +77,79 @@ class ResourcePrivilegeTest
     {
         for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
         {
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.TRAVERSE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
-
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.READ, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
-
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new ProcedureResource( "", "" ), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.WRITE, new ProcedureResource( "", "" ), RelTypeSegment.ALL ) );
-
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new GraphResource(), LabelSegment.ALL ) );
-            assertThrows( InvalidArgumentsException.class,
-                          () -> new ResourcePrivilege( privilegeType, PrivilegeAction.EXECUTE, new GraphResource(), RelTypeSegment.ALL ) );
+            for ( PrivilegeAction action : PrivilegeAction.values() )
+            {
+                if ( ACCESS.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                }
+                else if ( TRAVERSE.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( READ.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( WRITE.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( ADMIN.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                }
+                else if ( SCHEMA.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                }
+                else if ( TOKEN.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                }
+                else if ( EXECUTE.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else
+                {
+                    fail( "Unhandled PrivilegeAction: " + action );
+                }
+            }
         }
     }
+
+    private void assertFail( ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource )
+    {
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT ) );
+    }
+
+    private void assertOk( ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource ) throws InvalidArgumentsException
+    {
+        new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT );
+    }
+
+    private static Segment TEST_SEGMENT = new Segment()
+    {
+    };
 }
