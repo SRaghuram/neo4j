@@ -7,9 +7,8 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.MORSEL
-import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
-import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, NO_FUSING}
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, NO_FUSING}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress._

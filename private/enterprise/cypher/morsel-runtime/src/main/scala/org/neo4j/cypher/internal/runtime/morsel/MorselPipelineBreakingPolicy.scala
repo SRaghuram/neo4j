@@ -13,17 +13,6 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 
-    /**
-      * Checks if the current one-child operator can be fused.
-      *
-      * An operator is deemed fusable iff the the fusion policy allows the operator and its child operator to be fused.
-      * For example if we have a plan like `UNFUSABLE -> Expand` we will say that `Expand` can't be fused and instead
-      * insert a pipeline break, whereas for `AllNodesScan -> Expand` we might be able to fuse them together and don't
-      * have to insert a pipeline break.
-      */
-    def canFuseOneChildOperator(plan: LogicalPlan): Boolean = fusionPolicy.canFuseOverPipeline(plan) &&
-      fusionPolicy.canFuse(plan.lhs.getOrElse(throw new IllegalStateException("Must be called from a one-child operator")))
-
     lp match {
       // leaf operators
       case _: AllNodesScan |
@@ -77,4 +66,32 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy) exte
 
   private def unsupported(thing: String): CantCompileQueryException =
     new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing`, use another runtime.")
+
+  /**
+    * Checks if the current one-child operator can be fused.
+    *
+    * An operator is deemed fusable iff the the fusion policy allows the operator and its child operators all the way
+    * down to the last break to be fused. For example if we have a plan like `UNFUSABLE -> Expand` we will say that
+    * `Expand` can't be fused and instead insert a pipeline break, whereas for `AllNodesScan -> Expand` we might be
+    * able to fuse them together and don't have to insert a pipeline break.
+    */
+  private def canFuseOneChildOperator(lp: LogicalPlan):Boolean = {
+    assert(lp.rhs.isEmpty)
+
+    if (!fusionPolicy.canFuseOverPipeline(lp)) {
+      return false
+    }
+    var current = lp.lhs.orNull
+    while (current != null) {
+      if (!fusionPolicy.canFuse(current)) {
+        return false
+      }
+      //we made it all the way down to a pipeline break
+      if (breakOn(current)) {
+        return true
+      }
+      current = current.lhs.orNull
+    }
+    true
+  }
 }
