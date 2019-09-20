@@ -112,10 +112,6 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.suspendUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
     public void suspendUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
-        if ( isSelf( username ) )
-        {
-            throw new InvalidArgumentsException( "Suspending yourself (user '" + username + "') is not allowed." );
-        }
         var query = String.format( "ALTER USER %s SET STATUS SUSPENDED", escapeParameter( username ) );
         runSystemCommand( query, "dbms.security.suspendUser" );
     }
@@ -129,10 +125,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException, InvalidArgumentsException
     {
-        if ( isSelf( username ) )
-        {
-            throw new InvalidArgumentsException( "Activating yourself (user '" + username + "') is not allowed." );
-        }
         var query = String.format( "ALTER USER %s %sSET STATUS ACTIVE", escapeParameter( username ),
                 requirePasswordChange ? "SET PASSWORD CHANGE REQUIRED " : "" );
         runSystemCommand( query, "dbms.security.activateUser" );

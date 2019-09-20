@@ -307,7 +307,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldFailToSuspendYourself()
     {
         assertSystemCommandFail( adminSubject, "CALL dbms.security.suspendUser('adminSubject')",
-                "Suspending yourself (user 'adminSubject') is not allowed." );
+                "Failed to alter the specified user 'adminSubject': Changing your own activation status is not allowed." );
     }
 
     //---------- activate user -----------
@@ -368,7 +368,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldFailToActivateYourself()
     {
         assertSystemCommandFail( adminSubject, "CALL dbms.security.activateUser('adminSubject')",
-                "Activating yourself (user 'adminSubject') is not allowed." );
+                "Failed to alter the specified user 'adminSubject': Changing your own activation status is not allowed." );
     }
 
     //---------- add user to role -----------

@@ -454,33 +454,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
   }
 
-  test("should fail when dropping current user that is not admin") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    prepareUser("neo5j","fooBar")
-    execute("ALTER USER neo5j SET PASSWORD CHANGE NOT REQUIRED")
-    val nonAdmin = user("neo5j", passwordChangeRequired = false)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, nonAdmin)
-
-    the[AuthorizationViolationException] thrownBy {
-      // WHEN
-      executeOnSystem("neo5j", "fooBar", "DROP USER neo5j")
-      // THEN
-    } should have message "Permission denied."
-
-    // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, nonAdmin)
-
-    the[AuthorizationViolationException] thrownBy {
-      // WHEN
-      executeOnSystem("neo5j", "fooBar", "DROP USER neo5j IF EXISTS")
-      // THEN
-    } should have message "Permission denied."
-
-    // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, nonAdmin)
-  }
-
   test("should fail when dropping non-existing user") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -731,7 +704,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     the[InvalidArgumentsException] thrownBy {
-      executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS SUSPENDED")
       executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS SUSPENDED")
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
