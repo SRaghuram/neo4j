@@ -15,6 +15,7 @@ import org.neo4j.graphdb.SchemaAcceptanceTestBase;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
 import org.neo4j.kernel.api.exceptions.schema.EquivalentSchemaRuleAlreadyExistsException;
+import org.neo4j.kernel.api.exceptions.schema.IndexWithNameAlreadyExistsException;
 import org.neo4j.test.extension.Inject;
 
 @ImpermanentEnterpriseDbmsExtension
@@ -114,6 +115,32 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         assertExpectedException( expectedCause, expectedMessage, exception );
     }
 
+    @ParameterizedTest()
+    @EnumSource( SchemaTxStrategy.class )
+    void shouldThrowIfIndexWithNameExistsWhenCreatingNodeKeyConstraint( SchemaTxStrategy txStrategy )
+    {
+        final ConstraintViolationException exception = txStrategy.execute( db,
+                schema -> schema.indexFor( label ).on( propertyKey ).withName( "name" ).create(),
+                schema1 -> schema1.constraintFor( label ).assertPropertyIsNodeKey( secondPropertyKey ).withName( "name" ).create(),
+                ConstraintViolationException.class );
+        Class<IndexWithNameAlreadyExistsException> expectedCause = IndexWithNameAlreadyExistsException.class;
+        String expectedMessage = "There already exists an index called 'name'.";
+        assertExpectedException( expectedCause, expectedMessage, exception );
+    }
+
+    @ParameterizedTest()
+    @EnumSource( SchemaTxStrategy.class )
+    void shouldThrowIfIndexWithNameExistsWhenCreatingExistenceConstraint( SchemaTxStrategy txStrategy )
+    {
+        final ConstraintViolationException exception = txStrategy.execute( db,
+                schema -> schema.indexFor( label ).on( propertyKey ).withName( "name" ).create(),
+                schema1 -> schema1.constraintFor( label ).assertPropertyExists( secondPropertyKey ).withName( "name" ).create(),
+                ConstraintViolationException.class );
+        Class<IndexWithNameAlreadyExistsException> expectedCause = IndexWithNameAlreadyExistsException.class;
+        String expectedMessage = "There already exists an index called 'name'.";
+        assertExpectedException( expectedCause, expectedMessage, exception );
+    }
+
     //todo
     // X shouldThrowIfEquivalentNodeKeyConstraintExist
     // X shouldThrowIfEquivalentExistenceConstraintExist
@@ -122,4 +149,6 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     // X shouldThrowIfSchemaAlreadyNodeKeyConstrainedWhenCreatingIndex
     // X shouldThrowIfSchemaAlreadyNodeKeyConstrainedWhenCreatingUniquenessConstraint
     // X shouldThrowIfSchemaAlreadyNodeKeyConstrainedWhenCreatingNodeKeyConstraint
+    // X shouldThrowIfIndexWithNameExistsWhenCreatingNodeKeyConstraint
+    // X shouldThrowIfIndexWithNameExistsWhenCreatingExistenceConstraint
 }
