@@ -12,7 +12,7 @@ import static java.lang.String.format;
 
 public class LdbcComparisonResult implements CsvRow
 {
-    static final String HEADER = "group,bench,old,new,unit,improvement";
+    static final String HEADER = "Workload,Benchmark,Old,New,Unit,Difference";
     private static DecimalFormat NUMBER = new DecimalFormat( "#.00" );
 
     private final String group;

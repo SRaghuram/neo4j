@@ -11,7 +11,7 @@ import static java.lang.String.format;
 
 public class MicroCoverageResult implements CsvRow
 {
-    static final String HEADER = "group,bench,test_count,change";
+    static final String HEADER = "Suite,Benchmark Group,Scenarios,Summary";
 
     public enum Change
     {

@@ -65,9 +65,9 @@ public class SyntheticStoreGeneratorIT
     {
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
-                .withResultsPerDay( 10 )
-                .withBenchmarkGroups( Group.from( "group1", 50 ),
-                                      Group.from( "group2", 50 ) )
+                .withResultsPerDay( 5 )
+                .withBenchmarkGroups( Group.from( "group1", 10 ),
+                                      Group.from( "group2", 10 ) )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0" )
                 .withNeo4jEditions( COMMUNITY )
                 .withSettingsInConfig( 10 )
@@ -191,7 +191,7 @@ public class SyntheticStoreGeneratorIT
                             session.run( "MATCH (:Neo4jConfig) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
                             equalTo( generationResult.neo4jConfigs() ) );
 
-                verifyPersonalRuns( session, generator );
+                verifyPersonalRuns( session, generator, generationResult );
 
                 int testRunAnnotations = session.run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of TestRun Annotation nodes",
@@ -316,7 +316,7 @@ public class SyntheticStoreGeneratorIT
         }
     }
 
-    private void verifyPersonalRuns( Session session, SyntheticStoreGenerator generator )
+    private void verifyPersonalRuns( Session session, SyntheticStoreGenerator generator, SyntheticStoreGenerator.GenerationResult generationResult )
     {
         List<String> branchOwners = Lists.newArrayList( generator.neo4jBranchOwners() );
 
@@ -336,7 +336,7 @@ public class SyntheticStoreGeneratorIT
         }
         else
         {
-            assertEquals( generator.days() * generator.resultsPerDay(), personalNeo4jCount );
+            assertEquals( generationResult.testRuns(), personalNeo4jCount );
 
             for ( String owner : generator.neo4jBranchOwners() )
             {
