@@ -343,6 +343,24 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("bar", "secondPassword", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should fail when replacing current user") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet should be(Set(neo4jUserActive))
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      executeOnSystem("neo4j", "bar", "CREATE OR REPLACE USER neo4j SET PASSWORD 'baz'")
+      // THEN
+    } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
+    testUserLogin("neo4j", "bar", AuthenticationResult.SUCCESS)
+    testUserLogin("neo4j", "baz", AuthenticationResult.FAILURE)
+  }
+
   test("should get syntax exception when using both replace and if not exists") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
