@@ -184,8 +184,18 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, propertyKey );
         var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, nonDefaultSchemaIndex.providerName() ) );
-        // todo update expected message in accordance with EquivalentSchemaRuleAlreadyExistsException
-        assertThat( e.getMessage(), containsString( "" ) );
+
+        if ( uniquenessConstraint )
+        {
+            final String schemaDescription = ":label[0](property[0])";
+            assertEquals( "There already exists an index " + schemaDescription + ". A constraint cannot be created until the index has been dropped.",
+                    e.getMessage() );
+        }
+        else
+        {
+            final String indexDescription = "Index( 1, 'Index on :Superhero (primaryPower)', GENERAL, :Superhero(primaryPower), native-btree-1.0 )";
+            assertEquals( "An equivalent index already exists, '" + indexDescription + "'.", e.getMessage() );
+        }
     }
 
     private void init( boolean uniquenessConstraint, String indexProcedureName, String expectedSuccessfulCreationStatus )
