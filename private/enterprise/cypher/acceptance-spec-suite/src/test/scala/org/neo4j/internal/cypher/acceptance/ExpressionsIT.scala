@@ -1306,6 +1306,120 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, context) should equal(relType)
   }
 
+  test("HasLabelsFromSlot - resolved - positive") {
+    // Given
+    val labels = Seq("A", "B", "C")
+    val n = ValueUtils.fromNodeProxy(createLabeledNode(labels: _*))
+
+    val offset = 0
+    val resolvedLabelTokenIds = labels.flatMap(l => query.getOptLabelId(l))
+    val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, Seq.empty)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.TRUE)
+  }
+
+  test("HasLabelsFromSlot - resolved - negative") {
+    // Given
+    val labels = Seq("A", "B", "C")
+    val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B"))
+
+    val offset = 0
+    val resolvedLabelTokenIds = labels.flatMap(l => query.getOptLabelId(l))
+    val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, Seq.empty)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.FALSE)
+  }
+
+  test("HasLabelsFromSlot - late - positive") {
+    // Given
+    val labels = Seq("A", "B", "C")
+    val n = ValueUtils.fromNodeProxy(createLabeledNode(labels: _*))
+
+    val offset = 0
+    val expression = HasLabelsFromSlot(offset, Seq.empty, labels)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.TRUE)
+  }
+
+  test("HasLabelsFromSlot - late - negative") {
+    // Given
+    val labels = Seq("A", "B", "C")
+    val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B"))
+
+    val offset = 0
+    val expression = HasLabelsFromSlot(offset, Seq.empty, labels)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.FALSE)
+  }
+
+  test("HasLabelsFromSlot - mixed - positive") {
+    // Given
+    val resolvedLabels = Seq("A", "B")
+    val lateLabels = Seq("C", "D")
+    val n = ValueUtils.fromNodeProxy(createLabeledNode(resolvedLabels ++ lateLabels: _*))
+
+    val offset = 0
+    val resolvedLabelTokenIds = resolvedLabels.flatMap(l => query.getOptLabelId(l))
+    val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, lateLabels)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.TRUE)
+  }
+
+  test("HasLabelsFromSlot - mixed - negative") {
+    // Given
+    val resolvedLabels = Seq("A", "B")
+    val lateLabels = Seq("C", "D")
+    val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B", "D"))
+
+    val offset = 0
+    val resolvedLabelTokenIds = resolvedLabels.flatMap(l => query.getOptLabelId(l))
+    val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, lateLabels)
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+    val context = SlottedExecutionContext(slots)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    context.setLongAt(offset, n.id)
+    evaluate(compiled, context) should equal(Values.FALSE)
+  }
+
   test("PrimitiveEquals") {
     val compiled = compile(PrimitiveEquals(parameter(0), parameter(1)))
 
