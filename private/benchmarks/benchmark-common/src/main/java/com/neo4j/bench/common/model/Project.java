@@ -74,6 +74,11 @@ public class Project
         this.owner = requireNonNull( owner );
     }
 
+    public Repository repository()
+    {
+        return repository;
+    }
+
     public String commit()
     {
         return commit;
