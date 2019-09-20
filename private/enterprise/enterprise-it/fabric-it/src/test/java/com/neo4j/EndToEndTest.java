@@ -6,10 +6,17 @@
 package com.neo4j;
 
 import com.neo4j.utils.CustomFunctions;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,33 +40,32 @@ import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EndToEndTest
 {
 
-    private Driver clientDriver;
-    private TestServer testServer;
-    private InProcessNeo4j shard0;
-    private InProcessNeo4j shard1;
+    static private Driver clientDriver;
+    static private TestServer testServer;
+    static private InProcessNeo4j shard0;
+    static private InProcessNeo4j shard1;
+    static private Driver shard0Driver;
+    static private Driver shard1Driver;
 
-    @BeforeEach
-    void setUp() throws KernelException
+    @BeforeAll
+    static void beforeAll() throws KernelException
     {
 
-        shard0 = TestNeo4jBuilders.newInProcessBuilder()
-                .withFixture( "CREATE (:Person {name: 'Anna', uid: 0, age: 30})" )
-                .withFixture( "CREATE (:Person {name: 'Bob',  uid: 1, age: 40})" )
-                .build();
-        shard1 = TestNeo4jBuilders.newInProcessBuilder()
-                .withFixture( "CREATE (:Person {name: 'Carrie', uid: 100, age: 30})" )
-                .withFixture( "CREATE (:Person {name: 'Dave'  , uid: 101, age: 90})" )
-                .build();
+        shard0 = TestNeo4jBuilders.newInProcessBuilder().build();
+        shard1 = TestNeo4jBuilders.newInProcessBuilder().build();
 
         PortUtils.Ports ports = PortUtils.findFreePorts();
 
@@ -90,15 +96,53 @@ class EndToEndTest
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
+
+        shard0Driver = GraphDatabase.driver(
+                shard0.boltURI(),
+                AuthTokens.none(),
+                org.neo4j.driver.Config.builder()
+                        .withoutEncryption()
+                        .withMaxConnectionPoolSize( 3 )
+                        .build() );
+        shard1Driver = GraphDatabase.driver(
+                shard1.boltURI(),
+                AuthTokens.none(),
+                org.neo4j.driver.Config.builder()
+                        .withoutEncryption()
+                        .withMaxConnectionPoolSize( 3 )
+                        .build() );
     }
 
-    @AfterEach
-    void tearDown()
+    @BeforeEach
+    void beforeEach()
     {
-        testServer.stop();
-        clientDriver.close();
-        shard0.close();
-        shard1.close();
+        try ( Transaction tx = shard0Driver.session().beginTransaction() )
+        {
+            tx.run( "MATCH (n) DETACH DELETE n" );
+            tx.run( "CREATE (:Person {name: 'Anna', uid: 0, age: 30})" ).consume();
+            tx.run( "CREATE (:Person {name: 'Bob',  uid: 1, age: 40})" ).consume();
+            tx.success();
+        }
+        try ( Transaction tx = shard1Driver.session().beginTransaction() )
+        {
+            tx.run( "MATCH (n) DETACH DELETE n" ).consume();
+            tx.run( "CREATE (:Person {name: 'Carrie', uid: 100, age: 30})" ).consume();
+            tx.run( "CREATE (:Person {name: 'Dave'  , uid: 101, age: 90})" ).consume();
+            tx.success();
+        }
+    }
+
+    @AfterAll
+    static void afterAll()
+    {
+        List.<Runnable>of(
+                () -> testServer.stop(),
+                () -> clientDriver.close(),
+                () -> shard0Driver.close(),
+                () -> shard1Driver.close(),
+                () -> shard0.close(),
+                () -> shard1.close()
+        ).parallelStream().forEach( Runnable::run );
     }
 
     @Test
@@ -166,7 +210,7 @@ class EndToEndTest
     void testWriteNodes()
     {
 
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE  ).withDatabase( "mega" ).build() )
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
             tx.run( "FROM mega.graph0 CREATE (:Cat {name: 'Whiskers'})" );
@@ -176,7 +220,7 @@ class EndToEndTest
 
         List<Node> r;
 
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE  ).withDatabase( "mega" ).build() )
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
             tx.run( "FROM mega.graph1 CREATE (:Cat {name: 'Misty'})" );
@@ -237,14 +281,10 @@ class EndToEndTest
         }
 
         assertThat( r.size(), equalTo( 4 ) );
-        assertThat( r.get( 0 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 0 ).get( "name" ).asString(), equalTo( "Anna" ) );
-        assertThat( r.get( 1 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 1 ).get( "name" ).asString(), equalTo( "Bob" ) );
-        assertThat( r.get( 2 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 2 ).get( "name" ).asString(), equalTo( "Carrie" ) );
-        assertThat( r.get( 3 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 3 ).get( "name" ).asString(), equalTo( "Dave" ) );
+        var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
+        labels.forEach( l -> assertThat( l, contains( equalTo( "Person" ) ) ) );
+        var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
+        assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
     }
 
     @Test
@@ -263,14 +303,10 @@ class EndToEndTest
         }
 
         assertThat( r.size(), equalTo( 4 ) );
-        assertThat( r.get( 0 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 0 ).get( "name" ).asString(), equalTo( "Anna" ) );
-        assertThat( r.get( 1 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 1 ).get( "name" ).asString(), equalTo( "Bob" ) );
-        assertThat( r.get( 2 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 2 ).get( "name" ).asString(), equalTo( "Carrie" ) );
-        assertThat( r.get( 3 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 3 ).get( "name" ).asString(), equalTo( "Dave" ) );
+        var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
+        labels.forEach( l -> assertThat( l, contains( equalTo( "Person" ) ) ) );
+        var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
+        assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
     }
 
     @Test
@@ -319,7 +355,7 @@ class EndToEndTest
             tx.success();
         }
 
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.READ ).withDatabase( "mega" ).build()  )
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.READ ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
             tx.run( "FROM mega.graph0 MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" ).consume();
@@ -332,7 +368,7 @@ class EndToEndTest
     {
         List<Record> r;
 
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build()  ).beginTransaction() )
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( "RETURN 1+2 AS a, 'foo' AS f" ).list();
             tx.success();
@@ -436,7 +472,7 @@ class EndToEndTest
         var tagged = r.stream().map( c -> c.get( "tagged_id" ).asLong() ).distinct().count();
 
         assertThat( gids, is( 2L ) );
-        assertThat( local, is( 2L ) );
+        assertThat( local, allOf( greaterThanOrEqualTo( 2L ), lessThanOrEqualTo( 4L ) ) );
         assertThat( tagged, is( 4L ) );
     }
 
@@ -553,9 +589,7 @@ class EndToEndTest
             tx.success();
         }
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).keys(), contains( "x" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ) ) );
+        assertThat( r.size(), equalTo( 0 ) );
     }
 
     @Test
@@ -578,9 +612,7 @@ class EndToEndTest
             tx.success();
         }
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).keys(), contains( "x" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ) ) );
+        assertThat( r.size(), equalTo( 0 ) );
     }
 
     @Test
@@ -638,35 +670,184 @@ class EndToEndTest
     }
 
     @Test
-    void testCorrelatedRemoteSubqueryWithNodes()
+    void testCorrelatedRemoteSubquerySupportedTypes()
     {
         List<Record> r;
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             var query = String.join( "\n",
+                    "WITH",
+                    "  null AS nothing,",
+                    "  true AS boolean,",
+                    "  1 AS integer,",
+                    "  3.14 AS float,",
+                    "  'abc' AS string,",
+                    "  [10, 20] AS list,",
+                    "  {a: 1, b: 2} AS map,",
+                    "  point({x: 1.0, y: 2.0}) AS point,",
+                    "  datetime('2015-06-24T12:50:35.556+0100') AS datetime,",
+                    "  localdatetime('2015185T19:32:24') AS localdatetime,",
+                    "  date('+2015-W13-4') AS date,",
+                    "  time('125035.556+0100') AS time,",
+                    "  localtime('12:50:35.556') AS localtime,",
+                    "  duration('PT16H12M') AS duration",
                     "CALL {",
                     "  FROM mega.graph(0)",
-                    "  MATCH (x)",
-                    "  RETURN x",
+                    "  WITH",
+                    "    nothing,",
+                    "    boolean,",
+                    "    integer,",
+                    "    float,",
+                    "    string,",
+                    "    list,",
+                    "    map,",
+                    "    point,",
+                    "    datetime,",
+                    "    localdatetime,",
+                    "    date,",
+                    "    time,",
+                    "    localtime,",
+                    "    duration",
+                    "  RETURN",
+                    "    nothing AS nothing_2,",
+                    "    boolean AS boolean_2,",
+                    "    integer AS integer_2,",
+                    "    float AS float_2,",
+                    "    string AS string_2,",
+                    "    list AS list_2,",
+                    "    map AS map_2,",
+                    "    point AS point_2,",
+                    "    datetime AS datetime_2,",
+                    "    localdatetime AS localdatetime_2,",
+                    "    date AS date_2,",
+                    "    time AS time_2,",
+                    "    localtime AS localtime_2,",
+                    "    duration AS duration_2",
                     "}",
-                    "CALL {",
-                    "  FROM mega.graph(0)",
-                    "  WITH x",
-                    "  RETURN x AS y",
-                    "}",
-                    "RETURN x, y"
+                    "RETURN",
+                    "  nothing_2,",
+                    "  boolean_2,",
+                    "  integer_2,",
+                    "  float_2,",
+                    "  string_2,",
+                    "  list_2,",
+                    "  map_2,",
+                    "  point_2,",
+                    "  datetime_2,",
+                    "  localdatetime_2,",
+                    "  date_2,",
+                    "  time_2,",
+                    "  localtime_2,",
+                    "  duration_2"
             );
 
             r = tx.run( query ).list();
             tx.success();
         }
 
-//        assertThat( r.size(), equalTo( 2 ) );
-//        assertThat( r.get( 0 ).keys(), contains( "x", "y" ) );
-//        assertThat( r.get( 0 ).values(), contains( Values.value( 10 ), Values.value( 11 ) ) );
-//        assertThat( r.get( 1 ).keys(), contains( "x", "y" ) );
-//        assertThat( r.get( 1 ).values(), contains( Values.value( 20 ), Values.value( 21 ) ) );
+        assertThat( r.size(), equalTo( 1 ) );
+        assertThat( r.get( 0 ).get( "nothing_2" ), is( Values.NULL ) );
+        assertThat( r.get( 0 ).get( "boolean_2" ), is( Values.value( true ) ) );
+        assertThat( r.get( 0 ).get( "integer_2" ), is( Values.value( 1L ) ) );
+        assertThat( r.get( 0 ).get( "float_2" ), is( Values.value( 3.14 ) ) );
+        assertThat( r.get( 0 ).get( "string_2" ), is( Values.value( "abc" ) ) );
+        assertThat( r.get( 0 ).get( "list_2" ), is( Values.value( List.of( 10L, 20L ) ) ) );
+        assertThat( r.get( 0 ).get( "map_2" ), is( Values.value( Map.of( "a", 1L, "b", 2L ) ) ) );
+        assertThat( r.get( 0 ).get( "point_2" ), is( Values.point( 7203, 1.0, 2.0 ) ) );
+        assertThat( r.get( 0 ).get( "datetime_2" ), is( Values.value( ZonedDateTime.parse( "2015-06-24T12:50:35.556+01:00" ) ) ) );
+        assertThat( r.get( 0 ).get( "localdatetime_2" ), is( Values.value( LocalDateTime.parse( "2015-07-04T19:32:24" ) ) ) );
+        assertThat( r.get( 0 ).get( "date_2" ), is( Values.value( LocalDate.parse( "2015-03-26" ) ) ) );
+        assertThat( r.get( 0 ).get( "time_2" ), is( Values.value( OffsetTime.parse( "12:50:35.556+01:00" ) ) ) );
+        assertThat( r.get( 0 ).get( "localtime_2" ), is( Values.value( LocalTime.parse( "12:50:35.556" ) ) ) );
+        assertThat( r.get( 0 ).get( "duration_2" ), is( Values.value( Duration.parse( "PT16H12M" ) ) ) );
+    }
+
+    @Test
+    void testCorrelatedRemoteSubqueryNodeType()
+    {
+        ClientException ex = assertThrows( ClientException.class, () ->
+        {
+            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+            {
+                var query = String.join( "\n",
+                        "CALL {",
+                        "  FROM mega.graph(0)",
+                        "  CREATE (n:Test)",
+                        "  RETURN n",
+                        "}",
+                        "CALL {",
+                        "  FROM mega.graph(0)",
+                        "  WITH n",
+                        "  RETURN 1 AS x",
+                        "}",
+                        "RETURN n, x"
+                );
+                tx.run( query ).list();
+                tx.success();
+            }
+        } );
+
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "node values" ) );
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
+    }
+
+    @Test
+    void testCorrelatedRemoteSubqueryRelType()
+    {
+        ClientException ex = assertThrows( ClientException.class, () ->
+        {
+            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+            {
+                var query = String.join( "\n",
+                        "CALL {",
+                        "  FROM mega.graph(0)",
+                        "  CREATE (:Test)-[r:Rel]->(:Test)",
+                        "  RETURN r",
+                        "}",
+                        "CALL {",
+                        "  FROM mega.graph(0)",
+                        "  WITH r",
+                        "  RETURN 1 AS x",
+                        "}",
+                        "RETURN r, x"
+                );
+                tx.run( query ).list();
+                tx.success();
+            }
+        } );
+
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "relationship values" ) );
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
+    }
+
+    @Test
+    void testCorrelatedRemoteSubqueryPathType()
+    {
+        ClientException ex = assertThrows( ClientException.class, () ->
+        {
+            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+            {
+                var query = String.join( "\n",
+                        "CALL {",
+                        "  FROM mega.graph(0)",
+                        "  CREATE (n:Test)",
+                        "  RETURN n",
+                        "}",
+                        "CALL {",
+                        "  FROM mega.graph(0)",
+                        "  WITH n",
+                        "  RETURN 1 AS x",
+                        "}",
+                        "RETURN n, x"
+                );
+                tx.run( query ).list();
+                tx.success();
+            }
+        } );
+
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "node values" ) );
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
     }
 
     @Test
