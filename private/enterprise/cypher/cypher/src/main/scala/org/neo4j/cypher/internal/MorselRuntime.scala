@@ -111,7 +111,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
 
-    val metadata: Seq[Argument] = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
+    val metadata = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
 
     new MorselExecutionPlan(executablePipelines,
                           executionGraphDefinition,
@@ -125,7 +125,7 @@ class MorselRuntime(parallelExecution: Boolean,
                           morselSize,
                           context.config.memoryTrackingController,
                           maybeThreadSafeCursors,
-                        metadata: Seq[Argument])
+                        metadata)
     } catch {
       case e: CantCompileQueryException if shouldFuseOperators =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
