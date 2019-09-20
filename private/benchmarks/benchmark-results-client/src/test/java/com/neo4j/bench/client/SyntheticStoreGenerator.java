@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.client;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.queries.AttachMetricsAnnotation;
 import com.neo4j.bench.client.queries.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.SubmitTestRun;
-import com.neo4j.bench.client.queries.SubmitTestRunResult;
 import com.neo4j.bench.common.model.Annotation;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.Benchmark.Mode;
@@ -41,70 +41,57 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
-import static com.neo4j.bench.common.model.Benchmark.Mode.SINGLE_SHOT;
-import static com.neo4j.bench.common.model.Benchmark.Mode.THROUGHPUT;
-import static com.neo4j.bench.common.model.Repository.ALGOS;
-import static com.neo4j.bench.common.model.Repository.ALGOS_JMH;
-import static com.neo4j.bench.common.model.Repository.CAPS;
-import static com.neo4j.bench.common.model.Repository.CAPS_BENCH;
 import static com.neo4j.bench.common.model.Repository.IMPORT_BENCH;
 import static com.neo4j.bench.common.model.Repository.LDBC_BENCH;
 import static com.neo4j.bench.common.model.Repository.MACRO_BENCH;
 import static com.neo4j.bench.common.model.Repository.MICRO_BENCH;
-import static com.neo4j.bench.common.model.Repository.MORPHEUS_BENCH;
 import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class SyntheticStoreGenerator
 {
+    private static final RichRandom RNG = new RichRandom( 42 );
     private static final double TEST_RUN_ANNOTATION_PROBABILITY = 0.5;
     private static final double METRICS_ANNOTATION_PROBABILITY = 0.5;
     private static final DecimalFormat THROUGHPUT_FORMAT = new DecimalFormat( "#,###,##0.00" );
     private static final int DEFAULT_DAYS = 7;
     private static final int DEFAULT_RESULTS_PER_DAY = 10;
-    private static final String[] DEFAULT_BENCHMARK_GROUP_COUNT = {"1", "2", "3", "4"};
-    private static final int DEFAULT_BENCHMARK_PER_GROUP_COUNT = 10;
+    private static final Map<String,String> BENCHMARK_PARAMETERS =
+            IntStream.range( 0, 10 ).mapToObj( Integer::toString ).collect( toMap( s -> "k_" + s, s -> "v_" + s ) );
+    private static final Group[] DEFAULT_BENCHMARK_GROUPS = IntStream.range( 0, 4 )
+                                                                     .mapToObj( Integer::toString )
+                                                                     .map( name -> Group.from( name, 10 ) )
+                                                                     .toArray( Group[]::new );
     private static final String[] DEFAULT_NEO4J_VERSIONS = {"3.0.2", "3.0.1", "3.0.0"};
     private static final Edition[] DEFAULT_NEO4J_EDITIONS = Edition.values();
     private static final int DEFAULT_SETTINGS_IN_CONFIG = 50;
-    private static final Repository[] TOOLS = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH, CAPS_BENCH, MORPHEUS_BENCH, ALGOS_JMH};
-    private static final Repository[] PROJECTS = {CAPS, NEO4J, ALGOS};
+    private static final Repository[] TOOLS = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH};
+    private static final Repository[] PROJECTS = {NEO4J};
     private static final String[] DEFAULT_OPERATING_SYSTEMS = {"Windows", "OSX", "Ubuntu"};
     private static final String[] DEFAULT_SERVERS = {"Skalleper", "local", "AWS", "Mattis", "Borka"};
     private static final String[] DEFAULT_JVM_ARGS = {"-XX:+UseG1GC -Xmx4g", "-server", "-Xmx12g"};
     private static final String[] DEFAULT_JVMS = {"Oracle", "OpenJDK"};
     private static final String[] DEFAULT_JVM_VERSIONS = {"1.80_66", "1.80_12", "1.7.0_42"};
     private static final String[] DEFAULT_NEO4J_BRANCH_OWNERS = {NEO4J.defaultOwner()};
-    private static final String[] DEFAULT_CAPS_BRANCH_OWNERS = {CAPS.defaultOwner()};
-    private static final String[] DEFAULT_TOOL_BRANCH_OWNERS = {
-            MICRO_BENCH.defaultOwner(),
-            LDBC_BENCH.defaultOwner(),
-            CAPS_BENCH.defaultOwner()};
-    private static final Mode[] MODES = {THROUGHPUT, LATENCY, SINGLE_SHOT};
+    private static final String[] DEFAULT_TOOL_BRANCH_OWNERS = {MICRO_BENCH.defaultOwner(), LDBC_BENCH.defaultOwner()};
     private static final TimeUnit[] UNITS = new TimeUnit[]{SECONDS, MILLISECONDS, MICROSECONDS, NANOSECONDS};
-    private static final String BENCHMARK_DESCRIPTION =
-            IntStream.range( 0, 50 ).mapToObj( i -> "description" ).collect( joining() );
 
-    private static final RichRandom RNG = new RichRandom( 42 );
     private static final Supplier<TimeUnit> UNIT = () -> UNITS[RNG.nextInt( 0, UNITS.length - 1 )];
-    private static final Supplier<Mode> MODE = () -> MODES[RNG.nextInt( 0, MODES.length - 1 )];
     private static final Supplier<Double> MIN_NS = () -> RNG.nextDouble( 1, 100 );
     private static final Supplier<Double> MEAN_NS = () -> RNG.nextDouble( 1_000_000, 1_000_000_000 );
     private static final Supplier<Double> ERROR_NS = () -> RNG.nextDouble( 5, 50 );
@@ -133,17 +120,13 @@ public class SyntheticStoreGenerator
             .mapToObj( i -> new TestRunError( "group", "benchmark-" + i, "Error No." + i ) )
             .collect( toList() );
 
-    private static final Map<String,String> BENCHMARK_PARAMETERS =
-            IntStream.range( 0, 10 ).boxed().map( Object::toString ).collect( toMap( s -> "k_" + s, s -> "v_" + s ) );
-
     private static final long SAMPLE_SIZE = 10_000;
 
     public static class SyntheticStoreGeneratorBuilder
     {
         private int days = DEFAULT_DAYS;
         private int resultsPerDay = DEFAULT_RESULTS_PER_DAY;
-        private String[] benchmarkGroupNames = DEFAULT_BENCHMARK_GROUP_COUNT;
-        private int benchmarkPerGroupCount = DEFAULT_BENCHMARK_PER_GROUP_COUNT;
+        private Group[] benchmarkGroups = DEFAULT_BENCHMARK_GROUPS;
         private String[] neo4jVersions = DEFAULT_NEO4J_VERSIONS;
         private Edition[] neo4jEditions = DEFAULT_NEO4J_EDITIONS;
         private int settingsInConfig = DEFAULT_SETTINGS_IN_CONFIG;
@@ -153,12 +136,10 @@ public class SyntheticStoreGenerator
         private String[] jvms = DEFAULT_JVMS;
         private String[] jvmVersions = DEFAULT_JVM_VERSIONS;
         private String[] neo4jBranchOwners = DEFAULT_NEO4J_BRANCH_OWNERS;
-        private String[] capsBranchOwners = DEFAULT_CAPS_BRANCH_OWNERS;
         private String[] toolBranchOwners = DEFAULT_TOOL_BRANCH_OWNERS;
         private Repository[] tools = TOOLS;
         private Repository[] projects = PROJECTS;
         private boolean withPrintout;
-        private boolean withAssertions = true;
 
         SyntheticStoreGeneratorBuilder withDays( int days )
         {
@@ -172,15 +153,9 @@ public class SyntheticStoreGenerator
             return this;
         }
 
-        SyntheticStoreGeneratorBuilder withBenchmarkGroups( String... benchmarkGroupNames )
+        SyntheticStoreGeneratorBuilder withBenchmarkGroups( Group... benchmarkGroups )
         {
-            this.benchmarkGroupNames = benchmarkGroupNames;
-            return this;
-        }
-
-        SyntheticStoreGeneratorBuilder withBenchmarkPerGroupCount( int benchmarkPerGroupCount )
-        {
-            this.benchmarkPerGroupCount = benchmarkPerGroupCount;
+            this.benchmarkGroups = benchmarkGroups;
             return this;
         }
 
@@ -238,12 +213,6 @@ public class SyntheticStoreGenerator
             return this;
         }
 
-        SyntheticStoreGeneratorBuilder withCapsBranchOwners( String... capsBranchOwners )
-        {
-            this.capsBranchOwners = capsBranchOwners;
-            return this;
-        }
-
         SyntheticStoreGeneratorBuilder withToolBranchOwners( String... toolBranchOwners )
         {
             this.toolBranchOwners = toolBranchOwners;
@@ -268,19 +237,12 @@ public class SyntheticStoreGenerator
             return this;
         }
 
-        SyntheticStoreGeneratorBuilder withAssertions( boolean withAssertions )
-        {
-            this.withAssertions = withAssertions;
-            return this;
-        }
-
         public SyntheticStoreGenerator build()
         {
             return new SyntheticStoreGenerator(
                     days,
                     resultsPerDay,
-                    benchmarkGroupNames,
-                    benchmarkPerGroupCount,
+                    benchmarkGroups,
                     neo4jVersions,
                     neo4jEditions,
                     settingsInConfig,
@@ -290,12 +252,10 @@ public class SyntheticStoreGenerator
                     jvms,
                     jvmVersions,
                     neo4jBranchOwners,
-                    capsBranchOwners,
                     toolBranchOwners,
                     tools,
                     projects,
-                    withPrintout,
-                    withAssertions
+                    withPrintout
             );
         }
     }
@@ -303,8 +263,7 @@ public class SyntheticStoreGenerator
     private final int days;
 
     private final int resultsPerDay;
-    private final BenchmarkGroup[] benchmarkGroupMapping;
-    private final int benchmarkPerGroupCount;
+    private final Group[] benchmarkGroups;
     private final String[] neo4jVersions;
     private final Edition[] neo4jEditions;
     private final int settingsInConfig;
@@ -314,18 +273,15 @@ public class SyntheticStoreGenerator
     private final String[] jvms;
     private final String[] jvmVersions;
     private final String[] neo4jBranchOwners;
-    private final String[] capsBranchOwners;
     private final String[] toolBranchOwners;
     private final boolean withPrintout;
-    private final boolean withAssertions;
     private final Repository[] tools;
     private final Repository[] projects;
 
     private SyntheticStoreGenerator(
             int days,
             int resultsPerDay,
-            String[] benchmarkGroupNames,
-            int benchmarkPerGroupCount,
+            Group[] benchmarkGroups,
             String[] neo4jVersions,
             Edition[] neo4jEditions,
             int settingsInConfig,
@@ -335,17 +291,14 @@ public class SyntheticStoreGenerator
             String[] jvms,
             String[] jvmVersions,
             String[] neo4jBranchOwners,
-            String[] capsBranchOwners,
             String[] toolBranchOwners,
             Repository[] tools,
             Repository[] projects,
-            boolean withPrintout,
-            boolean withAssertions )
+            boolean withPrintout )
     {
         this.days = days;
         this.resultsPerDay = resultsPerDay;
-        this.benchmarkGroupMapping = Arrays.stream( benchmarkGroupNames ).map( BenchmarkGroup::new ).toArray( BenchmarkGroup[]::new );
-        this.benchmarkPerGroupCount = benchmarkPerGroupCount;
+        this.benchmarkGroups = benchmarkGroups;
         this.neo4jVersions = neo4jVersions;
         this.neo4jEditions = neo4jEditions;
         this.settingsInConfig = settingsInConfig;
@@ -355,22 +308,15 @@ public class SyntheticStoreGenerator
         this.jvms = jvms;
         this.jvmVersions = jvmVersions;
         this.neo4jBranchOwners = neo4jBranchOwners;
-        this.capsBranchOwners = capsBranchOwners;
         this.toolBranchOwners = toolBranchOwners;
         this.tools = tools;
         this.projects = projects;
         this.withPrintout = withPrintout;
-        this.withAssertions = withAssertions;
     }
 
     int resultCount()
     {
         return days * resultsPerDay;
-    }
-
-    int maxNumberOfBenchmarkTools()
-    {
-        return tools.length * benchmarkGroupCount();
     }
 
     public int days()
@@ -383,89 +329,21 @@ public class SyntheticStoreGenerator
         return resultsPerDay;
     }
 
-    int benchmarkGroupCount()
-    {
-        return benchmarkGroupMapping.length;
-    }
-
-    int benchmarkPerGroupCount()
-    {
-        return benchmarkPerGroupCount;
-    }
-
-    public String[] neo4jVersions()
-    {
-        return neo4jVersions;
-    }
-
-    public Edition[] neo4jEditions()
-    {
-        return neo4jEditions;
-    }
-
-    public int settingsInConfig()
-    {
-        return settingsInConfig;
-    }
-
-    String[] operatingSystems()
-    {
-        return operatingSystems;
-    }
-
-    String[] servers()
-    {
-        return servers;
-    }
-
-    String[] jvmArgs()
-    {
-        return jvmArgs;
-    }
-
-    String[] jvms()
-    {
-        return jvms;
-    }
-
-    String[] jvmVersions()
-    {
-        return jvmVersions;
-    }
-
     String[] neo4jBranchOwners()
     {
         return neo4jBranchOwners;
     }
 
-    String[] capsBranchOwners()
+    GenerationResult generate( StoreClient client )
     {
-        return capsBranchOwners;
-    }
+        GenerationResult generationResult = new GenerationResult();
 
-    void generate( StoreClient client )
-    {
         final Map<String,String> configMap = new HashMap<>();
         for ( int i = 0; i < settingsInConfig; i++ )
         {
             configMap.put( Integer.toString( i ), UUID.randomUUID().toString() );
         }
         final Neo4jConfig config = new Neo4jConfig( configMap );
-        final Benchmark[][] benchmarkMapping = new Benchmark[benchmarkGroupCount()][benchmarkPerGroupCount];
-        for ( int groupId = 0; groupId < benchmarkGroupCount(); groupId++ )
-        {
-            benchmarkGroupMapping[groupId] = new BenchmarkGroup( Integer.toString( groupId ) );
-            for ( int benchmarkId = 0; benchmarkId < benchmarkPerGroupCount; benchmarkId++ )
-            {
-                String simpleBenchmarkName = Integer.toString( benchmarkId );
-                String benchmarkDescription = simpleBenchmarkName + BENCHMARK_DESCRIPTION;
-                benchmarkMapping[groupId][benchmarkId] = Benchmark.benchmarkFor(
-                        benchmarkDescription,
-                        simpleBenchmarkName,
-                        MODE.get(),
-                        BENCHMARK_PARAMETERS );
-            }
-        }
 
         int minutesBetweenRuns = (int) TimeUnit.DAYS.toMinutes( 1 ) / resultsPerDay;
         Calendar calendar = Calendar.getInstance();
@@ -486,9 +364,10 @@ public class SyntheticStoreGenerator
             for ( int dayResult = 0; dayResult < resultsPerDay; dayResult++ )
             {
                 BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-                int benchmarkGroupId = RNG.nextInt( benchmarkGroupCount() );
-                BenchmarkGroup benchmarkGroup = benchmarkGroupMapping[benchmarkGroupId];
-                for ( Benchmark benchmark : benchmarkMapping[benchmarkGroupId] )
+                Group randomGroup = randomFrom( benchmarkGroups );
+                BenchmarkGroup benchmarkGroup = randomGroup.group();
+                BenchmarkTool tool = generateBenchmarkTool();
+                for ( Benchmark benchmark : randomGroup.benchmarks() )
                 {
                     benchmarkGroupBenchmarkMetrics.add(
                             benchmarkGroup,
@@ -508,28 +387,33 @@ public class SyntheticStoreGenerator
                                          PERC_99_NS.get(),
                                          PERC_99_9_NS.get() ),
                             config );
+                    generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
+                    generationResult.incMetrics();
                 }
-                calendar.add( Calendar.MINUTE, minutesBetweenRuns );
-                String triggeredBy = randomOwnerFor( randomFrom( projects ) );
-                TestRun testRun =
-                        new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
 
-                BenchmarkTool tool = generateBenchmarkTool();
-                Set<Project> project = generateProjects();
+                calendar.add( Calendar.MINUTE, minutesBetweenRuns );
+                Project project = generateProject();
+                generationResult.addProject( project );
+                String triggeredBy = randomOwnerFor( project.repository() );
+                TestRun testRun = new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
+                generationResult.incTestRuns();
+
                 Environment environment = new Environment(
                         randomFrom( operatingSystems ),
                         randomFrom( servers ) );
+                generationResult.addEnvironments( environment );
                 Java java = new Java(
                         randomFrom( jvms ),
                         randomFrom( jvmVersions ),
                         randomFrom( jvmArgs ) );
+                generationResult.addJavas( java );
                 List<BenchmarkPlan> plans = new ArrayList<>();
                 List<TestRunError> errors = ERRORS.get();
 
                 TestRunReport testRunReport = new TestRunReport(
                         testRun,
                         benchmarkConfig,
-                        project,
+                        Sets.newHashSet( project ),
                         config,
                         environment,
                         benchmarkGroupBenchmarkMetrics,
@@ -540,13 +424,14 @@ public class SyntheticStoreGenerator
                 SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport, Planner.COST );
 
                 QueryRetrier queryRetrier = new QueryRetrier( withPrintout );
-                SubmitTestRunResult result = queryRetrier.execute( client, submitTestRun, 1 );
+                queryRetrier.execute( client, submitTestRun, 1 );
 
                 if ( RNG.nextDouble() > TEST_RUN_ANNOTATION_PROBABILITY )
                 {
                     AttachTestRunAnnotation attachTestRunAnnotation = new AttachTestRunAnnotation(
                             testRunReport.testRun().id(),
                             new Annotation( "comment", System.currentTimeMillis(), "author" ) );
+                    generationResult.incTestRunAnnotations();
                     queryRetrier.execute( client, attachTestRunAnnotation, 1 );
                 }
 
@@ -555,32 +440,12 @@ public class SyntheticStoreGenerator
                     if ( RNG.nextDouble() > METRICS_ANNOTATION_PROBABILITY )
                     {
                         queryRetrier.execute( client,
-                                                             new AttachMetricsAnnotation( testRunReport.testRun().id(),
-                                                                                 bgb.benchmark().name(),
-                                                                                 bgb.benchmarkGroup().name(),
-                                                                                 new Annotation( "comment", System.currentTimeMillis(), "author" ) ),
-                                                             1 );
-                    }
-                }
-
-                if ( withAssertions )
-                {
-                    if ( result.benchmarkMetricsList().size() != benchmarkPerGroupCount )
-                    {
-                        throw new AssertionError( format( "%s <> %s\nCreate/return one metrics per benchmark in group",
-                                                          result.benchmarkMetricsList().size(),
-                                                          benchmarkPerGroupCount ) );
-                    }
-                    if ( !result.testRun().id().equals( testRun.id() ) )
-                    {
-                        throw new AssertionError( "return result for same test run" );
-                    }
-                    Set<String> createdBenchmarks = result.benchmarkMetricsList().stream()
-                                                          .map( bm -> bm.benchmark().name() ).collect( Collectors.toSet() );
-                    if ( !Arrays.stream( benchmarkMapping[benchmarkGroupId] )
-                                .allMatch( b -> createdBenchmarks.contains( b.name() ) ) )
-                    {
-                        throw new AssertionError( "create a result for every benchmark" );
+                                              new AttachMetricsAnnotation( testRunReport.testRun().id(),
+                                                                           bgb.benchmark().name(),
+                                                                           bgb.benchmarkGroup().name(),
+                                                                           new Annotation( "comment", System.currentTimeMillis(), "author" ) ),
+                                              1 );
+                        generationResult.incMetricsAnnotations();
                     }
                 }
 
@@ -606,6 +471,7 @@ public class SyntheticStoreGenerator
                                         BenchmarkUtil.durationToString( Duration.of( durationMs, ChronoUnit.MILLIS ) ),
                                         THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
         }
+        return generationResult;
     }
 
     private BenchmarkTool generateBenchmarkTool()
@@ -620,7 +486,7 @@ public class SyntheticStoreGenerator
         return new BenchmarkTool( tool, commit, owner, branch );
     }
 
-    private Set<Project> generateProjects()
+    private Project generateProject()
     {
         Repository repository = randomFrom( projects );
         String owner = randomOwnerFor( repository );
@@ -630,7 +496,7 @@ public class SyntheticStoreGenerator
         String branch = BranchAndVersion.isPersonalBranch( repository, owner )
                         ? neo4jVersion + "-" + owner
                         : neo4jVersion;
-        return Sets.newHashSet( new Project( repository, commit, neo4jVersion, neo4jEdition, branch, owner ) );
+        return new Project( repository, commit, neo4jVersion, neo4jEdition, branch, owner );
     }
 
     private String randomOwnerFor( Repository repository )
@@ -639,13 +505,10 @@ public class SyntheticStoreGenerator
         {
         case NEO4J:
             return randomFrom( neo4jBranchOwners );
-        case CAPS:
-            return randomFrom( capsBranchOwners );
-        case CAPS_BENCH:
-            return randomFrom( toolBranchOwners );
         case MICRO_BENCH:
-            return randomFrom( toolBranchOwners );
+        case MACRO_BENCH:
         case LDBC_BENCH:
+        case IMPORT_BENCH:
             return randomFrom( toolBranchOwners );
         default:
             throw new IllegalArgumentException( "Unrecognized repository: " + repository );
@@ -660,8 +523,198 @@ public class SyntheticStoreGenerator
         }
         else
         {
-            int randomIndex = RNG.nextInt( array.length );
-            return array[randomIndex];
+            try
+            {
+                int randomIndex = RNG.nextInt( array.length );
+                return array[randomIndex];
+            }
+            catch ( NullPointerException e )
+            {
+                e.printStackTrace();
+                throw e;
+            }
+        }
+    }
+
+    static class Group
+    {
+        static Group from( String groupName, int benchmarkCount )
+        {
+            String[] benchNames = IntStream.range( 0, benchmarkCount )
+                                           .mapToObj( Integer::toString )
+                                           .toArray( String[]::new );
+            return Group.from( groupName, benchNames );
+        }
+
+        static Group from( String groupName, String... benchNames )
+        {
+            BenchmarkGroup group = new BenchmarkGroup( groupName );
+            Benchmark[] benchmarks = Arrays.stream( benchNames )
+                                           .map( b -> Benchmark
+                                                   .benchmarkFor( "description for: " + b, b, randomFrom( Mode.values() ), BENCHMARK_PARAMETERS ) )
+                                           .toArray( Benchmark[]::new );
+            return from( group, benchmarks );
+        }
+
+        static Group from( BenchmarkGroup group, Benchmark... benchmarks )
+        {
+            return new Group( group, benchmarks );
+        }
+
+        private final BenchmarkGroup group;
+        private final Benchmark[] benchmarks;
+
+        private Group( BenchmarkGroup group, Benchmark... benchmarks )
+        {
+            this.group = group;
+            this.benchmarks = benchmarks;
+        }
+
+        public BenchmarkGroup group()
+        {
+            return group;
+        }
+
+        public Benchmark[] benchmarks()
+        {
+            return benchmarks;
+        }
+    }
+
+    static class GenerationResult
+    {
+        private Set<List<String>> benchmarkGroups = new HashSet<>();
+        private Set<List<String>> benchmarks = new HashSet<>();
+        private int testRuns = 0;
+        private Set<Environment> environments = new HashSet<>();
+        private Set<Java> javas = new HashSet<>();
+        private Set<Project> projects = new HashSet<>();
+        private Set<String> tools = new HashSet<>();
+        private Set<BenchmarkTool> toolVersions = new HashSet<>();
+        private int metrics = 0;
+        private int testRunAnnotations = 0;
+        private int metricsAnnotations = 0;
+
+        private void addBenchmark( BenchmarkTool tool, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+        {
+            benchmarkGroups.add( Lists.newArrayList( tool.toolName(), benchmarkGroup.name() ) );
+            benchmarks.add( Lists.newArrayList( tool.toolName(), benchmarkGroup.name(), benchmark.name() ) );
+            tools.add( tool.toolName() );
+            toolVersions.add( tool );
+        }
+
+        private void incTestRuns()
+        {
+            testRuns++;
+        }
+
+        private void addEnvironments( Environment environment )
+        {
+            environments.add( environment );
+        }
+
+        private void addJavas( Java java )
+        {
+            javas.add( java );
+        }
+
+        private void addProject( Project project )
+        {
+            projects.add( project );
+        }
+
+        private void incMetrics()
+        {
+            metrics++;
+        }
+
+        private void incTestRunAnnotations()
+        {
+            testRunAnnotations++;
+        }
+
+        private void incMetricsAnnotations()
+        {
+            metricsAnnotations++;
+        }
+
+        int benchmarkGroups()
+        {
+            return benchmarkGroups.size();
+        }
+
+        int benchmarks()
+        {
+            return benchmarks.size();
+        }
+
+        int benchmarksInTool( String tool )
+        {
+            return (int) benchmarks.stream()
+                                   .filter( b -> b.get( 0 ).equalsIgnoreCase( tool ) )
+                                   .count();
+        }
+
+        int benchmarksIn( String tool, String... groups )
+        {
+            return (int) benchmarks.stream()
+                                   .filter( b -> b.get( 0 ).equalsIgnoreCase( tool ) && Arrays.stream( groups ).anyMatch( b.get( 1 )::equalsIgnoreCase ) )
+                                   .count();
+        }
+
+        int testRuns()
+        {
+            return testRuns;
+        }
+
+        int environments()
+        {
+            return environments.size();
+        }
+
+        int javas()
+        {
+            return javas.size();
+        }
+
+        int projects()
+        {
+            return projects.size();
+        }
+
+        int baseNeo4jConfigs()
+        {
+            return testRuns();
+        }
+
+        int neo4jConfigs()
+        {
+            return testRuns() + metrics();
+        }
+
+        int toolVersions()
+        {
+            return toolVersions.size();
+        }
+
+        int tools()
+        {
+            return tools.size();
+        }
+
+        int metrics()
+        {
+            return metrics;
+        }
+
+        int testRunAnnotations()
+        {
+            return testRunAnnotations;
+        }
+
+        int metricsAnnotations()
+        {
+            return metricsAnnotations;
         }
     }
 }

@@ -6,6 +6,7 @@
 package com.neo4j.bench.client;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.SyntheticStoreGenerator.Group;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
@@ -92,8 +93,8 @@ public class SyntheticStoreGeneratorIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( "group1", "group2" )
-                .withBenchmarkPerGroupCount( 50 )
+                .withBenchmarkGroups( Group.from( "group1", 50 ),
+                                      Group.from( "group2", 50 ) )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0" )
                 .withNeo4jEditions( COMMUNITY )
                 .withSettingsInConfig( 10 )
@@ -103,14 +104,12 @@ public class SyntheticStoreGeneratorIT
                 .withJvms( "Oracle" )
                 .withJvmVersions( "1.80_66" )
                 .withNeo4jBranchOwners( "Foo", "Bar" )
-                .withCapsBranchOwners( "Hat", "Helmet" )
                 .withToolBranchOwners( "Hammer", "PizzaCutter" )
-                .withAssertions( true )
                 .build();
 
-        generateStoreUsing( generator );
+        SyntheticStoreGenerator.GenerationResult generationResult = generateStoreUsing( generator );
 
-        verifySchema( generator );
+        verifySchema( generationResult, generator );
     }
 
     @Test
@@ -119,8 +118,10 @@ public class SyntheticStoreGeneratorIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 10 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( "group1", "group2", "group3", "group4" )
-                .withBenchmarkPerGroupCount( 50 )
+                .withBenchmarkGroups( Group.from( "group1", 50 ),
+                                      Group.from( "group2", 50 ),
+                                      Group.from( "group3", 50 ),
+                                      Group.from( "group4", 50 ) )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0", "2.3.4", "2.3.3", "2.3.2" )
                 .withNeo4jEditions( COMMUNITY, ENTERPRISE )
                 .withSettingsInConfig( 50 )
@@ -130,15 +131,14 @@ public class SyntheticStoreGeneratorIT
                 .withJvms( "Oracle", "OpenJDK" )
                 .withJvmVersions( "1.80_66", "1.80_12", "1.7.0_42" )
                 .withPrintout( true )
-                .withAssertions( true )
                 .build();
 
-        generateStoreUsing( generator );
+        SyntheticStoreGenerator.GenerationResult generationResult = generateStoreUsing( generator );
 
-        verifySchema( generator );
+        verifySchema( generationResult, generator );
     }
 
-    private void generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
+    private SyntheticStoreGenerator.GenerationResult generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
     {
         Main.main( new String[]{"index",
                                 CMD_RESULTS_STORE_USER, USERNAME,
@@ -150,11 +150,11 @@ public class SyntheticStoreGeneratorIT
             QUERY_RETRIER.execute( client, new DropSchema(), CLIENT_RETRY_COUNT );
             QUERY_RETRIER.execute( client, new CreateSchema(), CLIENT_RETRY_COUNT );
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
-            generator.generate( client );
+            return generator.generate( client );
         }
     }
 
-    private void verifySchema( SyntheticStoreGenerator generator )
+    private void verifySchema( SyntheticStoreGenerator.GenerationResult generationResult, SyntheticStoreGenerator generator )
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -167,96 +167,71 @@ public class SyntheticStoreGeneratorIT
                 // -------------------------------------------------------------
 
                 int testRunCount = session.run( "MATCH (:TestRun) RETURN count(*) AS c" ).next().get( "c" ).asInt();
+
                 assertThat( "has correct number of unique TestRun nodes",
                             testRunCount,
-                            equalTo( generator.resultCount() ) );
+                            equalTo( generationResult.testRuns() ) );
 
-                // NOTE: random selection -> for small stores some server/os combinations may not get created
-                int minEnvironments = Math.min( generator.servers().length, generator.operatingSystems().length );
-                int maxEnvironments = generator.servers().length * generator.operatingSystems().length;
                 assertThat( "has correct number of unique Environment nodes",
                             session.run( "MATCH (:Environment) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                            allOf( greaterThanOrEqualTo( minEnvironments ), lessThanOrEqualTo( maxEnvironments ) ) );
+                            equalTo( generationResult.environments() ) );
 
-                // NOTE: random selection -> for small stores some jvm/version/args combinations may not get created
-                int minJavas = 1;
-                int maxJavas = generator.jvmArgs().length * generator.jvms().length * generator.jvmVersions().length;
                 assertThat( "has correct number of unique Java nodes",
                             session.run( "MATCH (:Java) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                            allOf( greaterThanOrEqualTo( minJavas ), lessThanOrEqualTo( maxJavas ) ) );
+                            equalTo( generationResult.javas() ) );
 
-                // NOTE: generator creates new Project commit for every result
                 assertThat( "has correct number of unique Project nodes",
                             session.run( "MATCH (:Project) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                            equalTo( generator.resultCount() ) );
+                            equalTo( generationResult.projects() ) );
 
                 assertThat( "has correct number of unique base Neo4jConfig nodes",
                             session.run( "RETURN size((:TestRun)-[:HAS_CONFIG]->(:Neo4jConfig)) AS c" )
                                    .next().get( "c" ).asInt(),
-                            equalTo( generator.resultCount() ) );
+                            equalTo( generationResult.baseNeo4jConfigs() ) );
 
-                // NOTE: generator creates new tool commit for every result
                 int toolVersionCount = session.run( "MATCH (:BenchmarkToolVersion) RETURN count(*) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of unique BenchmarkToolVersion nodes",
                             toolVersionCount,
-                            equalTo( generator.resultCount() ) );
+                            equalTo( generationResult.toolVersions() ) );
 
-                // NOTE: we should not have more than the number of repositories
                 int toolCount = session.run( "MATCH (:BenchmarkTool) RETURN count(*) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of unique BenchmarkTool nodes",
                             toolCount,
-                            lessThanOrEqualTo( generator.maxNumberOfBenchmarkTools() ) );
+                            equalTo( generationResult.tools() ) );
 
                 int metricsCount = session.run( "MATCH (:Metrics) RETURN count(*) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of unique Metrics nodes",
                             metricsCount,
-                            equalTo( generator.resultCount() * generator.benchmarkPerGroupCount() ) );
+                            equalTo( generationResult.metrics() ) );
 
-                // NOTE: random selection -> for small stores some groups may not get created
-                int benchmarkGroupCount =
-                        session.run( "MATCH (:BenchmarkGroup) RETURN count(*) AS c" ).next().get( "c" ).asInt();
-                int minGroups = 1;
-                int maxGroups = generator.benchmarkGroupCount() * toolCount;
+                int benchmarkGroupCount = session.run( "MATCH (:BenchmarkGroup) RETURN count(*) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of unique BenchmarkGroup nodes",
                             benchmarkGroupCount,
-                            allOf( greaterThanOrEqualTo( minGroups ), lessThanOrEqualTo( maxGroups ) ) );
+                            equalTo( generationResult.benchmarkGroups() ) );
 
-                int benchmarkCount =
-                        session.run( "MATCH (:Benchmark) RETURN count(*) AS c" ).next().get( "c" ).asInt();
+                int benchmarkCount = session.run( "MATCH (:Benchmark) RETURN count(*) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of unique Benchmark nodes",
                             benchmarkCount,
-                            equalTo( benchmarkGroupCount * generator.benchmarkPerGroupCount() ) );
+                            equalTo( generationResult.benchmarks() ) );
 
                 assertThat( "has correct number of unique Neo4jConfig nodes",
                             session.run( "MATCH (:Neo4jConfig) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
-                            equalTo( generator.resultCount() + metricsCount ) );
+                            equalTo( generationResult.neo4jConfigs() ) );
 
                 verifyPersonalRuns( session, generator );
 
-                // NOTE: random selection -> for small stores variance may be beyond asserted range
-                long minTestRunAnnotations = Math.round( generator.resultCount() * 0.40 );
-                long maxTestRunAnnotations = Math.round( generator.resultCount() * 0.60 );
-                long testRunAnnotations =
-                        session.run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS c" )
-                               .next().get( "c" ).asLong();
+                int testRunAnnotations = session.run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of TestRun Annotation nodes",
                             testRunAnnotations,
-                            allOf( greaterThanOrEqualTo( minTestRunAnnotations ),
-                                   lessThanOrEqualTo( maxTestRunAnnotations ) ) );
+                            equalTo( generationResult.testRunAnnotations() ) );
 
-                // NOTE: random selection -> for small stores variance may be beyond asserted range
-                long minMetricsAnnotations = Math.round( metricsCount * 0.40 );
-                long maxMetricsAnnotations = Math.round( metricsCount * 0.60 );
-                long metricsAnnotations =
-                        session.run( "RETURN size((:Metrics)-[:WITH_ANNOTATION]->(:Annotation)) AS c" )
-                               .next().get( "c" ).asLong();
+                int metricsAnnotations = session.run( "RETURN size((:Metrics)-[:WITH_ANNOTATION]->(:Annotation)) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of Metrics Annotation nodes",
                             metricsAnnotations,
-                            allOf( greaterThanOrEqualTo( minMetricsAnnotations ),
-                                   lessThanOrEqualTo( maxMetricsAnnotations ) ) );
+                            equalTo( generationResult.metricsAnnotations() ) );
 
                 assertThat( "has correct number of Annotations nodes",
-                            session.run( "MATCH (:Annotation) RETURN count(*) AS c" ).next().get( "c" ).asLong(),
+                            session.run( "MATCH (:Annotation) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
                             equalTo( testRunAnnotations + metricsAnnotations ) );
 
                 // -------------------------------------------------------------
@@ -371,7 +346,6 @@ public class SyntheticStoreGeneratorIT
     private void verifyPersonalRuns( Session session, SyntheticStoreGenerator generator )
     {
         List<String> branchOwners = Lists.newArrayList( generator.neo4jBranchOwners() );
-        branchOwners.addAll( Lists.newArrayList( generator.capsBranchOwners() ) );
 
         int personalNeo4jCount = executeCountQuery( session,
                                                     "MATCH (n:Project) " +
