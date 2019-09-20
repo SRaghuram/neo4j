@@ -765,16 +765,21 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldNotBeAbleToCallReadProcedureThroughWriteProcedureInWriteOnlyTransaction()
+    void shouldNotGetReadAccessCallingReadProcedureThroughWriteProcedureInWriteOnlyTransaction()
     {
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.full() ) )
+        {
+            tx.execute( "CREATE ()" );
+            tx.commit();
+        }
 
         // When
         try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.writeOnly() ) )
         {
-            QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingReadProcedure" ).next() );
-            assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
+            Result result = tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingReadProcedure" );
+            assertFalse( result.hasNext() );
+            tx.commit();
         }
     }
 
@@ -1250,21 +1255,25 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldNotAllowReadProcedureInNoneTransaction()
+    void shouldGetNoResultsWithReadProcedureInAccessTransaction()
     {
+        // Given
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.full() ) )
+        {
+            tx.execute( "CREATE ()" );
+            tx.commit();
+        }
 
         // When
-        AuthorizationViolationException exception =
-                assertThrows( AuthorizationViolationException.class, () ->
-                {
-                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
-                    {
-                        tx.execute( "CALL com.neo4j.procedure.integrationTestMe()" ).next();
-                        tx.commit();
-                    }
-                } );
-        assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.access() ) )
+        {
+            Result result = tx.execute( "CALL com.neo4j.procedure.nodeIds()" );
+
+            // Then
+            assertFalse( result.hasNext() );
+            tx.commit();
+        }
     }
 
     @Test
@@ -1777,6 +1786,18 @@ public class ProcedureIT
         }
 
         @Procedure
+        public Stream<Output> nodeIds()
+        {
+            Result result = transaction.execute( "MATCH (n) RETURN id(n) as nodeId" );
+            var nodeIds = new ArrayList<Output>();
+            while ( result.hasNext() )
+            {
+                nodeIds.add( new Output( (Long) result.next().get( "nodeId" ) ) );
+            }
+            return nodeIds.stream();
+        }
+
+        @Procedure
         public Stream<Output> failingPersonCount()
         {
             Result result = transaction.execute( "MATCH (n:Person) RETURN count(n) as count" );
@@ -2015,7 +2036,7 @@ public class ProcedureIT
         @Procedure( mode = WRITE )
         public Stream<Output> writeProcedureCallingReadProcedure()
         {
-            return transaction.execute( "CALL com.neo4j.procedure.integrationTestMe" ).stream().map(
+            return transaction.execute( "CALL com.neo4j.procedure.nodeIds" ).stream().map(
                     row -> new Output( 0 ) );
         }
 

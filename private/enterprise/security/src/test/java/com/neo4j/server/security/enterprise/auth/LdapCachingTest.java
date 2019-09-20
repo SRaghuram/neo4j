@@ -28,12 +28,15 @@ import javax.naming.NamingException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.SecureHasher;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class LdapCachingTest
@@ -52,8 +55,13 @@ class LdapCachingTest
         testRealm = new TestRealm( getLdapConfig(), securityLog, new SecureHasher() );
 
         fakeTicker = new FakeTicker();
-        authManager = new MultiRealmAuthManager( mock( EnterpriseUserManager.class ), Collections.singletonList( testRealm ),
-                new ShiroCaffeineCache.Manager( fakeTicker::read, 100, 10, true ), securityLog, false, false, Collections.emptyMap() );
+        EnterpriseUserManager userManager = mock( EnterpriseUserManager.class );
+        when( userManager.getPrivilegesForRoles( anySet() ) ).thenReturn( Collections.singleton(
+                new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL ) ) );
+
+        authManager = new MultiRealmAuthManager( userManager, Collections.singletonList( testRealm ),
+                                                 new ShiroCaffeineCache.Manager( fakeTicker::read, 100, 10, true ),
+                                                 securityLog, false, false, Collections.emptyMap() );
         authManager.init();
         authManager.start();
     }

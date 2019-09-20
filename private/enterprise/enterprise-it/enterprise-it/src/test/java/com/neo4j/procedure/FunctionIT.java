@@ -717,21 +717,25 @@ class FunctionIT
     }
 
     @Test
-    void shouldNotAllowReadFunctionInNoneTransaction()
+    void shouldSeeEmptyGraphReadFunctionInAccessTransaction()
     {
+        // Given
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.full() ) )
+        {
+            tx.execute( "CREATE ()" );
+            tx.commit();
+        }
 
         // When
-        AuthorizationViolationException exception =
-                assertThrows( AuthorizationViolationException.class, () ->
-                {
-                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
-                    {
-                        tx.execute( "RETURN com.neo4j.procedure.integrationTestMe()" ).next();
-                        tx.commit();
-                    }
-                } );
-        assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.access() ) )
+        {
+            Result result = tx.execute( "RETURN com.neo4j.procedure.nodeCount() AS count" );
+
+            // Then
+            assertThat( result.next().get( "count" ), equalTo( 0L ) );
+            tx.commit();
+        }
     }
 
     @Test
@@ -926,6 +930,12 @@ class FunctionIT
 
         @Context
         public Log log;
+
+        @UserFunction
+        public long nodeCount()
+        {
+            return transaction.getAllNodes().stream().count();
+        }
 
         @UserFunction
         public long integrationTestMe()

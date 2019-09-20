@@ -108,6 +108,6 @@ public class EnterpriseSecurityContextDescriptionTest
     private EnterpriseSecurityContext context() throws InvalidAuthTokenException, KernelException
     {
         return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
-                .authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+                .authorize( token, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
     }
 }

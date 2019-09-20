@@ -216,7 +216,7 @@ public class FabricLocalExecutor
         {
             var originalSecurityContext = inner.authorize( idLookup, dbName );
             var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.READ );
-            return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), originalSecurityContext.isAdmin() );
+            return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), action -> false );
         }
     }
 }

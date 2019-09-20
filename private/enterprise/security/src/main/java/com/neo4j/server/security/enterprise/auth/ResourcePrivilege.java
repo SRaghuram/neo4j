@@ -9,6 +9,7 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 
 public class ResourcePrivilege
 {
@@ -46,7 +47,7 @@ public class ResourcePrivilege
     {
         if ( database.equals( SYSTEM_DATABASE_NAME ) )
         {
-            if ( action.isAdminAction() )
+            if ( ADMIN.satisfies( action ) )
             {
                 return true;
             }

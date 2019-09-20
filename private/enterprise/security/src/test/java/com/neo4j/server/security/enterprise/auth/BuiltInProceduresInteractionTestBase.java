@@ -1126,9 +1126,13 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldNotAllowUnauthorizedAccessToProcedure() throws Exception
     {
         assertDDLCommandSuccess( adminSubject, "CREATE USER nopermission SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
+        createRole( "Access", "nopermission" );
+        grantAccess( "Access" );
+
+        // should get result from empty sub graph
+        assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.numNodes()", r -> assertKeyIs( r, "count", "0" ) );
 
         // should not be able to invoke any procedure
-        assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticReadProcedure()", READ_OPS_NOT_ALLOWED );
         assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticWriteProcedure()", WRITE_OPS_NOT_ALLOWED );
         assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticSchemaProcedure()", SCHEMA_OPS_NOT_ALLOWED );
     }
@@ -1136,13 +1140,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldNotAllowNonReaderToReadAfterCallingAllowedReadProc() throws Exception
     {
-        assertDDLCommandSuccess( adminSubject, "CREATE USER nopermission SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
-        createRole( "role1", "nopermission" );
-
-        // should not be able to invoke any procedure
-        assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.allowedReadProcedure()",
+        setupRole1Subject();
+        assertSuccess( neo.login( "role1Subject", "abc" ), "CALL test.allowedReadProcedure()",
                 itr -> assertEquals( (int) itr.stream().count(), 1 ) );
-        assertFail( neo.login( "nopermission", "abc" ),
+        assertFail( neo.login( "role1Subject", "abc" ),
                 "CALL test.allowedReadProcedure() YIELD value MATCH (n:Secret) RETURN n.pass", READ_OPS_NOT_ALLOWED );
     }
 
@@ -1248,7 +1249,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldNotClearQueryCachesIfNotAdmin()
     {
-        assertFail( noneSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
+        assertFail( noneSubject, "CALL dbms.clearQueryCaches()", ACCESS_DENIED );
         assertFail( readSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
         assertFail( writeSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
         assertFail( schemaSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
@@ -1261,10 +1262,11 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // any answer is okay, as long as it isn't denied. That is why we don't care about the actual result here
     }
 
-    private void setupRole1Subject() throws InvalidArgumentsException
+    private void setupRole1Subject()
     {
         assertDDLCommandSuccess( adminSubject, "CREATE USER role1Subject SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
         createRole( "role1", "role1Subject" );
+        grantAccess( "role1" );
     }
 
     /*

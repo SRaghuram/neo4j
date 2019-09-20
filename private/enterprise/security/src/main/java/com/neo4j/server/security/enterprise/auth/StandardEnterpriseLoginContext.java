@@ -41,6 +41,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 
@@ -753,7 +754,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     {
                         schema = true;
                     }
-                    else if ( action.isAdminAction() )
+                    else if ( ADMIN.satisfies( action ) )
                     {
                         var dbScope = privilege.isAllDatabases() ?
                                       AdminActionOnResource.DatabaseScope.ALL :

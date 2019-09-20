@@ -577,7 +577,7 @@ order by a.COL1""".format(a, b))
 
     // Until we have a clean cut way where statement context is injected into cypher,
     // I don't know a non-hairy way to tell if this was done correctly, so here goes:
-    val tx = graph.beginTransaction( Type.explicit, AnonymousContext.none() )
+    val tx = graph.beginTransaction( Type.explicit, AnonymousContext.access() )
     val isTopLevelTx = tx.getClass === classOf[TransactionImpl]
     tx.close()
 

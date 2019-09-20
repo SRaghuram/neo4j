@@ -89,6 +89,7 @@ public abstract class ProcedureInteractionTestBase<S>
             "The credentials you provided were valid, but must be changed before you can use this instance.";
     String READ_OPS_NOT_ALLOWED = "Read operations are not allowed";
     String PERMISSION_DENIED = "Permission denied.";
+    String ACCESS_DENIED = "Database access is not allowed for user";
     String WRITE_OPS_NOT_ALLOWED = "Write operations are not allowed";
     String TOKEN_CREATE_OPS_NOT_ALLOWED = "Token create operations are not allowed";
     String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
@@ -527,6 +528,11 @@ public abstract class ProcedureInteractionTestBase<S>
         {
             assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", roleName, username) );
         }
+    }
+
+    void grantAccess( String roleName )
+    {
+        assertDDLCommandSuccess( adminSubject, String.format( "GRANT ACCESS ON DATABASE * TO %s", roleName ) );
     }
 
     List<Object> getObjectsAsList( ResourceIterator<Map<String,Object>> r, String key )

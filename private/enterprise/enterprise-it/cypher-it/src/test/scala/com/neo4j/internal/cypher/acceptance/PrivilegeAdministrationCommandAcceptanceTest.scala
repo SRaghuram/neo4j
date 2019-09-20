@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
@@ -45,6 +46,18 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   // Tests for showing privileges
+
+  test("should not show privileges as non admin") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW PRIVILEGES")
+    } should have message "Permission denied."
+  }
 
   test("should show privileges for users") {
     // GIVEN
@@ -617,6 +630,30 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             )
           }
       }
+  }
+
+  test("should not grant anything as non admin") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "GRANT MATCH {bar} ON GRAPH * TO custom")
+    } should have message "Permission denied."
+  }
+
+  test("should not deny anything as non admin") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DENY MATCH {bar} ON GRAPH * TO custom")
+    } should have message "Permission denied."
   }
 
   // Tests for granting and denying privileges on properties

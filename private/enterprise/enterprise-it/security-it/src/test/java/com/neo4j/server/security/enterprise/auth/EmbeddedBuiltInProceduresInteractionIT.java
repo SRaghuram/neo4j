@@ -111,7 +111,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
                 return Collections.emptySet();
             }
 
-            SecurityContext inner = AnonymousContext.none().authorize( IdLookup.EMPTY, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+            SecurityContext inner = AnonymousContext.access().authorize( IdLookup.EMPTY, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
             @Override
             public AuthSubject subject()
