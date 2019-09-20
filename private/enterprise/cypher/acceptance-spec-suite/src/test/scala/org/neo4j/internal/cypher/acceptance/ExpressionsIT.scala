@@ -40,7 +40,6 @@ import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.procedure.Context
-import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContext}
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -72,8 +71,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     if (context != null) {
       context.close()
     }
+    if (tx != null) {
+      try {
+        tx.commit()
+      } finally {
+        val txToClose = tx
+        tx = null // Set this to null before closing, just in case
+        txToClose.close()
+      }
+    }
 
-    tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
+    beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
     context = Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP)
     query = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
     cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors)
@@ -93,7 +101,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   protected var query: QueryContext = _
   private var cursors: ExpressionCursors = _
   private val expressionVariables: Array[AnyValue] = Array.empty
-  private var tx: InternalTransaction = _
   private var context: TransactionalContext = _
   private val random = ThreadLocalRandom.current()
 
@@ -3570,7 +3577,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def addRelationships(context: ExecutionContext, rels: RelAt*): Unit = {
-    graph.inTx(
+    inTestTx(
       for (rel <- rels) {
         context.setLongAt(rel.slot, rel.rel.id())
       })
@@ -3600,7 +3607,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def nodeValue(properties: MapValue = EMPTY_MAP): NodeValue = {
-    graph.inTx {
+    inTestTx {
       val node = createNode()
       properties.foreach((t: String, u: AnyValue) => {
         node.setProperty(t, u.asInstanceOf[Value].asObject())
@@ -3615,7 +3622,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def relationshipValue(from: NodeValue, to: NodeValue, properties: MapValue): RelationshipValue = {
-    graph.withTx( tx => {
+    withTx( tx => {
       val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
       properties.foreach((t: String, u: AnyValue) => {
         r.setProperty(t, u.asInstanceOf[Value].asObject())
