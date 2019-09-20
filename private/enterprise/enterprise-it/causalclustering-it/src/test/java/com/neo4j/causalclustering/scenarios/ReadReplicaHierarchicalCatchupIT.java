@@ -22,12 +22,14 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 
+@SkipThreadLeakageGuard
 @ClusterExtension
 @TestInstance( PER_METHOD )
 class ReadReplicaHierarchicalCatchupIT

@@ -53,6 +53,7 @@ import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -66,6 +67,7 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.ssl.SslPolicyScope.BACKUP;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 
+@SkipThreadLeakageGuard
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )

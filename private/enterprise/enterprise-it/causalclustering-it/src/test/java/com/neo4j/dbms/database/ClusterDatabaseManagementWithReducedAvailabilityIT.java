@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
@@ -33,6 +34,7 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stop
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.concat;
 
+@SkipThreadLeakageGuard
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ClusterDatabaseManagementWithReducedAvailabilityIT

@@ -32,6 +32,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
@@ -54,6 +55,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // TODO: Fix: Failing to start when other members are unavailable: https://trello.com/c/l3TW6rp6/1576-stop-blocking-in-corelifestart
+@SkipThreadLeakageGuard
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ClusterDatabaseManagementIT

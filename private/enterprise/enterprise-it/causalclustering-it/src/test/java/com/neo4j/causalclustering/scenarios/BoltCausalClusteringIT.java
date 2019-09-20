@@ -45,6 +45,7 @@ import org.neo4j.driver.summary.ServerInfo;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;

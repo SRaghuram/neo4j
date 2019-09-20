@@ -26,11 +26,13 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+@SkipThreadLeakageGuard
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ClusterShutdownIT
