@@ -293,7 +293,7 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
                 case q: ast.SingleQuery =>
                   q.clauses.last match {
                     case _: ast.Return => q
-                    case _             => q.withReturnAll
+                    case _             => q.withReturnAliased(lq.produced)
                   }
               }
           }
@@ -314,16 +314,13 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
       def prepend(clause: ast.Clause): ast.SingleQuery =
         sq.copy(clause +: sq.clauses)(sq.position)
 
-      def withReturnAll: ast.SingleQuery =
-        append(ast.Return(ast.ReturnItems(includeExisting = true, Seq())(pos))(pos))
-
       def withReturnNone: ast.SingleQuery =
         append(ast.Return(ast.ReturnItems(includeExisting = false, Seq())(pos))(pos))
 
-      def withReturnNull: ast.SingleQuery =
-        append(ast.Return(ast.ReturnItems(includeExisting = false, Seq(
-          ast.AliasedReturnItem(exp.Null.NULL, exp.Variable("@@discard")(pos))(pos)
-        ))(pos))(pos))
+      def withReturnAliased(names: Seq[String]): ast.SingleQuery =
+        append(ast.Return(ast.ReturnItems(includeExisting = false,
+          names.map(n => ast.AliasedReturnItem(exp.Variable(n)(pos), exp.Variable(n)(pos))(pos))
+        )(pos))(pos))
 
       def withParamBindings(bindings: Map[String, String]): SingleQuery = {
         val items = for {
