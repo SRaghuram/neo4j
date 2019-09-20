@@ -54,7 +54,6 @@ public class JvmProcess implements BaseProcess, HasPid
         while ( !haveFoundPid && pidIterator.hasNext() )
         {
             pidStrategy = pidIterator.next();
-            System.out.println( pidStrategy );
             Instant start = Instant.now();
             pidStrategy.tryFindFor( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
             haveFoundPid = pidStrategy.pid().isPresent();

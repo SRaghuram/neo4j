@@ -86,7 +86,7 @@ public class EndToEndIT extends AnnotationsFixture
                     Files.exists( runReportScript ) );
 
         Path microJar = baseDir.resolve( "target/micro-benchmarks.jar" );
-        assertTrue( "micro-benchmarks.jar not found, make sure you have assembly in place, by running mvn package",
+        assertTrue( "micro-benchmarks.jar not found, make sure you have assembly in place, by running mvn package -PfullBenchmarks",
                     Files.exists( microJar ) );
 
         // copy files into temporary location

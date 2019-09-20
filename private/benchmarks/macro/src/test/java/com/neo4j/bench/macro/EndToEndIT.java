@@ -97,7 +97,7 @@ public class EndToEndIT
                     Files.exists( runReportScript ) );
 
         Path macroJar = baseDir.resolve( "target/macro.jar" );
-        assertTrue( "macro.jar not found, make sure you have assembly in place, by running mvn package",
+        assertTrue( "macro.jar not found, make sure you have assembly in place, by running mvn package -PfullBenchmarks",
                     Files.exists( macroJar ) );
 
         // assert if environment is setup
