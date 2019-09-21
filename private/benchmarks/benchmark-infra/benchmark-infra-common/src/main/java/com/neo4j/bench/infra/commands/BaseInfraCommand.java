@@ -18,7 +18,6 @@ import java.net.URI;
 
 public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
 {
-    private static final Logger LOG = LoggerFactory.getLogger( BaseInfraCommand.class );
 
     @Option( type = OptionType.COMMAND,
              name = {InfraParams.CMD_RESULTS_STORE_USER},
