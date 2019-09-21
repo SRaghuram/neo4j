@@ -11,6 +11,7 @@ import com.amazonaws.services.batch.model.SubmitJobResult;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
@@ -22,19 +23,22 @@ import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.infra.JobId;
+import com.neo4j.bench.infra.commands.BatchJobCommandParameters;
 import com.neo4j.bench.infra.commands.InfraParams;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -52,7 +56,7 @@ public class AWSBatchJobSchedulerTest
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void scheduleJob() throws IOException
+    public void scheduleJob() throws Exception
     {
         // given
         AWSBatch awsBatch = mock( AWSBatch.class );
@@ -155,6 +159,11 @@ public class AWSBatchJobSchedulerTest
         assertThat( mapDifferenceString( entriesDiffering ),
                     entriesDiffering.entriesOnlyOnLeft(),
                     equalTo( emptyMap() ) );
+
+        assertEquals( Collections.emptySet(),
+                      Sets.difference(
+                              new HashSet<>( BatchJobCommandParameters.getBatchJobCommandParameters() ),
+                              jobRequestParameters.keySet() ) );
     }
 
     private String mapDifferenceString( MapDifference<String,String> entriesDiffering )

@@ -136,6 +136,8 @@ public class InfraParams
         map.put( CMD_AWS_KEY, awsKey );
         map.put( CMD_AWS_REGION, awsRegion );
         map.put( CMD_DB_NAME, storeName );
+        map.put( CMD_RESULTS_STORE_URI, resultsStoreUri.toString() );
+        map.put( CMD_RESULTS_STORE_USER, resultsStoreUsername );
         return map;
     }
 }
