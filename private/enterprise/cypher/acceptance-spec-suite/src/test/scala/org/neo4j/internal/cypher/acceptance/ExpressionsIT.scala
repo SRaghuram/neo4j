@@ -1313,6 +1313,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val offset = 0
     val resolvedLabelTokenIds = labels.flatMap(l => query.getOptLabelId(l))
+    resolvedLabelTokenIds should have size labels.size
+
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, Seq.empty)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
     val context = SlottedExecutionContext(slots)
@@ -1329,9 +1331,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Given
     val labels = Seq("A", "B", "C")
     val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B"))
+    createLabeledNode("C")
 
     val offset = 0
     val resolvedLabelTokenIds = labels.flatMap(l => query.getOptLabelId(l))
+    resolvedLabelTokenIds should have size labels.size
+
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, Seq.empty)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
     val context = SlottedExecutionContext(slots)
@@ -1388,6 +1393,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val offset = 0
     val resolvedLabelTokenIds = resolvedLabels.flatMap(l => query.getOptLabelId(l))
+    resolvedLabelTokenIds should have size resolvedLabels.size
+
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, lateLabels)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
     val context = SlottedExecutionContext(slots)
@@ -1408,6 +1415,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val offset = 0
     val resolvedLabelTokenIds = resolvedLabels.flatMap(l => query.getOptLabelId(l))
+    resolvedLabelTokenIds should have size resolvedLabels.size
+
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, lateLabels)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
     val context = SlottedExecutionContext(slots)
