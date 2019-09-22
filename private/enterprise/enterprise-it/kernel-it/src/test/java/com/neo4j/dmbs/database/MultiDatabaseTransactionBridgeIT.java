@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
@@ -55,9 +56,10 @@ class MultiDatabaseTransactionBridgeIT
         }
         try ( Transaction transaction = db.beginTx() )
         {
-            TransactionFailureException exception =
-                    assertThrows( TransactionFailureException.class, () -> systemNode.createRelationshipTo( systemNode, RelationshipType.withName( "any" ) ) );
-            assertThat( exception.getMessage(), containsString( "transaction already bound to this thread" ) );
+            NotInTransactionException exception =
+                    assertThrows( NotInTransactionException.class,
+                            () -> systemNode.createRelationshipTo( systemNode, RelationshipType.withName( "any" ) ) );
+            assertThat( exception.getMessage(), containsString( "The transaction has been closed." ) );
         }
     }
 

@@ -30,6 +30,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.function.UncaughtCheckedException;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -47,7 +48,7 @@ import org.neo4j.kernel.api.procedure.SystemProcedure;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.KernelTransactions;
-import org.neo4j.kernel.impl.core.TransactionalProxyFactory;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -87,6 +88,9 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public GraphDatabaseAPI graph;
+
+    @Context
+    public Transaction transaction;
 
     @Context
     public SecurityContext securityContext;
@@ -303,7 +307,6 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         securityContext.assertCredentialsNotExpired();
 
-        TransactionalProxyFactory nodeManager = resolver.resolveDependency( TransactionalProxyFactory.class );
         ZoneId zoneId = getConfiguredTimeZone();
         try
         {
@@ -311,7 +314,7 @@ public class EnterpriseBuiltInDbmsProcedures
                 .flatMap( k -> k.executingQuery().stream() )
                     .filter( query -> isAdminOrSelf( query.username() ) )
                     .map( catchThrown( InvalidArgumentsException.class,
-                            query -> new QueryStatusResult( query, nodeManager, zoneId ) ) );
+                            query -> new QueryStatusResult( query, (InternalTransaction) transaction, zoneId ) ) );
         }
         catch ( UncaughtCheckedException uncaught )
         {

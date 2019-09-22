@@ -917,6 +917,7 @@ class BackupIT
         }
         try ( Transaction tx = db.beginTx() )
         {
+            node = tx.getNodeById( node.getId() );
             node.createRelationshipTo( tx.createNode(), theOtherType );
             for ( Relationship relationship : node.getRelationships( Direction.BOTH, typeToDelete ) )
             {

@@ -36,7 +36,7 @@ import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.query.ExecutingQuery
 import org.neo4j.kernel.api.{Kernel, Statement}
 import org.neo4j.kernel.database.Database
-import org.neo4j.kernel.impl.core.{ThreadToStatementContextBridge, TransactionalProxyFactory}
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
@@ -196,7 +196,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val activeLockCount: LongSupplier = new LongSupplier {
       override def getAsLong = 0
     }
-    val proxySpi = dependencyResolver.resolveDependency(classOf[TransactionalProxyFactory])
     new Neo4jTransactionalContext(
       new GraphDatabaseCypherService(db),
       threadToStatementContextBridge,
