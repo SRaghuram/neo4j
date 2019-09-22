@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.{NO_ENT
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.NO_PREDICATE_OFFSET
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -22,7 +23,6 @@ import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.InternalException
@@ -201,6 +201,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     shouldExpandAll: Boolean,
                                     tempNodeOffset: Int,
                                     tempRelOffset: Int,
+                                    genStartNodePredicate: Option[() => IntermediateExpression],
                                     genNodePredicate: Option[() => IntermediateExpression],
                                     genRelPredicate: Option[() => IntermediateExpression])
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
@@ -214,6 +215,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName())
   private val toOffset = toSlot.offset
   private val projectBackwards = VarLengthExpandPipe.projectBackwards(dir, projectedDir)
+  private var startNodePredicate: Option[IntermediateExpression] = _
   private var nodePredicate: Option[IntermediateExpression] = _
   private var relPredicate: Option[IntermediateExpression] = _
 
@@ -229,9 +231,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  //we don't add nodePredicate and relPredicate since they are evaluated
-  //in a different class and we only pass along its fields
-  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+  override def genExpressions: Seq[IntermediateExpression] = startNodePredicate.toSeq
 
   /**
     * In here we create an instance of VarExpandCursor that overrides the `satisfyPredicates` method
@@ -252,15 +252,26 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     //initialize predicates
-    nodePredicate = genNodePredicate.map(_())
-    relPredicate = genRelPredicate.map(_())
+    startNodePredicate = genNodePredicate.map(_())
 
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName()
     val toNode = codeGen.namer.nextVariableName()
+    val fromNodePredicate =
+      if (tempNodeOffset == NO_PREDICATE_OFFSET) None else startNodePredicate.map { pred =>
+      block(
+        arraySet(EXPRESSION_VARIABLES, tempNodeOffset,
+                 invoke(DB_ACCESS,
+                  method[DbAccess, NodeValue, Long]("nodeById"),
+                 load(fromNode))),
+        equal(trueValue, nullCheckIfRequired(pred)))
+    }
+    val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(load(fromNode), constant(-1L))) {
+      case (acc, current) => and(acc, current)
+    }
     val predicate =
-      if (shouldExpandAll) notEqual(load(fromNode), constant(-1L))
-      else and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))
+      if (shouldExpandAll) predicateOnFromNode
+      else and(predicateOnFromNode, notEqual(load(toNode), constant(-1L)))
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
@@ -378,8 +389,15 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *   [evaluate predicate] == Values.TRUE
     * }}}
     */
-  private def generatePredicate = {
-    val maybeNodePred = if (tempNodeOffset == NO_PREDICATE_OFFSET) None else nodePredicate.map { pred =>
+  private def generatePredicate = (generateNodePredicate, generateRelationshipPredicate) match {
+    case (Some(np), Some(rp)) => and(np, rp)
+    case (Some(np), None) => np
+    case (None, Some(rp)) => rp
+    case (None, None) => constant(true)
+  }
+
+  private def generateNodePredicate = {
+    if (tempNodeOffset == NO_PREDICATE_OFFSET) None else nodePredicate.map { pred =>
       block(
         oneTime(arraySet(EXPRESSION_VARIABLES, tempNodeOffset, invoke(DB_ACCESS,
                                                                       method[DbAccess, NodeValue, Long]("nodeById"),
@@ -388,7 +406,10 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                                                                "otherNodeReference"))))),
         equal(trueValue, nullCheckIfRequired(pred)))
     }
-    val maybeRelPred = if (tempRelOffset == NO_PREDICATE_OFFSET) None else relPredicate.map { pred =>
+  }
+
+  private def generateRelationshipPredicate = {
+    if (tempRelOffset == NO_PREDICATE_OFFSET) None else relPredicate.map { pred =>
       block(
         oneTime(arraySet(EXPRESSION_VARIABLES, tempRelOffset,
                          invokeStatic(
@@ -396,19 +417,15 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                            DB_ACCESS, load("selectionCursor")))),
         equal(trueValue, nullCheckIfRequired(pred)))
     }
-
-    (maybeNodePred, maybeRelPred) match {
-      case (Some(np), Some(rp)) => and(np, rp)
-      case (Some(np), None) => np
-      case (None, Some(rp)) => rp
-      case (None, None) => constant(true)
-    }
   }
 
   /**
     * Creates an inner class that extends `VarExpandCursor` with the appropriate node and relationship predicates
     */
   private def createInnerClass(dir: SemanticDirection) =  {
+    //generate predicates
+    nodePredicate = genNodePredicate.map(_())
+    relPredicate = genRelPredicate.map(_())
 
     //Directions governs what class we are extending
     val classToExtend = dir match {

@@ -522,6 +522,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                 tempNodeOffset,
                                                                 tempRelationshipOffset,
                                                                 nodePredicate.map(x => compileExpression(x.predicate)),
+                                                                nodePredicate.map(x => compileExpression(x.predicate)),
                                                                 relationshipPredicate.map(x => compileExpression(x.predicate))
                                                                 )(expressionCompiler)
             acc.copy(
