@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{Community
 import org.neo4j.cypher.internal.runtime.morsel.execution.{ProfiledQuerySubscription, QueryExecutor}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselBlacklist
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, MorselPipelineBreakingPolicy, OperatorFactory}
+import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, InterpretedPipesFallbackPolicy, MorselPipelineBreakingPolicy, OperatorFactory}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
@@ -70,7 +70,8 @@ class MorselRuntime(parallelExecution: Boolean,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
     val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
-    val breakingPolicy = MorselPipelineBreakingPolicy(context.config, operatorFusionPolicy)
+    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.config.useInterpretedPipes, parallelExecution)
+    val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
