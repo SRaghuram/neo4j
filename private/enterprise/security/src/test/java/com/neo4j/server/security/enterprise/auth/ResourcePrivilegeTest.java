@@ -17,7 +17,14 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.*;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 
 class ResourcePrivilegeTest
 {
