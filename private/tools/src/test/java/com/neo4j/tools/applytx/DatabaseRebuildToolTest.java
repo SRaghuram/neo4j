@@ -228,7 +228,7 @@ class DatabaseRebuildToolTest
         {
             try ( Transaction tx = db.beginTx() )
             {
-                Relationship relationship = nodes[i % nodes.length]
+                Relationship relationship = tx.getNodeById( nodes[i % nodes.length].getId() )
                         .createRelationshipTo( nodes[(i + 1) % nodes.length], withName( "TYPE_" + (i % 3) ) );
                 setProperties( relationship, i );
                 tx.commit();
@@ -236,7 +236,7 @@ class DatabaseRebuildToolTest
         }
         try ( Transaction tx = db.beginTx() )
         {
-            Node node = nodes[nodes.length - 1];
+            Node node = tx.getNodeById( nodes[nodes.length - 1].getId() );
             for ( Relationship relationship : node.getRelationships() )
             {
                 relationship.delete();

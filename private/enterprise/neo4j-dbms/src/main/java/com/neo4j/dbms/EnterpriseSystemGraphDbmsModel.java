@@ -16,7 +16,6 @@ import java.util.stream.Stream;
 import org.neo4j.dbms.database.SystemGraphDbmsModel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.internal.helpers.collection.Iterables;
@@ -47,13 +46,14 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         {
             var changedDatabases = Iterables.stream( transactionData.assignedNodeProperties() )
                     .map( PropertyEntry::entity )
+                    .map( n -> tx.getNodeById( n.getId() ) )
                     .filter( n -> n.hasLabel( DATABASE_LABEL ) )
                     .map( this::getDatabaseId )
                     .distinct();
 
             var deletedDatabases = Iterables.stream( transactionData.assignedLabels() )
                     .filter( l -> l.label().equals( DELETED_DATABASE_LABEL ) )
-                    .map( LabelEntry::node )
+                    .map( e -> tx.getNodeById( e.node().getId() ) )
                     .map( this::getDatabaseId );
 
             updatedDatabases = Stream.concat( changedDatabases, deletedDatabases ).collect( Collectors.toList() );
