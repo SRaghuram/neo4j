@@ -81,16 +81,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
         if ( dbName.equals( SYSTEM_DATABASE_NAME ) )
         {
-            try
-            {
-                accessModeBuilder.addPrivilege(
-                        new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(),
-                                               DatabaseSegment.ALL, dbName ) );
-            }
-            catch ( InvalidArgumentsException e )
-            {
-                throw new AuthorizationViolationException( String.format( "Database '%s' access not allowed: %s", dbName, e.getMessage() ), e );
-            }
+            accessModeBuilder.withAccess();
         }
         accessModeBuilder.addBlacklistedPropertyPermissions( authManager.getPropertyPermissions( roles(), resolver ) );
 
@@ -604,6 +595,11 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                         relationshipSegmentForProperty.get( DENY ),
 
                         adminModeBuilder.build() );
+            }
+
+            void withAccess()
+            {
+                anyAccess.put( GRANT, true );
             }
 
             void addPrivilege( ResourcePrivilege privilege ) throws KernelException
