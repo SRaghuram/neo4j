@@ -169,9 +169,7 @@
             "--neo4j-deployment",
             "Ref::--neo4j-deployment",
             "--recreate-schema",
-            "Ref::--recreate-schema",
             "--skip-flamegraphs",
-            "Ref::--skip-flamegraphs",
 
             "--neo4j-commit",
             "Ref::--neo4j-commit",
@@ -283,9 +281,7 @@
             "--neo4j-deployment",
             "Ref::--neo4j-deployment",
             "--recreate-schema",
-            "Ref::--recreate-schema",
             "--skip-flamegraphs",
-            "Ref::--skip-flamegraphs",
 
             "--neo4j-commit",
             "Ref::--neo4j-commit",
@@ -397,9 +393,7 @@
             "--neo4j-deployment",
             "Ref::--neo4j-deployment",
             "--recreate-schema",
-            "Ref::--recreate-schema",
             "--skip-flamegraphs",
-            "Ref::--skip-flamegraphs",
 
             "--neo4j-commit",
             "Ref::--neo4j-commit",
@@ -511,9 +505,7 @@
             "--neo4j-deployment",
             "Ref::--neo4j-deployment",
             "--recreate-schema",
-            "Ref::--recreate-schema",
             "--skip-flamegraphs",
-            "Ref::--skip-flamegraphs",
 
             "--neo4j-commit",
             "Ref::--neo4j-commit",
