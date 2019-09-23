@@ -87,7 +87,6 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 public abstract class ProcedureInteractionTestBase<S>
 {
     private static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
-    protected boolean PWD_CHANGE_CHECK_FIRST;
     protected String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private static final String BOLT_PWD_ERR_MSG =
             "The credentials you provided were valid, but must be changed before you can use this instance.";
@@ -104,7 +103,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     String pwdReqErrMsg( String errMsg )
     {
-        return PWD_CHANGE_CHECK_FIRST ? CHANGE_PWD_ERR_MSG : IS_EMBEDDED ? errMsg : BOLT_PWD_ERR_MSG;
+        return IS_EMBEDDED ? errMsg : BOLT_PWD_ERR_MSG;
     }
 
     final String EMPTY_ROLE = "empty";

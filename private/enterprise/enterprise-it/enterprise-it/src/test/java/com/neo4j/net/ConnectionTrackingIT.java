@@ -420,11 +420,11 @@ class ConnectionTrackingIT
 
     private void changeDefaultPasswordForUserNeo4j( String newPassword )
     {
-        String changePasswordUri = neo4j.httpURI().resolve( "user/neo4j/password" ).toString();
+        var uri = neo4j.httpURI().resolve( "db/system/tx/commit" ).toString();
         Response response = withBasicAuth( "neo4j", "neo4j" )
-                .POST( changePasswordUri, quotedJson( "{'password':'" + newPassword + "'}" ) );
+                .POST( uri, query( String.format( "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO '%s'", newPassword ) ) );
 
-        assertEquals( 204, response.status() );
+        assertEquals( 200, response.status() );
     }
 
     private void createNewUser( String username, String password )

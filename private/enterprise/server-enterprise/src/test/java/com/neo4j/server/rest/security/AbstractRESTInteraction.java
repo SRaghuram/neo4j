@@ -209,9 +209,22 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     @Override
     public void assertPasswordChangeRequired( RESTSubject subject )
     {
-        HTTP.Response response = authenticate( subject.principalCredentials );
-        assertThat( response.status(), equalTo( 403 ) );
-        assertThat( parseErrorMessage( response ), containsString( "User is required to change their password." ) );
+        // Should be ok to authenticate from REST
+        HTTP.Response authResponse = authenticate( subject.principalCredentials );
+        assertThat( authResponse.status(), equalTo( 200 ) );
+
+        // Should be blocked on data access by the server
+        HTTP.Response dataResponse = HTTP.withBasicAuth( subject.username, subject.password ).POST( server.baseUri().resolve( txCommitURL() ).toString(),
+                HTTP.RawPayload.quotedJson( "{'statements':[{'statement':'MATCH (n) RETURN n'}]}" ) );
+
+        try
+        {
+            assertPermissionErrorAtDataAccess( dataResponse );
+        }
+        catch ( JsonParseException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     @Override

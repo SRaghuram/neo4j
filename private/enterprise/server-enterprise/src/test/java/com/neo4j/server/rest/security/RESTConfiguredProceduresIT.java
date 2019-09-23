@@ -28,8 +28,6 @@ public class RESTConfiguredProceduresIT extends ConfiguredProceduresTestBase<RES
     public RESTConfiguredProceduresIT()
     {
         super();
-        CHANGE_PWD_ERR_MSG = "User is required to change their password.";
-        PWD_CHANGE_CHECK_FIRST = true;
         IS_EMBEDDED = false;
     }
 
