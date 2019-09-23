@@ -694,7 +694,7 @@ class CheckTxLogsTest
     {
         // given
         ensureLogExists( logFile( 1 ) );
-        writeCheckPoint( logFile( 2 ), 1, 42 );
+        writeCheckPoint( logFile( 2 ), 1, LOG_HEADER_SIZE + 42 );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
@@ -706,7 +706,7 @@ class CheckTxLogsTest
         assertEquals( 1, handler.checkPointInconsistencies.size() );
 
         assertEquals( 2, handler.checkPointInconsistencies.get( 0 ).logVersion );
-        assertEquals( new LogPosition( 1, 42 ), handler.checkPointInconsistencies.get( 0 ).logPosition );
+        assertEquals( new LogPosition( 1, LOG_HEADER_SIZE + 42 ), handler.checkPointInconsistencies.get( 0 ).logPosition );
         assertEquals( LOG_HEADER_SIZE, handler.checkPointInconsistencies.get( 0 ).size );
     }
 
