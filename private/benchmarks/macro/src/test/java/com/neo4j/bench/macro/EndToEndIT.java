@@ -139,7 +139,7 @@ class EndToEndIT
 
         Path macroJar = baseDir.resolve( "target/macro.jar" );
         assertTrue( Files.exists( macroJar ),
-                    "macro.jar not found, make sure you have assembly in place, by running mvn package" );
+                    "macro.jar not found, make sure you have assembly in place, by running 'mvn package -P fullBenchmarks'" );
 
         // assert if environment is setup
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );

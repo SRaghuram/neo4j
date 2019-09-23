@@ -130,7 +130,7 @@ class EndToEndIT extends AnnotationsFixture
         Path microJar = baseDir.resolve( "target/micro-benchmarks.jar" );
         assertTrue(
                 Files.exists( microJar ),
-                "micro-benchmarks.jar not found, make sure you have assembly in place, by running mvn package" );
+                "micro.jar not found, make sure you have assembly in place, by running 'mvn package -P fullBenchmarks'" );
 
         // copy files into temporary location
         Path workPath = temporaryFolder.absolutePath().toPath();
