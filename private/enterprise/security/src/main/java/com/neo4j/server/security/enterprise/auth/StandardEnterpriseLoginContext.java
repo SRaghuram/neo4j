@@ -245,12 +245,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public boolean allowsTokenReads()
-        {
-            return allowsReads || allowsWrites || allowsTokenCreates || allowsSchemaWrites;
-        }
-
-        @Override
         public boolean allowsWrites()
         {
             return allowsWrites;
