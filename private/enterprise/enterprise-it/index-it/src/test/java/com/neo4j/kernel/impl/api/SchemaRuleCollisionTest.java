@@ -9,6 +9,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -29,6 +30,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
+import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.kernel.api.Kernel;
@@ -90,12 +92,13 @@ class SchemaRuleCollisionTest
         }
     }
 
-    private static final SchemaType<IndexDescriptor> INDEX = createSchemaType( SchemaWrite::indexCreate, "index" );
+    private static final SchemaType<IndexDescriptor> INDEX = createLabelSchemaType( SchemaWrite::indexCreate, "index" );
     private static final SchemaType<ConstraintDescriptor> UNIQUE_CONSTRAINT =
-            createSchemaType( SchemaWrite::uniquePropertyConstraintCreate, "unique_constraint" );
-    private static final SchemaType<ConstraintDescriptor> NODE_KEY_CONSTRAINT = createSchemaType( SchemaWrite::nodeKeyConstraintCreate, "node_key_constraint" );
+            createLabelSchemaType( SchemaWrite::uniquePropertyConstraintCreate, "unique_constraint" );
+    private static final SchemaType<ConstraintDescriptor> NODE_KEY_CONSTRAINT =
+            createLabelSchemaType( SchemaWrite::nodeKeyConstraintCreate, "node_key_constraint" );
     private static final SchemaType<ConstraintDescriptor> EXISTENCE_CONSTRAINT =
-            createSchemaType( SchemaWrite::nodePropertyExistenceConstraintCreate, "existence_constraint" );
+            createLabelSchemaType( SchemaWrite::nodePropertyExistenceConstraintCreate, "existence_constraint" );
 
     private static List<Arguments> allSchemaTypes()
     {
@@ -281,6 +284,54 @@ class SchemaRuleCollisionTest
         assertEquals( "Schema rule name cannot be the empty string or only contain whitespace.", illegalArgumentException.getMessage() );
     }
 
+    @Test
+    void testRelationshipPropertyExistenceConstraintDifferentNameDifferentSchema() throws KernelException
+    {
+        final SchemaType<SchemaRule> relPropExistenceConstraint = createRelTypeSchemaType(
+                SchemaWrite::relationshipPropertyExistenceConstraintCreate, "relationship_property_existence_constraint" );
+        Pattern firstPattern = new Pattern( "relType", "prop1" );
+        Pattern secondPattern = new Pattern( "relType", "prop2" );
+        String firstName = "name";
+        String secondName = "otherName";
+        Result.success().verify( this, relPropExistenceConstraint, firstName, firstPattern );
+        Result.success().verify( this, relPropExistenceConstraint, secondName, secondPattern );
+    }
+
+    @Test
+    void testRelationshipPropertyExistenceConstraintDifferentNameSameSchema() throws KernelException
+    {
+        final SchemaType<SchemaRule> relPropExistenceConstraint = createRelTypeSchemaType(
+                SchemaWrite::relationshipPropertyExistenceConstraintCreate, "relationship_property_existence_constraint" );
+        Pattern pattern = new Pattern( "relType", "prop" );
+        String firstName = "name";
+        String secondName = "otherName";
+        Result.success().verify( this, relPropExistenceConstraint, firstName, pattern );
+        alreadyConstrained().verify( this, relPropExistenceConstraint, secondName, pattern );
+    }
+
+    @Test
+    void testRelationshipPropertyExistenceConstraintSameNameDifferentSchema() throws KernelException
+    {
+        final SchemaType<SchemaRule> relPropExistenceConstraint = createRelTypeSchemaType(
+                SchemaWrite::relationshipPropertyExistenceConstraintCreate, "relationship_property_existence_constraint" );
+        Pattern firstPattern = new Pattern( "relType", "prop1" );
+        Pattern secondPattern = new Pattern( "relType", "prop2" );
+        String name = "name";
+        Result.success().verify( this, relPropExistenceConstraint, name, firstPattern );
+        constraintWithNameAlreadyExists().verify( this, relPropExistenceConstraint, name, secondPattern );
+    }
+
+    @Test
+    void testRelationshipPropertyExistenceConstraintSameNameSameSchema() throws KernelException
+    {
+        final SchemaType<SchemaRule> relPropExistenceConstraint = createRelTypeSchemaType(
+                SchemaWrite::relationshipPropertyExistenceConstraintCreate, "relationship_property_existence_constraint" );
+        Pattern pattern = new Pattern( "relType", "prop" );
+        String name = "name";
+        Result.success().verify( this, relPropExistenceConstraint, name, pattern );
+        equivalentSchemaRuleExists().verify( this, relPropExistenceConstraint, name, pattern );
+    }
+
     private void assertExist( SchemaRule schemaRule ) throws TransactionFailureException
     {
         try ( KernelTransaction transaction = newTransaction( db ) )
@@ -311,7 +362,7 @@ class SchemaRuleCollisionTest
         }
     }
 
-    private static <T extends SchemaRule> SchemaType<T> createSchemaType( SchemaWriteOperation<T> operation, String opName )
+    private static <T extends SchemaRule> SchemaType<T> createLabelSchemaType( SchemaWriteOperation<LabelSchemaDescriptor,T> operation, String opName )
     {
         return new SchemaType<>()
         {
@@ -329,6 +380,42 @@ class SchemaRuleCollisionTest
                 }
 
                 final LabelSchemaDescriptor schema = SchemaDescriptor.forLabel( labelId, propId );
+                try ( KernelTransaction transaction = newTransaction( db ) )
+                {
+                    final SchemaWrite schemaWrite = transaction.schemaWrite();
+                    final T result = operation.create( schemaWrite, schema, name );
+                    transaction.commit();
+                    return result;
+                }
+            }
+
+            @Override
+            public String toString()
+            {
+                return opName;
+            }
+        };
+    }
+
+    private static <T extends SchemaRule> SchemaType<T> createRelTypeSchemaType(
+            SchemaWriteOperation<RelationTypeSchemaDescriptor,T> operation, String opName )
+    {
+        return new SchemaType<>()
+        {
+            @Override
+            public T create( GraphDatabaseAPI db, String name, Pattern pattern ) throws KernelException
+            {
+                final int relTypeId;
+                final int propId;
+                try ( KernelTransaction transaction = newTransaction( db ) )
+                {
+                    final TokenWrite tokenWrite = transaction.tokenWrite();
+                    relTypeId = tokenWrite.relationshipTypeGetOrCreateForName( pattern.labelName );
+                    propId = tokenWrite.propertyKeyGetOrCreateForName( pattern.propertyName );
+                    transaction.commit();
+                }
+
+                final RelationTypeSchemaDescriptor schema = SchemaDescriptor.forRelType( relTypeId, propId );
                 try ( KernelTransaction transaction = newTransaction( db ) )
                 {
                     final SchemaWrite schemaWrite = transaction.schemaWrite();
@@ -377,9 +464,9 @@ class SchemaRuleCollisionTest
         return Result.fail( AlreadyConstrainedException.class );
     }
 
-    interface SchemaWriteOperation<T extends SchemaRule>
+    interface SchemaWriteOperation<DESCRIPTOR extends SchemaDescriptor, T extends SchemaRule>
     {
-        T create( SchemaWrite schemaWrite, LabelSchemaDescriptor schemaDescriptor, String name ) throws KernelException;
+        T create( SchemaWrite schemaWrite, DESCRIPTOR schemaDescriptor, String name ) throws KernelException;
     }
 
     private interface SchemaType<T extends SchemaRule>
