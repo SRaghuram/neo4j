@@ -25,6 +25,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
@@ -230,9 +231,13 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     }
 
     @Test
-    public void willPrefetchEverything() throws IOException
+    public void willPrefetchEverything() throws Exception
     {
-        db.withSetting( GraphDatabaseSettings.pagecache_warmup_enabled, false )
+        File metricsDirectory = testDirectory.directory( "metrics" );
+
+        db.withSetting( MetricsSettings.metricsEnabled, false )
+                .withSetting( OnlineBackupSettings.online_backup_enabled, false )
+                .withSetting( GraphDatabaseSettings.pagecache_warmup_enabled, false )
                 .withSetting( GraphDatabaseSettings.pagecache_memory, "50M" ) //enough to keep everything in page-cache & prevent evictions
                 .ensureStarted();
         createData();
@@ -242,7 +247,18 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         touchAllPages( db );
         long pagesInMemoryWithoutPrefetchAfterTouch = getPageFaults( db );
 
-        db.restartDatabase( Map.of( GraphDatabaseSettings.pagecache_warmup_enabled, true, GraphDatabaseSettings.pagecache_warmup_prefetch, true ));
+        Map<Setting<?>,Object> config = Map.of(
+                GraphDatabaseSettings.pagecache_warmup_enabled, true,
+                GraphDatabaseSettings.pagecache_warmup_prefetch, true,
+                MetricsSettings.metricsEnabled, true,
+                MetricsSettings.csvEnabled, true,
+                MetricsSettings.csvInterval, Duration.ofMillis( 100 ),
+                MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath()
+        );
+
+        db.restartDatabase( config );
+        verifyEventuallyWarmsUp( pagesInMemoryWithoutPrefetchAfterTouch, metricsDirectory );
+
         long pagesInMemoryWithPrefetch = getPageFaults( db );
         touchAllPages( db );
         long pagesInMemoryWithPrefetchAfterTouch = getPageFaults( db );
