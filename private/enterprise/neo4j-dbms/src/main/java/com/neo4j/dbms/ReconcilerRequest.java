@@ -81,6 +81,14 @@ public class ReconcilerRequest
         return thisDatabaseHasPanicked ? Optional.of( causeOfPanic ) : Optional.empty();
     }
 
+    /**
+     * @return Whether this reconciler request is simple (i.e. isn't forced and has no panic cause associated).
+     */
+    boolean isSimple()
+    {
+        return causeOfPanic == null && !forceReconciliation;
+    }
+
     @Override
     public boolean equals( Object o )
     {

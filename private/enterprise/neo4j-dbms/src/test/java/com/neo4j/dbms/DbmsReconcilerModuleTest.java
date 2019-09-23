@@ -5,40 +5,59 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.database.StubMultiDatabaseManager;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.dbms.OperatorState.DROPPED;
 import static com.neo4j.dbms.OperatorState.STARTED;
+import static com.neo4j.dbms.OperatorState.STOPPED;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( LifeExtension.class )
 class DbmsReconcilerModuleTest
 {
-
     @Inject
     private LifeSupport lifeSupport;
     private StubMultiDatabaseManager databaseManager;
@@ -106,6 +125,107 @@ class DbmsReconcilerModuleTest
         for ( Database database : databases )
         {
             verify( database ).stop();
+        }
+    }
+
+    @Test
+    void shouldCacheSimpleReconciliationRequests() throws Exception
+    {
+        // given
+        // an operator desiring foo as started
+        var foo = idRepository.getRaw( "foo" );
+        var operator = new LocalDbmsOperator( idRepository );
+        // a database manager which blocks on starting databases
+        CountDownLatch startingLatch  = new CountDownLatch( 1 );
+        AtomicBoolean isStarting = new AtomicBoolean( false );
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        doAnswer( ignored ->
+        {
+            isStarting.set( true );
+            startingLatch.await();
+            return null;
+        } ).when( databaseManager ).startDatabase( any( DatabaseId.class ) );
+
+        try ( var scheduler = new ThreadPoolJobScheduler() )
+        {
+            // a reconciler with a proper multi threaded executor
+            var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), scheduler );
+
+            // when
+            // the reconciler is already executing a long running job
+            operator.startDatabase( foo.name() );
+            var startFoo = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
+            assertEventually( "Reconciler should be starting foo!", isStarting::get, is( true ), 10, SECONDS );
+
+            // and a second job gets created. It waits and is put in an internal cache
+            operator.stopDatabase( foo.name() );
+            var stopFooA = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
+
+            // then
+            // Futher reconciliation attempts should simply return the cached job
+
+            var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
+            assertEquals( stopFooA, stopFooB, "The reconciler results should be equal for the cached job!" );
+
+            // the reconciler should pick up the latest state at the time each job starts
+            operator.startDatabase( foo.name() );
+            startingLatch.countDown();
+            startFoo.awaitAll();
+            stopFooA.awaitAll();
+            stopFooB.awaitAll();
+
+            verify( databaseManager, atLeastOnce() ).startDatabase( foo );
+            verify( databaseManager, never() ).stopDatabase( foo );
+        }
+    }
+
+    @Test
+    void shouldNotCacheForceReconciliationRequests() throws Exception
+    {
+        // given
+        // an operator desiring foo as started
+        var foo = idRepository.getRaw( "foo" );
+        var operator = new LocalDbmsOperator( idRepository );
+
+        // a database manager which blocks on starting databases
+        CountDownLatch startingLatch  = new CountDownLatch( 1 );
+        AtomicBoolean isStarting = new AtomicBoolean( false );
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        doAnswer( ignored ->
+        {
+            isStarting.set( true );
+            startingLatch.await();
+            return null;
+        } ).when( databaseManager ).startDatabase( any( DatabaseId.class ) );
+
+        try ( var scheduler = new ThreadPoolJobScheduler() )
+        {
+            // a reconciler with a proper multi threaded executor
+            var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), scheduler );
+            // when
+            // the reconciler is already executing a long running job
+            operator.startDatabase( foo.name() );
+            var startFoo = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
+            assertEventually( "Reconciler should be starting foo!", isStarting::get, is( true ), 10, SECONDS );
+
+            // and a second job gets created. It waits and is put in an internal cache
+            operator.stopDatabase( foo.name() );
+            var stopFooA = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
+
+            // then
+            // A third reconciliation attempts would return the cached job, but its forced, so it won't
+            operator.stopDatabase( foo.name() );
+            var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.force() );
+
+            // then
+            assertNotEquals( stopFooA, stopFooB, "The reconciler results should not be equal as forced jobs should not be cached!" );
+
+            startingLatch.countDown();
+            startFoo.awaitAll();
+            stopFooA.awaitAll();
+            stopFooB.awaitAll();
         }
     }
 }

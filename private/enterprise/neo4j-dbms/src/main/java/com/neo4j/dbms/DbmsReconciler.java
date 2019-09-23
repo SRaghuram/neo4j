@@ -82,6 +82,7 @@ public class DbmsReconciler implements DatabaseStateService
 {
     private final ExponentialBackoffStrategy backoffStrategy;
     private final Executor executor;
+    private final Map<String,CompletableFuture<ReconcilerStepResult>> reconcilerJobCache;
     private final Set<String> reconciling;
     private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
     private final BinaryOperator<DatabaseState> precedence;
@@ -98,10 +99,18 @@ public class DbmsReconciler implements DatabaseStateService
         this.backoffStrategy = new ExponentialBackoffStrategy(
                 config.get( GraphDatabaseSettings.reconciler_minimum_backoff ),
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
+
+        if ( config.isExplicitlySet( GraphDatabaseSettings.reconciler_maximum_parallelism ) )
+        {
+            int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
+            parallelism = parallelism == 0 ? Runtime.getRuntime().availableProcessors() : parallelism;
+            scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
+        }
         this.executor = scheduler.executor( Group.DATABASE_RECONCILER );
 
         this.reconciling = new HashSet<>();
         this.currentStates = new ConcurrentHashMap<>();
+        this.reconcilerJobCache = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
         this.precedence = OperatorState.minByOperatorState( DatabaseState::operationalState );
         this.transitions = prepareLifecycleTransitionSteps();
@@ -146,6 +155,127 @@ public class DbmsReconciler implements DatabaseStateService
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
+    protected DatabaseState getReconcilerEntryFor( DatabaseId databaseId )
+    {
+        return currentStates.getOrDefault( databaseId.name(), DatabaseState.initial( databaseId ) );
+    }
+
+    /**
+     * This method attempts to perform reconciliation of the given database to the desired state, as specified via {@link DbmsOperator#desired()} for each of
+     * the provided operators.
+     *
+     * Reconciliation happens in 4 distinct steps: ACQUIRE LOCKS -> RECONCILE -> RETRY -> RELEASE LOCKS
+     *
+     * Each of these steps is asynchronously executed on completion of the previous step. Unfortunately, {@link CompletableFuture#thenCompose(Function)} does
+     * not guarantee that the submitted function is executed using the same execution context as the previous step. Therefore, in order to ensure
+     * reconciliation steps are strictly limited to being executed on the reconciler's provided executor, we must issue each step function using
+     * {@link CompletableFuture#supplyAsync(Supplier, Executor)} again.
+     *
+     * As a result, a reconciliation job is implemented as a stack of futures, implemented broadly as follows:
+     *
+     * {@code
+     *      CompletableFuture.supplyAsync( step, executor )
+     *          .thenCompose( CompletableFuture.supplyAsync( step, executor )
+     *              .thenCompose( CompletableFuture.supplyAsync( step, executor )
+     *                  .andSoOn() ) }
+     *
+     * ... though this is factored out across several methods, for clarity.
+     *
+     * Note that we also cache simple reconciliation jobs: reconciliation jobs which neither panic/fail the database, nor force reconciler to perform
+     * transitions on failed databases.
+     *
+     * As the desired state of each database is calculated dynamically when a reconciliation actually starts
+     * (after acquiring a lock), if a job is triggered for a database whilst another is already waiting, we just give the caller a reference
+     * to the waiting job. Any changes to the database's desired state which caused that additional call to
+     * {@link DbmsReconciler#reconcile(List, ReconcilerRequest)} will be picked up by the earlier waiting job when it finally starts reconciling.
+     */
+    private synchronized CompletableFuture<ReconcilerStepResult> reconcile( String databaseName, ReconcilerRequest request, List<DbmsOperator> operators )
+    {
+        var cachedJob = reconcilerJobCache.get( databaseName );
+        if ( cachedJob != null && request.isSimple() )
+        {
+            return cachedJob;
+        }
+
+        var reconcilerJobHandle = new CompletableFuture<Void>();
+
+        var job = reconcilerJobHandle
+                .thenCompose( ignored -> preReconcile( databaseName, operators, request ) )
+                .thenCompose( desiredState -> reconcileRetry( databaseName, desiredState, request ) )
+                .whenComplete( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
+
+        if ( request.isSimple() )
+        {
+            reconcilerJobCache.put( databaseName, job );
+        }
+        //Having synchronously placed the job future in the cache (and thus avoiding potential races)
+        // we can now start the job by completing the Void handle future at the head of the chain.
+        reconcilerJobHandle.complete( null );
+        return job;
+    }
+
+    private CompletableFuture<DatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators, ReconcilerRequest request )
+    {
+        return CompletableFuture.supplyAsync( () ->
+        {
+            try
+            {
+                log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
+                acquireLockOn( databaseName );
+
+                if ( request.isSimple() )
+                {
+                    reconcilerJobCache.remove( databaseName );
+                }
+
+                var desiredState = desiredStates( operators, precedence ).get( databaseName );
+                if ( desiredState == null )
+                {
+                    throw new IllegalStateException( format( "No operator desires a state for database %s any more. " +
+                            "This is likely an error!", databaseName ) );
+                }
+                else if ( !Objects.equals( databaseName, desiredState.databaseId().name() ) )
+                {
+                    throw new IllegalStateException( format( "The supplied database name %s does not match that stored " +
+                            "in its desired state %s!", databaseName, desiredState.databaseId().name() ) );
+                }
+                return desiredState;
+            }
+            catch ( InterruptedException e )
+            {
+                currentThread().interrupt();
+                throw new CompletionException( e );
+            }
+
+        }, executor );
+    }
+
+    private CompletableFuture<ReconcilerStepResult> reconcileRetry( String databaseName, DatabaseState desiredState, ReconcilerRequest request )
+    {
+        var currentState = getReconcilerEntryFor( desiredState.databaseId() );
+
+        var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
+
+        if ( currentState.equals( desiredState ) )
+        {
+            return CompletableFuture.completedFuture( initialResult );
+        }
+
+        if ( currentState.hasFailed() && !request.forceReconciliation() )
+        {
+            var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
+                    databaseName, desiredState.operationalState().description() );
+            return CompletableFuture.completedFuture( initialResult.withError( new DatabaseManagementException( message ) ) );
+        }
+
+        var backoff = backoffStrategy.newTimeout();
+        var steps = getLifecycleTransitionSteps( currentState, desiredState );
+
+        DatabaseId databaseId = desiredState.databaseId();
+        return CompletableFuture.supplyAsync( () -> reconcileSteps( initialResult.state(), steps, desiredState ), executor  )
+                .thenCompose( result -> retry( databaseId, desiredState, result, executor, backoff, 0 ) );
+    }
+
     private static ReconcilerStepResult reconcileSteps( DatabaseState currentState, Stream<Transition> steps, DatabaseState desiredState )
     {
         String oldThreadName = currentThread().getName();
@@ -178,62 +308,6 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    protected DatabaseState getReconcilerEntryFor( DatabaseId databaseId )
-    {
-        return currentStates.getOrDefault( databaseId.name(), DatabaseState.initial( databaseId ) );
-    }
-
-    /**
-     * This method attempts to perform reconciliation of the given database to the desired state, as specified via {@link DbmsOperator#desired()} for each of
-     * the provided operators.
-     *
-     * Reconciliation happens in 4 distinct steps: ACQUIRE LOCKS -> RECONCILE -> RETRY -> RELEASE LOCKS
-     *
-     * Each of these steps is asynchronously executed on completion of the previous step. Unfortunately, {@link CompletableFuture#thenCompose(Function)} does
-     * not guarantee that the submitted function is executed using the same execution context as the previous step. Therefore, in order to ensure
-     * reconciliation steps are strictly limited to being executed on the reconciler's provided executor, we must issue each step function using
-     * {@link CompletableFuture#supplyAsync(Supplier, Executor)} again.
-     *
-     * This leads to the potentially odd looking pattern in the method below:
-     *
-     * {@code
-     *      CompletableFuture.supplyAsync( step, executor )
-     *          .thenCompose( CompletableFuture.supplyAsync( step, executor )
-     *              .thenCompose( CompletableFuture.supplyAsync( step, executor )
-     *                  .andSoOn() ) }
-     */
-    private CompletableFuture<ReconcilerStepResult> reconcile( String databaseName, ReconcilerRequest request, List<DbmsOperator> operators )
-    {
-        var work = preReconcile( databaseName, operators )
-                .thenCompose( desiredState ->
-                {
-                    var currentState = getReconcilerEntryFor( desiredState.databaseId() );
-
-                    var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
-
-                    if ( currentState.equals( desiredState ) )
-                    {
-                        return CompletableFuture.completedFuture( initialResult );
-                    }
-
-                    if ( currentState.hasFailed() && !request.forceReconciliation() )
-                    {
-                        var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
-                                databaseName, desiredState.operationalState().description() );
-                        return CompletableFuture.completedFuture( initialResult.withError( new DatabaseManagementException( message ) ) );
-                    }
-
-                    var backoff = backoffStrategy.newTimeout();
-                    var steps = getLifecycleTransitionSteps( currentState, desiredState );
-
-                    DatabaseId databaseId = desiredState.databaseId();
-                    return CompletableFuture.supplyAsync( () -> reconcileSteps( initialResult.state(), steps, desiredState ), executor  )
-                            .thenCompose( result -> retry( databaseId, desiredState, result, executor, backoff, 0 ) );
-                } );
-
-        return postReconcile( work, databaseName, request );
-    }
-
     private CompletableFuture<ReconcilerStepResult> retry( DatabaseId databaseId, DatabaseState desiredState, ReconcilerStepResult result, Executor executor,
             TimeoutStrategy.Timeout backoff, int retries )
     {
@@ -253,82 +327,47 @@ public class DbmsReconciler implements DatabaseStateService
                 .thenCompose( retryResult -> retry( databaseId, desiredState, retryResult, executor, backoff, attempt ) );
     }
 
-    private CompletableFuture<DatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators )
+    private void postReconcile( String databaseName, ReconcilerRequest request, ReconcilerStepResult result, Throwable throwable )
     {
-        return CompletableFuture.supplyAsync( () ->
+        try
         {
-            try
+            currentStates.compute( databaseName, ( name, previousState ) ->
             {
-                log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
-                acquireLockOn( databaseName );
-
-                var desiredState = desiredStates( operators, precedence ).get( databaseName );
-                if ( desiredState == null )
+                if ( throwable != null )
                 {
-                    throw new IllegalStateException( format( "No operator desires a state for database %s any more. " +
-                                                             "This is likely an error!", databaseName ) );
+                    var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
+                    if ( previousState == null )
+                    {
+                        log.error( message, throwable );
+                        return DatabaseState.initial( null ).failed( throwable );
+                    }
+                    else
+                    {
+                        reportErrorAndPanicDatabase( previousState.databaseId(), message, throwable );
+                        return previousState.failed( throwable );
+                    }
                 }
-                else if ( !Objects.equals( databaseName, desiredState.databaseId().name() ) )
+                else if ( result.error() != null )
                 {
-                    throw new IllegalStateException( format( "The supplied database name %s does not match that stored " +
-                                                             "in its desired state %s!", databaseName, desiredState.databaseId().name() ) );
+                    var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
+                            databaseName, result.state(), result.desiredState().operationalState().description() );
+                    reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
+                    return result.state().failed( result.error() );
                 }
-                return desiredState;
-            }
-            catch ( InterruptedException e )
-            {
-                currentThread().interrupt();
-                throw new CompletionException( e );
-            }
 
-        }, executor );
-    }
-
-    private CompletableFuture<ReconcilerStepResult> postReconcile( CompletableFuture<ReconcilerStepResult> work, String databaseName,
-            ReconcilerRequest request )
-    {
-        return work.whenComplete( ( result, throwable ) ->
+                var nextState = result.state();
+                var failure = shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
+                return failure.map( nextState::failed ).orElse( nextState );
+            } );
+        }
+        finally
         {
-            try
-            {
-                currentStates.compute( databaseName, ( name, previousState ) ->
-                {
-                    if ( throwable != null )
-                    {
-                        var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
-                        if ( previousState == null )
-                        {
-                            log.error( message, throwable );
-                            return DatabaseState.failedUnknownId( throwable );
-                        }
-                        else
-                        {
-                            reportErrorAndPanicDatabase( previousState.databaseId(), message, throwable );
-                            return previousState.failed( throwable );
-                        }
-                    }
-                    else if ( result.error() != null )
-                    {
-                        var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
-                                databaseName, result.state(), result.desiredState().operationalState().description() );
-                        reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
-                        return result.state().failed( result.error() );
-                    }
-
-                    var nextState = result.state();
-                    var failure = shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
-                    return failure.map( nextState::failed ).orElse( nextState );
-                } );
-            }
-            finally
-            {
-                releaseLockOn( databaseName );
-                var errorExists = throwable != null || result.error() != null;
-                String outcome = errorExists ? "failed" : "succeeded";
-                log.debug( "Releasing lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
-                        result.desiredState().operationalState().description() );
-            }
-        } );
+            releaseLockOn( databaseName );
+            var errorExists = throwable != null || result.error() != null;
+            var outcome = errorExists ? "failed" : "succeeded";
+            log.debug( "Releasing lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
+                    result.desiredState().operationalState().description() );
+        }
     }
 
     private void reportErrorAndPanicDatabase( DatabaseId databaseId, String message, Throwable error )
@@ -380,6 +419,10 @@ public class DbmsReconciler implements DatabaseStateService
         return canRetry && !( t instanceof Error );
     }
 
+    /**
+     * This method defines the table mapping any pair of database states to the series of steps the reconciler needs to perform
+     * to take a database from one state to another.
+     */
     protected Transitions prepareLifecycleTransitionSteps()
     {
         return Transitions.builder()
