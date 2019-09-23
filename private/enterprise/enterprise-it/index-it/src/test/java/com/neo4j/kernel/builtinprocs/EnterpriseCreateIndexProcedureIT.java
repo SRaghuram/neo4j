@@ -111,7 +111,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        callIndexProcedure( indexPattern( label, propKey ), nonDefaultSchemaIndex.providerName() );
+        callIndexProcedure( null, indexPattern( label, propKey ), nonDefaultSchemaIndex.providerName() );
         commit();
 
         // then
@@ -135,7 +135,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( "Person", "name" );
-        ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, null ) );
+        ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, pattern, null ) );
 
         // then
         assertThat( e.getMessage(), containsString( "Could not create index with specified index provider being null" ) );
@@ -157,7 +157,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( "Person", "name" );
-        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, "non+existing-1.0" ) );
+        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, pattern, "non+existing-1.0" ) );
         assertThat( e.getMessage(), allOf(
                 containsString( "Failed to invoke procedure" ),
                 containsString( "Tried to get index provider" ),
@@ -185,7 +185,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, propertyKey );
-        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, nonDefaultSchemaIndex.providerName() ) );
+        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, pattern, nonDefaultSchemaIndex.providerName() ) );
 
         if ( uniquenessConstraint )
         {
@@ -239,7 +239,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return pattern.toString();
     }
 
-    private RawIterator<AnyValue[],ProcedureException> callIndexProcedure( String pattern, String specifiedProvider )
+    private RawIterator<AnyValue[],ProcedureException> callIndexProcedure( String name, String pattern, String specifiedProvider )
             throws ProcedureException, TransactionFailureException
     {
         Procedures procedures = procsSchema();
@@ -247,6 +247,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return procedures.procedureCallSchema( procedureId,
                 new AnyValue[]
                         {
+                                stringOrNoValue( name ), // name
                                 stringOrNoValue( pattern ), // index
                                 stringOrNoValue( specifiedProvider ) // providerName
                         },
@@ -275,10 +276,11 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, properties );
+        String name = "MyIndex";
         String specifiedProvider = nonDefaultSchemaIndex.providerName();
-        RawIterator<AnyValue[], ProcedureException> result = callIndexProcedure( pattern, specifiedProvider );
+        RawIterator<AnyValue[], ProcedureException> result = callIndexProcedure( name, pattern, specifiedProvider );
         // then
-        assertThat( Arrays.asList( result.next() ), contains( stringValue( pattern ), stringValue( specifiedProvider ),
+        assertThat( Arrays.asList( result.next() ), contains( stringValue( name ), stringValue( pattern ), stringValue( specifiedProvider ),
                 stringValue( expectedSuccessfulCreationStatus ) ) );
         commit();
         awaitIndexOnline();
@@ -287,7 +289,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         transaction = newTransaction( AnonymousContext.read() );
         SchemaRead schemaRead = transaction.schemaRead();
         IndexDescriptor index = single( schemaRead.index( SchemaDescriptor.forLabel( labelId, propertyKeyIds ) ) );
-        assertCorrectIndex( labelId, propertyKeyIds, uniquenessConstraint, index );
+        assertCorrectIndex( name, labelId, propertyKeyIds, uniquenessConstraint, index );
         assertIndexData( transaction, propertyKeyIds, value, node, index );
         commit();
     }
@@ -310,10 +312,10 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    private static void assertCorrectIndex( int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexDescriptor index )
+    private static void assertCorrectIndex( String name, int labelId, int[] propertyKeyIds, boolean expectedUnique, IndexDescriptor index )
     {
-        assertEquals( nonDefaultSchemaIndex.providerKey(), index.getIndexProvider().getKey(), "provider key" );
-        assertEquals( nonDefaultSchemaIndex.providerVersion(), index.getIndexProvider().getVersion(), "provider version" );
+        assertEquals( name, index.getName() );
+        assertEquals( nonDefaultSchemaIndex.providerName(), index.getIndexProvider().name(), "provider name" );
         assertEquals( expectedUnique, index.isUnique() );
         assertEquals( labelId, index.schema().getEntityTokenIds()[0], "label id" );
         for ( int i = 0; i < propertyKeyIds.length; i++ )
@@ -392,7 +394,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, properties );
         String specifiedProvider = nonDefaultSchemaIndex.providerName();
-        callIndexProcedure( pattern, specifiedProvider );
+        callIndexProcedure( null, pattern, specifiedProvider );
         commit();
     }
 
