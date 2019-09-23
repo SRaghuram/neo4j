@@ -69,7 +69,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         Set<String> roles = queryForRoleNames();
-        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver );
+        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver, dbName );
 
         Set<ResourcePrivilege> privileges = authManager.getPermissions( roles );
         for ( ResourcePrivilege privilege : privileges )
@@ -164,6 +164,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         private final IntObjectMap<IntSet> blacklistedRelTypesForProperty;
 
         private AdminAccessMode adminAccessMode;
+        private AdminActionOnResource.DatabaseScope database;
 
         StandardAccessMode(
                 boolean allowsAccess,
@@ -202,7 +203,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 IntObjectMap<IntSet> blacklistedLabelsForProperty,
                 IntObjectMap<IntSet> blacklistedRelTypesForProperty,
 
-                AdminAccessMode adminAccessMode
+                AdminAccessMode adminAccessMode,
+                String database
         )
         {
             this.allowsAccess = allowsAccess;
@@ -242,6 +244,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             this.blacklistedRelTypesForProperty = blacklistedRelTypesForProperty;
 
             this.adminAccessMode = adminAccessMode;
+            this.database = new AdminActionOnResource.DatabaseScope( database );
         }
 
         @Override
@@ -251,15 +254,21 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public boolean allowsTokenCreates()
+        public boolean allowsTokenCreates( PrivilegeAction action )
         {
-            return allowsTokenCreates;
+            return allowsTokenCreates && adminAccessMode.allows( new AdminActionOnResource( action, database ) );
         }
 
         @Override
         public boolean allowsSchemaWrites()
         {
             return allowsSchemaWrites;
+        }
+
+        @Override
+        public boolean allowsSchemaWrites( PrivilegeAction action )
+        {
+            return allowsSchemaWrites && adminAccessMode.allows( new AdminActionOnResource( action, database ) );
         }
 
         @Override
@@ -498,6 +507,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             private final boolean passwordChangeRequired;
             private final Set<String> roles;
             private final IdLookup resolver;
+            private final String database;
 
             private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
             private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
@@ -521,12 +531,13 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 
             private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
-            Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
+            Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver, String database )
             {
                 this.isAuthenticated = isAuthenticated;
                 this.passwordChangeRequired = passwordChangeRequired;
                 this.roles = roles;
                 this.resolver = resolver;
+                this.database = database;
                 for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
                 {
                     this.traverseLabels.put( privilegeType, IntSets.mutable.empty() );
@@ -588,7 +599,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                         nodeSegmentForProperty.get( DENY ),
                         relationshipSegmentForProperty.get( DENY ),
 
-                        adminModeBuilder.build() );
+                        adminModeBuilder.build(),
+                        database );
             }
 
             void withAccess()
@@ -739,26 +751,32 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     if ( TOKEN.satisfies( action ) )
                     {
                         token = true;
+                        addPrivilegeAction( privilege );
                     }
                     else if ( SCHEMA.satisfies( action ) )
                     {
                         schema = true;
+                        addPrivilegeAction( privilege );
                     }
                     else if ( ADMIN.satisfies( action ) )
                     {
-                        var dbScope = privilege.isAllDatabases() ?
-                                      AdminActionOnResource.DatabaseScope.ALL :
-                                      new AdminActionOnResource.DatabaseScope( privilege.getDbName() );
-                        var adminAction = new AdminActionOnResource( action, dbScope );
-                        if ( privilegeType.isGrant() )
-                        {
-                            adminModeBuilder.allow( adminAction );
-                        }
-                        else
-                        {
-                            adminModeBuilder.deny( adminAction );
-                        }
+                        addPrivilegeAction( privilege );
                     }
+                }
+            }
+
+            private void addPrivilegeAction( ResourcePrivilege privilege )
+            {
+                var dbScope =
+                        privilege.isAllDatabases() ? AdminActionOnResource.DatabaseScope.ALL : new AdminActionOnResource.DatabaseScope( privilege.getDbName() );
+                var adminAction = new AdminActionOnResource( privilege.getAction(), dbScope );
+                if ( privilege.getPrivilegeType().isGrant() )
+                {
+                    adminModeBuilder.allow( adminAction );
+                }
+                else
+                {
+                    adminModeBuilder.deny( adminAction );
                 }
             }
 
