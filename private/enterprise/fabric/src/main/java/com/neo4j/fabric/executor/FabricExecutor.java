@@ -18,6 +18,8 @@ import com.neo4j.fabric.stream.StatementResults;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 
@@ -64,13 +66,28 @@ public class FabricExecutor
 
     private StatementResult run( FabricQuery query, MapValue params, StatementResult input, FabricTransaction.FabricExecutionContext ctx )
     {
-        if ( query instanceof FabricQuery.LocalQuery )
+        Flux<String> outputCols = Flux.fromIterable( asJavaIterable( query.columns().output() ) );
+        Flux<Record> output = run( query, params, input.records(), ctx );
+        return StatementResults.create( outputCols, output, Mono.empty() );
+    }
+
+    private Flux<Record> run( FabricQuery query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
+    {
+        if ( query instanceof FabricQuery.Direct )
+        {
+            return runDirectQuery( (FabricQuery.Direct) query, params, input, ctx );
+        }
+        else if ( query instanceof FabricQuery.Apply )
+        {
+            return runApplyQuery( (FabricQuery.Apply) query, params, input, ctx );
+        }
+        else if ( query instanceof FabricQuery.LocalQuery )
         {
             return runLocalQuery( (FabricQuery.LocalQuery) query, params, input, ctx );
         }
-        else if ( query instanceof FabricQuery.ShardQuery )
+        else if ( query instanceof FabricQuery.RemoteQuery )
         {
-            return runShardQuery( (FabricQuery.ShardQuery) query, params, input, ctx );
+            return runRemoteQuery( (FabricQuery.RemoteQuery) query, params, input, ctx );
         }
         else if ( query instanceof FabricQuery.ChainedQuery )
         {
@@ -86,30 +103,71 @@ public class FabricExecutor
         }
     }
 
-    private StatementResult runLocalQuery( FabricQuery.LocalQuery query, MapValue params, StatementResult input, FabricTransaction.FabricExecutionContext ctx )
+    private Flux<Record> runChainedQuery( FabricQuery.ChainedQuery query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
     {
-        return ctx.getLocal().run( query.query(), params, input );
+        Flux<Record> previous = input;
+        for ( FabricQuery q : asJavaIterable( query.queries() ) )
+        {
+            previous = run( q, params, previous, ctx );
+        }
+
+        return previous;
     }
 
-    private StatementResult runShardQuery( FabricQuery.ShardQuery query, MapValue params, StatementResult input, FabricTransaction.FabricExecutionContext ctx )
+    private Flux<Record> runUnionQuery( FabricQuery.UnionQuery query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
+    {
+        Flux<Record> lhs = run( query.lhs(), params, input, ctx );
+        Flux<Record> rhs = run( query.rhs(), params, input, ctx );
+        Flux<Record> merged = Flux.merge( lhs, rhs );
+        if ( query.distinct() )
+        {
+            merged = merged.distinct();
+        }
+        return merged;
+    }
+
+    private Flux<Record> runDirectQuery( FabricQuery.Direct query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
+    {
+        return run( query.query(), params, input, ctx );
+    }
+
+    private Flux<Record> runApplyQuery( FabricQuery.Apply query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
+    {
+        return input.flatMap( inputRecord ->
+                run( query.query(), params, Flux.just( inputRecord ), ctx )
+                        .map( outputRecord ->
+                                Records.join( inputRecord, outputRecord ) ) );
+    }
+
+    private Flux<Record> runLocalQuery( FabricQuery.LocalQuery query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
+    {
+        // Wrap in StatementResult, REMOVE?
+        Flux<String> inputCols = Flux.fromIterable( asJavaIterable( query.columns().local() ) );
+        StatementResult inputStream = StatementResults.create( inputCols, input, Mono.empty() );
+        return ctx.getLocal().run( query.query(), params, inputStream ).records();
+    }
+
+    private Flux<Record> runRemoteQuery( FabricQuery.RemoteQuery query, MapValue params, Flux<Record> input, FabricTransaction.FabricExecutionContext ctx )
     {
         String queryString = query.queryString();
         Plan.QueryTask.QueryMode queryMode = getMode( query );
-        Flux<Record> flux = input.records().flatMap( inputRecord ->
+        return input.flatMap( inputRecord ->
         {
-            Map<String,AnyValue> record = recordAsMap( query, inputRecord );
-            FabricConfig.Graph graph = evalFrom( query, params, record );
+            Map<String,AnyValue> recordValues = recordAsMap( query, inputRecord );
+            FabricConfig.Graph graph = evalFrom( query, params, recordValues );
+            MapValue parameters = addImportParams( params, recordValues, mapAsJavaMap( query.parameters() ) );
 
-            MapValue parameters = addImportParams( params, record, mapAsJavaMap( query.parameters() ) );
-
-            StatementResult result = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
-            return result.records().map( rec -> Records.join( inputRecord, rec ) );
+            // Wrapped in StatementResult, REMOVE?
+            return ctx.getRemote().run( graph, queryString, queryMode, parameters ).block().records();
         } );
-
-        return StatementResults.create( Flux.fromIterable( asJavaIterable( query.columns().produced() ) ), flux, Mono.empty() );
     }
 
-    private FabricConfig.Graph evalFrom( FabricQuery.ShardQuery query, MapValue params, Map<String,AnyValue> record )
+    private Map<String,AnyValue> recordAsMap( FabricQuery.RemoteQuery query, Record inputRecord )
+    {
+        return Records.asMap( inputRecord, seqAsJavaList( query.columns().incoming() ) );
+    }
+
+    private FabricConfig.Graph evalFrom( FabricQuery.RemoteQuery query, MapValue params, Map<String,AnyValue> record )
     {
         Catalog.Graph graph = fromEvaluation.evaluate( query.from(), params, record );
         if ( graph instanceof Catalog.RemoteGraph )
@@ -150,35 +208,6 @@ public class FabricExecutor
         }
     }
 
-    private Map<String,AnyValue> recordAsMap( FabricQuery.ShardQuery query, Record inputRecord )
-    {
-        return Records.asMap( inputRecord, seqAsJavaList( query.columns().input() ) );
-    }
-
-    private StatementResult runChainedQuery( FabricQuery.ChainedQuery query, MapValue params, StatementResult input,
-            FabricTransaction.FabricExecutionContext ctx )
-    {
-        StatementResult previous = input;
-        for ( FabricQuery q : asJavaIterable( query.queries() ) )
-        {
-            previous = run( q, params, previous, ctx );
-        }
-
-        return previous;
-    }
-
-    private StatementResult runUnionQuery( FabricQuery.UnionQuery query, MapValue params, StatementResult input, FabricTransaction.FabricExecutionContext ctx )
-    {
-        StatementResult lhs = run( query.lhs(), params, input, ctx );
-        StatementResult rhs = run( query.rhs(), params, input, ctx );
-        Flux<Record> merged = Flux.merge( lhs.records(), rhs.records() );
-        if ( query.distinct() )
-        {
-            merged = merged.distinct();
-        }
-        return StatementResults.create( rhs.columns(), merged, rhs.summary() );
-    }
-
     private UnsupportedOperationException notImplemented( String msg, FabricQuery query )
     {
         return notImplemented( msg, query.toString() );
@@ -189,7 +218,7 @@ public class FabricExecutor
         return new UnsupportedOperationException( msg + ": " + info );
     }
 
-    private Plan.QueryTask.QueryMode getMode( FabricQuery.ShardQuery query )
+    private Plan.QueryTask.QueryMode getMode( FabricQuery.RemoteQuery query )
     {
         if ( query.query().part().containsUpdates() )
         {

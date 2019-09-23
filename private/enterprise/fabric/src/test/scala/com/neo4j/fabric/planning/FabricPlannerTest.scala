@@ -12,7 +12,7 @@ import java.util
 import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.{Database, GlobalDriverConfig, Graph}
-import com.neo4j.fabric.planning.FabricQuery.{ChainedQuery, LocalQuery, ShardQuery, UnionQuery}
+import com.neo4j.fabric.planning.FabricQuery.{Apply, ChainedQuery, Direct, LocalQuery, RemoteQuery, UnionQuery}
 import com.neo4j.fabric.util.Errors.InvalidQueryException
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery}
@@ -55,9 +55,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(0).asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(1).asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(2).asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(0).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(2).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
     }
 
     "not propagate FROM out" in {
@@ -72,9 +72,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(0).asLocalSingleQuery)
-        .check(_.queries(1).asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(2).asLocalSingleQuery)
+        .check(_.queries(0).asDirect.asLocalSingleQuery)
+        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(2).asDirect.asLocalSingleQuery)
     }
 
     "override FROM in subquery" in {
@@ -90,9 +90,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(0).asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(1).asShardQuery.from.shouldEqual(from(varFor("h"))))
-        .check(_.queries(2).asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(0).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("h"))))
+        .check(_.queries(2).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
     }
 
     "disallow embedded FROM" in {
@@ -139,7 +139,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       planner.init(q, params).fabricQuery
         .asChainedQuery
-        .check(_.queries(1).asShardQuery.from.shouldEqual(from(function("g", varFor("x")))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(function("g", varFor("x")))))
     }
 
     "allow FROM to reference imported variable" in {
@@ -155,7 +155,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       planner.init(q, params).fabricQuery
         .asChainedQuery
-        .check(_.queries(1).asShardQuery.from.shouldEqual(from(function("g", varFor("x")))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(function("g", varFor("x")))))
     }
 
     "disallow FROM to reference missing variable" in {
@@ -195,7 +195,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
   "Data flow: " - {
 
-    "input clause inserted in local fragments" in {
+    "local subqueries as apply" in {
       val q =
         """WITH 1 AS y, 2 AS x
           |CALL {
@@ -206,10 +206,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(FabricQuery.pretty.pprint)
-        .check(_.queries(1).asLocalSingleQuery.clauses.head
-          .shouldEqual(input(varFor("x"), varFor("y")))
-        )
+        .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(literal(3).as("z"))
+        )))
     }
 
     "return inserted in local intermediate fragments" in {
@@ -223,32 +222,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(FabricQuery.pretty.pprint)
-        .check(_.queries(0).asLocalSingleQuery.clauses.last
+        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.last
           .shouldEqual(return_(varFor("x").as("x"), varFor("y").as("y")))
         )
     }
 
-    "horizons expanded to pass through input in local fragments" in {
-      val q =
-        """WITH 1 AS x
-          |CALL {
-          |  WITH 2 AS y
-          |  RETURN y
-          |}
-          |RETURN x, y
-          |""".stripMargin
-
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asLocalSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("x")),
-          with_(varFor("x").as("x"), literal(2).as("y")),
-          return_(varFor("x").as("x"), varFor("y").as("y"))
-        )))
-    }
-
-    "return inserted and horizons expanded to pass through input in local update fragments" in {
+    "local update fragments" in {
       val q =
         """WITH 1 AS x
           |CALL {
@@ -260,15 +239,13 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asLocalSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("x")),
-          with_(varFor("x").as("x"), literal(2).as("y")),
-          create(nodePat("z", "A")),
-          return_(varFor("x").as("x"))
+        .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          with_(literal(2).as("y")),
+          create(nodePat("z", "A"))
         )))
     }
 
-    "horizons expanded to pass through input in correlated local fragments" in {
+    "input data stream inserted in correlated local subquery" in {
       val q =
         """WITH 1 AS x
           |CALL {
@@ -279,13 +256,14 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           |RETURN x, y, z
           |""".stripMargin
 
+      FabricPlanner.setPrintPlans(true)
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asLocalSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           input(varFor("x")),
           with_(varFor("x").as("x")),
-          with_(varFor("x").as("x"), literal(2).as("y"), varFor("x").as("z")),
-          return_(varFor("x").as("x"), varFor("y").as("y"), varFor("z").as("z"))
+          with_(literal(2).as("y"), varFor("x").as("z")),
+          return_(varFor("y").as("y"), varFor("z").as("z"))
         )))
     }
 
@@ -304,12 +282,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(2).asLocalSingleQuery.clauses.head.shouldEqual(
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.head.shouldEqual(
           input(varFor("x"), varFor("y"), varFor("z"))
         ))
     }
 
-    "horizons expanded to pass through input in nested local fragments" in {
+    "nested local fragments subqueries" in {
       val q =
         """WITH 1 AS x
           |CALL {
@@ -324,30 +302,15 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asChainedQuery
-          .check(_.queries(1).asLocalSingleQuery.clauses.last
-            .shouldEqual(return_(varFor("x").as("x"), varFor("y").as("y"), literal(3).as("z")))
-          )
+        .check(_.queries(1).asApply.asChainedQuery
+          .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            return_(literal(3).as("z")))
+          ))
+          .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            input(varFor("y"), varFor("z")),
+            return_(varFor("y").as("y")))
+          ))
         )
-    }
-
-    "horizons not expanded in remote fragments" in {
-      val q =
-        """WITH 1 AS x
-          |CALL {
-          |  FROM g
-          |  WITH 2 AS y
-          |  RETURN y
-          |}
-          |RETURN x, y
-          |""".stripMargin
-
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asShardSingleQuery.clauses.shouldEqual(Seq(
-          with_(literal(2).as("y")),
-          return_(varFor("y").as("y"))
-        )))
     }
 
     "imports translated to parameters in remote correlated fragments" in {
@@ -363,7 +326,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asShardSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqual(Seq(
           with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y")),
           with_(varFor("x").aliased, varFor("y").aliased),
           return_(varFor("x").as("x1"), varFor("y").as("y1"))
@@ -383,12 +346,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@x", CTAny).as("x")),
           with_(varFor("x").aliased),
           return_(varFor("x").as("z"))
         )))
-        .check(_.queries(2).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(2).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y"), parameter("@@z", CTAny).as("z")),
           return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased)
         )))
@@ -410,12 +373,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(FabricQuery.pretty.pprint)
-        .check(_.queries(1).asChainedQuery
-          .check(_.queries(1).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(1).asApply.asChainedQuery
+          .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
             return_(literal(3).as("z"))
           )))
-          .check(_.queries(2).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+          .check(_.queries(2).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
             with_(parameter("@@y", CTAny).as("y"), parameter("@@z", CTAny).as("z")),
             return_(varFor("y").aliased, varFor("z").aliased)
           )))
@@ -434,11 +396,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           call(Seq("some"), "procedure", yields = Some(Seq(varFor("z"), varFor("y")))),
-          returnAll
+          return_(varFor("y").aliased, varFor("z").aliased)
         )))
-        .check(_.queries(2).asLocalSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqualAst(Seq(
           input(varFor("x"), varFor("y"), varFor("z")),
           return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased)
         )))
@@ -456,10 +418,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(1).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           create(nodePat("x", "X"))
         )))
-        .check(_.queries(2).asLocalSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqualAst(Seq(
           input(varFor("x")),
           return_(varFor("x").aliased)
         )))
@@ -482,18 +444,18 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
         .check(FabricQuery.pretty.pprint)
-        .check(_.queries(0).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(0).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(literal(1).as("x")),
           create(nodePat("y")),
           with_(varFor("x").aliased, varFor("y").aliased),
-          returnAll
+          return_(varFor("x").aliased, varFor("y").aliased),
         )))
-        .check(_.queries(1).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@y", CTAny).as("y")),
           with_(varFor("y").aliased),
           create(nodePat("z"))
         )))
-        .check(_.queries(2).asShardSingleQuery.clauses.shouldEqualAst(Seq(
+        .check(_.queries(2).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y")),
           return_(varFor("x").aliased, varFor("y").aliased)
         )))
@@ -508,9 +470,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           |RETURN y
           """.stripMargin
 
-      planner
-        .plan(q, params)
-        .asLocalSingleQuery.clauses.shouldEqual(Seq(match_(nodePat("y")), return_(varFor("y").aliased)))
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          match_(nodePat("y")), return_(varFor("y").aliased)
+        )))
+
     }
 
     "a plain shard query" in {
@@ -521,7 +485,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           """.stripMargin
 
       planner
-        .plan(q, params).asShardQuery
+        .plan(q, params).asDirect.asShardQuery
         .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
         .check(_.query.part
           .as[SingleQuery].clauses.shouldEqual(Seq(match_(nodePat("y")), return_(varFor("y").aliased)))
@@ -540,13 +504,13 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       planner
         .plan(q, params).asChainedQuery
-        .check(_.queries(0).asShardQuery
+        .check(_.queries(0).asApply.asDirect.asShardQuery
           .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
           .check(_.asShardSingleQuery.clauses.shouldEqual(
             Seq(match_(nodePat("y")), return_(varFor("y").aliased))
           ))
         )
-        .check(_.queries(1).asLocalSingleQuery.clauses.shouldEqual(
+        .check(_.queries(1).asDirect.asLocalSingleQuery.clauses.shouldEqual(
           Seq(input(varFor("y")), return_(varFor("y").aliased))
         ))
     }
@@ -567,30 +531,30 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           """.stripMargin
 
       planner.plan(q, params).asChainedQuery
-        .check(_.queries(0).asLocalSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           unwind(listOf(literalInt(1), literalInt(2)), varFor("x")),
           return_(varFor("x").aliased))
         ))
-        .check(_.queries(1).asShardQuery
+        .check(_.queries(1).asApply.asDirect.asShardQuery
           .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
           .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
             match_(nodePat("y")),
             return_(varFor("y").aliased)
           )))
         )
-        .check(_.queries(2).asShardQuery
+        .check(_.queries(2).asApply.asDirect.asShardQuery
           .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
           .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
             return_(literalInt(1).as("z"), literal(2).as("w"))
           )))
         )
-        .check(_.queries(3).asLocalSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.queries(3).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           input(varFor("x"), varFor("y"), varFor("z"), varFor("w")),
           return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased, varFor("w").aliased)
         )))
     }
 
-    "a nested composite query" ignore {
+    "a nested composite query" in {
       val q =
         """WITH 1 AS x
           |CALL {
@@ -604,13 +568,26 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           """.stripMargin
 
       planner.plan(q, params).asChainedQuery
-        .check(_.queries(0).asLocalSingleQuery.clauses.shouldEqual(Seq(
-          unwind(listOf(literalInt(1), literalInt(2)), varFor("x")),
+        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          with_(literal(1).as("x")),
           return_(varFor("x").aliased))
         ))
-        .check(_.queries(3).asLocalSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("x"), varFor("y"), varFor("z"), varFor("w")),
-          return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased, varFor("w").aliased)
+        .check(_.queries(1).asApply.asChainedQuery
+            .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+              with_(literal(2).as("y")),
+              return_(varFor("y").aliased))
+            ))
+          .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            return_(literal(3).as("z")))
+          ))
+          .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            input(varFor("y"), varFor("z")),
+            return_(varFor("y").aliased, varFor("z").aliased))
+          ))
+        )
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          input(varFor("x"), varFor("y"), varFor("z")),
+          return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased)
         )))
     }
 
@@ -622,7 +599,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           """.stripMargin
 
       planner
-        .plan(q, params).asShardQuery
+        .plan(q, params).asDirect.asShardQuery
         .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
         .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
           create(nodePat("y", "Foo"))
@@ -640,10 +617,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
         .plan(q, params)
         .as[UnionQuery]
         .check(_.distinct.shouldEqual(true))
-        .check(_.lhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.lhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           return_(literalInt(1).as("x"))
         )))
-        .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.rhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           return_(literalInt(2).as("x"))
         )))
     }
@@ -655,6 +632,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           |  FROM g
           |  RETURN 1 AS y
           |  UNION
+          |  WITH x
           |  RETURN 2 AS y
           |}
           |RETURN x, y
@@ -662,21 +640,22 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       planner
         .plan(q, params).asChainedQuery
-        .check(_.queries(0).asLocalSingleQuery)
-        .check(_.queries(1).as[UnionQuery]
+        .check(_.queries(0).asDirect.asLocalSingleQuery)
+        .check(_.queries(1).asApply.as[UnionQuery]
           .check(_.distinct.shouldEqual(true))
-          .check(_.lhs.asShardQuery
+          .check(_.lhs.asDirect.asShardQuery
             .check(_.from.expression.shouldEqual(varFor("g")))
             .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
               return_(literalInt(1).as("y"))
             )))
           )
-          .check(_.rhs.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          .check(_.rhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
             input(varFor("x")),
-            return_(varFor("x").aliased, literalInt(2).as("y"))
+            with_(varFor("x").aliased),
+            return_(literalInt(2).as("y"))
           )))
         )
-        .check(_.queries(2).asLocalSingleQuery.clauses.shouldEqual(Seq(
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           input(varFor("x"), varFor("y")),
           return_(varFor("x").aliased, varFor("y").aliased)
         )))
@@ -773,14 +752,20 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
         .as[SingleQuery]
 
     def asShardSingleQuery: SingleQuery =
-      a.as[ShardQuery].query.part
+      a.as[RemoteQuery].query.part
         .as[SingleQuery]
 
-    def asShardQuery: ShardQuery =
-      a.as[ShardQuery]
+    def asShardQuery: RemoteQuery =
+      a.as[RemoteQuery]
 
     def asChainedQuery: ChainedQuery =
       a.as[ChainedQuery]
+
+    def asDirect: FabricQuery =
+      a.as[Direct].query
+
+    def asApply: FabricQuery =
+      a.as[Apply].query
   }
 
 }

@@ -19,7 +19,7 @@ trait PrettyPrinting[T] extends PrettyPrintingUtils {
     def head(name: String) = Stream(s"[ $name ]")
 
     def middle(fields: Seq[(String, Any)]): Stream[String] = {
-      val max = fields.map(_._1.length).max
+      val max = if (fields.nonEmpty) fields.map(_._1.length).max else 0
 
       fields.toStream.flatMap {
         case (name, vs: Stream[_]) =>

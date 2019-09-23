@@ -10,47 +10,61 @@ import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.v4_0.ast
 
 sealed trait Fragment {
-
-  def produced: Seq[String]
+  def columns: Columns
 }
 
 object Fragment {
 
+  case class Direct(
+    fragment: Fragment,
+    columns: Columns,
+  ) extends Fragment
+
+  case class Apply(
+    fragment: Fragment,
+    columns: Columns,
+  ) extends Fragment
+
   case class Chain(
-    fragments: Seq[Fragment]
-  ) extends Fragment {
-    def produced: Seq[String] = fragments.last.produced
-  }
+    fragments: Seq[Fragment],
+    columns: Columns,
+  ) extends Fragment
 
   case class Union(
     distinct: Boolean,
     lhs: Fragment,
     rhs: Fragment,
-    produced: Seq[String],
+    columns: Columns,
   ) extends Fragment
 
   case class Leaf(
     from: Option[ast.FromGraph],
     clauses: Seq[ast.Clause],
-    columns: Columns
-  ) extends Fragment {
-    def produced: Seq[String] = columns.produced
-  }
+    columns: Columns,
+  ) extends Fragment
 
   val pretty: PrettyPrinting[Fragment] = new PrettyPrinting[Fragment] {
     def pretty: Fragment => Stream[String] = {
+      case f: Direct => node(
+        name = "direct",
+        fields = Columns.fields(f.columns),
+        children = Seq(f.fragment)
+      )
+      case f: Apply => node(
+        name = "apply",
+        fields = Columns.fields(f.columns),
+        children = Seq(f.fragment)
+      )
+
       case f: Fragment.Chain => node(
         name = "chain",
-        fields = Seq(
-          "prod" -> list(f.produced)
-        ),
+        fields = Columns.fields(f.columns),
         children = f.fragments
       )
 
       case f: Fragment.Union => node(
         name = "union",
-        fields = Seq(
-          "prod" -> list(f.produced),
+        fields = Columns.fields(f.columns) ++Seq(
           "dist" -> f.distinct
         ),
         children = Seq(f.lhs, f.rhs)

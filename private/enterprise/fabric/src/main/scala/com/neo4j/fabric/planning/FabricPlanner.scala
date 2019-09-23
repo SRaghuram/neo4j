@@ -15,7 +15,7 @@ import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticState, SemanticTable}
-import org.neo4j.cypher.internal.v4_0.ast.{PeriodicCommitHint, SingleQuery, Statement}
+import org.neo4j.cypher.internal.v4_0.ast.{SingleQuery, Statement}
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
@@ -26,11 +26,17 @@ import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
-
+object FabricPlanner {
+  private var printPlans: Boolean = false
+  private var printBasePlans: Boolean = false
+  private var printFragments: Boolean = false
+  def setPrintPlans(enabled: Boolean): Unit = printPlans = enabled
+  def setPrintBasePlans(enabled: Boolean): Unit = printBasePlans = enabled
+  def setPrintFragments(enabled: Boolean): Unit = printFragments = enabled
+}
 case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
 
   private val catalog = Catalog.fromConfig(config)
-  private val renderer = Prettifier(ExpressionStringifier())
   private[planning] val queryCache = new FabricQueryCache()
 
   def plan(
@@ -38,10 +44,16 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
     parameters: MapValue
   ): FabricQuery = {
 
-    queryCache.computeIfAbsent(
+    val result = queryCache.computeIfAbsent(
       query, parameters,
       (q, p) => init(q, p).fabricQuery
     )
+
+    if (FabricPlanner.printPlans) {
+      FabricQuery.pretty.pprint(result)
+    }
+
+    result
   }
 
   def init(
@@ -70,59 +82,72 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
   ) {
 
     def fragment: Fragment = original match {
-      case ast.Query(hint, part) => fragment(part, Seq.empty, Option.empty)
+      case ast.Query(hint, part) => fragment(part, Seq.empty, Seq.empty, Option.empty)
       case d: ast.CatalogDDL     => Errors.unimplemented("Support for DDL", d)
       case c: ast.Command        => Errors.unimplemented("Support for commands", c)
     }
 
-    private def fragment(qp: ast.QueryPart, input: Seq[String], from: Option[ast.FromGraph]): Fragment = {
+    private def fragment(
+      part: ast.QueryPart,
+      incoming: Seq[String],
+      local: Seq[String],
+      from: Option[ast.FromGraph]
+    ): Fragment = {
 
       case class State(
-        columns: Seq[String],
-        local: Seq[String],
+        incoming: Seq[String],
+        locals: Seq[String],
+        imports: Seq[String],
         from: Option[ast.FromGraph],
         fragments: Seq[Fragment] = Seq.empty
       ) {
 
-        def append(f: Fragment): State = copy(
-          columns = Columns.combine(columns, f.produced),
-          local = Columns.combine(local, f.produced),
-          fragments = fragments :+ f
+        def columns: Columns = Columns(
+          incoming = incoming,
+          local = locals,
+          imports = imports,
+          output = Seq.empty,
         )
 
-        def append(l: Leaf): State = copy(
-          columns = Columns.combine(columns, l.produced),
-          local = Columns.combine(local, l.produced),
-          from = l.from,
-          fragments = fragments :+ l
-        )
+        def append(frag: Fragment): State =
+          copy(
+            incoming = frag.columns.output,
+            locals = frag.columns.output,
+            imports = Seq.empty,
+            fragments = fragments :+ frag,
+          )
       }
 
-      qp match {
+      part match {
         case sq: ast.SingleQuery =>
           val imports = sq.importColumns
           val parts = partitioned(sq.clauses)
-          val start = State(input, Seq(), leadingFrom(sq).orElse(from))
+          val start = State(incoming, local, imports, leadingFrom(sq).orElse(from))
           val state = parts.foldLeft(start) {
-            case (curr, part) => part match {
-
-              case Left(sub) =>
-                curr.append(fragment(
-                  qp = sub.part,
-                  input = curr.columns,
-                  from = curr.from
-                ))
+            case (current, part) => part match {
 
               case Right(clauses) =>
-                curr.append(Leaf(
-                  from = curr.from,
+                val leaf = Leaf(
+                  from = current.from,
                   clauses = clauses.filterNot(_.isInstanceOf[ast.FromGraph]),
-                  columns = Columns(
-                    input = curr.columns,
-                    local = curr.local,
-                    imports = imports,
-                    passThrough = input,
-                    produced = produced(clauses.last)
+                  columns = current.columns.copy(
+                    output = produced(clauses.last),
+                  )
+                )
+                current.append(Fragment.Direct(leaf, leaf.columns))
+
+              case Left(sub) =>
+                val frag = fragment(
+                  part = sub.part,
+                  incoming = current.incoming,
+                  local = Seq.empty,
+                  from = current.from
+                )
+                current.append(Fragment.Apply(
+                  frag,
+                  current.columns.copy(
+                    imports = Seq.empty,
+                    output = Columns.combine(current.locals, frag.columns.output),
                   )
                 ))
             }
@@ -130,17 +155,25 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
 
           state.fragments match {
             case Seq(single) => single
-            case many        => Chain(many)
+            case many        => Chain(
+              fragments = many,
+              columns = Columns(
+                incoming = incoming,
+                local = local,
+                imports = imports,
+                output = many.last.columns.output,
+              )
+            )
           }
 
         case uq: ast.Union =>
-          val lhs = fragment(uq.part, input, from)
-          val rhs = fragment(uq.query, input, from)
+          val lhs = fragment(uq.part, incoming, local, from)
+          val rhs = fragment(uq.query, incoming, local, from)
           val distinct = uq match {
             case _: ast.UnionAll      => false
             case _: ast.UnionDistinct => true
           }
-          Union(distinct, lhs, rhs, rhs.produced)
+          Union(distinct, lhs, rhs, rhs.columns)
       }
     }
 
@@ -159,10 +192,11 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
       from
     }
 
-
     private def produced(clause: ast.Clause): Seq[String] = clause match {
       case r: ast.Return => r.returnColumns.map(_.name)
-      case c             => semantic.scope(c).get.symbolNames.toSeq
+      case c             =>
+        val scope = semantic.scope(c)
+        scope.get.symbolNames.toSeq
     }
 
     /**
@@ -192,37 +226,56 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
       }
     }
 
-    def fabricQuery: FabricQuery =
-      fabricQuery(fragment)
+    def fabricQuery: FabricQuery = {
+      val frag = fragment
+      if (FabricPlanner.printFragments) {
+        Fragment.pretty.pprint(frag)
+      }
+      fabricQuery(frag)
+    }
 
     private def fabricQuery(fragment: Fragment): FabricQuery = fragment match {
 
-      case chain: Chain => ChainedQuery(
-        queries = chain.fragments.map(fabricQuery)
-      )
+      case chain: Fragment.Chain =>
+        FabricQuery.ChainedQuery(
+          queries = chain.fragments.map(fabricQuery),
+          columns = chain.columns,
+        )
 
-      case union: Union => UnionQuery(
-        lhs = fabricQuery(union.lhs),
-        rhs = fabricQuery(union.rhs),
-        distinct = union.distinct
-      )
+      case union: Fragment.Union =>
+        FabricQuery.UnionQuery(
+          lhs = fabricQuery(union.lhs),
+          rhs = fabricQuery(union.rhs),
+          distinct = union.distinct,
+          columns = union.columns,
+        )
 
-      case leaf: Leaf =>
+      case direct: Fragment.Direct =>
+        FabricQuery.Direct(
+          fabricQuery(direct.fragment),
+          direct.columns
+        )
+
+      case apply: Fragment.Apply =>
+        FabricQuery.Apply(
+          fabricQuery(apply.fragment),
+          apply.columns
+        )
+
+      case leaf: Fragment.Leaf =>
         val pos = leaf.clauses.head.position
-
         val query = ast.Query(None, ast.SingleQuery(leaf.clauses)(pos))(pos)
-
         val base = leaf.from match {
 
           case Some(from) =>
-            ShardQuery(
+            FabricQuery.RemoteQuery(
               from = from,
               query = query,
               columns = leaf.columns
             )
 
           case None =>
-            LocalQuery(
+            FabricQuery.LocalQuery(
               query = FullyParsedQuery(
                 state = PartialState(query),
                 // Other runtimes can fail when we don't have READ access
@@ -238,22 +291,24 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
             )
         }
 
+        if (FabricPlanner.printBasePlans) {
+          FabricQuery.pretty.pprint(base)
+        }
+
         base
           .rewritten
           .bottomUp {
             // Insert InputDataStream in front of local queries
-            case lq: LocalQuery if lq.columns.input.nonEmpty =>
-              val pos = lq.query.state.statement().position
-              val vars = lq.columns.input.map(name => exp.Variable(name)(pos))
-              val is = ast.InputDataStream(vars)(pos)
+            case lq: LocalQuery if lq.input.nonEmpty =>
               lq.rewritten.bottomUp {
-                case sq: ast.SingleQuery => sq.copy(is +: sq.clauses)(sq.position)
+                case sq: ast.SingleQuery =>
+                  sq.withInputDataStream(lq.input)
               }
           }
           .rewritten
           .bottomUp {
             // Add parameter bindings for shard query imports
-            case sq: ShardQuery if sq.parameters.nonEmpty =>
+            case sq: RemoteQuery if sq.parameters.nonEmpty =>
               sq.rewritten.bottomUp {
                 case q: ast.SingleQuery =>
                   q.withParamBindings(sq.parameters)
@@ -261,39 +316,13 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
           }
           .rewritten
           .bottomUp {
-            // Make local intermediates pass input columns through by pre-pending them
-            case lq: LocalQuery if lq.columns.passThrough.nonEmpty =>
-              lq
-                .rewritten
-                .bottomUp {
-                  // Add empty return, if there is none
-                  case q: ast.SingleQuery =>
-                    q.clauses.last match {
-                      case _: ast.Return => q
-                      case _             => q.withReturnNone
-                    }
-                }
-                .rewritten
-                .bottomUp {
-                  // Prepend variables to all horizons
-                  case ri @ ast.ReturnItems(false, _) =>
-                    val pos = ri.position
-                    val existing = ri.items.map(_.name)
-                    val toAdd = lq.columns.passThrough
-                      .filterNot(existing.contains)
-                      .map(n => ast.AliasedReturnItem(exp.Variable(n)(pos)))
-                    ri.copy(items = toAdd ++ ri.items)(pos)
-                }
-          }
-          .rewritten
-          .bottomUp {
             // Make all producing queries return
-            case lq: LeafQuery if lq.produced.nonEmpty =>
+            case lq: LeafQuery if lq.columns.output.nonEmpty =>
               lq.rewritten.bottomUp {
                 case q: ast.SingleQuery =>
                   q.clauses.last match {
                     case _: ast.Return => q
-                    case _             => q.withReturnAliased(lq.produced)
+                    case _             => q.withReturnAliased(lq.columns.output)
                   }
               }
           }
@@ -330,6 +359,11 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
           ast.With(ast.ReturnItems(false, items)(pos))(pos)
         )
       }
+
+      def withInputDataStream(names: Seq[String]): SingleQuery =
+        prepend(ast.InputDataStream(
+          names.map(name => exp.Variable(name)(pos))
+        )(pos))
     }
 
     private case class PartialState(stmt: ast.Statement) extends BaseState {

@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.utils.CustomFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -130,6 +131,7 @@ class EndToEndTest
             tx.run( "CREATE (:Person {name: 'Dave'  , uid: 101, age: 90})" ).consume();
             tx.success();
         }
+        FabricPlanner.setPrintPlans( true );
     }
 
     @AfterAll
@@ -551,13 +553,15 @@ class EndToEndTest
                     "WITH 3 AS z, y AS y",
                     "CALL {",
                     "  FROM mega.graph(0)",
+                    "  WITH y",
                     "  CREATE (a: A)",
+                    "  RETURN y*10 AS x",
                     "}",
                     "CALL {",
                     "  WITH 0 AS a",
                     "  RETURN 4 AS w",
                     "}",
-                    "RETURN z, w, y"
+                    "RETURN z, w, y, x"
             );
 
             r = tx.run( query ).list();
@@ -565,8 +569,42 @@ class EndToEndTest
         }
 
         assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).keys(), contains( "z", "w", "y" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 3 ), Values.value( 4 ), Values.value( 2 ) ) );
+        assertThat( r.get( 0 ).keys(), contains( "z", "w", "y", "x" ) );
+        assertThat( r.get( 0 ).values(), contains( Values.value( 3 ), Values.value( 4 ), Values.value( 2 ), Values.value( 20 ) ) );
+    }
+
+    @Test
+    void testRemoteSubqueryInRemoteSubquery()
+    {
+        List<Record> r;
+
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        {
+            var query = String.join( "\n",
+                    "UNWIND [1, 2, 3] AS x",
+                    "CALL {",
+                    "  FROM mega.graph(0)",
+                    "  WITH x",
+                    "  WITH x*10 AS y",
+                    "  CALL {",
+                    "    WITH y",
+                    "    WITH y*10 AS z",
+                    "    RETURN z",
+                    "  }",
+                    "  RETURN y, z, z*10 AS w",
+                    "}",
+                    "RETURN x, y, z, w"
+            );
+
+            r = tx.run( query ).list();
+            tx.success();
+        }
+
+        assertThat( r.size(), equalTo( 3 ) );
+        assertThat( r.get( 0 ).keys(), contains( "x", "y", "z", "w" ) );
+        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ), Values.value( 10 ), Values.value( 100 ), Values.value( 1000 ) ) );
+        assertThat( r.get( 1 ).values(), contains( Values.value( 2 ), Values.value( 20 ), Values.value( 200 ), Values.value( 2000 ) ) );
+        assertThat( r.get( 2 ).values(), contains( Values.value( 3 ), Values.value( 30 ), Values.value( 300 ), Values.value( 3000 ) ) );
     }
 
     @Test
