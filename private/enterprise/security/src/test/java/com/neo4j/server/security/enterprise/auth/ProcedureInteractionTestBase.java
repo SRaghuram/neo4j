@@ -172,7 +172,7 @@ public abstract class ProcedureInteractionTestBase<S>
         writeSubject = neo.login( "writeSubject", "abc" );
         schemaSubject = neo.login( "schemaSubject", "abc" );
         adminSubject = neo.login( "adminSubject", "abc" );
-        createRole( EMPTY_ROLE );
+        createRoleWithAccess( EMPTY_ROLE );
         setupTokensAndNodes();
     }
 
@@ -406,9 +406,9 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testFailTestProcs( S subject )
     {
-        assertFail( subject, "CALL test.allowedReadProcedure()", READ_OPS_NOT_ALLOWED );
-        assertFail( subject, "CALL test.allowedWriteProcedure()", WRITE_OPS_NOT_ALLOWED );
-        assertFail( subject, "CALL test.allowedSchemaProcedure()", SCHEMA_OPS_NOT_ALLOWED );
+        assertFail( subject, "CALL test.allowedReadProcedure()", ACCESS_DENIED );
+        assertFail( subject, "CALL test.allowedWriteProcedure()", ACCESS_DENIED );
+        assertFail( subject, "CALL test.allowedSchemaProcedure()", ACCESS_DENIED );
     }
 
     void testSuccessfulTestProcs( S subject )
@@ -522,7 +522,21 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void createRole( String roleName, String... usernames )
     {
+        createRole( roleName, false, usernames );
+    }
+
+    void createRoleWithAccess( String roleName, String... usernames )
+    {
+        createRole( roleName, true, usernames );
+    }
+
+    private void createRole( String roleName, boolean grantAccess, String... usernames )
+    {
         assertDDLCommandSuccess( adminSubject, String.format( "CREATE ROLE %s", roleName) );
+        if ( grantAccess )
+        {
+            grantAccess( roleName );
+        }
 
         for ( String username : usernames )
         {

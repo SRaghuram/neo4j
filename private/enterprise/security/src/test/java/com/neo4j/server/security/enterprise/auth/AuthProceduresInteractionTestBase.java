@@ -523,7 +523,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldDeleteRole()
     {
-        createRole( "new_role" );
+        createRoleWithAccess( "new_role" );
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", "new_role" ) );
 
         testSuccessfulListRoles( adminSubject, initialRoles );
@@ -628,7 +628,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     }
 
     @Test
-    void shouldShowCurrentUser()
+    void shouldShowCurrentUserWithAccess()
     {
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO writeSubject", READER ) );
         assertSuccess( adminSubject, "CALL dbms.showCurrentUser()",
@@ -640,8 +640,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertSuccess( writeSubject, "CALL dbms.showCurrentUser()",
                 r -> assertKeyIsMap( r, "username", "roles",
                         valueOf( map( "writeSubject", listOf( READER, PUBLISHER ) ) ) ) );
-        assertSuccess( noneSubject, "CALL dbms.showCurrentUser()",
-                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "noneSubject", listOf() ) ) ) );
+        assertFail( noneSubject, "CALL dbms.showCurrentUser()", ACCESS_DENIED );
     }
 
     @Test
@@ -783,17 +782,16 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         createRole( "failer", "mats" );
         S mats = neo.login( "mats", "foo" );
 
-        assertFail( noneSubject, "CALL test.numNodes",
-                "Read operations are not allowed for user 'noneSubject' with no roles." );
+        assertFail( noneSubject, "CALL test.numNodes", ACCESS_DENIED );
         assertFail( readSubject, "CALL test.allowedWriteProcedure",
                 "Write operations are not allowed for user 'readSubject' with roles [reader]." );
         assertFail( writeSubject, "CALL test.allowedSchemaProcedure",
                 "Schema operations are not allowed for user 'writeSubject' with roles [publisher]." );
         assertFail( mats, "CALL test.numNodes",
-                "Read operations are not allowed for user 'mats' with roles [failer]." );
+                "Database access is not allowed for user 'mats' with roles [failer]." );
         // UDFs
         assertFail( mats, "RETURN test.allowedFunction1()",
-                "Read operations are not allowed for user 'mats' with roles [failer]." );
+                "Database access is not allowed for user 'mats' with roles [failer]." );
     }
 
     @Test
@@ -875,9 +873,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldSetCorrectNoRolePermissions()
     {
-        testFailRead( noneSubject );
-        testFailWrite( noneSubject );
-        testFailSchema( noneSubject );
+        testFailRead( noneSubject, ACCESS_DENIED );
+        testFailWrite( noneSubject, ACCESS_DENIED );
+        testFailSchema( noneSubject, ACCESS_DENIED );
         testFailCreateUser( noneSubject, PERMISSION_DENIED );
         assertSystemCommandSuccess( noneSubject, "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO '321'" );
     }

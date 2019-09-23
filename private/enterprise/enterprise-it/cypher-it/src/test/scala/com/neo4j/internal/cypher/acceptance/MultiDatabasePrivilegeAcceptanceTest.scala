@@ -228,41 +228,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     )
   }
 
-  test("should only stop database if not denied") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE admin TO alice")
-    execute("DENY STOP ON DATABASE foo TO admin")
-
-    the[AuthorizationViolationException] thrownBy {
-      // WHEN
-      executeOnSystem("alice", "abc", "STOP DATABASE foo")
-      // THEN
-    } should have message "Permission denied."
-
-    // THEN
-    execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
-      db("foo", onlineStatus),
-      db("bar", onlineStatus),
-      db(SYSTEM_DATABASE_NAME))
-    )
-
-    // WHEN
-    executeOnSystem("alice", "abc", "STOP DATABASE bar")
-
-    // THEN
-    execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, default = true),
-      db("foo", onlineStatus),
-      db("bar", offlineStatus),
-      db(SYSTEM_DATABASE_NAME))
-    )
-  }
-
   // STOP DATABASE
 
   test("admin should be allowed to stop database") {
@@ -363,6 +328,41 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE ROLE role")
     execute("GRANT ROLE role TO alice")
     execute("GRANT STOP ON DATABASE bar TO role")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "STOP DATABASE foo")
+      // THEN
+    } should have message "Permission denied."
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(
+      db(DEFAULT_DATABASE_NAME, default = true),
+      db("foo", onlineStatus),
+      db("bar", onlineStatus),
+      db(SYSTEM_DATABASE_NAME))
+    )
+
+    // WHEN
+    executeOnSystem("alice", "abc", "STOP DATABASE bar")
+
+    // THEN
+    execute("SHOW DATABASES").toSet should be(Set(
+      db(DEFAULT_DATABASE_NAME, default = true),
+      db("foo", onlineStatus),
+      db("bar", offlineStatus),
+      db(SYSTEM_DATABASE_NAME))
+    )
+  }
+
+  test("should only stop database if not denied") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE admin TO alice")
+    execute("DENY STOP ON DATABASE foo TO admin")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN

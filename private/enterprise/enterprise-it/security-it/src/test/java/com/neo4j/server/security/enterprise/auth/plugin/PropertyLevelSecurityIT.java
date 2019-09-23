@@ -47,6 +47,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.api.KernelTransaction.Type.explicit;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
@@ -58,6 +59,7 @@ class PropertyLevelSecurityIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseFacade db;
+    private GraphDatabaseFacade systemDb;
     private LoginContext neo;
     private LoginContext smith;
     private LoginContext morpheus;
@@ -72,6 +74,7 @@ class PropertyLevelSecurityIT
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )
                 .setConfig( GraphDatabaseSettings.procedure_roles, "test.*:procRole" ).setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
+        systemDb = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
         EnterpriseAuthAndUserManager authManager = (EnterpriseAuthAndUserManager) db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
         GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( TestProcedure.class );
@@ -92,6 +95,7 @@ class PropertyLevelSecurityIT
         smith = authManager.login( authToken( "Smith", "mr" ) );
         jones = authManager.login( authToken( "Jones", "mr" ) );
         morpheus = authManager.login( authToken( "Morpheus", "dealwithit" ) );
+        executeOnSystem( "GRANT ACCESS ON DATABASE * TO Agent, procRole" );
     }
 
     @AfterEach
@@ -600,6 +604,15 @@ class PropertyLevelSecurityIT
             consumer.accept( result );
             tx.commit();
             result.close();
+        }
+    }
+
+    private void executeOnSystem( String query )
+    {
+        try ( Transaction tx = systemDb.beginTx() )
+        {
+            tx.execute( query);
+            tx.commit();
         }
     }
 

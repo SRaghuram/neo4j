@@ -97,13 +97,14 @@ public class NativeAuthIT
                 session.run( "CREATE DATABASE foo" ).consume();
                 session.run( "CREATE ROLE fooRole" ).consume();
                 session.run( "CALL dbms.security.createUser('fooUser', 'fooPassword')" ).consume();
+                session.run( "GRANT ACCESS ON DATABASE * TO fooRole" ).consume();
                 session.run( "GRANT MATCH {foo} ON GRAPH * NODES * TO fooRole" ).consume();
                 session.run( "GRANT TRAVERSE ON GRAPH foo TO fooRole" ).consume();
             }
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE fooRole PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 4 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 5 ) );
                 List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(foo)" ) ).collect( Collectors.toList() );
                 assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
             }
@@ -146,6 +147,7 @@ public class NativeAuthIT
                 session.run( "CREATE ROLE custom" ).consume();
                 session.run( "CREATE USER joe SET PASSWORD $password CHANGE NOT REQUIRED", map( "password", getPassword() ) ).consume();
                 session.run( "GRANT ROLE custom TO joe", map( "password", getPassword() ) ).consume();
+                session.run( "GRANT ACCESS ON DATABASE * TO custom" ).consume();
                 session.run( "GRANT MATCH {prop1} ON GRAPH * NODES * TO custom" ).consume();
                 session.run( "GRANT TRAVERSE ON GRAPH foo TO custom" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH foo NODES A TO custom" ).consume();
@@ -154,7 +156,7 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE custom PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 6 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 7 ) );
                 List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(prop1)" ) ).collect( Collectors.toList() );
                 assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
             }
@@ -199,6 +201,7 @@ public class NativeAuthIT
                 session.run( "CREATE USER tim SET PASSWORD $password CHANGE NOT REQUIRED", map( "password", getPassword() ) ).consume();
                 session.run( "CREATE ROLE role" ).consume();
                 session.run( "GRANT ROLE role TO tim" ).consume();
+                session.run( "GRANT ACCESS ON DATABASE * TO role" ).consume();
                 session.run( "GRANT MATCH {*} ON GRAPH * ELEMENTS * TO role" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH * NODES City TO role" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH * RELATIONSHIPS FROM TO role" ).consume();
@@ -208,7 +211,7 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE role PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 7 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 8 ) );
                 List<Record> grants = records.stream().filter( r -> {
                     Map<String, Object> m = r.asMap();
                     return m.get( "grant" ).equals( "DENIED" ) && m.get( "resource" ).equals( "property(name)" ) && m.get( "segment" ).equals( "NODE(Person)" );

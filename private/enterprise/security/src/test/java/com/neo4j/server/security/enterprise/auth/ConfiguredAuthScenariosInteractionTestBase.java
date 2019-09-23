@@ -39,7 +39,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     void shouldAllowRoleCallCreateNewTokensProceduresWhenConfigured() throws Throwable
     {
         configuredSetup( Map.of( GraphDatabaseSettings.default_allowed, "role1" ) );
-        userManager.newRole( "role1", "noneSubject" );
+        createRoleWithAccess( "role1", "noneSubject" );
         assertEmpty( noneSubject, "CALL db.createLabel('MySpecialLabel')" );
         assertEmpty( noneSubject, "CALL db.createRelationshipType('MySpecialRelationship')" );
         assertEmpty( noneSubject, "CALL db.createProperty('MySpecialProperty')" );

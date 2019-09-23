@@ -92,6 +92,12 @@ public class PluginAuthenticationIT
         dbRule.withSettings( settings );
         dbRule.ensureStarted();
         boltUri = DriverAuthHelper.boltUri( dbRule );
+        try ( org.neo4j.graphdb.Transaction tx = dbRule.beginTx() )
+        {
+            // create a node to be able to assert that access without other privileges sees empty graph
+            tx.createNode();
+            tx.commit();
+        }
     }
 
     @Test

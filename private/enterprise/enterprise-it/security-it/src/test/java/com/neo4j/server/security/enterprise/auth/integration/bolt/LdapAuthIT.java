@@ -59,7 +59,6 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.collection.MapUtil;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
 import org.neo4j.logging.Logger;
@@ -158,7 +157,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         settings.put( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" );
         settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
         settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, List.of( "gidnumber" ) );
-        settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin" );
+        settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;504=agent" );
         settings.put( GraphDatabaseSettings.procedure_roles, "test.staticReadProcedure:role1" );
         settings.put( SecuritySettings.ldap_read_timeout, Duration.ofSeconds( 1 ) );
         settings.put( SecuritySettings.ldap_authorization_use_system_account, false );
@@ -169,6 +168,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     public void shouldShowCurrentUser()
     {
         startDatabase();
+        createRole( "agent", true );
         try ( Driver driver = connectDriver( boltUri, "smith", "abc123" );
                 Session session = driver.session() )
         {
@@ -178,7 +178,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             // then
             // Assuming showCurrentUser has fields username, roles, flags
             assertThat( record.get( 0 ).asString(), equalTo( "smith" ) );
-            assertThat( record.get( 1 ).asList(), equalTo( Collections.emptyList() ) );
+            assertThat( record.get( 1 ).asList(), equalTo( Collections.singletonList( "agent" ) ) );
             assertThat( record.get( 2 ).asList(), equalTo( Collections.emptyList() ) );
         }
     }
@@ -190,7 +190,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         // Then
         // User 'neo' has reader role by default, but since we are not passing a group-to-role mapping
         // he should get no permissions
-        assertReadFails( boltUri, "neo", "abc123" );
+        assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
     }
 
     @Test
@@ -253,6 +253,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     {
         startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
+        createRole( "role1", true );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",
                 tx -> assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
     }
@@ -327,7 +328,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
-            assertReadFails( boltUri, "neo", "abc123" );
+            assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
         }
     }
 
@@ -343,7 +344,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
-            assertReadFails( boltUri, "neo", "abc123" );
+            assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
         }
     }
 
@@ -357,7 +358,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
-            assertReadFails( boltUri, "neo", "abc123" );
+            assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
         }
     }
 
@@ -382,7 +383,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldGetCombinedAuthorization() throws IOException, InvalidArgumentsException
+    public void shouldGetCombinedAuthorization()
     {
         startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
@@ -412,7 +413,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     // ===== Logging tests =====
 
     @Test
-    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException, InvalidArgumentsException
+    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException
     {
         startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME,SecuritySettings.LDAP_REALM_NAME ),
@@ -433,7 +434,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException, InvalidArgumentsException
+    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException
     {
         startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.LDAP_REALM_NAME,SecuritySettings.NATIVE_REALM_NAME ),
@@ -466,7 +467,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws IOException, InvalidArgumentsException
+    public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws IOException
     {
         startDatabaseWithSettings( Map.of(
                 SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME ),
@@ -628,11 +629,6 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         {
             assertRoles( driver, PredefinedRoles.PUBLISHER );
         }
-
-        try ( Driver driver = connectDriverWithParameters( boltUri, "smith", "abc123", parameters ) )
-        {
-            assertRoles( driver );
-        }
     }
 
     // ===== Helpers =====
@@ -687,7 +683,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         modifyLDAPAttribute( username, credentials, "gidnumber", gid );
     }
 
-    private class DirectoryServiceWaitOnSearch implements AutoCloseable
+    private static class DirectoryServiceWaitOnSearch implements AutoCloseable
     {
         private final Interceptor waitOnSearchInterceptor;
 
@@ -726,7 +722,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         }
     }
 
-    private class DirectoryServiceFailOnSearch implements AutoCloseable
+    private static class DirectoryServiceFailOnSearch implements AutoCloseable
     {
         private final Interceptor failOnSearchInterceptor;
 

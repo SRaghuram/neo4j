@@ -43,7 +43,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
@@ -78,7 +77,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
 import static org.neo4j.util.concurrent.Runnables.EMPTY_RUNNABLE;
@@ -1112,7 +1110,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldNotAllowNonWriterToWriteAfterCallingAllowedWriteProc() throws Exception
     {
         assertDDLCommandSuccess( adminSubject, "CREATE USER notAllowedToWrite SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
-        createRole( "role1", "notAllowedToWrite" );
+        createRoleWithAccess( "role1", "notAllowedToWrite" );
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s to notAllowedToWrite", READER ) );
         // should be able to invoke allowed procedure
         assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
@@ -1126,7 +1124,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldNotAllowUnauthorizedAccessToProcedure() throws Exception
     {
         assertDDLCommandSuccess( adminSubject, "CREATE USER nopermission SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
-        createRole( "Access", "nopermission" );
+        createRoleWithAccess( "Access", "nopermission" );
         grantAccess( "Access" );
 
         // should get result from empty sub graph
@@ -1143,8 +1141,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         setupRole1Subject();
         assertSuccess( neo.login( "role1Subject", "abc" ), "CALL test.allowedReadProcedure()",
                 itr -> assertEquals( (int) itr.stream().count(), 1 ) );
-        assertFail( neo.login( "role1Subject", "abc" ),
-                "CALL test.allowedReadProcedure() YIELD value MATCH (n:Secret) RETURN n.pass", READ_OPS_NOT_ALLOWED );
+        assertSuccess( neo.login( "role1Subject", "abc" ), "CALL test.allowedReadProcedure() YIELD value MATCH (n) RETURN count(n) AS count",
+                       itr -> assertThat( itr.next().get( "count" ), equalTo( valueOf( 0L ) ) ) );
     }
 
     @Test
@@ -1265,8 +1263,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private void setupRole1Subject()
     {
         assertDDLCommandSuccess( adminSubject, "CREATE USER role1Subject SET PASSWORD 'abc' CHANGE NOT REQUIRED" );
-        createRole( "role1", "role1Subject" );
-        grantAccess( "role1" );
+        createRoleWithAccess( "role1", "role1Subject" );
     }
 
     /*

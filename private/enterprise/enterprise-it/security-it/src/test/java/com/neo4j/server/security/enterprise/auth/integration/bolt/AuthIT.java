@@ -49,6 +49,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertEmptyRead;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertProcSucceeds;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadFails;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadSucceeds;
@@ -323,6 +324,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
 
         EnterpriseAuthAndUserManager authManager = dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
+        createRole( "role1", true );
         if ( createUsers )
         {
             userManager.newUser( NONE_USER, password.getBytes(), false );
@@ -332,7 +334,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
             userManager.setUserPassword( ADMIN_USER, password.getBytes(), false );
             userManager.addRoleToUser( PredefinedRoles.READER, READ_USER );
             userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
-            userManager.newRole( "role1", PROC_USER );
+            userManager.addRoleToUser( "role1", PROC_USER );
         }
         checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapServer.getPort() );
     }
@@ -396,8 +398,8 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     {
         try ( Driver driver = connectDriver( boltUri, NONE_USER, password ) )
         {
-            assertReadFails( driver );
-            assertWriteFails( driver );
+            assertReadFails( driver, ACCESS_DENIED );
+            assertWriteFails( driver, ACCESS_DENIED );
         }
     }
 
@@ -428,7 +430,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
         try ( Driver driver = connectDriver( boltUri, PROC_USER, password ) )
         {
             assertProcSucceeds( driver );
-            assertReadFails( driver );
+            assertEmptyRead( driver );
             assertWriteFails( driver );
         }
     }

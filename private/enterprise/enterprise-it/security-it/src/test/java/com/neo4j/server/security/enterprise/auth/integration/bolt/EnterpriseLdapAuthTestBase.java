@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
 import org.junit.After;
@@ -26,24 +25,27 @@ import java.util.Map;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.boltUri;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
 {
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
+    static final String ACCESS_DENIED = "Database access is not allowed for user";
 
     DbmsRule dbRule = new EnterpriseDbmsRule( testDirectory ).startLazily();
+
+    private GraphDatabaseFacade systemDb;
 
     @Rule
     public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
@@ -60,11 +62,18 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
               .withSetting( BoltConnector.enabled, true )
               .withSetting( BoltConnector.encryption_level, DISABLED )
-              .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) );
+              .withSetting( BoltConnector.listen_address, new SocketAddress( InetAddress.getLoopbackAddress().getHostAddress(), 0 ) );
         dbRule.withSettings( getSettings() );
         dbRule.withSettings( settings );
         dbRule.ensureStarted();
         boltUri = boltUri( dbRule );
+        systemDb = (GraphDatabaseFacade) dbRule.getManagementService().database( SYSTEM_DATABASE_NAME );
+        try ( org.neo4j.graphdb.Transaction tx = dbRule.beginTx() )
+        {
+            // create a node to be able to assert that access without other privileges sees empty graph
+            tx.createNode();
+            tx.commit();
+        }
     }
 
     @After
@@ -139,18 +148,31 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         reader.close();
     }
 
-    void createNativeUser( String username, String password, String... roles ) throws IOException, InvalidArgumentsException
+    void createRole( String roleName, boolean withAccess )
     {
-        EnterpriseAuthAndUserManager authManager =
-                dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
+        executeOnSystem( String.format( "CREATE ROLE %s", roleName ) );
+        if ( withAccess )
+        {
+            executeOnSystem( String.format( "GRANT ACCESS ON DATABASE * TO %s", roleName ) );
+        }
+    }
 
-        authManager.getUserManager( AuthSubject.AUTH_DISABLED, true )
-                .newUser( username, password( password ), false );
+    void createNativeUser( String username, String password, String... roles )
+    {
+        executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, password ) );
 
         for ( String role : roles )
         {
-            authManager.getUserManager( AuthSubject.AUTH_DISABLED, true )
-                    .addRoleToUser( role, username );
+            executeOnSystem( String.format( "GRANT ROLE %s TO %s", role, username ) );
+        }
+    }
+
+    private void executeOnSystem( String query )
+    {
+        try ( Transaction tx = systemDb.beginTx() )
+        {
+            tx.execute( query );
+            tx.commit();
         }
     }
 

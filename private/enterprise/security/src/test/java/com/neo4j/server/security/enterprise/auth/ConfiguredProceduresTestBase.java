@@ -46,7 +46,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester" ) );
 
-        createRole( "tester", "noneSubject" );
+        createRoleWithAccess( "tester", "noneSubject" );
 
         assertSuccess( noneSubject, "CALL test.numNodes", itr -> assertKeyIs( itr, "count", "3" ) );
     }
@@ -56,8 +56,8 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     {
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other" ) );
 
-        createRole( "tester", "noneSubject" );
-        createRole( "other", "readSubject" );
+        createRoleWithAccess( "tester", "noneSubject" );
+        createRoleWithAccess( "other", "readSubject" );
 
         assertSuccess( readSubject, "CALL test.allowedReadProcedure", itr -> assertKeyIs( itr, "value", "foo" ) );
         assertSuccess( noneSubject, "CALL test.createNode", ResourceIterator::close );
@@ -71,9 +71,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester;test.create*:other",
                 GraphDatabaseSettings.default_allowed, "default" ) );
 
-        createRole( "tester", "noneSubject" );
-        createRole( "default", "noneSubject" );
-        createRole( "other", "readSubject" );
+        createRoleWithAccess( "tester", "noneSubject" );
+        createRoleWithAccess( "default", "noneSubject" );
+        createRoleWithAccess( "other", "readSubject" );
 
         assertSuccess( noneSubject, "RETURN test.nonAllowedFunc() AS f", itr -> assertKeyIs( itr, "f", "success" ) );
         assertSuccess( readSubject, "RETURN test.allowedFunction1() AS f", itr -> assertKeyIs( itr, "f", "foo" ) );
@@ -99,8 +99,8 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         configuredSetup( Map.of( GraphDatabaseSettings.procedure_roles, "test.*:tester, other" ) );
 
         // When
-        createRole( "tester", "noneSubject" );
-        createRole( "other", "readSubject" );
+        createRoleWithAccess( "tester", "noneSubject" );
+        createRoleWithAccess( "other", "readSubject" );
 
         // Then
         assertSuccess( readSubject, "CALL test.createNode", ResourceIterator::close );

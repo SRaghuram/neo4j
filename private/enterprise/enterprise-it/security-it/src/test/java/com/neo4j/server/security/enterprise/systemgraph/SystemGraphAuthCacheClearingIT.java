@@ -139,7 +139,7 @@ class SystemGraphAuthCacheClearingIT
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
-            tx.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
+            tx.execute( "GRANT ACCESS ON DATABASE * TO role" );
             tx.commit();
         }
 
@@ -149,7 +149,7 @@ class SystemGraphAuthCacheClearingIT
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
-            tx.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
+            tx.execute( "REVOKE ACCESS ON DATABASE * FROM role" );
             tx.commit();
         }
 
@@ -217,7 +217,7 @@ class SystemGraphAuthCacheClearingIT
         // When granting privilege
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "GRANT TRAVERSE ON GRAPH * TO role" );
+            tx.execute( "GRANT ACCESS ON DATABASE * TO role" );
             tx.commit();
         } );
 
@@ -227,7 +227,7 @@ class SystemGraphAuthCacheClearingIT
         // When revoking privilege
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "REVOKE TRAVERSE ON GRAPH * FROM role" );
+            tx.execute( "REVOKE ACCESS ON DATABASE * FROM role" );
             tx.commit();
         } );
 

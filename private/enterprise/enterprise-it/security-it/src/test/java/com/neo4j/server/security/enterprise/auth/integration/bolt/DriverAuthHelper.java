@@ -27,6 +27,7 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.test.rule.DbmsRule;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.fail;
@@ -52,21 +53,17 @@ class DriverAuthHelper
 
     static void assertAuth( String uri, String username, String password, String realm )
     {
-        try ( Driver driver = connectDriver( uri, username, password, realm );
-                Session session = driver.session() )
+        try ( Driver driver = connectDriver( uri, username, password, realm ) )
         {
-            Value single = session.run( "RETURN 1" ).single().get( 0 );
-            assertThat( single.asLong(), CoreMatchers.equalTo( 1L ) );
+            driver.verifyConnectivity();
         }
     }
 
     static void assertAuth( String uri, AuthToken authToken )
     {
-        try ( Driver driver = connectDriver( uri, authToken );
-                Session session = driver.session() )
+        try ( Driver driver = connectDriver( uri, authToken ) )
         {
-            Value single = session.run( "RETURN 1" ).single().get( 0 );
-            assertThat( single.asLong(), CoreMatchers.equalTo( 1L ) );
+            driver.verifyConnectivity();
         }
     }
 
@@ -92,19 +89,33 @@ class DriverAuthHelper
         try ( Session session = driver.session() )
         {
             Value single = session.run( "MATCH (n) RETURN count(n)" ).single().get( 0 );
-            assertThat( single.asLong(), Matchers.greaterThanOrEqualTo( 0L ) );
+            assertThat( single.asLong(), Matchers.greaterThanOrEqualTo( 1L ) );
         }
     }
 
-    static void assertReadFails( String uri, String username, String password )
+    static void assertEmptyRead( Driver driver )
+    {
+        try ( Session session = driver.session() )
+        {
+            Value single = session.run( "MATCH (n) RETURN count(n)" ).single().get( 0 );
+            assertThat( single.asLong(), equalTo( 0L ) );
+        }
+    }
+
+    static void assertReadFails( String uri, String username, String password, String errorMessage )
     {
         try ( Driver driver = connectDriver( uri, username, password ) )
         {
-            assertReadFails( driver );
+            assertReadFails( driver, errorMessage );
         }
     }
 
     static void assertReadFails( Driver driver )
+    {
+        assertReadFails( driver, "Read operations are not allowed for user " );
+    }
+
+    static void assertReadFails( Driver driver, String errorMessage )
     {
         try ( Session session = driver.session() )
         {
@@ -113,7 +124,7 @@ class DriverAuthHelper
         }
         catch ( ClientException e )
         {
-            assertThat( e.getMessage(), containsString( "Read operations are not allowed for user " ) );
+            assertThat( e.getMessage(), containsString( errorMessage ) );
         }
     }
 
@@ -128,6 +139,11 @@ class DriverAuthHelper
 
     static void assertWriteFails( Driver driver )
     {
+        assertWriteFails( driver, "Write operations are not allowed for user " );
+    }
+
+    static void assertWriteFails( Driver driver, String errorMessage )
+    {
         try ( Session session = driver.session() )
         {
             session.run( "CREATE ()" ).consume();
@@ -135,7 +151,7 @@ class DriverAuthHelper
         }
         catch ( ClientException e )
         {
-            assertThat( e.getMessage(), containsString( "Write operations are not allowed for user " ) );
+            assertThat( e.getMessage(), containsString( errorMessage ) );
         }
     }
 

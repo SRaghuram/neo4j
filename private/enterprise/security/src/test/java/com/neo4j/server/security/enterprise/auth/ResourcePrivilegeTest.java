@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
@@ -70,6 +71,10 @@ class ResourcePrivilegeTest
                 else if ( EXECUTE.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new ProcedureResource( "", "" ) );
+                }
+                else if ( DATABASE_ACTIONS.satisfies( action ) )
+                {
+                    // grouping of other privileges that are already tested
                 }
                 else
                 {
@@ -137,6 +142,10 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new GraphResource() );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( DATABASE_ACTIONS.satisfies( action ) )
+                {
+                    // grouping of other privileges that are already tested
                 }
                 else
                 {
