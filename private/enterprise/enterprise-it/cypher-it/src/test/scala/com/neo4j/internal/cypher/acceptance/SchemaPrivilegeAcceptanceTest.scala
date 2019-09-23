@@ -110,6 +110,47 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
+  test("Should get correct privileges for all database privileges") {
+    // Given
+    val dbx: Set[PrivilegeMapBuilder] = Set(access(), startDatabase(), stopDatabase())
+    val schema = Set(createIndex(), dropIndex(), createConstraint(), dropConstraint())
+    val token = Set(createNodeLabel(), createRelationshipType(), createPropertyKey())
+    def toPriv(e: Set[PrivilegeMapBuilder]) = e.map(p => p.database("foo").role("custom").map)
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+
+    // When/Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").map,
+    ))
+
+    // When
+    execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE foo TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(access().role("custom").map) ++ toPriv(dbx ++ schema ++ token))
+
+    // When
+    execute("REVOKE NAME MANAGEMENT ON DATABASE foo FROM custom")
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(access().role("custom").map) ++ toPriv(dbx ++ schema))
+
+    // When
+    execute("REVOKE INDEX MANAGEMENT ON DATABASE foo FROM custom")
+    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE foo FROM custom")
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(access().role("custom").map) ++ toPriv(dbx))
+
+    // When
+    execute("REVOKE ACCESS ON DATABASE foo FROM custom")
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(access().role("custom").map) ++ toPriv(Set(startDatabase(), stopDatabase())))
+  }
+
   test("Should revoke subset of token and index management with superset revokes") {
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -205,5 +246,28 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CREATE INDEX ON :User(name)") should be(0)
+  }
+
+  test("Should allow index creation for normal user with all database privileges") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("GRANT ALL PRIVILEGES ON DATABASE foo TO custom")
+
+    // WHEN & THEN
+    executeOn("foo", "joe", "soap", "CREATE INDEX ON :User(name)") should be(0)
+  }
+
+  test("Should not allow index creation for normal user with all database privileges and explicit deny") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("GRANT ALL PRIVILEGES ON DATABASE * TO custom")
+    execute("DENY CREATE INDEX ON DATABASE foo TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "CREATE INDEX ON :User(name)")
+    } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [custom]."
   }
 }
