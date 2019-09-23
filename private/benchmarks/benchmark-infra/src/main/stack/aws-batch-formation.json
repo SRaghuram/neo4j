@@ -207,7 +207,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
@@ -321,7 +321,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
@@ -435,7 +435,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
@@ -549,7 +549,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
