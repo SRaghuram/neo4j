@@ -5,11 +5,12 @@
  */
 package com.neo4j.bench.client;
 
-import com.google.common.collect.Lists;
-import com.neo4j.bench.client.SyntheticStoreGenerator.Group;
+import com.neo4j.bench.client.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
+import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
+import com.neo4j.bench.common.model.Repository;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,10 @@ import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_PASSW
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_URI;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_USER;
 import static com.neo4j.bench.common.model.Repository.CAPS;
+import static com.neo4j.bench.common.model.Repository.IMPORT_BENCH;
+import static com.neo4j.bench.common.model.Repository.LDBC_BENCH;
+import static com.neo4j.bench.common.model.Repository.MACRO_BENCH;
+import static com.neo4j.bench.common.model.Repository.MICRO_BENCH;
 import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static com.neo4j.bench.common.options.Edition.COMMUNITY;
 import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
@@ -90,11 +95,15 @@ public class SyntheticStoreGeneratorIT
     @Test
     public void shouldCreateStoreWithPersonalRuns() throws Exception
     {
-        SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
+        Repository[] tools = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH};
+        ToolBenchGroup[] toolBenchGroups = Arrays.stream( tools )
+                                                 .map( tool -> ToolBenchGroup.from( tool, "group-" + tool.name(), 10 ) )
+                                                 .toArray( ToolBenchGroup[]::new );
+
+        SyntheticStoreGeneratorBuilder generatorBuilder = new SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 5 )
-                .withBenchmarkGroups( Group.from( "group1", 10 ),
-                                      Group.from( "group2", 10 ) )
+                .withBenchmarkGroups( toolBenchGroups )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0" )
                 .withNeo4jEditions( COMMUNITY )
                 .withSettingsInConfig( 10 )
@@ -104,24 +113,25 @@ public class SyntheticStoreGeneratorIT
                 .withJvms( "Oracle" )
                 .withJvmVersions( "1.80_66" )
                 .withNeo4jBranchOwners( "Foo", "Bar" )
-                .withToolBranchOwners( "Hammer", "PizzaCutter" )
-                .build();
+                .withToolBranchOwners( "Hammer", "PizzaCutter" );
 
-        SyntheticStoreGenerator.GenerationResult generationResult = generateStoreUsing( generator );
+        SyntheticStoreGenerator.GenerationResult generationResult = generateStoreUsing( generatorBuilder.build() );
 
-        verifySchema( generationResult, generator );
+        verifySchema( generationResult );
     }
 
     @Test
     public void shouldCreateStoreWithExpectedSchema() throws Exception
     {
-        SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
+        Repository[] tools = {MICRO_BENCH, MACRO_BENCH, LDBC_BENCH, IMPORT_BENCH};
+        ToolBenchGroup[] toolBenchGroups = Arrays.stream( tools )
+                                                 .map( tool -> ToolBenchGroup.from( tool, "group-" + tool.name(), 10 ) )
+                                                 .toArray( ToolBenchGroup[]::new );
+
+        SyntheticStoreGeneratorBuilder generatorBuilder = new SyntheticStoreGeneratorBuilder()
                 .withDays( 10 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( Group.from( "group1", 50 ),
-                                      Group.from( "group2", 50 ),
-                                      Group.from( "group3", 50 ),
-                                      Group.from( "group4", 50 ) )
+                .withBenchmarkGroups( toolBenchGroups )
                 .withNeo4jVersions( "3.0.2", "3.0.1", "3.0.0", "2.3.4", "2.3.3", "2.3.2" )
                 .withNeo4jEditions( COMMUNITY, ENTERPRISE )
                 .withSettingsInConfig( 50 )
@@ -130,12 +140,11 @@ public class SyntheticStoreGeneratorIT
                 .withJvmArgs( "-XX:+UseG1GC -Xmx4g", "-server", "-Xmx12g" )
                 .withJvms( "Oracle", "OpenJDK" )
                 .withJvmVersions( "1.80_66", "1.80_12", "1.7.0_42" )
-                .withPrintout( true )
-                .build();
+                .withPrintout( true );
 
-        SyntheticStoreGenerator.GenerationResult generationResult = generateStoreUsing( generator );
+        SyntheticStoreGenerator.GenerationResult generationResult = generateStoreUsing( generatorBuilder.build() );
 
-        verifySchema( generationResult, generator );
+        verifySchema( generationResult );
     }
 
     private SyntheticStoreGenerator.GenerationResult generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
@@ -154,7 +163,7 @@ public class SyntheticStoreGeneratorIT
         }
     }
 
-    private void verifySchema( SyntheticStoreGenerator.GenerationResult generationResult, SyntheticStoreGenerator generator )
+    private void verifySchema( SyntheticStoreGenerator.GenerationResult generationResult )
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
@@ -168,9 +177,13 @@ public class SyntheticStoreGeneratorIT
 
                 int testRunCount = session.run( "MATCH (:TestRun) RETURN count(*) AS c" ).next().get( "c" ).asInt();
 
-                assertThat( "has correct number of unique TestRun nodes",
+                assertThat( "store has same number of TestRun nodes as generator claims it created",
                             testRunCount,
                             equalTo( generationResult.testRuns() ) );
+
+                assertThat( "store has same number of TestRun nodes as generator was configured to create",
+                            testRunCount,
+                            equalTo( generationResult.expectedTotalTestRuns() ) );
 
                 assertThat( "has correct number of unique Environment nodes",
                             session.run( "MATCH (:Environment) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
@@ -218,7 +231,7 @@ public class SyntheticStoreGeneratorIT
                             session.run( "MATCH (:Neo4jConfig) RETURN count(*) AS c" ).next().get( "c" ).asInt(),
                             equalTo( generationResult.neo4jConfigs() ) );
 
-                verifyPersonalRuns( session, generator, generationResult );
+                verifyPersonalRuns( session, generationResult );
 
                 int testRunAnnotations = session.run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of TestRun Annotation nodes",
@@ -343,20 +356,18 @@ public class SyntheticStoreGeneratorIT
         }
     }
 
-    private void verifyPersonalRuns( Session session, SyntheticStoreGenerator generator, SyntheticStoreGenerator.GenerationResult generationResult )
+    private void verifyPersonalRuns( Session session, SyntheticStoreGenerator.GenerationResult generationResult )
     {
-        List<String> branchOwners = Lists.newArrayList( generator.neo4jBranchOwners() );
-
         int personalNeo4jCount = executeCountQuery( session,
                                                     "MATCH (n:Project) " +
                                                     "WHERE NOT n.owner IN $defaultOwner " +
                                                     "RETURN count(n) AS count",
                                                     singletonMap( "defaultOwner", Arrays.asList( NEO4J.defaultOwner(), CAPS.defaultOwner() ) ) );
 
-        List<String> nonDefaultBranchOwners = branchOwners.stream()
-                                                          .filter( owner -> !owner.equals( NEO4J.defaultOwner() ) )
-                                                          .filter( owner -> !owner.equals( CAPS.defaultOwner() ) )
-                                                          .collect( toList() );
+        List<String> nonDefaultBranchOwners = generationResult.projectBranchOwners().stream()
+                                                              .filter( owner -> !owner.equals( NEO4J.defaultOwner() ) )
+                                                              .filter( owner -> !owner.equals( CAPS.defaultOwner() ) )
+                                                              .collect( toList() );
         if ( nonDefaultBranchOwners.isEmpty() )
         {
             assertEquals( 0, personalNeo4jCount );
@@ -365,7 +376,7 @@ public class SyntheticStoreGeneratorIT
         {
             assertEquals( generationResult.testRuns(), personalNeo4jCount );
 
-            for ( String owner : generator.neo4jBranchOwners() )
+            for ( String owner : generationResult.projectBranchOwners() )
             {
                 int countForOwner = executeCountQuery( session,
                                                        "MATCH (n:Project {owner: $owner}) RETURN count(n) AS count",

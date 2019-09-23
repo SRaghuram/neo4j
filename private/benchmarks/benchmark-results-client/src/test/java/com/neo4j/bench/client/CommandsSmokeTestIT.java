@@ -6,7 +6,7 @@
 package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
-import com.neo4j.bench.client.SyntheticStoreGenerator.Group;
+import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -135,16 +135,17 @@ public class CommandsSmokeTestIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( Group.from( MACRO_COMPAT_GROUP_1, macroCompatBench(), macroCompatBench() ),
-                                      Group.from( MACRO_COMPAT_GROUP_2, macroCompatBench(), macroCompatBench() ),
-                                      Group.from( LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
-                                      Group.from( LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
+                .withBenchmarkGroups( ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
+                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
+                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
+                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
+                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
+                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
                 .withNeo4jVersions( "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )
                 .withNeo4jBranchOwners( "neo4j" )
                 .withToolBranchOwners( "neo-technology" )
-                .withTools( MICRO_BENCH, LDBC_BENCH, MACRO_BENCH )
                 .withProjects( NEO4J )
                 .withPrintout( false )
                 .build();
@@ -166,7 +167,7 @@ public class CommandsSmokeTestIT
                                        paramsMap );
     }
 
-    private Benchmark macroCompatBench()
+    private Benchmark macroBench()
     {
         Map<String,String> paramsMap = new HashMap<>();
         paramsMap.put( "execution_mode", ExecutionMode.EXECUTE.name() );
