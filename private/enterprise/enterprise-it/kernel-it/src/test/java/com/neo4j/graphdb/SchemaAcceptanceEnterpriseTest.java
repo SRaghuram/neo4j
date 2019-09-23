@@ -7,8 +7,11 @@ package com.neo4j.graphdb;
 
 import com.neo4j.test.extension.ImpermanentEnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
+import java.util.List;
 
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -26,15 +29,21 @@ import org.neo4j.kernel.api.exceptions.schema.ConstraintWithNameAlreadyExistsExc
 import org.neo4j.kernel.api.exceptions.schema.EquivalentSchemaRuleAlreadyExistsException;
 import org.neo4j.kernel.api.exceptions.schema.IndexWithNameAlreadyExistsException;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.rule.RandomRule;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
+@ExtendWith( RandomExtension.class )
 @ImpermanentEnterpriseDbmsExtension
 class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
 {
     @Inject
     private GraphDatabaseService db;
+    @Inject
+    private RandomRule random;
 
     @Test
     void shouldCreateNodePropertyExistenceConstraint()
@@ -116,7 +125,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             assertEquals( ConstraintType.NODE_KEY, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
-            assertEquals( "Node key constraint on :MY_LABEL(my_property_key)", constraint.getName() );
+            assertEquals( "Node key constraint on :MY_LABEL (my_property_key)", constraint.getName() );
             tx.commit();
         }
     }
@@ -136,6 +145,54 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             assertEquals( "MyConstraint", constraint.getName() );
             tx.commit();
         }
+    }
+
+    @Test
+    void shouldCreateNodeKeyOnSameSchemaAsExistenceAndDropIndependently()
+    {
+        // WHEN
+        ConstraintDefinition existenceConstraint = createNodePropertyExistenceConstraint( label, propertyKey );
+        ConstraintDefinition nodeKeyConstraint = createNodeKeyConstraint( label, propertyKey );
+        assertConstraintsExists( existenceConstraint, nodeKeyConstraint );
+
+        final ConstraintDefinition theOther = dropOneConstraint( existenceConstraint, nodeKeyConstraint );
+        assertConstraintsExists( theOther );
+    }
+
+    @Test
+    void shouldCreateUniquenessOnSameSchemaAsExistenceAndDropIndependently()
+    {
+        // WHEN
+        ConstraintDefinition existenceConstraint = createNodePropertyExistenceConstraint( label, propertyKey );
+        ConstraintDefinition uniquenessConstraint = createUniquenessConstraint( label, propertyKey );
+        assertConstraintsExists( existenceConstraint, uniquenessConstraint );
+
+        final ConstraintDefinition theOther = dropOneConstraint( existenceConstraint, uniquenessConstraint );
+        assertConstraintsExists( theOther );
+    }
+
+    @Test
+    void shouldCreateExistenceOnSameSchemaAsNodeKeyAndDropIndependently()
+    {
+        // WHEN
+        ConstraintDefinition nodeKeyConstraint = createNodeKeyConstraint( label, propertyKey );
+        ConstraintDefinition existenceConstraint = createNodePropertyExistenceConstraint( label, propertyKey );
+        assertConstraintsExists( existenceConstraint, nodeKeyConstraint );
+
+        final ConstraintDefinition theOther = dropOneConstraint( existenceConstraint, nodeKeyConstraint );
+        assertConstraintsExists( theOther );
+    }
+
+    @Test
+    void shouldCreateExistenceOnSameSchemaAsUniquenessAndDropIndependently()
+    {
+        // WHEN
+        ConstraintDefinition uniquenessConstraint = createUniquenessConstraint( label, propertyKey );
+        ConstraintDefinition existenceConstraint = createNodePropertyExistenceConstraint( label, propertyKey );
+        assertConstraintsExists( existenceConstraint, uniquenessConstraint );
+
+        final ConstraintDefinition theOther = dropOneConstraint( existenceConstraint, uniquenessConstraint );
+        assertConstraintsExists( theOther );
     }
 
     @ParameterizedTest()
@@ -320,6 +377,23 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         assertExpectedException( expectedCause, expectedMessage, exception );
     }
 
+    private ConstraintDefinition createUniquenessConstraint( Label label, String prop )
+    {
+        return createUniquenessConstraint( null, label, prop );
+    }
+
+    private ConstraintDefinition createUniquenessConstraint( String name, Label label, String prop )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintCreator creator = db.schema().constraintFor( label );
+            creator = creator.assertPropertyIsUnique( prop ).withName( name );
+            ConstraintDefinition constraint = creator.create();
+            tx.commit();
+            return constraint;
+        }
+    }
+
     private ConstraintDefinition createNodeKeyConstraint( Label label, String prop )
     {
         return createNodeKeyConstraint( null, label, prop );
@@ -368,6 +442,38 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             ConstraintDefinition constraint = creator.create();
             tx.commit();
             return constraint;
+        }
+    }
+
+    private ConstraintDefinition dropOneConstraint( ConstraintDefinition constraint1, ConstraintDefinition constraint2 )
+    {
+        boolean drop1 = random.nextBoolean();
+        try ( Transaction tx = db.beginTx() )
+        {
+            if ( drop1 )
+            {
+                constraint1.drop();
+            }
+            else
+            {
+                constraint2.drop();
+            }
+            tx.commit();
+        }
+        return drop1 ? constraint2 : constraint1;
+    }
+
+    private void assertConstraintsExists( ConstraintDefinition... expectedConstraints )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            final List<ConstraintDefinition> allConstraints = Iterables.asList( db.schema().getConstraints( label ) );
+            for ( ConstraintDefinition expectedConstraint : expectedConstraints )
+            {
+                assertTrue( allConstraints.remove( expectedConstraint ), "Constraints did not contain " + expectedConstraint );
+            }
+            assertTrue( allConstraints.isEmpty(), "Expected no more constraints to exist but had " + allConstraints );
+            tx.commit();
         }
     }
 }
