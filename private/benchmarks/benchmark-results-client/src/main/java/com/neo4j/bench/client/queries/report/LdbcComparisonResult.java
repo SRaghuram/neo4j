@@ -8,9 +8,7 @@ package com.neo4j.bench.client.queries.report;
 import java.text.DecimalFormat;
 import java.util.Objects;
 
-import static java.lang.String.format;
-
-public class LdbcComparisonResult implements CsvRow
+public class LdbcComparisonResult extends CsvRow
 {
     static final String HEADER = "Workload,Benchmark,Old,New,Unit,Difference";
     private static DecimalFormat NUMBER = new DecimalFormat( "#.00" );
@@ -102,15 +100,13 @@ public class LdbcComparisonResult implements CsvRow
     }
 
     @Override
-    public String row()
+    protected String[] unescapedRow()
     {
-        return format( "%s,%s,%s,%s,%s,%s",
-                       group,
-                       bench,
-                       NUMBER.format( oldResult ),
-                       NUMBER.format( newResult ),
-                       unit,
-                       NUMBER.format( improvement )
-        );
+        return new String[]{group,
+                            bench,
+                            NUMBER.format( oldResult ),
+                            NUMBER.format( newResult ),
+                            unit,
+                            NUMBER.format( improvement )};
     }
 }
