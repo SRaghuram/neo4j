@@ -28,6 +28,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -38,6 +39,7 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.internal.helpers.collection.Iterators.single;
 
 @EnterpriseDbmsExtension( configurationCallback = "enableBolt" )
 class ProcedureResourcesIT
@@ -152,10 +154,10 @@ class ProcedureResourcesIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            final KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
-            final int labelId = ktx.tokenRead().nodeLabel( "Label" );
-            final int propId = ktx.tokenRead().propertyKey( "prop" );
-            final IndexDescriptor index = ktx.schemaRead().index( labelId, propId );
+            KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
+            int labelId = ktx.tokenRead().nodeLabel( "Label" );
+            int propId = ktx.tokenRead().propertyKey( "prop" );
+            IndexDescriptor index = single( ktx.schemaRead().index( SchemaDescriptor.forLabel( labelId, propId ) ) );
             indexName = index.getName();
             tx.commit();
         }

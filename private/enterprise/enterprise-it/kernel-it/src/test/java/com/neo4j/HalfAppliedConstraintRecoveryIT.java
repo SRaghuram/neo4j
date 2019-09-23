@@ -177,7 +177,7 @@ public class HalfAppliedConstraintRecoveryIT
 
         // WHEN
         LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.err );
-        TestCommercialDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder()
+        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .setFileSystem( crashSnapshot )
                 .impermanent()
                 .setInternalLogProvider( logProvider )
