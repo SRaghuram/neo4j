@@ -51,6 +51,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
   }
 
   def compilePipeline(p: PipelineDefinition, needsFilteringMorsel: Boolean): (ExecutablePipeline, Boolean /* Upstream needs filtering morsel? */) = {
+
+    // All upstreams from LIMIT need filtering morsels
+    val upstreamNeedsFilteringMorsel = p.middlePlans.exists(_.isInstanceOf[Limit])
+
     // First, try to fuse as many middle operators as possible into the head operator
     val (maybeHeadOperator, unhandledMiddlePlans, unhandledOutput) =
       if (p.fusedPlans.nonEmpty) fuseOperators(p)
@@ -65,10 +69,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
     // Check if there are any unhandled middle operators that causes this pipeline (or upstream pipelines in case it has a WorkCanceller)
     // require the use of FilteringMorselExecutionContext
-    val (thisNeedsFilteringMorsel, upstreamNeedsFilteringMorsel) = unhandledMiddlePlans.foldLeft(needsFilteringMorsel, false) {
-      case ((thisNeeds, _),             _: Limit)     => (thisNeeds || needsMorsel, true /* All upstreams from here need filtering morsels */)
-      case ((thisNeeds, upstreamNeeds), _: Selection) => (thisNeeds || needsMorsel, upstreamNeeds)
-      case ((thisNeeds, upstreamNeeds), _: Distinct)  => (thisNeeds || needsMorsel, upstreamNeeds)
+    val thisNeedsFilteringMorsel = unhandledMiddlePlans.foldLeft(needsFilteringMorsel) {
+      case (thisNeeds, _: Limit)     => thisNeeds || needsMorsel
+      case (thisNeeds, _: Selection) => thisNeeds || needsMorsel
+      case (thisNeeds, _: Distinct)  => thisNeeds || needsMorsel
       case (acc, _)                           => acc
     }
 
