@@ -5,7 +5,20 @@
  */
 package com.neo4j.bench.client.queries.report;
 
-public interface CsvRow
+import org.apache.commons.lang3.StringEscapeUtils;
+
+import java.util.Arrays;
+
+import static java.util.stream.Collectors.joining;
+
+public abstract class CsvRow
 {
-    String row();
+    public final String row()
+    {
+        return Arrays.stream( unescapedRow() )
+                     .map( StringEscapeUtils::escapeCsv )
+                     .collect( joining( "," ) );
+    }
+
+    protected abstract String[] unescapedRow();
 }
