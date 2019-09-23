@@ -5,9 +5,8 @@
  */
 package com.neo4j.bench.client;
 
-import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
-import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.CreateSchema;
+import com.neo4j.bench.client.queries.SetStoreVersion;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.options.Planner;
@@ -15,12 +14,14 @@ import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -29,10 +30,17 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
-import org.neo4j.harness.junit.Neo4jRule;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Repository.LDBC_BENCH;
 import static com.neo4j.bench.common.model.Repository.MACRO_BENCH;
@@ -41,36 +49,62 @@ import static com.neo4j.bench.common.model.Repository.NEO4J;
 import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@TestDirectoryExtension
 public class CommandsSmokeTestIT
 {
     private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
+
     private static final BenchmarkGroup MACRO_COMPAT_GROUP_1 = new BenchmarkGroup( "Group1" );
     private static final BenchmarkGroup MACRO_COMPAT_GROUP_2 = new BenchmarkGroup( "Group2" );
     private static final BenchmarkGroup LDBC_READ = new BenchmarkGroup( "LdbcSnbInteractive-Read" );
     private static final BenchmarkGroup LDBC_WRITE = new BenchmarkGroup( "LdbcSnbInteractive-Write" );
 
-    private final Neo4jRule neo4j = new EnterpriseNeo4jRule()
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+    @RegisterExtension
+    static final Neo4jExtension neo4jExtension = EnterpriseNeo4jExtension.builder()
+                                                                         .withConfig( GraphDatabaseSettings.auth_enabled, false )
+                                                                         .withConfig( BoltConnector.enabled, true )
+                                                                         .withConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.OPTIONAL )
+                                                                         .build();
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( temporaryFolder ).around( neo4j );
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
-    @Test
-    public void shouldRunCompareVersionsCommand() throws Exception
-    {
-        GenerationResult generationResult = createSyntheticResultsStore();
+    @Inject
+    public TestDirectory temporaryFolder;
 
-        Path outputDir = temporaryFolder.newFolder().toPath();
+    private URI boltUri;
+
+    @BeforeEach
+    void setUp( GraphDatabaseService databaseService )
+    {
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                                                                   .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
+
+    @AfterEach
+    void cleanUpDb( GraphDatabaseService databaseService )
+    {
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        try ( Transaction transaction = databaseService.beginTx() )
+        {
+            transaction.execute( "MATCH (n) DETACH DELETE n" ).close();
+            transaction.commit();
+        }
+    }
+
+    @Test
+    void shouldRunCompareVersionsCommand() throws Exception
+    {
+        SyntheticStoreGenerator.GenerationResult generationResult = createSyntheticResultsStore();
+
+        Path outputDir = temporaryFolder.absolutePath().toPath();
+
         List<String> versionComparisonArgs = CompareVersionsCommand.argsFor( USERNAME,
                                                                              PASSWORD,
-                                                                             neo4j.boltURI(),
+                                                                             boltUri,
                                                                              "3.0.0",
                                                                              "3.0.1",
                                                                              1.0,
@@ -130,17 +164,17 @@ public class CommandsSmokeTestIT
         }
     }
 
-    private GenerationResult createSyntheticResultsStore()
+    private SyntheticStoreGenerator.GenerationResult createSyntheticResultsStore()
     {
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
-                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
-                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
-                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
-                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
-                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
+                .withBenchmarkGroups( SyntheticStoreGenerator.ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
+                                      SyntheticStoreGenerator.ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
+                                      SyntheticStoreGenerator.ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
+                                      SyntheticStoreGenerator.ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
+                                      SyntheticStoreGenerator.ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
+                                      SyntheticStoreGenerator.ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
                 .withNeo4jVersions( "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )
@@ -149,9 +183,11 @@ public class CommandsSmokeTestIT
                 .withProjects( NEO4J )
                 .withPrintout( false )
                 .build();
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            QUERY_RETRIER.execute( client, new CreateSchema(), 0 );
+            QUERY_RETRIER.execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
+            QUERY_RETRIER.execute( client, new CreateSchema(), 1 );
             return generator.generate( client );
         }
     }
