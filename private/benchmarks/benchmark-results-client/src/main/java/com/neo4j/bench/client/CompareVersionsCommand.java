@@ -106,6 +106,10 @@ public class CompareVersionsCommand implements Runnable
                    client,
                    new MicroCoverage( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) );
 
+            // TODO micro benchmark descriptions
+
+            // TODO macro workload descriptions
+
             toCsv( outputDir.toPath().resolve( LDBC_COMPARISON_FILENAME ),
                    client,
                    new LdbcComparison( oldNeo4jVersion, newNeo4jVersion, minimumDifference ) );
