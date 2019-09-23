@@ -131,6 +131,7 @@ public class InfraParams
     public Map<String,String> asMap()
     {
         Map<String,String> map = new HashMap<>();
+        map.put( CMD_WORKSPACE_DIR, workspaceDir.toAbsolutePath().toString() );
         map.put( CMD_AWS_SECRET, awsSecret );
         map.put( CMD_AWS_KEY, awsKey );
         map.put( CMD_AWS_REGION, awsRegion );
