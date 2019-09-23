@@ -120,7 +120,7 @@ class DriverConfigFactory
                 .build();
     }
 
-    private <T> T getProperty( FabricConfig.Graph graph, Function<FabricConfig.DriverConfig,T> extractor )
+    <T> T getProperty( FabricConfig.Graph graph, Function<FabricConfig.DriverConfig,T> extractor )
     {
         var graphDriverConfig = graph.getDriverConfig();
 

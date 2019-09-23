@@ -41,6 +41,7 @@ public class FabricSettings implements SettingsDeclaration
     private static final String DRIVER_LOAD_BALANCING_STRATEGY = "driver.load_balancing_strategy";
     private static final String DRIVER_RETRY_MAX_TIME = "driver.retry_timeout";
     private static final String DRIVER_METRICS_ENABLED = "driver.metrics.enabled";
+    private static final String DRIVER_API = "driver.api";
 
     static Setting<List<SocketAddress>> fabricServersSetting = newBuilder( "fabric.routing.servers",
             SettingValueParsers.listOf( SettingValueParsers.SOCKET_ADDRESS ),
@@ -74,13 +75,14 @@ public class FabricSettings implements SettingsDeclaration
             .build();
     static Setting<Integer> bufferSizeSetting = newBuilder( "fabric.stream.buffer.size", INT, 1000 ).build();
     static Setting<Integer> syncBatchSizeSetting = newBuilder( "fabric.stream.sync.batch.size", INT, 50 ).build();
+    static Setting<DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API, ofEnum(DriverApi.class), DriverApi.RX ).build();
 
     @ServiceProvider
     public static class GraphSetting extends GroupSetting
     {
 
         public final Setting<URI> uri = getBuilder( "uri", SettingValueParsers.URI, null ).build();
-        public final Setting<String> database = getBuilder( "database", SettingValueParsers.STRING, "neo4j" ).build();
+        public final Setting<String> database = getBuilder( "database", SettingValueParsers.STRING, null ).build();
         public final Setting<String> name = getBuilder( "name", SettingValueParsers.STRING, null ).build();
 
         public final Setting<Level> driverLoggingLevel = getBuilder( DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
@@ -96,6 +98,7 @@ public class FabricSettings implements SettingsDeclaration
         public final Setting<Duration> driverConnectTimeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
         public final Setting<Duration> driverRetryMaxTime = getBuilder( DRIVER_RETRY_MAX_TIME, DURATION, null ).build();
         public final Setting<Boolean> driverMetricsEnabled = getBuilder( DRIVER_METRICS_ENABLED, BOOL, null ).build();
+        public final Setting<DriverApi> driverApi = getBuilder( DRIVER_API, ofEnum(DriverApi.class), null ).build();
 
         protected GraphSetting( String name )
         {
@@ -124,5 +127,11 @@ public class FabricSettings implements SettingsDeclaration
     {
         ROUND_ROBIN,
         LEAST_CONNECTED
+    }
+
+    public enum DriverApi
+    {
+        RX,
+        ASYNC
     }
 }

@@ -9,19 +9,15 @@ import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.internal.SessionConfig;
-import org.neo4j.driver.reactive.RxSession;
-import org.neo4j.driver.reactive.RxTransaction;
 
-public class PooledDriver
+public abstract class PooledDriver
 {
     private final Driver driver;
     private final AtomicInteger referenceCounter = new AtomicInteger();
@@ -39,17 +35,7 @@ public class PooledDriver
         releaseCallback.accept( this );
     }
 
-    public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo )
-    {
-        var session = driver.rxSession( SessionConfig.builder()
-                .withDefaultAccessMode( translateAccessMode(accessMode) )
-                .withDatabase( location.getDatabase() )
-                .build() );
-
-        var driverTransaction = getDriverTransaction( session, transactionInfo );
-
-        return driverTransaction.map( tx ->  new FabricDriverTransaction( tx, session, location ));
-    }
+    public abstract Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo );
 
     AtomicInteger getReferenceCounter()
     {
@@ -71,6 +57,18 @@ public class PooledDriver
         driver.close();
     }
 
+    protected SessionConfig createSessionConfig( FabricConfig.Graph location, AccessMode accessMode )
+    {
+        var builder = SessionConfig.builder().withDefaultAccessMode( translateAccessMode( accessMode ) );
+
+        if ( location.getDatabase() != null )
+        {
+            builder.withDatabase( location.getDatabase() );
+        }
+
+        return builder.build();
+    }
+
     private org.neo4j.driver.AccessMode translateAccessMode( AccessMode accessMode )
     {
         if ( accessMode == AccessMode.READ )
@@ -79,16 +77,5 @@ public class PooledDriver
         }
 
         return org.neo4j.driver.AccessMode.WRITE;
-    }
-
-    private Mono<RxTransaction> getDriverTransaction( RxSession session, FabricTransactionInfo transactionInfo )
-    {
-        if ( transactionInfo.getTxTimeout().equals( Duration.ZERO ) )
-        {
-
-            return Mono.from( session.beginTransaction() ).cache();
-        }
-
-        return Mono.from( session.beginTransaction( TransactionConfig.builder().withTimeout( transactionInfo.getTxTimeout() ).build() ) ).cache();
     }
 }

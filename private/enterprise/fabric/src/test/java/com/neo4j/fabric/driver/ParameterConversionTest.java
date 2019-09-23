@@ -50,7 +50,7 @@ class ParameterConversionTest
     @BeforeEach
     void beforeEach()
     {
-        pooledDriver = new PooledDriver( databaseDriver, d ->
+        pooledDriver = new RxPooledDriver( databaseDriver, d ->
         {
         } );
 

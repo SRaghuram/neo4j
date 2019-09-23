@@ -87,9 +87,9 @@ class TransactionTest
     @BeforeAll
     static void beforeAll() throws UnavailableException
     {
-        FabricConfig.Graph graph1 = new FabricConfig.Graph( 1, URI.create( "bolt://somewhere:1001" ), "neo4j", null, emptyDriverConfig() );
-        FabricConfig.Graph graph2 = new FabricConfig.Graph( 2, URI.create( "bolt://somewhere:1002" ), "neo4j", null, emptyDriverConfig() );
-        FabricConfig.Graph graph3 = new FabricConfig.Graph( 3, URI.create( "bolt://somewhere:1003" ), "neo4j", null, emptyDriverConfig() );
+        FabricConfig.Graph graph1 = new FabricConfig.Graph( 1, URI.create( "bolt://somewhere:1001" ), null, null, emptyDriverConfig() );
+        FabricConfig.Graph graph2 = new FabricConfig.Graph( 2, URI.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
+        FabricConfig.Graph graph3 = new FabricConfig.Graph( 3, URI.create( "bolt://somewhere:1003" ), null, null, emptyDriverConfig() );
 
         var ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
@@ -532,6 +532,6 @@ class TransactionTest
 
     private static FabricConfig.DriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null, null, null );
+        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null, null, null, null );
     }
 }

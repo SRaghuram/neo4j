@@ -37,9 +37,9 @@ import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
-public class ParameterConverter
+class ParameterConverter
 {
-    public Object convertValue( AnyValue serverValue )
+    Object convertValue( AnyValue serverValue )
     {
         if ( serverValue instanceof NoValue )
         {

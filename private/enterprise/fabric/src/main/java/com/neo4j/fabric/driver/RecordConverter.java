@@ -48,19 +48,19 @@ import org.neo4j.values.virtual.VirtualValues;
 
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
-public class RecordConverter
+class RecordConverter
 {
 
     private final boolean hasSourceTag;
     private final long sourceTagValue;
 
-    public RecordConverter()
+    RecordConverter()
     {
         this.hasSourceTag = true;
         this.sourceTagValue = 0;
     }
 
-    public RecordConverter( long sourceTag )
+    RecordConverter( long sourceTag )
     {
         if ( sourceTag < 0 || 255 < sourceTag )
         {
@@ -75,7 +75,7 @@ public class RecordConverter
         return (long) ((byte) value) << 56;
     }
 
-    public AnyValue convertValue( Value driverValue )
+    AnyValue convertValue( Value driverValue )
     {
         Object value = driverValue.asObject();
         return convertValue( value );

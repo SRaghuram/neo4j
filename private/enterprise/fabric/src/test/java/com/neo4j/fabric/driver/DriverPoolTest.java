@@ -7,6 +7,7 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.config.FabricSettings;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,8 +49,8 @@ class DriverPoolTest
     private final FabricConfig.Graph s1 = new FabricConfig.Graph( 1, shard0.boltURI(), "db1", "shard-0", null );
     private final FabricConfig.Graph s2 = new FabricConfig.Graph( 2, shard1.boltURI(), "db1", "shard-1", null );
 
-    private final CredentialsProvider credentialsProvider = Mockito.mock(CredentialsProvider.class);
-    private final AuthSubject as1 = mock(AuthSubject.class);
+    private final CredentialsProvider credentialsProvider = Mockito.mock( CredentialsProvider.class );
+    private final AuthSubject as1 = mock( AuthSubject.class );
     private final AuthSubject as2 = mock( AuthSubject.class );
 
     private final AuthToken at1 = AuthTokens.basic( "u1", "p" );
@@ -79,6 +80,7 @@ class DriverPoolTest
         var driverConfig = mock( FabricConfig.DriverConfig.class );
         when( driverConfig.getMaxConnectionPoolSize() ).thenReturn( 10 );
         when( driverConfig.getLoggingLevel() ).thenReturn( Level.INFO );
+        when( driverConfig.getDriverApi() ).thenReturn( FabricSettings.DriverApi.RX );
 
         var remoteGraphDriver = new FabricConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );

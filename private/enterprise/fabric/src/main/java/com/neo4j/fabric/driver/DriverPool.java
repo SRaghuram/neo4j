@@ -147,7 +147,17 @@ public class DriverPool extends LifecycleAdapter
 
         var driverFactory = new DriverFactory();
         var databaseDriver = driverFactory.newInstance( location.getUri(), token, RoutingSettings.DEFAULT, RetrySettings.DEFAULT, config, eventLoopGroup );
-        return new PooledDriver( databaseDriver, pd -> release( key, pd ) );
+
+        var driverApi = driverConfigFactory.getProperty( location, FabricConfig.DriverConfig::getDriverApi );
+        switch ( driverApi )
+        {
+        case RX:
+            return new RxPooledDriver( databaseDriver, pd -> release( key, pd ) );
+        case ASYNC:
+            return new AsyncPooledDriver( databaseDriver, pd -> release( key, pd ) );
+        default:
+            throw new IllegalArgumentException( "Unexpected Driver API value: " + driverApi );
+        }
     }
 
     private class Key
