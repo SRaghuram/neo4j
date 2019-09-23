@@ -21,11 +21,9 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
-import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.schema.ConstraintDescriptor;
@@ -33,6 +31,8 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
+import org.neo4j.kernel.api.Kernel;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
 import org.neo4j.kernel.api.exceptions.schema.ConstraintWithNameAlreadyExistsException;
@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 @EphemeralTestDirectoryExtension
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
@@ -283,7 +283,7 @@ class SchemaRuleCollisionTest
 
     private void assertExist( SchemaRule schemaRule ) throws TransactionFailureException
     {
-        try ( Transaction transaction = newTransaction( db ) )
+        try ( KernelTransaction transaction = newTransaction( db ) )
         {
             final SchemaRead schemaRead = transaction.schemaRead();
             if ( schemaRule instanceof IndexDescriptor )
@@ -320,7 +320,7 @@ class SchemaRuleCollisionTest
             {
                 final int labelId;
                 final int propId;
-                try ( Transaction transaction = newTransaction( db ) )
+                try ( KernelTransaction transaction = newTransaction( db ) )
                 {
                     final TokenWrite tokenWrite = transaction.tokenWrite();
                     labelId = tokenWrite.labelGetOrCreateForName( pattern.labelName );
@@ -329,7 +329,7 @@ class SchemaRuleCollisionTest
                 }
 
                 final LabelSchemaDescriptor schema = SchemaDescriptor.forLabel( labelId, propId );
-                try ( Transaction transaction = newTransaction( db ) )
+                try ( KernelTransaction transaction = newTransaction( db ) )
                 {
                     final SchemaWrite schemaWrite = transaction.schemaWrite();
                     final T result = operation.create( schemaWrite, schema, name );
@@ -346,7 +346,7 @@ class SchemaRuleCollisionTest
         };
     }
 
-    private static Transaction newTransaction( GraphDatabaseAPI db ) throws org.neo4j.internal.kernel.api.exceptions.TransactionFailureException
+    private static KernelTransaction newTransaction( GraphDatabaseAPI db ) throws org.neo4j.internal.kernel.api.exceptions.TransactionFailureException
     {
         final Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
         return kernel.beginTransaction( implicit, LoginContext.AUTH_DISABLED );
