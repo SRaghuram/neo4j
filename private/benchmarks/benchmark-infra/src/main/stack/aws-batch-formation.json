@@ -132,9 +132,9 @@
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
             "Ref::--worker-artifact-uri",
+            "run-worker",
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
-            "run-worker",
 
             "--workload",
             "Ref::--workload",
@@ -194,8 +194,6 @@
             "--triggered-by",
             "Ref::--triggered-by",
 
-            "--workspace-dir",
-            "Ref::--workspace-dir",
             "--aws-secret",
             "Ref::--aws-secret",
             "--aws-key",
@@ -209,7 +207,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
@@ -248,9 +246,9 @@
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
             "Ref::--worker-artifact-uri",
+            "run-worker",
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
-            "run-worker",
 
             "--workload",
             "Ref::--workload",
@@ -310,8 +308,6 @@
             "--triggered-by",
             "Ref::--triggered-by",
 
-            "--workspace-dir",
-            "Ref::--workspace-dir",
             "--aws-secret",
             "Ref::--aws-secret",
             "--aws-key",
@@ -325,7 +321,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
@@ -426,8 +422,6 @@
             "--triggered-by",
             "Ref::--triggered-by",
 
-            "--workspace-dir",
-            "Ref::--workspace-dir",
             "--aws-secret",
             "Ref::--aws-secret",
             "--aws-key",
@@ -441,7 +435,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
@@ -542,8 +536,6 @@
             "--triggered-by",
             "Ref::--triggered-by",
 
-            "--workspace-dir",
-            "Ref::--workspace-dir",
             "--aws-secret",
             "Ref::--aws-secret",
             "--aws-key",
@@ -557,7 +549,7 @@
             "Ref::--results_store_user",
             "--results_store_pass",
             {
-              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString}}"
+              "Fn::Sub": "{{resolve:secretsmanager:ResultStoreSecret-${STAGE}:SecretString::password}}"
             },
             "--results_store_uri",
             "Ref::--results_store_uri"
