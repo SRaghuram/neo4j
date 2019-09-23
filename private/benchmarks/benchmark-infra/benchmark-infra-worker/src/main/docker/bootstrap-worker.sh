@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2002-2019 "Neo4j,"
+# Neo4j Sweden AB [http://neo4j.com]
+# This file is part of Neo4j internal tooling.
 set -ex
 
 declare -a params
@@ -12,10 +15,6 @@ while (( "$#" )); do
       shift
       break
       ;;
-#    -*|--*=) # unsupported flags
-#      echo "Error: Unsupported flag $1" >&2
-#      exit 1
-#      ;;
     *) # preserve positional arguments
       params+=("$1")
       shift
