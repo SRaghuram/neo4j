@@ -7,9 +7,7 @@ package com.neo4j.bench.client.queries.report;
 
 import java.util.Objects;
 
-import static java.lang.String.format;
-
-public class MicroCoverageResult implements CsvRow
+public class MicroCoverageResult extends CsvRow
 {
     static final String HEADER = "Suite,Benchmark Group,Scenarios,Summary";
 
@@ -88,12 +86,11 @@ public class MicroCoverageResult implements CsvRow
     }
 
     @Override
-    public String row()
+    protected String[] unescapedRow()
     {
-        return format( "%s,%s,%s,%s",
-                       group,
-                       bench,
-                       testCount,
-                       change.name() );
+        return new String[]{group,
+                            bench,
+                            Integer.toString( testCount ),
+                            change.name()};
     }
 }
