@@ -236,7 +236,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                transaction.execute( "CREATE INDEX ON :Person(name)" ).close();
+                transaction.execute( "CREATE INDEX FOR (n:Person) ON (n.name)" ).close();
                 transaction.commit();
             }
         }
@@ -269,7 +269,7 @@ class BackupSchemaIT
         {
             try ( Transaction transaction = db.beginTx() )
             {
-                transaction.execute( "CREATE INDEX ON :Person(name, age)" ).close();
+                transaction.execute( "CREATE INDEX FOR (n:Person) ON (n.name, n.age)" ).close();
                 transaction.commit();
             }
         }

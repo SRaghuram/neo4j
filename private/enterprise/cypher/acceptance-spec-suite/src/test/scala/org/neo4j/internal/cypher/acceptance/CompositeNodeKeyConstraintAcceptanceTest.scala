@@ -243,7 +243,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an index") {
     // Given
-    executeSingle("CREATE INDEX ON :Person(firstname, lastname)".fixNewLines)
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,
@@ -254,7 +254,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
 
   test("should give appropriate error message when there is already an index (named constraint)") {
     // Given
-    executeSingle("CREATE INDEX ON FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)".fixNewLines)
 
     // then
     failWithError(Configs.All,

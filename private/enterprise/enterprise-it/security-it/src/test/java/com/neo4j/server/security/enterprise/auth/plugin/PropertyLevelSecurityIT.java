@@ -356,7 +356,7 @@ class PropertyLevelSecurityIT
     {
         execute( neo, "CREATE (:A {secret: 1})", Collections.emptyMap() ).close();
 
-        execute( neo, "CREATE INDEX ON :A(secret)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:A) ON (n.secret)", Collections.emptyMap() ).close();
         execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
 
         String query = "CREATE (:A {secret: $param}) WITH 1 as bar MATCH (a:A) USING INDEX a:A(secret) WHERE EXISTS(a.secret) RETURN a.secret";
@@ -376,7 +376,7 @@ class PropertyLevelSecurityIT
     void shouldBehaveLikeDataIsMissingWhenFilteringWithIndex()
     {
         execute( neo, "CREATE (n:Person {name: 'Andersson'})", Collections.emptyMap() ).close();
-        execute( neo, "CREATE INDEX ON :Person(alias)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:Person) ON (n.alias)", Collections.emptyMap() ).close();
         execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
 
         String query = "MATCH (n:Person) USING INDEX n:Person(alias) WHERE n.alias = 'neo' RETURN n";
@@ -397,7 +397,7 @@ class PropertyLevelSecurityIT
     @Test
     void shouldBehaveLikeDataIsMissingForExistsWithIndex()
     {
-        execute( neo, "CREATE INDEX ON :Person(alias)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:Person) ON (n.alias)", Collections.emptyMap() ).close();
         execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
         execute( neo, "CREATE (n:Person {name: 'Andersson'}) ", Collections.emptyMap() ).close();
 
@@ -420,7 +420,7 @@ class PropertyLevelSecurityIT
     @Test
     void shouldBehaveLikeDataIsMissingForStringBeginsWithIndex()
     {
-        execute( neo, "CREATE INDEX ON :Person(alias)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:Person) ON (n.alias)", Collections.emptyMap() ).close();
         execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
         execute( neo, "CREATE (n:Person {name: 'Andersson'}) ", Collections.emptyMap() ).close();
 
@@ -443,7 +443,7 @@ class PropertyLevelSecurityIT
     @Test
     void shouldBehaveLikeDataIsMissingForRangeWithIndex()
     {
-        execute( neo, "CREATE INDEX ON :Person(secret)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:Person) ON (n.secret)", Collections.emptyMap() ).close();
         execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
         execute( neo, "CREATE (n:Person {name: 'Andersson'}) ", Collections.emptyMap() ).close();
 
@@ -466,8 +466,8 @@ class PropertyLevelSecurityIT
     @Test
     void shouldBehaveLikeDataIsMissingForCompositeWithIndex()
     {
-        execute( neo, "CREATE INDEX ON :Person(name , alias)", Collections.emptyMap() ).close();
-        execute( neo, "CREATE INDEX ON :Person(name)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:Person) ON (n.name , n.alias)", Collections.emptyMap() ).close();
+        execute( neo, "CREATE INDEX FOR (n:Person) ON (n.name)", Collections.emptyMap() ).close();
         execute( neo, "CALL db.awaitIndexes", Collections.emptyMap() ).close();
         execute( neo, "CREATE (n:Person {name: 'Andersson'}) ", Collections.emptyMap() ).close();
 

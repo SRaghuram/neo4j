@@ -295,7 +295,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testSuccessfulSchema( S subject )
     {
-        assertEmpty( subject, "CREATE INDEX ON :Node(number)" );
+        assertEmpty( subject, "CREATE INDEX FOR (n:Node) ON (n.number)" );
     }
 
     void testFailSchema( S subject )
@@ -305,7 +305,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testFailSchema( S subject, String errMsg )
     {
-        assertFail( subject, "CREATE INDEX ON :Node(number)", errMsg );
+        assertFail( subject, "CREATE INDEX FOR (n:Node) ON (n.number)", errMsg );
     }
 
     void testFailCreateUser( S subject, String errMsg )
@@ -841,7 +841,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.allowedSchemaProcedure", mode = Mode.SCHEMA )
         public Stream<AuthProceduresBase.StringResult> allowedProcedure3()
         {
-            transaction.execute( "CREATE INDEX ON :VeryUniqueLabel(prop)" );
+            transaction.execute( "CREATE INDEX FOR (n:VeryUniqueLabel) ON (n.prop)" );
             return Stream.of( new AuthProceduresBase.StringResult( "OK" ) );
         }
 

@@ -271,7 +271,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( findAndRead, query, r -> assertKeyIs( r, "n.number", 3 ) );
         assertEmpty( readOnly, query );
 
-        assertEmpty( adminSubject, "CREATE INDEX ON :A(number)" );
+        assertEmpty( adminSubject, "CREATE INDEX FOR (n:A) ON (n.number)" );
         assertEmpty( adminSubject, "CALL db.awaitIndexes" );
 
         assertSuccess( adminSubject, queryIndex, r -> assertKeyIs( r, "n.number", 3, 4 ) );
@@ -282,7 +282,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     @Test
     void shouldOnlyShowWhitelistedPropertiesWithIndexSeek() throws Throwable
     {
-        assertEmpty( adminSubject, "CREATE INDEX ON :A(number)" );
+        assertEmpty( adminSubject, "CREATE INDEX FOR (n:A) ON (n.number)" );
         assertEmpty( adminSubject, "CREATE (n:A) SET n.number = 4" );
         assertEmpty( adminSubject, "CREATE (n:Node:A) SET n.number = 3" );
         String role = "custom";
@@ -520,7 +520,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         setupGraph();
         assertEmpty( adminSubject, "CREATE (:A {foo: 1})" );
 
-        assertEmpty( adminSubject, "CREATE INDEX ON :A(foo)" );
+        assertEmpty( adminSubject, "CREATE INDEX FOR (n:A) ON (n.foo)" );
         assertEmpty( adminSubject, "CALL db.awaitIndexes" );
 
         String query = "CREATE (:A {foo: $param}) WITH 1 as bar MATCH (a:A) USING INDEX a:A(foo) WHERE EXISTS(a.foo) RETURN a.foo";
@@ -567,7 +567,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         assertSuccess( findAll, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
         assertSuccess( findSome, "MATCH (n:A) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo", r -> assertKeyIs( r, "n.foo", 5 ) );
 
-        assertEmpty( adminSubject, "CREATE INDEX ON :A(foo, bar)" );
+        assertEmpty( adminSubject, "CREATE INDEX FOR (n:A) ON (n.foo, n.bar)" );
         assertEmpty( adminSubject, "CALL db.awaitIndexes" );
 
         assertSuccess( adminSubject, "MATCH (n:A) USING INDEX n:A(foo, bar) WHERE exists(n.foo) AND exists(n.bar) RETURN n.foo",

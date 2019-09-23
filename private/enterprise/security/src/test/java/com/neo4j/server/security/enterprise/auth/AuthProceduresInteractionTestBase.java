@@ -848,7 +848,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertFail( unknownUser, "CREATE (:Node)", "" );
 
         unknownUser = neo.login( "Batman", "Matban" );
-        assertFail( unknownUser, "CREATE INDEX ON :Node(number)", "" );
+        assertFail( unknownUser, "CREATE INDEX FOR (n:Node) ON (n.number)", "" );
 
         unknownUser = neo.login( "Batman", "Matban" );
         assertSystemCommandFail( unknownUser, "ALTER CURRENT USER SET PASSWORD FROM 'Matban' TO '321'", "" );

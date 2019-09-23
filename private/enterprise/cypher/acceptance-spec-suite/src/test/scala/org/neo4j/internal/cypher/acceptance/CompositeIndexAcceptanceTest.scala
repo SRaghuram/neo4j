@@ -722,8 +722,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should not fail on multiple attempts to create a composite index") {
     // Given
-    executeWith(Configs.All, "CREATE INDEX ON :Person(name, surname)")
-    executeWith(Configs.All, "CREATE INDEX ON :Person(name, surname)")
+    executeWith(Configs.All, "CREATE INDEX FOR (n:Person) ON (n.name, n.surname)")
+    executeWith(Configs.All, "CREATE INDEX FOR (n:Person) ON (n.name, n.surname)")
   }
 
   test("should not fail on multiple attempts to create a named composite index") {

@@ -116,9 +116,9 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   }
 
   test("should be able to plan customer query using outer join and alias (ZenDesk ticket #6628)") {
-    executeSingle("CREATE INDEX ON :L0(p0)")
-    executeSingle("CREATE INDEX ON :L1(p1)")
-    executeSingle("CREATE INDEX ON :L2(p2,p3)")
+    executeSingle("CREATE INDEX FOR (n:L0) ON (n.p0)")
+    executeSingle("CREATE INDEX FOR (n:L1) ON (n.p1)")
+    executeSingle("CREATE INDEX FOR (n:L2) ON (n.p2,n.p3)")
 
     graph.withTx( tx => {
       tx.schema.awaitIndexesOnline(10, TimeUnit.SECONDS)

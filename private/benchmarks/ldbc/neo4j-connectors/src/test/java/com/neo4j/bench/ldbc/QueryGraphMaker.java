@@ -46,7 +46,7 @@ public abstract class QueryGraphMaker
         }
         for ( Tuple2<Label,String> labelAndProperty : indexes )
         {
-            queries.add( "CREATE INDEX ON :" + labelAndProperty._1() + "(" + labelAndProperty._2() + ")" );
+            queries.add( "CREATE INDEX FOR (n:" + labelAndProperty._1() + ") ON (n." + labelAndProperty._2() + ")" );
         }
         return queries;
     }

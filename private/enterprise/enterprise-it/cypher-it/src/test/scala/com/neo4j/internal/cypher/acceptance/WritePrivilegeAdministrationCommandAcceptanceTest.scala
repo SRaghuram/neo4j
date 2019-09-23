@@ -697,7 +697,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // Need schema permission to add index
     an[AuthorizationViolationException] shouldBe thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX ON :A(name)")
+      executeOnDefault("joe", "soap", "CREATE INDEX FOR (n:A) ON (n.name)")
     }
 
     // Need schema permission to add constraint

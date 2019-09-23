@@ -27,7 +27,7 @@ public enum SchemaHelper
                 @Override
                 public void createIndex( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    tx.execute( format( "CREATE INDEX ON :`%s`(`%s`)", label, property ) );
+                    tx.execute( format( "CREATE INDEX FOR (n:`%s`) ON (n.`%s`)", label, property ) );
                 }
 
                 @Override

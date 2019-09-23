@@ -14,7 +14,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
   // Create index
 
-  test("should create index") {
+  test("should create index (old syntax)") {
     // WHEN
     executeSingle("CREATE INDEX ON :Person(name)")
     graph.awaitIndexesOnline()
@@ -46,7 +46,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name"))
   }
 
-  test("should create composite index") {
+  test("should create composite index (old syntax)") {
     // WHEN
     executeSingle("CREATE INDEX ON :Person(name,age)")
     graph.awaitIndexesOnline()
@@ -110,7 +110,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name", "age"))
   }
 
-  test("should not fail to create multiple indexes with same schema") {
+  test("should not fail to create multiple indexes with same schema (old syntax)") {
     // GIVEN
     executeSingle("CREATE INDEX ON :Person(name)")
     graph.awaitIndexesOnline()
@@ -126,6 +126,22 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // THEN
     executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+  }
+
+  test("should not fail to create multiple indexes with same schema (mixed syntax)") {
+    // GIVEN: old syntax
+    executeSingle("CREATE INDEX ON :Person(name)")
+    graph.awaitIndexesOnline()
+
+    // THEN: new syntax
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+
+    // GIVEN: new syntax
+    executeSingle("CREATE INDEX ON :Person(age)")
+    graph.awaitIndexesOnline()
+
+    // THEN: old syntax
+    executeSingle("CREATE INDEX FOR (n:Person) ON (n.age)")
   }
 
   test("should not fail to create multiple named indexes with same name and schema") {
