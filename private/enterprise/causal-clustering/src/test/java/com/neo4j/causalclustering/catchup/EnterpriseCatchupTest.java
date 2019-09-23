@@ -81,7 +81,7 @@ abstract class EnterpriseCatchupTest
         databaseManager = new StubClusteredDatabaseManager();
         databaseManager.givenDatabaseWithConfig()
                 .withDatabaseId( DEFAULT_DB_ID )
-                .withStoreId( StoreId.DEFAULT )
+                .withStoreId( StoreId.UNKNOWN )
                 .withDatabaseAvailabilityGuard( availabilityGuard )
                 .register();
         serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fsa, 32768, LOG_PROVIDER );

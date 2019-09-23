@@ -110,7 +110,7 @@ public class StubClusteredDatabaseManager extends LifecycleAdapter implements Da
         }
         else
         {
-            when( db.getStoreId() ).thenReturn( StoreId.DEFAULT );
+            when( db.getStoreId() ).thenReturn( StoreId.UNKNOWN );
         }
         return dbContext;
     }

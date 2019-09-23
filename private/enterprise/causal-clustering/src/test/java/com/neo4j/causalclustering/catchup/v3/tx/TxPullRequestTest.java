@@ -33,6 +33,6 @@ class TxPullRequestTest
 
     private static TxPullRequest newTxPullRequest( long correctTxId )
     {
-        return new TxPullRequest( correctTxId, StoreId.DEFAULT, new TestDatabaseIdRepository().defaultDatabase() );
+        return new TxPullRequest( correctTxId, StoreId.UNKNOWN, new TestDatabaseIdRepository().defaultDatabase() );
     }
 }

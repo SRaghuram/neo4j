@@ -85,7 +85,7 @@ class TransactionLogAnalyzerTest
         logFiles = LogFilesBuilder.builder( directory.databaseLayout(), fs )
                 .withLogVersionRepository( logVersionRepository )
                 .withTransactionIdStore( new SimpleTransactionIdStore() )
-                .withStoreId( new StoreId( 0 ) )
+                .withStoreId( StoreId.UNKNOWN )
                 .build();
         life.add( logFiles );
         logFile = logFiles.getLogFile();

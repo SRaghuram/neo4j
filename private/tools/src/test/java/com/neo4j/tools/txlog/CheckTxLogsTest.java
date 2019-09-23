@@ -876,7 +876,7 @@ class CheckTxLogsTest
         {
             try ( StoreChannel channel = fs.write( logFile ) )
             {
-                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.DEFAULT ) );
+                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ) );
             }
         }
     }

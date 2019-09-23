@@ -34,7 +34,7 @@ import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 @SuppressWarnings( {"unchecked", "UnnecessaryLocalVariable"} )
 public class ChunkedTransactionStreamTest
 {
-    private final StoreId storeId = StoreId.DEFAULT;
+    private final StoreId storeId = StoreId.UNKNOWN;
     private final ByteBufAllocator allocator = mock( ByteBufAllocator.class );
     private final CatchupServerProtocol protocol = mock( CatchupServerProtocol.class );
     private final IOCursor<CommittedTransactionRepresentation> cursor = mock( IOCursor.class );
