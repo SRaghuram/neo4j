@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.builder.{AbstractLogicalPlanBuilder, TokenResolver}
+import org.neo4j.cypher.internal.logical.builder.{AbstractLogicalPlanBuilder, Resolver}
+import org.neo4j.cypher.internal.logical.plans.{ProcedureSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Variable
@@ -19,7 +20,7 @@ class ExecutionGraphDefinitionBuilder()
   private val plansToBreakOn = ArrayBuffer[Id]()
 
   private var semanticTable = new SemanticTable()
-  private val tokenContext = tokenResolver.asInstanceOf[TokenContext]
+  private val tokenContext = resolver.asInstanceOf[TokenContext]
 
   override def newNode(node: Variable): Unit = {
     semanticTable = semanticTable.addNode(node)
@@ -47,7 +48,7 @@ class ExecutionGraphDefinitionBuilder()
   }
 }
 
-class NotImplementedTokenContext extends TokenResolver with TokenContext {
+class NotImplementedTokenContext extends Resolver with TokenContext {
   override def getLabelName(id: Int): String = ???
 
   override def getOptLabelId(labelName: String): Option[Int] = ???
@@ -65,4 +66,8 @@ class NotImplementedTokenContext extends TokenResolver with TokenContext {
   override def getOptRelTypeId(relType: String): Option[Int] = ???
 
   override def getRelTypeId(relType: String): Int = ???
+
+  override def procedureSignature(name: QualifiedName): ProcedureSignature = ???
+
+  override def functionSignature(name: QualifiedName): Option[UserFunctionSignature] = ???
 }
