@@ -39,15 +39,6 @@ class ArgumentStateMapTest extends MorselUnitTest {
           // Then
           validateRows(row, numberOfRows, predicate)
         }
-
-        test(s"filterCancelledArguments - $name - $numberOfRows rows") {
-          // Given
-          val row = buildSequentialInput(numberOfRows)
-          // When
-          ArgumentStateMap.filterCancelledArguments(0, row, filterCancelledArgumentsCheck(predicate))
-          // Then
-          validateRows(row, numberOfRows, predicate)
-        }
     }
   }
   }
@@ -84,16 +75,6 @@ class ArgumentStateMapTest extends MorselUnitTest {
           // Then
           validateRows(row, numberOfRows, x => p1(x) && p2(x))
         }
-
-        test(s"filterCancelledArguments - $name - $numberOfRows rows") {
-          // Given
-          val row = buildSequentialInput(numberOfRows)
-          // When
-          ArgumentStateMap.filterCancelledArguments(0, row, filterCancelledArgumentsCheck(p1))
-          ArgumentStateMap.filterCancelledArguments(0, row, filterCancelledArgumentsCheck(p2))
-          // Then
-          validateRows(row, numberOfRows, x => p1(x) && p2(x))
-        }
     }
   }
 
@@ -125,41 +106,6 @@ class ArgumentStateMapTest extends MorselUnitTest {
     }
   }
 
-  for (inputPos <- Seq(0, 3, 4, 5, 6, 7)) {
-
-    test(s"filterCancelledArguments should work with current row $inputPos") {
-      val row = new FilteringInput()
-        .addRow(Longs(1, 10))
-        .addRow(Longs(1, 11))
-        .addRow(Longs(1, 12))
-        .addRow(Longs(2, 20))
-        .addRow(Longs(3, 30))
-        .addRow(Longs(6, 50))
-        .addRow(Longs(6, 51))
-        .build()
-
-      row.setCurrentRow(inputPos)
-      ArgumentStateMap.filterCancelledArguments(0,
-        row,
-        argumentRowId => argumentRowId % 2 == 0)
-
-      row.getCurrentRow should be(inputPos)
-      new ThenOutput(row, 2, 0)
-        .shouldReturnRow(Longs(1, 10))
-        .shouldReturnRow(Longs(1, 11))
-        .shouldReturnRow(Longs(1, 12))
-        .shouldReturnRow(Longs(3, 30))
-        .shouldBeDone()
-    }
-  }
-
-  def alwaysTruePredicate: Long => Boolean = _ => true
-  def alwaysFalsePredicate: Long => Boolean = _ => false
-  def moduloPredicate(n: Long): Long => Boolean = _ % n == 0
-  def ltPredicate(n: Long): Long => Boolean = _ < n
-  def gtePredicate(n: Long): Long => Boolean = _ >= n
-  def eqPredicate(n: Long): Long => Boolean = _ == n
-
   //-------------------
   // Creates a predicate for ArgumentStateMaps.filter(morsel: MorselExecutionContext, predicate: MorselExecutionContext => Boolean)
   def morselFilterPredicate(predicate: Long => Boolean): MorselExecutionContext => Boolean = {
@@ -187,57 +133,6 @@ class ArgumentStateMapTest extends MorselUnitTest {
   //-------------------
   // Creates an isCancelledCheck for ArgumentStateMaps.filterCancelledArguments(argumentSlotOffset: Int, morsel: MorselExecutionContext, isCancelledCheck: Long => Boolean)
   def filterCancelledArgumentsCheck(predicate: Long => Boolean): Long => Boolean = !predicate(_)
-
-  def buildSequentialInput(numberOfRows: Int): FilteringMorselExecutionContext = {
-    var rb = new FilteringInput()
-    (0 until numberOfRows).foreach { i =>
-      rb = rb.addRow(Longs(i, i*2), Refs(Values.stringValue(i.toString), Values.stringValue((i*2).toString)))
-    }
-    rb.build()
-  }
-
-  def validateRowDataContent(row: MorselExecutionContext, i: Int): Unit = {
-    row.getLongAt(0) shouldEqual i
-    row.getLongAt(1) shouldEqual i*2
-    row.getRefAt(0) shouldEqual Values.stringValue(i.toString)
-    row.getRefAt(1) shouldEqual Values.stringValue((i*2).toString)
-  }
-
-  def validateRows(row: FilteringMorselExecutionContext, numberOfRows: Int, predicate: Long => Boolean): Unit = {
-    val rawRow = row.shallowCopy()
-
-    val expectedValidRows = (0 until numberOfRows).foldLeft(0)((count, i) => if (predicate(i)) count + 1 else count)
-
-    row.getCurrentRow shouldEqual 0
-    row.numberOfRows shouldEqual numberOfRows
-    rawRow.getCurrentRow shouldEqual 0
-    rawRow.numberOfRows shouldEqual numberOfRows
-
-    row.getValidRows shouldEqual expectedValidRows
-    rawRow.getValidRows shouldEqual expectedValidRows
-
-    row.resetToFirstRow()
-    (0 until numberOfRows).foreach { i =>
-      rawRow.isValidRawRow shouldBe true
-      if (predicate(i)) {
-        rawRow.isCancelled(i) shouldBe false
-        row.isValidRow shouldBe true
-        validateRowDataContent(row, i)
-        validateRowDataContent(rawRow, i)
-
-        val hasNextRow = row.hasNextRow
-        row.moveToNextRow()
-        row.isValidRow shouldEqual hasNextRow
-      } else {
-        rawRow.isCancelled(i) shouldBe true
-        rawRow.isValidRow shouldBe false
-      }
-      rawRow.moveToNextRawRow()
-    }
-    row.isValidRow shouldEqual false
-    rawRow.isValidRow shouldEqual false
-    rawRow.isValidRawRow shouldEqual false
-  }
 
   class SumUntil32() {
     var sum: Long = 0

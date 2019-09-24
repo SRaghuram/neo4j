@@ -31,15 +31,6 @@ trait ArgumentStateMap[S <: ArgumentState] {
                            onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit
 
   /**
-    * Filter away cancelled argument rows using the [[ArgumentState]] related to `argument`.
-    *
-    * @param isCancelled is called once per argumentRowId.
-    *                    If true, rows for the argumentRowId will be discarded, otherwise they will be retained.
-    */
-  def filterCancelledArguments(morsel: MorselExecutionContext,
-                               isCancelled: S => Boolean): IndexedSeq[Long]
-
-  /**
     * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
     */
   def peekCompleted(): Iterator[S]
@@ -344,83 +335,6 @@ object ArgumentStateMap {
         filteringMorsel.moveToNextRawRow()
       }
     }
-  }
-
-  def filterCancelledArguments(argumentSlotOffset: Int,
-                               morsel: MorselExecutionContext,
-                               isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
-    val currentRow = morsel.getCurrentRow // Save current row
-
-    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
-
-    val cancelled =
-      if (filteringMorsel.hasCancelledRows) {
-        filterCancelledArgumentsLoop(argumentSlotOffset, filteringMorsel, isCancelledCheck)
-      } else {
-        filterCancelledArgumentsLoopRaw(argumentSlotOffset, filteringMorsel, isCancelledCheck)
-      }
-
-    filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
-
-    cancelled
-  }
-
-  private def filterCancelledArgumentsLoop(argumentSlotOffset: Int,
-                                           filteringMorsel: FilteringMorselExecutionContext,
-                                           isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
-    filteringMorsel.resetToFirstRow()
-
-    val cancelled = new ArrayBuffer[Long]
-
-    while (filteringMorsel.isValidRow) {
-      val arg = filteringMorsel.getArgumentAt(argumentSlotOffset)
-      val isCancelled = isCancelledCheck(arg)
-      if (isCancelled) {
-        cancelled += arg
-
-        // Cancel all rows up to the next argument
-        do {
-          filteringMorsel.cancelCurrentRow()
-          filteringMorsel.moveToNextRow()
-        } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
-
-      } else {
-        // We should keep this argument. Skip ahead to the next argument.
-        do {
-          filteringMorsel.moveToNextRow()
-        } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
-      }
-    }
-    cancelled
-  }
-
-  private def filterCancelledArgumentsLoopRaw(argumentSlotOffset: Int,
-                                              filteringMorsel: FilteringMorselExecutionContext,
-                                              isCancelledCheck: Long => Boolean): IndexedSeq[Long] = {
-    filteringMorsel.resetToFirstRawRow()
-
-    val cancelled = new ArrayBuffer[Long]
-
-    while (filteringMorsel.isValidRawRow) {
-      val arg = filteringMorsel.getArgumentAt(argumentSlotOffset)
-      val isCancelled = isCancelledCheck(arg)
-      if (isCancelled) {
-        cancelled += arg
-
-        // Cancel all rows up to the next argument
-        do {
-          filteringMorsel.cancelCurrentRow()
-          filteringMorsel.moveToNextRawRow()
-        } while (filteringMorsel.isValidRawRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
-
-      } else {
-        // We should keep this argument. Skip ahead to the next argument.
-        do {
-          filteringMorsel.moveToNextRawRow()
-        } while (filteringMorsel.isValidRawRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == arg)
-      }
-    }
-    cancelled
   }
 
   case class PerArgument[T](argumentRowId: Long, value: T)

@@ -62,17 +62,6 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
                             row => onRow(filterState, row))
   }
 
-  override def filterCancelledArguments(morsel: MorselExecutionContext,
-                                        isCancelled: STATE => Boolean): IndexedSeq[Long] = {
-    if (isCancelled(controller.state)) {
-      morsel.resetToFirstRow()
-      morsel.finishedWriting()
-      IndexedSeq(TopLevelArgument.VALUE)
-    } else {
-      IndexedSeq.empty
-    }
-  }
-
   override def takeOneCompleted(): STATE = {
     if (hasController && controller.tryTake()) {
       val completedState = controller.state

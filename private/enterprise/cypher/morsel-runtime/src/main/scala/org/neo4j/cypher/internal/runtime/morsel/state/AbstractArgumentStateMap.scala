@@ -60,13 +60,6 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     )
   }
 
-  override def filterCancelledArguments(morsel: MorselExecutionContext,
-                                        isCancelled: STATE => Boolean): IndexedSeq[Long] = {
-    ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
-      morsel,
-      argumentRowId => isCancelled(controllers.get(argumentRowId).state))
-  }
-
   override def takeOneCompleted(): STATE = {
     val iterator = controllers.values().iterator()
 

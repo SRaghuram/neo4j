@@ -5,12 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 
+import java.util
+
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.execution.{FilteringMorselExecutionContext, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateMaps, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, MorselParallelizer, QueryCompletionTracker}
+import org.neo4j.util.Preconditions
 
 /**
   * Morsel buffer which adds reference counting of arguments to the regular buffer semantics.
@@ -30,6 +33,16 @@ class MorselBuffer(id: BufferId,
                     with Source[MorselParallelizer]
                     with SinkByOrigin
                     with DataHolder {
+
+  private val cancellerMaps = {
+    val x = new Array[ArgumentStateMap[WorkCanceller]](workCancellers.size)
+    var i = 0
+    while (i < workCancellers.size) {
+      x(i) = argumentStateMaps(workCancellers(i)).asInstanceOf[ArgumentStateMap[WorkCanceller]]
+      i += 1
+    }
+    x
+  }
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
@@ -92,16 +105,59 @@ class MorselBuffer(id: BufferId,
     * @return `true` iff the morsel is cancelled
     */
   def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
-    var i = 0
-    while (i < workCancellers.size) {
-      val workCanceller = workCancellers(i)
-      val argumentStateMap = argumentStateMaps(workCanceller).asInstanceOf[ArgumentStateMap[WorkCanceller]]
-      val cancelledArguments =
-        argumentStateMap.filterCancelledArguments(morsel, canceller => canceller.isCancelled)
+    if (workCancellers.nonEmpty) {
+      val currentRow = morsel.getCurrentRow // Save current row
 
-      decrementArgumentCounts(downstreamArgumentReducers, cancelledArguments)
-      i += 1
+      Preconditions.checkArgument(morsel.isInstanceOf[FilteringMorselExecutionContext],
+        s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
+
+      val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
+      filteringMorsel.resetToFirstRow()
+
+      val reducerArguments = new Array[Long](downstreamArgumentReducers.size)
+      util.Arrays.fill(reducerArguments, -1) // otherwise we do not decrement for argumentRowId 0
+
+      while (filteringMorsel.isValidRow) {
+        var i = 0
+        var isCancelled = false
+        var argumentRowId: Long = -1L
+        var argumentSlotOffset: Int = -2
+
+        while (i < workCancellers.size && !isCancelled) {
+          val cancellerMap = cancellerMaps(i)
+          argumentRowId = filteringMorsel.getArgumentAt(cancellerMap.argumentSlotOffset)
+          if (cancellerMap.peek(argumentRowId).isCancelled) {
+            argumentSlotOffset = cancellerMap.argumentSlotOffset
+            isCancelled = true // break
+          }
+          i += 1
+        }
+        if (isCancelled) {
+
+          // Cancel all rows up to the next argument
+          do {
+            var i = 0
+            while (i < downstreamArgumentReducers.size) {
+              val reducer = downstreamArgumentReducers(i)
+              val arg = filteringMorsel.getArgumentAt(reducer.argumentSlotOffset)
+              if (arg != reducerArguments(i)) {
+                reducer.decrement(arg)
+                reducerArguments(i) = arg
+              }
+              i += 1
+            }
+            filteringMorsel.cancelCurrentRow()
+            filteringMorsel.moveToNextRow()
+          } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == argumentRowId)
+
+        } else {
+          filteringMorsel.moveToNextRow()
+        }
+      }
+
+      filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
     }
+
     morsel.isEmpty
   }
 

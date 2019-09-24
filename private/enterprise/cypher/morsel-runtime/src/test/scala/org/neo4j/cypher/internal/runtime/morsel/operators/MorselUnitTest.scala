@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
 
 abstract class MorselUnitTest extends CypherFunSuite {
   protected val resources: QueryResources = mock[QueryResources](RETURNS_DEEP_STUBS)
@@ -155,6 +156,64 @@ abstract class MorselUnitTest extends CypherFunSuite {
       input.addRow(longs, refs)
       this
     }
+  }
+
+  def alwaysTruePredicate: Long => Boolean = _ => true
+  def alwaysFalsePredicate: Long => Boolean = _ => false
+  def moduloPredicate(n: Long): Long => Boolean = _ % n == 0
+  def ltPredicate(n: Long): Long => Boolean = _ < n
+  def gtePredicate(n: Long): Long => Boolean = _ >= n
+  def eqPredicate(n: Long): Long => Boolean = _ == n
+
+  def buildSequentialInput(numberOfRows: Int): FilteringMorselExecutionContext = {
+    var rb = new FilteringInput()
+    (0 until numberOfRows).foreach { i =>
+      rb = rb.addRow(Longs(i, i*2), Refs(Values.stringValue(i.toString), Values.stringValue((i*2).toString)))
+    }
+    rb.build()
+  }
+
+  def validateRows(row: FilteringMorselExecutionContext, numberOfRows: Int, predicate: Long => Boolean): Unit = {
+    val rawRow = row.shallowCopy()
+
+    val expectedValidRows = (0 until numberOfRows).foldLeft(0)((count, i) => if (predicate(i)) count + 1 else count)
+
+    row.getCurrentRow shouldEqual 0
+    row.numberOfRows shouldEqual numberOfRows
+    rawRow.getCurrentRow shouldEqual 0
+    rawRow.numberOfRows shouldEqual numberOfRows
+
+    row.getValidRows shouldEqual expectedValidRows
+    rawRow.getValidRows shouldEqual expectedValidRows
+
+    row.resetToFirstRow()
+    (0 until numberOfRows).foreach { i =>
+      rawRow.isValidRawRow shouldBe true
+      if (predicate(i)) {
+        rawRow.isCancelled(i) shouldBe false
+        row.isValidRow shouldBe true
+        validateRowDataContent(row, i)
+        validateRowDataContent(rawRow, i)
+
+        val hasNextRow = row.hasNextRow
+        row.moveToNextRow()
+        row.isValidRow shouldEqual hasNextRow
+      } else {
+        rawRow.isCancelled(i) shouldBe true
+        rawRow.isValidRow shouldBe false
+      }
+      rawRow.moveToNextRawRow()
+    }
+    row.isValidRow shouldEqual false
+    rawRow.isValidRow shouldEqual false
+    rawRow.isValidRawRow shouldEqual false
+  }
+
+  def validateRowDataContent(row: MorselExecutionContext, i: Int): Unit = {
+    row.getLongAt(0) shouldEqual i
+    row.getLongAt(1) shouldEqual i*2
+    row.getRefAt(0) shouldEqual Values.stringValue(i.toString)
+    row.getRefAt(1) shouldEqual Values.stringValue((i*2).toString)
   }
 
   class StatelessOperatorGiven(operator: StatelessOperator) extends Given with HasOneInput {
