@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark-infra</artifactId>
-        <version>3.5.11-SNAPSHOT</version>
+        <version>3.5.12-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
