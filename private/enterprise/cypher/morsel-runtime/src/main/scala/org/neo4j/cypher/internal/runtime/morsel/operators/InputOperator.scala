@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue}
@@ -132,7 +133,9 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
                             nodeOffsets: Array[Int],
                             relationshipOffsets: Array[Int],
                             refOffsets: Array[Int],
-                            nullable: Boolean)(codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+                            nullable: Boolean,
+                            final override protected val isHead: Boolean = true)
+                           (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import IntermediateRepresentation._
   import OperatorCodeGenHelperTemplates._
 
@@ -169,7 +172,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
     *    outputRow.finishedWriting()
     * }}}
     */
-  override def genOperate: IntermediateRepresentation = {
+  final override protected def genOperateHead: IntermediateRepresentation = {
 
     val setNodes = nodeOffsets.zipWithIndex.map {
       case (nodeOffset, i) =>
@@ -202,6 +205,10 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
         )
       )
     )
+  }
+
+  override protected def genOperateMiddle: IntermediateRepresentation = {
+    throw new CantCompileQueryException("Cannot compile Input as middle operator")
   }
 
   override def genInit: IntermediateRepresentation = inner.genInit

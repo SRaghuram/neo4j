@@ -102,7 +102,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                                      override val id: Id,
                                      innermost: DelegateOperatorTaskTemplate,
                                      codeGen: OperatorExpressionCompiler,
-                                     isHead: Boolean = true) extends ContinuableOperatorTaskWithMorselTemplate {
+                                     override val isHead: Boolean = true) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
 
   protected val canContinue: InstanceField = field[Boolean](codeGen.namer.nextVariableName() + "canContinue")
@@ -129,10 +129,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     inner.genInit
   }
 
-  override def genOperate: IntermediateRepresentation =
-    if (isHead) genOperateHead else genOperateMiddle
-
-  private def genOperateHead: IntermediateRepresentation = {
+  final override protected def genOperateHead: IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
     //while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
     //  if (!innerLoop) {
@@ -183,20 +180,21 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                   setField(innerLoop, constant(false)),
                   INPUT_ROW_MOVE_TO_NEXT,
                   setField(canContinue, INPUT_ROW_IS_VALID)
-                  )
                 )
               )
-            )( //else
-              block(
-                INPUT_ROW_MOVE_TO_NEXT
-               )),
+            )
+          )( //else
+            block(
+              INPUT_ROW_MOVE_TO_NEXT
+            )
+          ),
           innermost.resetCachedPropertyVariables
-          )
         )
       )
+    )
   }
 
-  private def genOperateMiddle: IntermediateRepresentation = {
+  final override protected def genOperateMiddle: IntermediateRepresentation = {
     /**
       * This is called when the loop is used as a middle operator,
       * Here we should act as an inner loop and not advance the input
@@ -229,17 +227,17 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                 block(
                   genCloseInnerLoop,
                   setField(innerLoop, constant(false)),
-                  )
                 )
               )
-            ),
+            )
+          ),
           innermost.resetCachedPropertyVariables,
           condition(and(loadField(canContinue), not(innermost.predicate))) (
             break(OUTER_LOOP_LABEL_NAME)
-            )
           )
         )
       )
+    )
   }
 
   /**

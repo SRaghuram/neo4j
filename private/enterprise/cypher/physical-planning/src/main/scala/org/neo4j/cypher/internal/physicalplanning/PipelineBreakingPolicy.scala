@@ -107,7 +107,8 @@ object OperatorFusionPolicy {
              _: UndirectedRelationshipByIdSeek |
              _: NodeCountFromCountStore |
              _: RelationshipCountFromCountStore |
-             _: Input
+             _: Input |
+             _: Argument
         => true
 
         // one child operators
@@ -131,11 +132,18 @@ object OperatorFusionPolicy {
     }
 
     override def canFuseOverPipeline(lp: LogicalPlan): Boolean = lp match {
+      case _: Argument |
+           _: Input =>
+        false
+
       //because of how fused var expand is implemented where we evaluate predicate in a separate specialized
       //implementation of a VarExpandCursor we can at this moment not fuse VarExpand if it contains
       //predicates
-      case e: VarExpand if e.nodePredicate.isDefined || e.relationshipPredicate.isDefined => false
-      case _ => canFuse(lp)
+      case e: VarExpand if e.nodePredicate.isDefined || e.relationshipPredicate.isDefined =>
+        false
+
+      case _ =>
+        canFuse(lp)
     }
   }
 

@@ -435,6 +435,13 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   import IntermediateRepresentation._
   import OperatorCodeGenHelperTemplates._
 
+  protected def isHead: Boolean
+  protected def genOperateHead: IntermediateRepresentation
+  protected def genOperateMiddle: IntermediateRepresentation
+
+  final override def genOperate: IntermediateRepresentation =
+    if (isHead) genOperateHead else genOperateMiddle
+
   // We let the generated class extend the abstract class CompiledContinuableOperatorTaskWithMorsel(which extends ContinuableOperatorTaskWithMorsel),
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
 

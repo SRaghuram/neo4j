@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation.{and, block, labeledLoop}
+import org.neo4j.codegen.api.IntermediateRepresentation.{and, block, break, condition, constant, labeledLoop, loadField, loop, not, or, setField}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentS
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.exceptions.CantCompileQueryException
 
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {
@@ -60,14 +61,14 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
 class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
                                    override val id: Id,
-                                   innermost: DelegateOperatorTaskTemplate)
+                                   innermost: DelegateOperatorTaskTemplate,
+                                   final override protected val isHead: Boolean = true)
                                    (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
-  // [HN] It might be time to try to move the shared logic between InputLoopTask, InputOperator and ArgumentOperator templates into ContinuableOperatorTaskWithMorselTemplate
-  override protected def genOperate: IntermediateRepresentation = {
+  override protected def genOperateHead: IntermediateRepresentation = {
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(INPUT_ROW_IS_VALID, innermost.predicate))(
         block(
@@ -80,13 +81,19 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
     )
   }
 
+  override protected def genOperateMiddle: IntermediateRepresentation = {
+    throw new CantCompileQueryException("Cannot compile Input as middle operator")
+  }
+
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty[IntermediateExpression]
 
   override def genFields: Seq[Field] = Seq.empty[Field]
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty[LocalVariable]
 
-  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+  override def genCanContinue: Option[IntermediateRepresentation] = {
+    inner.genCanContinue.map(or(_, INPUT_ROW_IS_VALID)).orElse(Some(INPUT_ROW_IS_VALID))
+  }
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 }
