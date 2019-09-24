@@ -343,9 +343,19 @@ object ArgumentStateMap {
              morsel: MorselExecutionContext,
              f: MorselExecutionContext => T): IndexedSeq[PerArgument[T]] = {
 
+    val result = new ArrayBuffer[PerArgument[T]]()
+    foreach(argumentSlotOffset,
+            morsel,
+            (argumentRowId, view) => result += PerArgument(argumentRowId, f(view)))
+    result
+  }
+
+  def foreach[T](argumentSlotOffset: Int,
+                 morsel: MorselExecutionContext,
+                 f: (Long, MorselExecutionContext) => Unit): Unit = {
+
     val readingRow = morsel.shallowCopy()
     readingRow.resetToFirstRow()
-    val result = new ArrayBuffer[PerArgument[T]]()
 
     while (readingRow.isValidRow) {
       val arg = readingRow.getArgumentAt(argumentSlotOffset)
@@ -356,8 +366,7 @@ object ArgumentStateMap {
       val end: Int = readingRow.getCurrentRow
 
       val view = readingRow.view(start, end)
-      result += PerArgument(arg, f(view))
+      f(arg, view)
     }
-    result
   }
 }

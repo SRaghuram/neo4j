@@ -91,6 +91,7 @@ class Buffers(numBuffers: Int,
           new MorselAttachBuffer(bufferDefinition.id,
                                  applyBuffer(x.applyBuffer.id),
                                  x.outputSlots,
+                                 x.argumentSlotOffset,
                                  x.argumentSize.nLongs,
                                  x.argumentSize.nReferences)
 

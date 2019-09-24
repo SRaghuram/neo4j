@@ -99,9 +99,9 @@ object PipelineTreeBuilder {
     * Builder for [[AttachBufferVariant]]
     */
   class AttachBufferDefinitionBuild(id: BufferId,
-                                    val attachingPlan: LogicalPlan,
                                     inputSlotConfiguration: SlotConfiguration,
                                     val outputSlotConfiguration: SlotConfiguration,
+                                    val argumentSlotOffset: Int,
                                     val argumentSize: SlotConfiguration.Size
                                    ) extends BufferDefinitionBuild(id, inputSlotConfiguration) {
 
@@ -173,18 +173,17 @@ object PipelineTreeBuilder {
     }
 
     def newAttachBuffer(producingPipelineId: PipelineId,
-                        argumentSlotOffset: Int,
-                        attachingPlan: LogicalPlan,
                         inputSlotConfiguration: SlotConfiguration,
                         postAttachSlotConfiguration: SlotConfiguration,
-                        argumentSize: SlotConfiguration.Size): AttachBufferDefinitionBuild = {
+                        outerArgumentSlotOffset: Int,
+                        outerArgumentSize: SlotConfiguration.Size): AttachBufferDefinitionBuild = {
 
       val x = buffers.size
       val buffer = new AttachBufferDefinitionBuild(BufferId(x),
-                                                   attachingPlan,
                                                    inputSlotConfiguration,
                                                    postAttachSlotConfiguration,
-                                                   argumentSize)
+                                                   outerArgumentSlotOffset,
+                                                   outerArgumentSize)
       buffers += buffer
       buffer
     }
@@ -246,20 +245,20 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   private def outputToAttachApplyBuffer(pipeline: PipelineDefinitionBuild,
+                                        attachingPlanId: Id,
                                         argumentSlotOffset: Int,
-                                        attachingPlan: LogicalPlan,
                                         postAttachSlotConfiguration: SlotConfiguration,
-                                        argumentSize: SlotConfiguration.Size): AttachBufferDefinitionBuild = {
+                                        outerArgumentSlotOffset: Int,
+                                        outerArgumentSize: SlotConfiguration.Size): AttachBufferDefinitionBuild = {
 
     val output = stateDefinition.newAttachBuffer(pipeline.id,
-                                                 argumentSlotOffset,
-                                                 attachingPlan,
                                                  slotConfigurations(pipeline.headPlan.id),
                                                  postAttachSlotConfiguration,
-                                                 argumentSize)
+                                                 outerArgumentSlotOffset,
+                                                 outerArgumentSize)
 
     output.applyBuffer = stateDefinition.newApplyBuffer(pipeline.id, argumentSlotOffset, postAttachSlotConfiguration)
-    pipeline.outputDefinition = MorselBufferOutput(output.id, attachingPlan.id)
+    pipeline.outputDefinition = MorselBufferOutput(output.id, attachingPlanId)
     output
   }
 
@@ -410,11 +409,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       case _: plans.CartesianProduct =>
         val rhsSlots = slotConfigurations(plan.rhs.get.id)
         val argumentSlotOffset = rhsSlots.getArgumentLongOffsetFor(plan.id)
+        val outerArgumentSize = argumentSizes.get(LogicalPlans.leftLeaf(plan).id)
+        val outerArgumentSlotOffset = argument.argumentSlotOffset
 
-        // TODO: record argumentSize for all plans, this getOrElse is not correct
-        val argumentSize = argumentSizes.getOrElse(plan.lhs.get.id, SlotAllocation.NO_ARGUMENT(true).argumentSize)
-
-        outputToAttachApplyBuffer(lhs, argumentSlotOffset, plan, rhsSlots, argumentSize).applyBuffer
+        outputToAttachApplyBuffer(lhs, plan.id, argumentSlotOffset, rhsSlots, outerArgumentSlotOffset, outerArgumentSize).applyBuffer
 
       case _ =>
         argument

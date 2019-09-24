@@ -8,14 +8,17 @@ package org.neo4j.cypher.internal.runtime.morsel.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.SinkByOrigin
 
 /**
- * A buffer which folds input morsels into an attachment of a new morsel.
+ * A buffer which groups input morsels by argument row id and folds each
+  * such group/view into an attachment of a new morsel.
  */
 class MorselAttachBuffer(id: BufferId,
                          delegateApplyBuffer: MorselApplyBuffer,
                          outputSlots: SlotConfiguration,
+                         argumentSlotOffset: Int,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
                        ) extends SinkByOrigin
@@ -27,14 +30,15 @@ class MorselAttachBuffer(id: BufferId,
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
+
     if (morsel.hasData) {
-      morsel.resetToFirstRow()
+      ArgumentStateMap.foreach(argumentSlotOffset, morsel, (_, view) => {
+        val outputMorsel = new FilteringMorselExecutionContext(Morsel.create(outputSlots, 1), outputSlots, 1, 0, 0, 1, morsel.producingWorkUnitEvent)
+        outputMorsel.copyFrom(view, argumentNumLongs, argumentNumRefs)
+        outputMorsel.attach(view)
 
-      val outputMorsel = new FilteringMorselExecutionContext(Morsel.create(outputSlots, 1), outputSlots, 1, 0, 0, 1, morsel.producingWorkUnitEvent)
-      outputMorsel.copyFrom(morsel, argumentNumLongs, argumentNumRefs)
-      outputMorsel.attach(morsel)
-
-      delegateApplyBuffer.put(outputMorsel)
+        delegateApplyBuffer.put(outputMorsel)
+      })
     }
   }
 

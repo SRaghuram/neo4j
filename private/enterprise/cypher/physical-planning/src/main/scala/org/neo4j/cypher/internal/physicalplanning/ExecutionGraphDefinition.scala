@@ -136,9 +136,9 @@ case class ApplyBufferVariant(argumentSlotOffset: Int,
     (argumentSlotOffset, reducersOnRHSReversed, delegates)
 }
 
-case class AttachBufferVariant(attachingPlanId: Id, // TODO: remove?
-                               applyBuffer: BufferDefinition,
+case class AttachBufferVariant(applyBuffer: BufferDefinition,
                                outputSlots: SlotConfiguration,
+                               argumentSlotOffset: Int,
                                argumentSize: SlotConfiguration.Size) extends BufferVariant
 
 /**

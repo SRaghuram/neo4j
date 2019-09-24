@@ -46,7 +46,7 @@ object PipelineBuilder {
 
     val variant = bufferDefinition match {
       case b: AttachBufferDefinitionBuild =>
-        AttachBufferVariant(b.attachingPlan.id, mapBuffer(b.applyBuffer), b.outputSlotConfiguration, b.argumentSize)
+        AttachBufferVariant(mapBuffer(b.applyBuffer), b.outputSlotConfiguration, b.argumentSlotOffset, b.argumentSize)
 
       case b: ApplyBufferDefinitionBuild =>
         ApplyBufferVariant(b.argumentSlotOffset,
