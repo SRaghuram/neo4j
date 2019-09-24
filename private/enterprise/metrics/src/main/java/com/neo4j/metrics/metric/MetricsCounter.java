@@ -12,6 +12,7 @@ import java.util.function.LongSupplier;
 public class MetricsCounter extends Meter
 {
     private final LongSupplier countSupplier;
+    private volatile long memo;
 
     public MetricsCounter( LongSupplier countSupplier )
     {
@@ -21,6 +22,13 @@ public class MetricsCounter extends Meter
     @Override
     public long getCount()
     {
-        return countSupplier.getAsLong();
+        try
+        {
+            return memo = countSupplier.getAsLong();
+        }
+        catch ( Exception e )
+        {
+            return memo;
+        }
     }
 }
