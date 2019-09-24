@@ -49,8 +49,9 @@ public class UserManagementProcedures extends AuthProceduresBase
     }
 
     @SystemProcedure
+    @Deprecated
     @Description( "Change the current user's password." )
-    @Procedure( name = "dbms.security.changePassword", mode = DBMS )
+    @Procedure( name = "dbms.security.changePassword", mode = DBMS, deprecatedBy = "Administration command: ALTER CURRENT USER SET PASSWORD" )
     public void changePassword( @Name( "password" ) String password,
             @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange ) throws ProcedureException
     {

@@ -58,6 +58,13 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
      */
 
     @Test
+    void shouldGiveDeprecatedNotificationsForChangePassword()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.changePassword( '321' )",
+                deprecatedProcedureNotification( "dbms.security.changePassword", "Administration command: ALTER CURRENT USER SET PASSWORD" ) );
+    }
+
+    @Test
     void shouldGiveDeprecatedNotificationsForChangeUserPassword()
     {
         assertNotificationForSystemCommand( "explain CALL dbms.security.changeUserPassword( 'readSubject', '321', false )",
