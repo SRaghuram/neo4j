@@ -62,6 +62,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -74,6 +75,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_PROPERTYKEY;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_RELTYPE;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
@@ -91,7 +95,9 @@ public abstract class ProcedureInteractionTestBase<S>
     String PERMISSION_DENIED = "Permission denied.";
     String ACCESS_DENIED = "Database access is not allowed for user";
     String WRITE_OPS_NOT_ALLOWED = "Write operations are not allowed";
-    String TOKEN_CREATE_OPS_NOT_ALLOWED = "Token create operations are not allowed";
+    String CREATE_LABEL_OPS_NOT_ALLOWED = format( "'%s' operations are not allowed", CREATE_LABEL );
+    String CREATE_RELTYPE_OPS_NOT_ALLOWED = format( "'%s' operations are not allowed", CREATE_RELTYPE );
+    String CREATE_PROPERTYKEY_OPS_NOT_ALLOWED = format( "'%s' operations are not allowed", CREATE_PROPERTYKEY );
     String SCHEMA_OPS_NOT_ALLOWED = "Schema operations are not allowed";
 
     protected boolean IS_EMBEDDED = true;
@@ -252,7 +258,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testFailTokenWrite( S subject )
     {
-        testFailTokenWrite( subject, TOKEN_CREATE_OPS_NOT_ALLOWED );
+        testFailTokenWrite( subject, CREATE_LABEL_OPS_NOT_ALLOWED );
     }
 
     void testFailTokenWrite( S subject, String errMsg )
@@ -430,12 +436,12 @@ public abstract class ProcedureInteractionTestBase<S>
         if ( IS_EMBEDDED )
         {
             subjectToUse = subject;
-            query = String.format( "ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", oldPassword, newPassword );
+            query = format( "ALTER CURRENT USER SET PASSWORD FROM '%s' TO '%s'", oldPassword, newPassword );
         }
         else
         {
             subjectToUse = adminSubject;
-            query = String.format( "ALTER USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", neo.nameOf( subject ), newPassword );
+            query = format( "ALTER USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", neo.nameOf( subject ), newPassword );
         }
         assertDDLCommandSuccess( subjectToUse, query );
     }
@@ -445,7 +451,7 @@ public abstract class ProcedureInteractionTestBase<S>
         String err = assertCallEmpty( subject, DEFAULT_DATABASE_NAME, call, null );
         if ( StringUtils.isEmpty( err ) )
         {
-            fail( String.format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
+            fail( format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
         }
         else
         {
@@ -476,7 +482,7 @@ public abstract class ProcedureInteractionTestBase<S>
         String err = assertCallEmpty( subject, SYSTEM_DATABASE_NAME, call, null );
         if ( StringUtils.isEmpty( err ) )
         {
-            fail( String.format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
+            fail( format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
         }
         else
         {
@@ -532,7 +538,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     private void createRole( String roleName, boolean grantAccess, String... usernames )
     {
-        assertDDLCommandSuccess( adminSubject, String.format( "CREATE ROLE %s", roleName) );
+        assertDDLCommandSuccess( adminSubject, format( "CREATE ROLE %s", roleName) );
         if ( grantAccess )
         {
             grantAccess( roleName );
@@ -540,13 +546,13 @@ public abstract class ProcedureInteractionTestBase<S>
 
         for ( String username : usernames )
         {
-            assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", roleName, username) );
+            assertDDLCommandSuccess( adminSubject, format( "GRANT ROLE %s TO %s", roleName, username) );
         }
     }
 
     void grantAccess( String roleName )
     {
-        assertDDLCommandSuccess( adminSubject, String.format( "GRANT ACCESS ON DATABASE * TO %s", roleName ) );
+        assertDDLCommandSuccess( adminSubject, format( "GRANT ACCESS ON DATABASE * TO %s", roleName ) );
     }
 
     List<Object> getObjectsAsList( ResourceIterator<Map<String,Object>> r, String key )

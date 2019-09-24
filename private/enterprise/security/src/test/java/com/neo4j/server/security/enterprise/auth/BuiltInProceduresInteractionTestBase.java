@@ -699,11 +699,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldCreateLabel()
     {
-        assertFail( editorSubject, "CREATE (:MySpecialLabel)", TOKEN_CREATE_OPS_NOT_ALLOWED );
-        assertFail( editorSubject, "CALL db.createLabel('MySpecialLabel')", TOKEN_CREATE_OPS_NOT_ALLOWED );
+        assertFail( editorSubject, "CREATE (:MySpecialLabel)", CREATE_LABEL_OPS_NOT_ALLOWED );
+        assertFail( editorSubject, "CALL db.createLabel('MySpecialLabel')", CREATE_LABEL_OPS_NOT_ALLOWED );
         assertEmpty( writeSubject, "CALL db.createLabel('MySpecialLabel')" );
-        assertSuccess( writeSubject, "MATCH (n:MySpecialLabel) RETURN count(n) AS count",
-                r -> r.next().get( "count" ).equals( 0 ) );
+        assertSuccess( writeSubject, "MATCH (n:MySpecialLabel) RETURN count(n) AS count", r -> r.next().get( "count" ).equals( 0 ) );
         assertEmpty( editorSubject, "CREATE (:MySpecialLabel)" );
     }
 
@@ -711,26 +710,21 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldCreateRelationshipType()
     {
         assertEmpty( writeSubject, "CREATE (a:Node {id:0}) CREATE ( b:Node {id:1} )" );
-        assertFail( editorSubject,
-                "MATCH (a:Node), (b:Node) WHERE a.id = 0 AND b.id = 1 CREATE (a)-[:MySpecialRelationship]->(b)",
-                TOKEN_CREATE_OPS_NOT_ALLOWED );
-        assertFail( editorSubject, "CALL db.createRelationshipType('MySpecialRelationship')",
-                TOKEN_CREATE_OPS_NOT_ALLOWED );
+        assertFail( editorSubject, "MATCH (a:Node), (b:Node) WHERE a.id = 0 AND b.id = 1 CREATE (a)-[:MySpecialRelationship]->(b)",
+                CREATE_RELTYPE_OPS_NOT_ALLOWED );
+        assertFail( editorSubject, "CALL db.createRelationshipType('MySpecialRelationship')", CREATE_RELTYPE_OPS_NOT_ALLOWED );
         assertEmpty( writeSubject, "CALL db.createRelationshipType('MySpecialRelationship')" );
-        assertSuccess( editorSubject, "MATCH (n)-[c:MySpecialRelationship]-(m) RETURN count(c) AS count",
-                r -> r.next().get( "count" ).equals( 0 ) );
-        assertEmpty( editorSubject,
-                "MATCH (a:Node), (b:Node) WHERE a.id = 0 AND b.id = 1 CREATE (a)-[:MySpecialRelationship]->(b)" );
+        assertSuccess( editorSubject, "MATCH (n)-[c:MySpecialRelationship]-(m) RETURN count(c) AS count", r -> r.next().get( "count" ).equals( 0 ) );
+        assertEmpty( editorSubject, "MATCH (a:Node), (b:Node) WHERE a.id = 0 AND b.id = 1 CREATE (a)-[:MySpecialRelationship]->(b)" );
     }
 
     @Test
     void shouldCreateProperty()
     {
-        assertFail( editorSubject, "CREATE (a) SET a.MySpecialProperty = 'a'", TOKEN_CREATE_OPS_NOT_ALLOWED );
-        assertFail( editorSubject, "CALL db.createProperty('MySpecialProperty')", TOKEN_CREATE_OPS_NOT_ALLOWED );
+        assertFail( editorSubject, "CREATE (a) SET a.MySpecialProperty = 'a'", CREATE_PROPERTYKEY_OPS_NOT_ALLOWED );
+        assertFail( editorSubject, "CALL db.createProperty('MySpecialProperty')", CREATE_PROPERTYKEY_OPS_NOT_ALLOWED );
         assertEmpty( writeSubject, "CALL db.createProperty('MySpecialProperty')" );
-        assertSuccess( editorSubject, "MATCH (n) WHERE n.MySpecialProperty IS NULL RETURN count(n) AS count",
-                r -> r.next().get( "count" ).equals( 0 ) );
+        assertSuccess( editorSubject, "MATCH (n) WHERE n.MySpecialProperty IS NULL RETURN count(n) AS count", r -> r.next().get( "count" ).equals( 0 ) );
         assertEmpty( editorSubject, "CREATE (a) SET a.MySpecialProperty = 'a'" );
     }
 
