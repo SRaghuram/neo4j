@@ -24,7 +24,8 @@ import org.neo4j.internal.kernel.api.helpers.{StubNodeCursor, StubRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
-import org.neo4j.kernel.impl.core.{NodeProxy, TransactionalProxyFactory}
+import org.neo4j.kernel.impl.core.NodeProxy
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
@@ -46,14 +47,15 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     nodeCursor.withNode(1)
     nodeCursor.withNode(2)
     when(cursors.allocateNodeCursor()).thenReturn(nodeCursor)
-    val entityAccessor = mock[TransactionalProxyFactory]
+    val transaction = mock[InternalTransaction]
     val queryContext = mock[QueryContext]
     val transactionalContext = mock[TransactionalContextWrapper]
+    when(queryContext.entityAccessor).thenReturn(transaction)
     when(queryContext.transactionalContext).thenReturn(transactionalContext.asInstanceOf[QueryTransactionalContext])
     when(transactionalContext.kernelStatisticProvider).thenReturn(new DelegatingKernelStatisticProvider(new DefaultPageCursorTracer))
     when(transactionalContext.cursors).thenReturn(cursors)
     when(transactionalContext.dataRead).thenReturn(dataRead)
-    when(entityAccessor.newNodeProxy(anyLong())).thenReturn(mock[NodeProxy])
+    when(transaction.newNodeProxy(anyLong())).thenReturn(mock[NodeProxy])
 
     // when
     val tracer = new ProfilingTracer(transactionalContext.kernelStatisticProvider)
