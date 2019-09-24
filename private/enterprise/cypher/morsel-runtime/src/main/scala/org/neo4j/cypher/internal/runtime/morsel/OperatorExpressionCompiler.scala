@@ -190,10 +190,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
         // (See full comment in getLongAt above)
         condition(isNull(load(local)))(
-          block(
-            assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
-            condition(isNull(load(local)))(assign(local, getFromStore))
-          )
+          if (maybeCachedProperty.isDefined) {
+            block(
+              assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
+              condition(isNull(load(local)))(assign(local, getFromStore))
+            )
+          } else {
+            assign(local, getFromStore)
+          }
         )
       }
 
