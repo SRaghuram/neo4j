@@ -172,6 +172,8 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
           condition(not(loadField(innerLoop)))(setField(innerLoop, genInitializeInnerLoop)),
+            // TODO: We should have an else case here where we initialize local variables from context slots (or cached properties)!
+            // Could be another method, i.e. genContinueInnerLoop or genInitializeInnerLoopContinuation
           ifElse(loadField(innerLoop))(
             block(
               genInnerLoop,

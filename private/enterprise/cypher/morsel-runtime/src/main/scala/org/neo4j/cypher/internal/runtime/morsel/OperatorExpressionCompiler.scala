@@ -87,13 +87,34 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         load(local)
       )
     } else {
-      load(local)
+      block(
+        // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
+        // This happens for example when we have a continuation where innerLoop = true
+        // It is sub-optimal to check this every time at runtime, so we should come up with a better solution
+        // e.g. to do this initialization only once at the entry-point of each nested fused loop
+        //      or if possible, save the state when we exit with a continuation, and restore it when we come back
+        condition(equal(load(local), constant(-2L)))( // TODO: Define constant for uninitialized long slot local
+          // We need to initialize the local from the execution context
+          assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+        ),
+        load(local)
+      )
     }
   }
 
   final def getLongAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
     val local = locals.getLocalForLongSlot(offset)
-    if (local == null) orElse else load(local)
+    if (local == null) orElse else {
+      // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
+      // (See full comment in getLongAt above)
+      block(
+        condition(equal(load(local), constant(-2L)))( // TODO: Define constant for uninitialized long slot local
+          // We need to initialize the local from the execution context
+          assign(local, orElse),
+        ),
+        load(local)
+      )
+    }
   }
 
   override final def getRefAt(offset: Int): IntermediateRepresentation = {
@@ -105,13 +126,29 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         load(local)
       )
     } else {
-      load(local)
+      // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
+      // (See full comment in getLongAt above)
+      block(
+        condition(isNull(load(local)))(
+          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+        ),
+        load(local)
+      )
     }
   }
 
   final def getRefAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
     val local = locals.getLocalForRefSlot(offset)
-    if (local == null) orElse else load(local)
+    if (local == null) orElse else {
+      // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
+      // (See full comment in getLongAt above)
+      block(
+        condition(isNull(load(local)))(
+          assign(local, orElse),
+        ),
+        load(local)
+      )
+    }
   }
 
   override final def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {
@@ -145,13 +182,19 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         block(
           assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
           condition(isNull(load(local)))(assign(local, getFromStore))
-          )
+        )
       } else if (local == null) {
         local = locals.addCachedProperty(offset)
         assign(local, getFromStore)
       } else {
-        condition(isNull(load(local)))(assign(local, getFromStore))
-
+        // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
+        // (See full comment in getLongAt above)
+        condition(isNull(load(local)))(
+          block(
+            assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
+            condition(isNull(load(local)))(assign(local, getFromStore))
+          )
+        )
       }
 
     block(prepareOps, cast[Value](load(local)))

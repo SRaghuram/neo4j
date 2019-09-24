@@ -658,7 +658,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     val localsForSlots =
       codeGen.locals.getAllLocalsForLongSlots.map {
         case (_, name) =>
-          variable[Long](name, constant(-1L))
+          variable[Long](name, constant(-2L)) // TODO: Define constant for uninitialized value
       } ++
       codeGen.locals.getAllLocalsForRefSlots.map {
         case (_, name) =>
