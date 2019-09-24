@@ -106,7 +106,6 @@ Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths tha
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all relationships 2"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all relationships"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate"
-Feature "ShortestPathAcceptance": Scenario "Find a shortest path in an expression context"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path without loosing context information at runtime"
 Feature "ShortestPathAcceptance": Scenario "Find all shortest paths"
 Feature "ShortestPathAcceptance": Scenario "Find no shortest path when a length limit prunes all candidates"
@@ -125,5 +124,4 @@ Feature "SubqueryAcceptance": Scenario "CALL around union query - using returned
 Feature "SubqueryAcceptance": Scenario "CALL around union query with different return column orders - using returned vars in outer query"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with empty db"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"
-Feature "UnwindAcceptance": Scenario "Primitive node type support in list literal"
-Feature "UnwindAcceptance": Scenario "Primitive relationship type support in list literal"
+
