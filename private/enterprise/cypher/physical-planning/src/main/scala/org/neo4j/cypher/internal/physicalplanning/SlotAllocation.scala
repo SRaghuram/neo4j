@@ -36,12 +36,13 @@ import scala.util.Try
 object SlotAllocation {
 
   /**
-   * TODO
-   * @param slotConfiguration
-   * @param argumentSize
-   * @param applyPlan
-   */
-  case class SlotsAndArgument(slotConfiguration: SlotConfiguration, argumentSize: Size, applyPlan: Id)
+    * Case class containing information about the argument at a particular point during slot allocation.
+    *
+    * @param slotConfiguration the slot configuration of the argument. Might contain more slot than the argument.
+    * @param argumentSize the prefix size of `slotConfiguration` that holds the argument.
+    * @param argumentPlan the plan which introduced this argument
+    */
+  case class SlotsAndArgument(slotConfiguration: SlotConfiguration, argumentSize: Size, argumentPlan: Id)
 
   case class SlotMetaData(slotConfigurations: SlotConfigurations,
                           argumentSizes: ArgumentSizes,
@@ -125,7 +126,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     while (planStack.nonEmpty) {
       val (nullable, current) = planStack.pop()
 
-      val outerApplyPlan = if (argumentStack.isEmpty) Id.INVALID_ID else argumentStack.top.applyPlan
+      val outerApplyPlan = if (argumentStack.isEmpty) Id.INVALID_ID else argumentStack.top.argumentPlan
       applyPlans.set(current.id, outerApplyPlan)
 
       (current.lhs, current.rhs) match {
