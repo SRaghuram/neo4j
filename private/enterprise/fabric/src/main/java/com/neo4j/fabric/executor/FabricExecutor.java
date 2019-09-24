@@ -13,13 +13,13 @@ import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.planning.FabricQuery;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
+import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
+import com.neo4j.fabric.stream.SyncPublisher;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 
@@ -158,7 +158,13 @@ public class FabricExecutor
             MapValue parameters = addImportParams( params, recordValues, mapAsJavaMap( query.parameters() ) );
 
             // Wrapped in StatementResult, REMOVE?
-            return ctx.getRemote().run( graph, queryString, queryMode, parameters ).block().records();
+            StatementResult statementResult = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
+            Rx2SyncStream syncStream = new Rx2SyncStream( statementResult,
+                    config.getDataStream().getBufferLowWatermark(),
+                    config.getDataStream().getBufferSize(),
+                    config.getDataStream().getSyncBatchSize() );
+
+            return Flux.from( new SyncPublisher(syncStream) );
         } );
     }
 
