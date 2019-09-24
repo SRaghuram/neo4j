@@ -55,7 +55,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
     val creates = planDescription.find("Create")
     creates.size should equal(1)
     val expectedTotalDbHits: Long = BIG_N * 3
-    creates.head.totalDbHits.get should be > expectedTotalDbHits
+    creates.head.totalDbHits.hits should be > expectedTotalDbHits
   }
 
   test("PROFILE many CREATE clauses") {
@@ -72,7 +72,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
     val creates = planDescription.find("Create")
     creates.size should equal(1)
     val expectedTotalDbHits: Long = BIG_N * 3
-    creates.head.totalDbHits.get should be > expectedTotalDbHits
+    creates.head.totalDbHits.hits should be > expectedTotalDbHits
   }
 
   test("handle null value in property map from parameter for create node") {

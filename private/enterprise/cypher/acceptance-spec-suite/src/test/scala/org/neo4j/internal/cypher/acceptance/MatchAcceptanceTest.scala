@@ -978,7 +978,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.DropResult, "PROFILE MATCH (n) WHERE 1 = 0 AND 5 > 1 RETURN n")
 
     // Then
-    result.executionPlanDescription().totalDbHits should equal(Some(0))
+    result.executionPlanDescription().totalDbHits.hits should equal(Some(0))
   }
 
   test("should not touch the database when for impossible or'd predicates") {
@@ -989,7 +989,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.DropResult, "PROFILE MATCH (n) WHERE 1 = 0 OR 1 > 5 RETURN n")
 
     // Then
-    result.executionPlanDescription().totalDbHits should equal(Some(0))
+    result.executionPlanDescription().totalDbHits.hits should equal(Some(0))
   }
 
   test("should remove anded predicates that is always true") {

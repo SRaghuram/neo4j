@@ -214,14 +214,25 @@ public class PlannerDescription
     {
         String operatorType = executionPlanDescription.getName();
         Number estimatedRows = (Number) executionPlanDescription.getArguments().get( ESTIMATED_ROWS );
+        ExecutionPlanDescription.ProfilerStatistics profilerStatistics = null;
         // some queries are run with 'explain' instead of 'profile', e.g., those with PERIODIC COMMIT
-        long dbHits = executionPlanDescription.hasProfilerStatistics()
-                      ? executionPlanDescription.getProfilerStatistics().getDbHits()
-                      : -1;
-        // some queries are run with 'explain' instead of 'profile', e.g., those with PERIODIC COMMIT
-        long rows = executionPlanDescription.hasProfilerStatistics()
-                    ? executionPlanDescription.getProfilerStatistics().getRows()
-                    : -1;
+        if ( executionPlanDescription.hasProfilerStatistics() )
+        {
+            profilerStatistics = executionPlanDescription.getProfilerStatistics();
+        }
+
+        long dbHits = -1;
+        if ( profilerStatistics != null && profilerStatistics.hasDbHits() )
+        {
+            dbHits = profilerStatistics.getDbHits();
+        }
+
+        long rows = -1;
+        if ( profilerStatistics != null && profilerStatistics.hasRows() )
+        {
+            rows = profilerStatistics.getRows();
+        }
+
         Map<String,String> arguments = executionPlanDescription.getArguments().entrySet().stream()
                                                                .filter( e -> isArgumentKey( e.getKey() ) )
                                                                .collect( toMap( Map.Entry::getKey, e -> e.getValue().toString() ) );

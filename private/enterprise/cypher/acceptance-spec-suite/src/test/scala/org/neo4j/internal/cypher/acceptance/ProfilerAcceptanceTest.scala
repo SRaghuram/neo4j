@@ -5,12 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Boolean.FALSE
-
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription.TotalHits
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.cypher.{ExecutionEngineFunSuite, TxCounts}
@@ -31,6 +30,21 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     planString should not include "Page Cache Misses"
     planString should not include "Page Cache Hit Ratio"
     planString should not include "Time (ms)"
+
+    planString.toLowerCase should not include "page cache"
+  }
+
+  test("morsel profile should include expected profiling data with some fused operators") {
+    createNode()
+    val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN count(*), n")
+    val planString = result.executionPlanDescription().toString
+    planString should include("Estimated Rows")
+    planString should include("Rows")
+    planString should include("DB Hits")
+    planString should not include "Page Cache Hits"
+    planString should not include "Page Cache Misses"
+    planString should not include "Page Cache Hit Ratio"
+    planString should include("Time (ms)")
 
     planString.toLowerCase should not include "page cache"
   }
@@ -58,10 +72,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     profile(Configs.All,
       "MATCH (n) RETURN n",
-      _ should (
-        includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
-          includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
-        ))
+      plan => {
+        plan should (
+          includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
+            includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
+          )
+        plan.totalDbHits shouldBe TotalHits(4, uncertain = false)
+      })
   }
 
   test("track db hits in Projection") {
@@ -104,24 +121,29 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Animal")
 
     val result = profileSingle("CALL db.labels")
-    result.executionPlanDescription() should includeSomewhere.aPlan("ProcedureCall")
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
-      .withDBHits(1)
       .withExactVariables("label", "nodeCount")
       .containingArgument("db.labels() :: (label :: String, nodeCount :: Integer)")
+    plan.totalDbHits shouldBe TotalHits(0, uncertain = true)
   }
 
   test("profile call in query") {
     createLabeledNode("Person")
     createLabeledNode("Animal")
 
-    val result = profileSingle("CYPHER runtime=slotted MATCH (n:Person) CALL db.labels() YIELD label RETURN *")
-
-    result.executionPlanDescription() should includeSomewhere.aPlan("ProcedureCall")
-      .withRows(2)
-      .withDBHits(1)
-      .withExactVariables("n", "label")
-      .containingArgument("db.labels() :: (label :: String)")
+    profile(Configs.InterpretedAndSlotted,
+      "MATCH (n:Person) CALL db.labels() YIELD label RETURN *",
+      plan => {
+        plan should includeSomewhere.aPlan("ProcedureCall")
+          .withRows(2)
+          .withExactVariables("n", "label")
+          .containingArgument("db.labels() :: (label :: String)")
+            .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
+        plan.totalDbHits shouldBe TotalHits(2, uncertain = true)
+      }
+    )
   }
 
   test("MATCH (n) WHERE (n)-[:FOO]->() RETURN *") {
@@ -627,7 +649,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   private def assertProfileData(p: InternalPlanDescription): Unit = {
-    if (!p.arguments.exists(_.isInstanceOf[DbHits])) {
+    if (p.name != "ProcedureCall" && !p.arguments.exists(_.isInstanceOf[DbHits])) {
       fail("Found plan that was not profiled with DbHits: " + p.name)
     }
     if (!p.arguments.exists(_.isInstanceOf[Rows])) {
