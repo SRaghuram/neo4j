@@ -164,7 +164,7 @@ public class FabricExecutor
                     config.getDataStream().getBufferSize(),
                     config.getDataStream().getSyncBatchSize() );
 
-            return Flux.from( new SyncPublisher(syncStream) );
+            return Flux.from( new SyncPublisher( syncStream ) );
         } );
     }
 

@@ -73,12 +73,14 @@ public class Rx2SyncStream
 
         if ( recordOrError.error != null )
         {
-            if (recordOrError.error instanceof FabricException ) {
+            if ( recordOrError.error instanceof FabricException )
+            {
                 throw (FabricException) recordOrError.error;
-            } else {
+            }
+            else
+            {
                 throw new FabricException( Status.Statement.ExecutionFailed, recordOrError.error );
             }
-
         }
 
         return recordOrError.record;
