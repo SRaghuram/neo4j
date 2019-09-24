@@ -8,6 +8,7 @@ package com.neo4j.bench.infra.worker;
 import com.amazonaws.SdkClientException;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -143,7 +144,7 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    Long.toString( runWorkloadParams.teamcityBuild() ),
                                    Long.toString( runWorkloadParams.parentBuild() ),
                                    runWorkloadParams.executionMode().name(),
-                                   "'" + String.join( " ", runWorkloadParams.jvmArgs() ) + "'",
+                                   String.join( " ", runWorkloadParams.jvmArgs() ),
                                    Boolean.toString( runWorkloadParams.isRecreateSchema() ),
                                    runWorkloadParams.planner().name(),
                                    runWorkloadParams.runtime().name(),
