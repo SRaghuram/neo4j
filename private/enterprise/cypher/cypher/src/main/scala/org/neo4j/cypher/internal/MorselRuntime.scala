@@ -48,6 +48,9 @@ class MorselRuntime(parallelExecution: Boolean,
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
+    if (query.periodicCommitInfo.isDefined)
+      throw new CantCompileQueryException("Periodic commit is not supported by Morsel runtime")
+
     compilePlan(shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled,
                 query,
                 context,

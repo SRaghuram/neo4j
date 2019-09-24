@@ -135,72 +135,77 @@ object InterpretedPipesFallbackPolicy {
   // WHITELIST
   private case class INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
 
-    override def breakOn(lp: LogicalPlan): Boolean = lp match {
-      // Whitelisted breaking plans
-      case _: PruningVarExpand =>
-        true
-
-      // Whitelisted breaking plans, but not for parallel
-      case _: ProcedureCall if !parallelExecution =>
-        true
-
-      // All other plans not explicitly whitelisted are not supported
-      case _ =>
-        throw unsupported(lp.getClass.getSimpleName)
-    }
-  }
-
-  //===================================
-  // BLACKLIST
-  private case class INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
-
-    override def breakOn(lp: LogicalPlan): Boolean = lp match {
-      // Blacklisted non-eager plans
-      case _: Skip =>
-        throw unsupported(lp.getClass.getSimpleName)
-
-      // Not supported in parallel execution
-      case _: ProcedureCall | _: LoadCSV if parallelExecution =>
-        throw unsupported(lp.getClass.getSimpleName)
-
-      // We do not support any eager plans
-      case _: EagerLogicalPlan |
-           _: EmptyResult =>
-        throw unsupported(lp.getClass.getSimpleName)
-
-  // The old morsel blacklist, for context:
-  // * Now implemented
-  // *          case _: plans.Limit | // Limit keeps state (remaining counter) between iterator.next() calls, so we cannot re-create iterator
-  // *               _: plans.Optional | // Optional pipe relies on a pull-based dataflow and needs a different solution for push
-  //                 _: plans.Skip | // Skip pipe eagerly drops n rows upfront which does not work with feed pipe
-  //                 _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
-  //                 _: plans.PartialSort | // same as above
-  //                 _: plans.PartialTop | // same as above
-  //                 _: plans.EmptyResult | // Eagerly exhausts the source iterator
-  // *               _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
-  //                 _: plans.LoadCSV | // Not verified to be thread safe
-  //                 _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
-  //                                              transaction via Core API reads, which is not thread safe because of the transaction
-  //                                              bound CursorFactory.
-
-      // Cardinality increasing plans need to break
+    val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
+      // Whitelisted breaking plans - All cardinality increasing plans need to break
       case e: Expand if e.mode == ExpandInto =>
         true
 
-      case _: OptionalExpand |
+      case _: PruningVarExpand |
+           _: OptionalExpand |
            _: FindShortestPaths =>
         true
 
       case p: ProjectEndpoints if !p.directed => // Undirected is cardinality increasing
         true
 
-      // All other one child plans are supported and assumed non-breaking
-      case _ if lp.lhs.isDefined && lp.rhs.isEmpty =>
+      // Whitelisted breaking plans, but not for parallel
+      case _: ProcedureCall if !parallelExecution =>
+        true
+
+      // Whitelisted non-breaking plans
+      case p: ProjectEndpoints if p.directed =>  // Directed is not cardinality increasing
         false
 
-      // Leafs or two-children plans are not supported
-      case _ =>
+      case _: DropResult |
+           _: ErrorPlan =>
+        false
+    }
+
+    override def breakOn(lp: LogicalPlan): Boolean = {
+      WHITELIST.applyOrElse[LogicalPlan, Boolean](lp, _ =>
+        // All other plans not explicitly whitelisted are not supported
+        throw unsupported(lp.getClass.getSimpleName))
+    }
+  }
+
+  //===================================
+  // BLACKLIST
+  private case class INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
+    private val WHITELIST = INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution).WHITELIST
+
+    val BLACKLIST: PartialFunction[LogicalPlan, Boolean] = {
+      // Blacklisted non-eager plans
+      case lp: Skip => // Maintains state a
         throw unsupported(lp.getClass.getSimpleName)
+
+      // Not supported in parallel execution
+      case lp: ProcedureCall if parallelExecution =>
+        throw unsupported(lp.getClass.getSimpleName)
+      case lp: LoadCSV if parallelExecution =>
+        throw unsupported(lp.getClass.getSimpleName)
+
+      // We do not support any eager plans
+      case lp: EagerLogicalPlan =>
+        throw unsupported(lp.getClass.getSimpleName)
+
+      // No leaf plans (but they should all be supported by operators anyway...)
+      case lp if lp.isLeaf =>
+        throw unsupported(lp.getClass.getSimpleName)
+
+      // No two-children plans
+      case lp if lp.lhs.isDefined && lp.rhs.isDefined =>
+        throw unsupported(lp.getClass.getSimpleName)
+    }
+
+    override def breakOn(lp: LogicalPlan): Boolean = {
+      WHITELIST.orElse(BLACKLIST).applyOrElse[LogicalPlan, Boolean](lp, {
+        case _: LoadCSV =>
+          true
+
+        // All other one child plans are supported and assumed non-breaking (unless defined differently by the WHITELIST)
+        case _ =>
+          false
+      })
     }
   }
 
