@@ -30,4 +30,4 @@ work_dir=$(pwd)/macro_work_dir/
 mkdir "${work_dir}"
 
 # shellcheck disable=SC2086
-java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}" --workspace-dir "${work_dir}"
+java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}" --workspace-dir "${work_dir}" --worker-artifact-uri "${workerArtifactUri}"
