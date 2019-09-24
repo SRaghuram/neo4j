@@ -138,6 +138,7 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    runWorkloadParams.neo4jBranch(),
                                    runWorkloadParams.neo4jBranchOwner(),
                                    runWorkloadParams.toolCommit(),
+                                   runWorkloadParams.toolOwner(),
                                    runWorkloadParams.toolBranch(),
                                    Long.toString( runWorkloadParams.teamcityBuild() ),
                                    Long.toString( runWorkloadParams.parentBuild() ),

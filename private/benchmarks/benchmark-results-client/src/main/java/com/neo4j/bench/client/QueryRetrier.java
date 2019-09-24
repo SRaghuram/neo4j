@@ -17,6 +17,17 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class QueryRetrier
 {
     static final int DEFAULT_RETRY_COUNT = 10;
+    private final boolean verbose;
+
+    public QueryRetrier()
+    {
+        this( true );
+    }
+
+    public QueryRetrier( boolean verbose )
+    {
+        this.verbose = verbose;
+    }
 
     public <QUERY extends Query<RESULT>, RESULT> RESULT execute( StoreClient client, QUERY query )
     {
@@ -40,7 +51,7 @@ public class QueryRetrier
             }
             catch ( Throwable e )
             {
-                System.out.println( format( "Error executing callable %s\n%s", supplier, stackTraceFor( e ) ) );
+                System.err.println( format( "Error executing callable %s\n%s", supplier, stackTraceFor( e ) ) );
                 backOff( retry++ );
                 lastException = e;
             }
@@ -76,8 +87,11 @@ public class QueryRetrier
                 try
                 {
                     RESULT result = client.execute( query );
-                    query.nonFatalError().ifPresent( System.out::println );
-                    System.out.println( "Query successfully executed: " + toString() );
+                    query.nonFatalError().ifPresent( System.err::println );
+                    if ( verbose )
+                    {
+                        System.out.println( "Query successfully executed: " + toString() );
+                    }
                     return result;
                 }
                 catch ( Throwable e )

@@ -70,10 +70,13 @@ public class PlannerDescriptionIT
                             result.accept( row -> true );
                             ExecutionPlanDescription rootPlanDescription = result.getExecutionPlanDescription();
                             PlanOperator rootPlanOperator = PlannerDescription.toPlanOperator( rootPlanDescription );
-                            String errorMessage = format( "Plans were not equal!\n" +
-                                                          "%s %s\n" +
-                                                          "%s", workload.name(), query.name(), rootPlanDescription );
-                            assertPlansEqual( errorMessage, rootPlanOperator, rootPlanDescription );
+                            assertPlansEqual( rootPlanOperator, rootPlanDescription );
+                            }
+                            catch ( Throwable e )
+                            {
+                                throw new RuntimeException( format( "Plans comparison failed!\n" +
+                                                                    "Workload: %s\n" +
+                                                                    "Query:    %s", workload.name(), query.name() ), e );
                         }
                     }
                 }
@@ -83,7 +86,7 @@ public class PlannerDescriptionIT
 
     private static final String ERROR_IN_TEST_CODE = "Error is probably in test code that traverses logical plan";
 
-    private static void assertPlansEqual( String errorMessage, PlanOperator rootPlanOperator, ExecutionPlanDescription planDescriptionRoot )
+    private static void assertPlansEqual( PlanOperator rootPlanOperator, ExecutionPlanDescription planDescriptionRoot )
     {
         Stack<PlanOperator> planOperators = new Stack<>();
         Stack<ExecutionPlanDescription> planDescriptions = new Stack<>();
@@ -138,13 +141,13 @@ public class PlannerDescriptionIT
                             childrenMap.get( parentMap.get( planOperator ) ).remove( planOperator ) );
 
                 actualVisitedPlans++;
-                assertThat( errorMessage, planOperatorName, equalTo( planDescriptionName ) );
+                assertThat( planOperatorName, equalTo( planDescriptionName ) );
             }
             // this is a leaf operator, compare operators then begin popping the stack
             else
             {
                 actualVisitedPlans++;
-                assertThat( errorMessage, planOperatorName, equalTo( planDescriptionName ) );
+                assertThat( planOperatorName, equalTo( planDescriptionName ) );
             }
         }
         // sanity checks, to make sure test code is actually traversing and comparing the entire logical plan
