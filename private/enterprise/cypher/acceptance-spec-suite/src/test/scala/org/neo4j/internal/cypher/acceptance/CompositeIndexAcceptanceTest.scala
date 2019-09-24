@@ -72,7 +72,6 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":User(name,surname)")
-        // TODO this is printed with `:User(name,surname)`, do we want `user_index` instead?
       }))
 
     // Then

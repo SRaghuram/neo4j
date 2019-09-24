@@ -252,7 +252,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX my_index")
       // THEN
-    } should have message "No such index my_index." // TODO not as nice error message
+    } should have message "Unable to drop index my_index: No such index my_index."
   }
 
   test("should get error when trying to drop non-existing index") {
@@ -268,7 +268,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX my_index")
       // THEN
-    } should have message "No such index my_index." // TODO not as nice error message
+    } should have message "Unable to drop index my_index: No such index my_index."
   }
 
   // Create constraint
@@ -755,8 +755,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node key constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    val nameNodeKey = graph.getNodeConstraint("Label", Seq("prop")).getName
-    executeSingle(s"DROP CONSTRAINT `$nameNodeKey`") // needed to test the uniqueness constraint
+    executeSingle("DROP CONSTRAINT `Node key constraint on :Label (prop)`") // needed to test the uniqueness constraint
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
@@ -1001,7 +1000,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
       // THEN
-    } should have message "No such constraint :Person(name)." // TODO not as nice error message as for dropping non-existing index
+    } should have message "Unable to drop constraint on :Person(name): No such constraint :Person(name)."
   }
 
   test("should get error when trying to drop the same named constraint twice") {
@@ -1015,7 +1014,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT my_constraint")
       // THEN
-    } should have message "No such constraint my_constraint." // TODO not as nice error message as for dropping non-existing index
+    } should have message "Unable to drop constraint my_constraint: No such constraint my_constraint."
   }
 
   test("should get error when trying to drop non-existing constraint") {
@@ -1023,7 +1022,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
       // THEN
-    } should have message "No such constraint :Person(name)." // TODO not as nice error message as for dropping non-existing index
+    } should have message "Unable to drop constraint on :Person(name): No such constraint :Person(name)."
   }
 
   test("should get error when trying to drop non-existing named constraint") {
@@ -1031,7 +1030,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT my_constraint")
       // THEN
-    } should have message "No such constraint my_constraint." // TODO not as nice error message as for dropping non-existing index
+    } should have message "Unable to drop constraint my_constraint: No such constraint my_constraint."
   }
 
   // Combination
