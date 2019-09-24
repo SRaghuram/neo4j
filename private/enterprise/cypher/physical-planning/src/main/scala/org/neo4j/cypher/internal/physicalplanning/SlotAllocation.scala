@@ -224,6 +224,15 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           (acc, TRAVERSE_INTO_CHILDREN)
         }
 
+      case ProjectEndpoints(_, _, start, startInScope, end, endInScope, _, _, _) =>
+        acc: Accumulator => {
+          if (!startInScope)
+            slots.newLong(start, nullable, CTNode)
+          if (!endInScope)
+            slots.newLong(end, nullable, CTNode)
+          (acc, TRAVERSE_INTO_CHILDREN)
+        }
+
       // Only allocate expression on the LHS for these other two-child plans (which have expressions)
       case _: ApplyPlan if !shouldAllocateLhs =>
         acc: Accumulator =>
@@ -443,10 +452,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case _: LockNodes =>
 
       case ProjectEndpoints(_, _, start, startInScope, end, endInScope, _, _, _) =>
-        if (!startInScope)
-          slots.newLong(start, nullable, CTNode)
-        if (!endInScope)
-          slots.newLong(end, nullable, CTNode)
+        // Because of the way the interpreted pipe works, we already have to do the necessary allocations in allocateExpressions(),
+        // before the pipeline breaking
 
       case LoadCSV(_, _, variableName, NoHeaders, _, _, _) =>
         slots.newReference(variableName, nullable, CTList(CTAny))
