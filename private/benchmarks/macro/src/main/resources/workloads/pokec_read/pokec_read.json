@@ -252,6 +252,11 @@
       "name": "Q35",
       "description": "Impossible predicates",
       "queryFile": "queries/Q35.cypher"
+    },
+    {
+      "name": "Q36",
+      "description": "Cartesian Product",
+      "queryFile": "queries/Q36.cypher"
     }
   ]
 }

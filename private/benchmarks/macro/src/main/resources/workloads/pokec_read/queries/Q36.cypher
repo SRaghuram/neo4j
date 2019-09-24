@@ -1,0 +1,3 @@
+ MATCH (a:PROFILES), (b:PROFILES)
+ WHERE a.pets STARTS WITH "q" AND b.pets STARTS WITH "a"
+ RETURN a, b
