@@ -206,8 +206,10 @@ public class EmbeddedDatabase implements Database
     private int execute( GraphDatabaseService db, String query, Map<String,Object> parameters )
     {
         resultVisitor.reset();
-        db.executeTransactionally( query, parameters, result -> result.accept( resultVisitor ) );
-        return resultVisitor.count();
+        return db.executeTransactionally( query, parameters, result -> {
+            result.accept( resultVisitor );
+            return resultVisitor.count();
+        } );
     }
 
     public GraphDatabaseService db()

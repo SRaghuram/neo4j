@@ -6,7 +6,6 @@
 package com.neo4j.procedure;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -577,18 +576,19 @@ class FunctionIT
         String url = createCsvFile( lines );
 
         //WHEN
-        MutableLong counter = new MutableLong( 1 );
-        db.executeTransactionally( "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
+        long value = db.executeTransactionally( "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
                         "CREATE (n {prop: com.neo4j.procedure.simpleArgument(toInteger(line[0]))}) " + "RETURN n.prop", emptyMap(), result ->
                 {
+                    long counter = 1;
                     while ( result.hasNext() )
                     {
                         var row = result.next();
-                        assertThat( row.get( "n.prop" ), equalTo( counter.getAndIncrement() ) );
+                        assertThat( row.get( "n.prop" ), equalTo( counter++ ) );
                     }
+                    return counter;
                 } );
                 // THEN
-        assertEquals( 101L, counter.getValue() );
+        assertEquals( 101L, value );
         try ( Transaction transaction = db.beginTx() )
         {
             //Make sure all the lines has been properly commited to the database.

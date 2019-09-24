@@ -6,7 +6,6 @@
 package com.neo4j.procedure;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -1077,18 +1076,19 @@ public class ProcedureIT
         String url = createCsvFile( lines);
 
         //WHEN
-        MutableInt counter = new MutableInt( 1 );
-        db.executeTransactionally(
+        int value = db.executeTransactionally(
                 "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " + "CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n " +
                         "RETURN n.prop", emptyMap(), result ->
                 {
+                    int counter = 1;
                     while ( result.hasNext() )
                     {
                         var row = result.next();
-                        assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter.getAndIncrement() ) ) );
+                        assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter++ ) ) );
                     }
+                    return counter;
                 } );
-        assertEquals( 101, counter.getValue() );
+        assertEquals( 101, value );
 
         try ( Transaction transaction = db.beginTx() )
         {
