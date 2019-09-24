@@ -130,7 +130,13 @@ object OperatorFusionPolicy {
       }
     }
 
-    override def canFuseOverPipeline(lp: LogicalPlan): Boolean = canFuse(lp)
+    override def canFuseOverPipeline(lp: LogicalPlan): Boolean = lp match {
+      //because of how fused var expand is implemented where we evaluate predicate in a separate specialized
+      //implementation of a VarExpandCursor we can at this moment not fuse VarExpand if it contains
+      //predicates
+      case e: VarExpand if e.nodePredicate.isDefined || e.relationshipPredicate.isDefined => false
+      case _ => canFuse(lp)
+    }
   }
 
   case object OPERATOR_FUSION_WITHIN_PIPELINE extends OperatorFusionPolicy {

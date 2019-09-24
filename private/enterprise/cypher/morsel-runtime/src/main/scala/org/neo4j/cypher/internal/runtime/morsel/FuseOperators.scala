@@ -521,10 +521,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                 mode == ExpandAll,
                                                                 tempNodeOffset,
                                                                 tempRelationshipOffset,
-                                                                nodePredicate.map(x => compileExpression(x.predicate)),
-                                                                nodePredicate.map(x => compileExpression(x.predicate)),
-                                                                relationshipPredicate.map(x => compileExpression(x.predicate))
-                                                                )(expressionCompiler)
+                                                                nodePredicate,
+                                                                relationshipPredicate)(expressionCompiler)
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)

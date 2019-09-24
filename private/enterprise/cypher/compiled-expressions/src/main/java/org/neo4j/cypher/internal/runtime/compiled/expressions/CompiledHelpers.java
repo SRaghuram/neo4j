@@ -49,6 +49,11 @@ public final class CompiledHelpers
         return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
     }
 
+    public static AnyValue nodeOrNoValue( DbAccess dbAccess, long nodeId )
+    {
+        return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
+    }
+
     public static AnyValue relationshipOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
     {
         long relationshipId = context.getLongAt( offset );
@@ -93,4 +98,5 @@ public final class CompiledHelpers
             return -1L;
         }
     }
+
 }

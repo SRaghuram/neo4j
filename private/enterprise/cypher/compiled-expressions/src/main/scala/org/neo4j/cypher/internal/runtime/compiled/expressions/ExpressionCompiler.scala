@@ -57,9 +57,9 @@ class VariableNamer {
 /**
   * Compiles a Cypher Expression to a class or intermediate representation
   */
-abstract class ExpressionCompiler(slots: SlotConfiguration,
-                                  readOnly: Boolean,
-                                  codeGenerationMode: CodeGeneration.CodeGenerationMode,
+abstract class ExpressionCompiler(val slots: SlotConfiguration,
+                                  val readOnly: Boolean,
+                                  val codeGenerationMode: CodeGeneration.CodeGenerationMode,
                                   val namer: VariableNamer = new VariableNamer) {
 
   import ExpressionCompiler._
@@ -2122,7 +2122,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration,
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
-  protected final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+   final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
@@ -2924,7 +2924,11 @@ abstract class ExpressionCompiler(slots: SlotConfiguration,
 }
 
 object ExpressionCompiler {
-  def defaultGenerator(slots: SlotConfiguration, readOnly: Boolean, codeGenerationMode: CodeGeneration.CodeGenerationMode): ExpressionCompiler = new DefaultExpressionCompiler(slots, readOnly, codeGenerationMode)
+  def defaultGenerator(slots: SlotConfiguration,
+                       readOnly: Boolean,
+                       codeGenerationMode: CodeGeneration.CodeGenerationMode,
+                       namer: VariableNamer = new VariableNamer
+                      ): ExpressionCompiler = new DefaultExpressionCompiler(slots, readOnly, codeGenerationMode, namer)
 
   private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
@@ -2973,7 +2977,7 @@ object ExpressionCompiler {
     if (expression.requireNullCheck) nullCheck(expression)(onNull)(expression.ir) else expression.ir
 }
 
-private class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, codeGenerationMode: CodeGeneration.CodeGenerationMode) extends ExpressionCompiler(slots, readOnly, codeGenerationMode) {
+class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, codeGenerationMode: CodeGeneration.CodeGenerationMode, namer: VariableNamer) extends ExpressionCompiler(slots, readOnly, codeGenerationMode, namer) {
 
   override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
 

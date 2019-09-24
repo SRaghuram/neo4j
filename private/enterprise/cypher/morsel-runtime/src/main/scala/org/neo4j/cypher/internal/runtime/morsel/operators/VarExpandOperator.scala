@@ -7,13 +7,14 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{ExtendClass, Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.cypher.internal.logical.plans.VariablePredicate
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.{NO_ENTITY_FUNCTION, makeGetPrimitiveNodeFromSlotFunctionFor}
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.NO_PREDICATE_OFFSET
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, DefaultExpressionCompiler, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{RelationshipTypes, VarLengthExpandPipe}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
@@ -25,7 +26,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.exceptions.InternalException
+import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{IndexReadSession, NodeCursor, Read}
 import org.neo4j.values.AnyValue
@@ -201,9 +202,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     shouldExpandAll: Boolean,
                                     tempNodeOffset: Int,
                                     tempRelOffset: Int,
-                                    genStartNodePredicate: Option[() => IntermediateExpression],
-                                    genNodePredicate: Option[() => IntermediateExpression],
-                                    genRelPredicate: Option[() => IntermediateExpression])
+                                    maybeNodeVariablePredicate: Option[VariablePredicate],
+                                    maybeRelVariablePredicate: Option[VariablePredicate])
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
   import OperatorCodeGenHelperTemplates._
 
@@ -242,7 +242,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *   this.canContinue = false
     *   val fromNode = [GET FROM INPUT]
     *   val toNode = [GET FROM INPUT OR -1 if ExpandAll]
-    *   if (fromNode != -1L ) {//for ExandInto we also check toNode
+    *   if (fromNode != -1L && [fromNode satisfies nodePredicate]) {//for ExandInto we also check toNode
     *     this.varExpandCursor = [SPECIALIZED CURSOR]
     *     this.varExpandCursor.enterWorkUnit(cursorPool)
     *     this.varExpandCursor.setTracer(executionEvent)
@@ -251,33 +251,42 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *
     */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    //initialize predicates
-    startNodePredicate = genNodePredicate.map(_())
-
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName()
     val toNode = codeGen.namer.nextVariableName()
-    val fromNodePredicate =
-      if (tempNodeOffset == NO_PREDICATE_OFFSET) None else startNodePredicate.map { pred =>
-      block(
-        arraySet(EXPRESSION_VARIABLES, tempNodeOffset,
-                 invoke(DB_ACCESS,
-                  method[DbAccess, NodeValue, Long]("nodeById"),
-                 load(fromNode))),
-        equal(trueValue, nullCheckIfRequired(pred)))
+
+    /**
+      * Generate node predicate to be checked on the fromNode
+      */
+    def generateStartNodePredicate() = {
+      startNodePredicate = maybeNodeVariablePredicate
+        .map(p => codeGen.intermediateCompileExpression(p.predicate)
+          .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+
+      val fromNodePredicate =
+        if (tempNodeOffset == NO_PREDICATE_OFFSET) None else startNodePredicate.map { pred =>
+          block(
+            arraySet(EXPRESSION_VARIABLES, tempNodeOffset,
+                     invoke(DB_ACCESS,
+                            method[DbAccess, NodeValue, Long]("nodeById"),
+                            load(fromNode))),
+            equal(trueValue, nullCheckIfRequired(pred)))
+        }
+      val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(load(fromNode), constant(-1L))) {
+        case (acc, current) => and(acc, current)
+      }
+      val predicate =
+        if (shouldExpandAll) predicateOnFromNode
+        else and(predicateOnFromNode, notEqual(load(toNode), constant(-1L)))
+      predicate
     }
-    val predicateOnFromNode = fromNodePredicate.foldLeft(notEqual(load(fromNode), constant(-1L))) {
-      case (acc, current) => and(acc, current)
-    }
-    val predicate =
-      if (shouldExpandAll) predicateOnFromNode
-      else and(predicateOnFromNode, notEqual(load(toNode), constant(-1L)))
+
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
       setField(canContinue, constant(false)),
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
       declareAndAssign(typeRefOf[Long], toNode, if (shouldExpandAll) constant(-1L) else getNodeIdFromSlot(toSlot)),
-      condition(predicate){
+      condition(generateStartNodePredicate()){
         block(
           loadTypes,
           setField(varExpandCursorField, newInstance(createInnerClass(dir),
@@ -289,7 +298,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                                      constant(minLength),
                                                      constant(maxLength),
                                                      loadField(DATA_READ),
-                                                     OUTPUT_ROW,
+                                                     loadField(INPUT_MORSEL),
                                                      DB_ACCESS,
                                                      PARAMS,
                                                      EXPRESSION_CURSORS,
@@ -423,9 +432,46 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     * Creates an inner class that extends `VarExpandCursor` with the appropriate node and relationship predicates
     */
   private def createInnerClass(dir: SemanticDirection) =  {
-    //generate predicates
-    nodePredicate = genNodePredicate.map(_())
-    relPredicate = genRelPredicate.map(_())
+    //since we are evaluating the predicate expression in a separate method in a separate class we cannot
+    //use the provided OperatorExpressionCompiler since it will try to read from local variables instead of accessing the context.
+    //Here we assume we are always running as start operator of a pipeline and will always read from context unless we are
+    //accessing fromNode and toNode which we already have stored in fields.
+    val newScopeExpressionCompiler = new DefaultExpressionCompiler(codeGen.slots, codeGen.readOnly, codeGen.codeGenerationMode, codeGen.namer) {
+      override protected def getLongAt(offset: Int): IntermediateRepresentation =
+        if (fromSlot.isLongSlot && offset == fromSlot.offset) {
+          invoke(self(), method[VarExpandCursor, Long]("fromNode"))
+        } else if (toSlot.isLongSlot && offset == toSlot.offset) {
+          invoke(self(), method[VarExpandCursor, Long]("targetToNode"))
+        } else {
+          super.getLongAt(offset)
+        }
+      override protected def getRefAt(offset: Int): IntermediateRepresentation = {
+        val tmp = codeGen.namer.nextVariableName()
+        if (!fromSlot.isLongSlot && offset == fromSlot.offset) {
+          block(
+            oneTime(declareAndAssign(typeRefOf[AnyValue], tmp,
+              invokeStatic(method[CompiledHelpers, AnyValue, DbAccess, Long]("nodeOrNoValue"),
+             DB_ACCESS, invoke(self(), method[VarExpandCursor, Long]("fromNode"))))),
+            load(tmp))
+        } else if (!toSlot.isLongSlot && offset == toSlot.offset) {
+          block(
+            oneTime(declareAndAssign(typeRefOf[AnyValue], tmp,
+                                     invokeStatic(method[CompiledHelpers, AnyValue, DbAccess, Long]("nodeOrNoValue"),
+                        DB_ACCESS, invoke(self(), method[VarExpandCursor, Long]("targetToNode"))))),
+            load(tmp))
+        } else {
+          super.getRefAt(offset)
+        }
+      }
+    }
+
+    nodePredicate = maybeNodeVariablePredicate
+      .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+      .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+
+    relPredicate = maybeRelVariablePredicate
+      .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+      .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
 
     //Directions governs what class we are extending
     val classToExtend = dir match {
@@ -446,7 +492,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                    param[Int]("minLength"),
                    param[Int]("maxLength"),
                    param[Read]("read"),
-                   param[ExecutionContext]("executionContext"),
+                   param[ExecutionContext]("context"),
                    param[DbAccess]("dbAccess"),
                    param[Array[AnyValue]]("params"),
                    param[ExpressionCursors]("cursors"),
@@ -454,7 +500,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                 Seq(methodDeclaration[Boolean]("satisfyPredicates",
                                               generatePredicate,
                                               () => locals.toSeq,
-                                              param[ExecutionContext]("executionContext"),
+                                              param[ExecutionContext]("context"),
                                               param[DbAccess]("dbAccess"),
                                               param[Array[AnyValue]]("params"),
                                               param[ExpressionCursors]("cursors"),

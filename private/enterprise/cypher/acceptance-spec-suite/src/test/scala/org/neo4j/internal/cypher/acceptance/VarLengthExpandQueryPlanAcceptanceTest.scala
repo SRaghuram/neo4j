@@ -232,7 +232,6 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     path.endNode() should equal(node2)
   }
 
-
   test("AllNodesInPath with complex inner predicate using the start node and end node") {
     val node1 = createLabeledNode(Map("prop" -> 1), "NODE")
     val node2 = createLabeledNode(Map("prop" -> 1),"NODE")
