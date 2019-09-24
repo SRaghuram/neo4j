@@ -26,7 +26,9 @@ class MorselInputTest extends InputTestBase(FUSING, MORSEL, SIZE_HINT)
 
 // ALL NODE SCAN
 class MorselAllNodeScanTest extends AllNodeScanTestBase(FUSING, MORSEL, SIZE_HINT)
+                            with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+                                    with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 
 // NODE BY ID SEEK
 class MorselNodeByIdSeekTest extends NodeByIdSeekTestBase(FUSING, MORSEL, SIZE_HINT)

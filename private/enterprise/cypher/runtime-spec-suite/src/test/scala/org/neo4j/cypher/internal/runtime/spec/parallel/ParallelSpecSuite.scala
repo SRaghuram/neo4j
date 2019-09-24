@@ -25,8 +25,12 @@ class ParallelRuntimeInputTest extends ParallelInputTestBase(ENTERPRISE.FUSING, 
 class ParallelRuntimeInputTestNoFusing extends ParallelInputTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
 
 // ALL NODE SCAN
-class ParallelRuntimeAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
-class ParallelRuntimeAllNodeScanNoFusingTest extends AllNodeScanTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)
+                                     with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                                     with TimeLimitedCypherTest
+class ParallelRuntimeAllNodeScanNoFusingTest extends AllNodeScanTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)
+                                             with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                                             with TimeLimitedCypherTest
 class ParallelRuntimeAllNodeScanStressTest extends AllNodeScanStressTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeAllNodeScanNoFusingStressTest extends AllNodeScanStressTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
 

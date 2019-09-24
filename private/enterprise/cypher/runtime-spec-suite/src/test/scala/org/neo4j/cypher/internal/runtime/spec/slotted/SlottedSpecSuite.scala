@@ -16,6 +16,7 @@ object SlottedSpecSuite {
 }
 
 class SlottedAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                             with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class SlottedNodeByIdSeekTest extends NodeByIdSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
