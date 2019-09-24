@@ -198,7 +198,12 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             resultAssertionInTx: Option[RewindableExecutionResult => Unit] = None,
                             executeBefore: InternalTransaction => Unit = _ => {},
                             executeExpectedFailures: Boolean = true,
-                            params: Map[String, Any] = Map.empty): RewindableExecutionResult = {
+                            params: Map[String, Any] = Map.empty,
+                            printPlanDescription: Boolean = false): RewindableExecutionResult = {
+    if (printPlanDescription) {
+      val result = executeSingle(s"EXPLAIN $query", params)
+      println(result.executionPlanDescription())
+    }
     if (expectSucceed.scenarios.nonEmpty) {
       val compareResults = expectSucceed - expectedDifferentResults
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)

@@ -418,11 +418,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         plan match {
           case plans.Sort(_, sortItems) =>
             val ordering = sortItems.map(translateColumnOrder(slots, _))
-            new SortPreOperator(WorkIdentity.fromPlan(plan), argumentSlot, bufferId, ordering)
+            new SortPreOperator(WorkIdentity.fromPlan(plan, "Pre"), argumentSlot, bufferId, ordering)
 
           case plans.Top(_, sortItems, limit) =>
             val ordering = sortItems.map(translateColumnOrder(slots, _))
-            TopOperator(WorkIdentity.fromPlan(plan),
+            TopOperator(WorkIdentity.fromPlan(plan, "Pre"),
                         ordering,
                         converters.toCommandExpression(plan.id, limit)).mapper(argumentSlot, bufferId)
 
@@ -436,7 +436,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                 expressions += converters.toCommandExpression(id, expression)
               }
 
-            AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
+            AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"),
                                           aggregators.result())
               .mapper(argumentSlot,
                       bufferId,
@@ -454,7 +454,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                 expressions += converters.toCommandExpression(id, expression)
             }
 
-            AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
+            AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators.result(), groupings)
               .mapper(argumentSlot, bufferId, expressions.result())
 
         }

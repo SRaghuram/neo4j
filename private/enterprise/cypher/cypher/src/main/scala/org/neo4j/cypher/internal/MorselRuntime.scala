@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, InterpretedPipesFallbackPolicy, MorselPipelineBreakingPolicy, OperatorFactory}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.v4_0.util.InternalNotification
+import org.neo4j.cypher.internal.v4_0.util.{CypherException, InternalNotification}
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.exceptions.CantCompileQueryException
@@ -41,20 +41,46 @@ object MorselRuntime {
 }
 
 class MorselRuntime(parallelExecution: Boolean,
-                    override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] {
+                    override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
 
   private val runtimeName = RuntimeName(name)
+
+  val ENABLE_DEBUG_PRINTS = false // NOTE: false toggles all debug prints off, overriding the individual settings below
+
+  // Should we print query text and logical plan before we see any exceptions from execution plan building?
+  // Setting this to true is useful if you want to see the query and logical plan while debugging a failure
+  // Setting this to false is useful if you want to quickly spot the failure reason at the top of the output from tests
+  val PRINT_PLAN_INFO_EARLY = false
+
+  override val PRINT_QUERY_TEXT = true
+  override val PRINT_LOGICAL_PLAN = true
+  override val PRINT_REWRITTEN_LOGICAL_PLAN = true
+  override val PRINT_PIPELINE_INFO = false
+  override val PRINT_FAILURE_STACK_TRACE = true
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("MorselRuntime.compileToExecutable()")
 
-    if (query.periodicCommitInfo.isDefined)
-      throw new CantCompileQueryException("Periodic commit is not supported by Morsel runtime")
+    if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
+      printPlanInfo(query)
+    }
 
-    compilePlan(shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled,
-                query,
-                context,
-                new QueryIndexRegistrator(context.schemaRead))
+    try {
+      if (query.periodicCommitInfo.isDefined)
+        throw new CantCompileQueryException("Periodic commit is not supported by Morsel runtime")
+
+      compilePlan(shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled,
+                  query,
+                  context,
+                  new QueryIndexRegistrator(context.schemaRead))
+    } catch {
+      case e: CypherException if ENABLE_DEBUG_PRINTS =>
+        printFailureStackTrace(e)
+        if (!PRINT_PLAN_INFO_EARLY) {
+          printPlanInfo(query)
+        }
+        throw e
+    }
   }
 
   private def selectMorselSize(query: LogicalQuery,
@@ -80,6 +106,10 @@ class MorselRuntime(parallelExecution: Boolean,
                                             query.semanticTable,
                                             breakingPolicy,
                                             allocateArgumentSlots = true)
+
+    if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
+      printRewrittenPlanInfo(physicalPlan.logicalPlan)
+    }
 
     val codeGenerationMode = CodeGeneration.CodeGenerationMode.fromDebugOptions(context.debugOptions)
 
@@ -134,23 +164,32 @@ class MorselRuntime(parallelExecution: Boolean,
 
       val morselSize = selectMorselSize(query, context)
 
-    val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
+      val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
 
-    val metadata = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
+      val metadata = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
 
-    new MorselExecutionPlan(executablePipelines,
-                          executionGraphDefinition,
-                          queryIndexRegistrator.result(),
-                          physicalPlan.nExpressionSlots,
-                          physicalPlan.logicalPlan,
-                          physicalPlan.parameterMapping,
-                          query.resultColumns,
-                          executor,
-                          context.runtimeEnvironment.tracer,
-                          morselSize,
-                          context.config.memoryTrackingController,
-                          maybeThreadSafeCursors,
-                        metadata)
+      if (ENABLE_DEBUG_PRINTS) {
+        if (!PRINT_PLAN_INFO_EARLY) {
+          // Print after execution plan building to see any occurring exceptions first
+          printPlanInfo(query)
+          printRewrittenPlanInfo(physicalPlan.logicalPlan)
+        }
+        printPipe(physicalPlan.slotConfigurations)
+      }
+
+      new MorselExecutionPlan(executablePipelines,
+                              executionGraphDefinition,
+                              queryIndexRegistrator.result(),
+                              physicalPlan.nExpressionSlots,
+                              physicalPlan.logicalPlan,
+                              physicalPlan.parameterMapping,
+                              query.resultColumns,
+                              executor,
+                              context.runtimeEnvironment.tracer,
+                              morselSize,
+                              context.config.memoryTrackingController,
+                              maybeThreadSafeCursors,
+                              metadata)
     } catch {
       case e: CantCompileQueryException if shouldFuseOperators =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -161,18 +200,18 @@ class MorselRuntime(parallelExecution: Boolean,
   }
 
   class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
-                                 executionGraphDefinition: ExecutionGraphDefinition,
-                                 queryIndexes: QueryIndexes,
-                                 nExpressionSlots: Int,
-                                 logicalPlan: LogicalPlan,
-                                 parameterMapping: ParameterMapping,
-                                 fieldNames: Array[String],
-                                 queryExecutor: QueryExecutor,
-                                 schedulerTracer: SchedulerTracer,
-                                 morselSize: Int,
-                                 memoryTrackingController: MemoryTrackingController,
-                                 maybeThreadSafeCursors: Option[CursorFactory],
-                                 override val metadata: Seq[Argument]) extends ExecutionPlan {
+                            executionGraphDefinition: ExecutionGraphDefinition,
+                            queryIndexes: QueryIndexes,
+                            nExpressionSlots: Int,
+                            logicalPlan: LogicalPlan,
+                            parameterMapping: ParameterMapping,
+                            fieldNames: Array[String],
+                            queryExecutor: QueryExecutor,
+                            schedulerTracer: SchedulerTracer,
+                            morselSize: Int,
+                            memoryTrackingController: MemoryTrackingController,
+                            maybeThreadSafeCursors: Option[CursorFactory],
+                            override val metadata: Seq[Argument]) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,

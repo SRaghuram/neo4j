@@ -20,7 +20,7 @@ trait DebugPrettyPrinter {
   val PRINT_PIPELINE_INFO = true
   val PRINT_FAILURE_STACK_TRACE = true
 
-  protected def printPlanInfo(logicalQuery: LogicalQuery) = {
+  protected def printPlanInfo(logicalQuery: LogicalQuery): Unit = {
     println(s"\n========================================================================")
     if (PRINT_QUERY_TEXT)
       println(s"\u001b[32m[QUERY]\n\n${logicalQuery.queryText}") // Green
@@ -31,7 +31,7 @@ trait DebugPrettyPrinter {
     println("\u001b[30m")
   }
 
-  protected def printRewrittenPlanInfo(logicalPlan: LogicalPlan) = {
+  protected def printRewrittenPlanInfo(logicalPlan: LogicalPlan): Unit = {
     if (PRINT_REWRITTEN_LOGICAL_PLAN) {
       println(s"\n\u001b[35m[REWRITTEN LOGICAL PLAN]\n") // Magenta
       prettyPrintLogicalPlan(logicalPlan)
@@ -39,17 +39,19 @@ trait DebugPrettyPrinter {
     println("\u001b[30m")
   }
 
-  protected def printPipe(slotConfigurations: SlotConfigurations, pipe: Pipe) = {
+  protected def printPipe(slotConfigurations: SlotConfigurations, pipe: Pipe = null): Unit = {
     if (PRINT_PIPELINE_INFO) {
       println(s"\n\u001b[36m[SLOT CONFIGURATIONS]\n") // Cyan
       prettyPrintPipelines(slotConfigurations)
-      println(s"\n\u001b[34m[PIPE INFO]\n") // Blue
-      prettyPrintPipe(pipe)
+      if (pipe != null) {
+        println(s"\n\u001b[34m[PIPE INFO]\n") // Blue
+        prettyPrintPipe(pipe)
+      }
     }
     println("\u001b[30m")
   }
 
-  protected def printFailureStackTrace(e: CypherException) = {
+  protected def printFailureStackTrace(e: CypherException): Unit = {
     if (PRINT_FAILURE_STACK_TRACE) {
       println("------------------------------------------------")
       println("<<< Slotted failed because:\u001b[31m") // Red
