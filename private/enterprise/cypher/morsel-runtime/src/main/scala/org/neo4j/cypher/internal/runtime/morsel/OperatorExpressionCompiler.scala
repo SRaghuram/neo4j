@@ -175,28 +175,29 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     val offset = property.cachedPropertyOffset
     var local = locals.getLocalForRefSlot(offset)
     val maybeCachedProperty = inputSlotConfiguration.getCachedPropertySlot(property)
+
+    def initializeFromStoreIR = assign(local, getFromStore)
+    def initializeFromContextIR =
+      block(
+        assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
+        condition(isNull(load(local)))(initializeFromStoreIR)
+      )
+
     val prepareOps =
       if (local == null && maybeCachedProperty.isDefined) {
-
         local = locals.addCachedProperty(offset)
-        block(
-          assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
-          condition(isNull(load(local)))(assign(local, getFromStore))
-        )
+        initializeFromContextIR
       } else if (local == null) {
         local = locals.addCachedProperty(offset)
-        assign(local, getFromStore)
+        initializeFromStoreIR
       } else {
         // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
         // (See full comment in getLongAt above)
         condition(isNull(load(local)))(
           if (maybeCachedProperty.isDefined) {
-            block(
-              assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
-              condition(isNull(load(local)))(assign(local, getFromStore))
-            )
+            initializeFromContextIR
           } else {
-            assign(local, getFromStore)
+            initializeFromStoreIR
           }
         )
       }
