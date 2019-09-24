@@ -7,6 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.graphdb.{Label, Node, Relationship}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.helpers.collection.Iterators
 import org.neo4j.internal.schema.SchemaDescriptor
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 
@@ -486,8 +487,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
-    val index = inTx(tx => tx.kernelTransaction().schemaRead().index(tokenReader( tx, t => t.nodeLabel("Person")),
-      tokenReader(tx, t => t.propertyKey("name"))))
+    val index = Iterators.single(inTx(tx => tx.kernelTransaction().schemaRead().index(
+      SchemaDescriptor.forLabel(tokenReader(tx, t => t.nodeLabel("Person")), tokenReader(tx, t => t.propertyKey("name"))))))
 
     // when
     val listResult = executeWith(Configs.ProcedureCall, "CALL db.indexes()")
