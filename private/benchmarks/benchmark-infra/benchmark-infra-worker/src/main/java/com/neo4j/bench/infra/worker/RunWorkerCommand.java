@@ -145,8 +145,8 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    runWorkloadParams.executionMode().name(),
                                    "'" + String.join( " ", runWorkloadParams.jvmArgs() ) + "'",
                                    Boolean.toString( runWorkloadParams.isRecreateSchema() ),
-                                   runWorkloadParams.planner().value(),
-                                   runWorkloadParams.runtime().value(),
+                                   runWorkloadParams.planner().name(),
+                                   runWorkloadParams.runtime().name(),
                                    runWorkloadParams.triggeredBy(),
                                    runWorkloadParams.errorPolicy().name(),
                                    runWorkloadParams.deployment().parsableValue() );
