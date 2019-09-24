@@ -64,7 +64,7 @@ public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdapto
     {
         try
         {
-            storeFileStream.write( fileChunk.bytes() );
+            storeFileStream.write( fileChunk.payload() );
         }
         catch ( Exception e )
         {

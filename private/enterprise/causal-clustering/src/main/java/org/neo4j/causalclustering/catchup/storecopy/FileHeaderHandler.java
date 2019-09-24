@@ -33,6 +33,6 @@ public class FileHeaderHandler extends SimpleChannelInboundHandler<FileHeader>
     {
         log.info( "Receiving file: %s", fileHeader.fileName() );
         handler.onFileHeader( fileHeader );
-        protocol.expect( State.FILE_CONTENTS );
+        protocol.expect( State.FILE_CHUNK );
     }
 }

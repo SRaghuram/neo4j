@@ -6,16 +6,29 @@
 package org.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 
-import org.neo4j.causalclustering.messaging.NetworkWritableChannel;
+import java.util.List;
 
-public class FileChunkEncoder extends MessageToByteEncoder<FileChunk>
+import static org.neo4j.causalclustering.catchup.storecopy.FileChunk.HEADER_SIZE;
+
+public class FileChunkEncoder extends MessageToMessageEncoder<FileChunk>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, FileChunk chunk, ByteBuf out ) throws Exception
+    protected void encode( ChannelHandlerContext ctx, FileChunk msg, List<Object> out )
     {
-        FileChunk.marshal().marshal( chunk, new NetworkWritableChannel( out ) );
+        ByteBuf header = ctx.alloc().ioBuffer( HEADER_SIZE );
+        header.writeInt( msg.encodedLength() );
+
+        ByteBuf payload = msg.payload();
+
+        CompositeByteBuf composite = ctx.alloc().compositeBuffer( 2 );
+
+        composite.addComponent( true, header );
+        composite.addComponent( true, payload );
+
+        out.add( composite );
     }
 }

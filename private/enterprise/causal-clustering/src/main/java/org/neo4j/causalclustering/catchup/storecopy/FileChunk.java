@@ -5,35 +5,35 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Objects;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
-import org.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import org.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import java.util.Objects;
 
 public class FileChunk
 {
-    static final int MAX_SIZE = 8192;
-    private static final int USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS = -1;
-    private final int encodedLength;
-    private final byte[] bytes;
+    static final int HEADER_SIZE = 4;
+    static final int MAX_PAYLOAD_SIZE = 8192;
 
-    static FileChunk create( byte[] bytes, boolean last )
+    static final int USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS = -1;
+
+    private final int encodedLength;
+    private final ByteBuf payload;
+
+    static FileChunk create( ByteBuf payload, boolean isLast )
     {
-        if ( !last && bytes.length != MAX_SIZE )
+        if ( !isLast && payload.readableBytes() != MAX_PAYLOAD_SIZE )
         {
             throw new IllegalArgumentException( "All chunks except for the last must be of max size." );
         }
-        return new FileChunk( last ? bytes.length : USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS, bytes );
+        int encodedLength = isLast ? payload.readableBytes() : USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS;
+        return new FileChunk( encodedLength, payload );
     }
 
-    FileChunk( int encodedLength, byte[] bytes )
+    FileChunk( int encodedLength, ByteBuf payload )
     {
         this.encodedLength = encodedLength;
-        this.bytes = bytes;
+        this.payload = payload;
     }
 
     public boolean isLast()
@@ -41,12 +41,12 @@ public class FileChunk
         return encodedLength != USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS;
     }
 
-    public byte[] bytes()
+    ByteBuf payload()
     {
-        return bytes;
+        return payload;
     }
 
-    public int length()
+    int encodedLength()
     {
         return encodedLength;
     }
@@ -63,50 +63,18 @@ public class FileChunk
             return false;
         }
         FileChunk fileChunk = (FileChunk) o;
-        return encodedLength == fileChunk.encodedLength && Arrays.equals( bytes, fileChunk.bytes );
+        return encodedLength == fileChunk.encodedLength && ByteBufUtil.equals( payload, fileChunk.payload );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( encodedLength, Arrays.hashCode( bytes ) );
+        return Objects.hash( encodedLength, Objects.hashCode( payload ) );
     }
 
     @Override
     public String toString()
     {
-        return "FileChunk{" + Arrays.toString( bytes ) + '}';
-    }
-
-    public static ChannelMarshal<FileChunk> marshal()
-    {
-        return Marshal.INSTANCE;
-    }
-
-    private static class Marshal extends SafeChannelMarshal<FileChunk>
-    {
-        private static final Marshal INSTANCE = new Marshal();
-
-        private Marshal()
-        {
-        }
-
-        @Override
-        public void marshal( FileChunk fileChunk, WritableChannel channel ) throws IOException
-        {
-            channel.putInt( fileChunk.encodedLength );
-            byte[] bytes = fileChunk.bytes();
-            channel.put( bytes, bytes.length );
-        }
-
-        @Override
-        protected FileChunk unmarshal0( ReadableChannel channel ) throws IOException
-        {
-            int encodedLength = channel.getInt();
-            int length = encodedLength == USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS ? MAX_SIZE : encodedLength;
-            byte[] bytes = new byte[length];
-            channel.get( bytes, length );
-            return new FileChunk( encodedLength, bytes );
-        }
+        return "FileChunk{" + "encodedLength=" + encodedLength + ", payload=" + payload + '}';
     }
 }

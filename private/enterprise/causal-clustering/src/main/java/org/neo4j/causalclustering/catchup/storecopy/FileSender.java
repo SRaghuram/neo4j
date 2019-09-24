@@ -5,16 +5,18 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.util.Objects;
 
-import static org.neo4j.causalclustering.catchup.storecopy.FileChunk.MAX_SIZE;
+import org.neo4j.io.fs.StoreChannel;
+
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static org.neo4j.causalclustering.catchup.storecopy.FileChunk.MAX_PAYLOAD_SIZE;
 import static org.neo4j.causalclustering.catchup.storecopy.FileSender.State.FINISHED;
 import static org.neo4j.causalclustering.catchup.storecopy.FileSender.State.FULL_PENDING;
 import static org.neo4j.causalclustering.catchup.storecopy.FileSender.State.LAST_PENDING;
@@ -23,16 +25,14 @@ import static org.neo4j.causalclustering.catchup.storecopy.FileSender.State.PRE_
 class FileSender implements ChunkedInput<FileChunk>
 {
     private final StoreResource resource;
-    private final ByteBuffer byteBuffer;
 
-    private ReadableByteChannel channel;
-    private byte[] nextBytes;
+    private StoreChannel channel;
+    private ByteBuf nextPayload;
     private State state = PRE_INIT;
 
     FileSender( StoreResource resource )
     {
         this.resource = resource;
-        this.byteBuffer = ByteBuffer.allocateDirect( MAX_SIZE );
     }
 
     @Override
@@ -61,28 +61,30 @@ class FileSender implements ChunkedInput<FileChunk>
         else if ( state == PRE_INIT )
         {
             channel = resource.open();
-            nextBytes = prefetch();
-            if ( nextBytes == null )
+            nextPayload = prefetch( allocator );
+
+            if ( nextPayload == null )
             {
                 state = FINISHED;
-                return FileChunk.create( new byte[0], true );
+                return FileChunk.create( EMPTY_BUFFER, true );
             }
             else
             {
-                state = nextBytes.length < MAX_SIZE ? LAST_PENDING : FULL_PENDING;
+                state = nextPayload.readableBytes() < MAX_PAYLOAD_SIZE ? LAST_PENDING : FULL_PENDING;
             }
         }
 
         if ( state == FULL_PENDING )
         {
-            byte[] toSend = nextBytes;
-            nextBytes = prefetch();
-            if ( nextBytes == null )
+            ByteBuf toSend = nextPayload;
+            nextPayload = prefetch( allocator );
+
+            if ( nextPayload == null )
             {
                 state = FINISHED;
                 return FileChunk.create( toSend, true );
             }
-            else if ( nextBytes.length < MAX_SIZE )
+            else if ( nextPayload.readableBytes() < MAX_PAYLOAD_SIZE )
             {
                 state = LAST_PENDING;
                 return FileChunk.create( toSend, false );
@@ -95,7 +97,7 @@ class FileSender implements ChunkedInput<FileChunk>
         else if ( state == LAST_PENDING )
         {
             state = FINISHED;
-            return FileChunk.create( nextBytes, true );
+            return FileChunk.create( nextPayload, true );
         }
         else
         {
@@ -142,35 +144,41 @@ class FileSender implements ChunkedInput<FileChunk>
         return Objects.hash( resource );
     }
 
-    private byte[] prefetch() throws IOException
+    private ByteBuf prefetch( ByteBufAllocator allocator ) throws IOException
     {
+        ByteBuf payload = allocator.ioBuffer( MAX_PAYLOAD_SIZE );
+
+        int totalRead = 0;
+        try
+        {
+            totalRead = read( payload );
+        }
+        finally
+        {
+            if ( totalRead == 0 )
+            {
+                payload.release();
+                payload = null;
+            }
+        }
+
+        return payload;
+    }
+
+    private int read( ByteBuf payload ) throws IOException
+    {
+        int totalRead = 0;
         do
         {
-            int bytesRead = channel.read( byteBuffer );
-            if ( bytesRead == -1 )
+            int bytesReadOrEOF = payload.writeBytes( channel, MAX_PAYLOAD_SIZE - totalRead );
+            if ( bytesReadOrEOF < 0 )
             {
                 break;
             }
+            totalRead += bytesReadOrEOF;
         }
-        while ( byteBuffer.hasRemaining() );
-
-        if ( byteBuffer.position() > 0 )
-        {
-            return createByteArray( byteBuffer );
-        }
-        else
-        {
-            return null;
-        }
-    }
-
-    private byte[] createByteArray( ByteBuffer buffer )
-    {
-        buffer.flip();
-        byte[] bytes = new byte[buffer.limit()];
-        buffer.get( bytes );
-        buffer.clear();
-        return bytes;
+        while ( totalRead < MAX_PAYLOAD_SIZE );
+        return totalRead;
     }
 
     enum State

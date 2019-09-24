@@ -5,22 +5,23 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
+import org.neo4j.io.fs.StoreChannel;
 
 import static org.neo4j.io.IOUtils.closeAll;
 
 public class StreamToDisk implements StoreFileStream
 {
-    private WritableByteChannel writableByteChannel;
+    private StoreChannel storeChannel;
     private List<AutoCloseable> closeables;
 
     static StreamToDisk fromFile( FileSystemAbstraction fsa, File file ) throws IOException
@@ -28,21 +29,28 @@ public class StreamToDisk implements StoreFileStream
         return new StreamToDisk( fsa.open( file, OpenMode.READ_WRITE ) );
     }
 
-    private StreamToDisk( WritableByteChannel writableByteChannel, AutoCloseable... closeables )
+    private StreamToDisk( StoreChannel storeChannel, AutoCloseable... closeables )
     {
-        this.writableByteChannel = writableByteChannel;
+        this.storeChannel = storeChannel;
         this.closeables = new ArrayList<>();
-        this.closeables.add( writableByteChannel );
+        this.closeables.add( storeChannel );
         this.closeables.addAll( Arrays.asList( closeables ) );
     }
 
     @Override
-    public void write( byte[] data ) throws IOException
+    public void write( ByteBuf data ) throws IOException
     {
-        ByteBuffer buffer = ByteBuffer.wrap( data );
-        while ( buffer.hasRemaining() )
+        int expectedTotal = data.readableBytes();
+        int totalWritten = 0;
+        while ( totalWritten < expectedTotal )
         {
-            writableByteChannel.write( buffer );
+            // read from buffer, write to channel
+            int bytesWrittenOrEOF = data.readBytes( storeChannel, expectedTotal );
+            if ( bytesWrittenOrEOF < 0 )
+            {
+                throw new IOException( "Unexpected failure writing to channel: " + bytesWrittenOrEOF );
+            }
+            totalWritten += bytesWrittenOrEOF;
         }
     }
 

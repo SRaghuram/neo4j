@@ -7,23 +7,37 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-import org.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import static org.neo4j.causalclustering.catchup.storecopy.FileChunk.HEADER_SIZE;
+import static org.neo4j.causalclustering.catchup.storecopy.FileChunk.MAX_PAYLOAD_SIZE;
+import static org.neo4j.causalclustering.catchup.storecopy.FileChunk.USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS;
 
-/**
- * This class does not consume bytes during the decode method. Instead, it puts a {@link FileChunk} object with
- * a reference to the buffer, to be consumed later. This is the reason it does not extend
- * {@link io.netty.handler.codec.ByteToMessageDecoder}, since that class fails if an object is added in the out
- * list but no bytes have been consumed.
- */
-public class FileChunkDecoder extends MessageToMessageDecoder<ByteBuf>
+public class FileChunkDecoder extends ByteToMessageDecoder
 {
     @Override
-    protected void decode( ChannelHandlerContext ctx, ByteBuf msg, List<Object> out ) throws Exception
+    protected void decode( ChannelHandlerContext ctx, ByteBuf msg, List<Object> out )
     {
-        out.add( FileChunk.marshal().unmarshal( new NetworkReadableClosableChannelNetty4( msg ) ) );
+        int encodedLength = msg.readInt();
+        int length = encodedLength == USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS ? MAX_PAYLOAD_SIZE : encodedLength;
+
+        ByteBuf payload = msg.readRetainedSlice( length );
+
+        boolean success = false;
+        try
+        {
+            FileChunk fileChunk = new FileChunk( encodedLength, payload );
+            out.add( fileChunk );
+            success = true;
+        }
+        finally
+        {
+            if ( !success )
+            {
+                payload.release();
+            }
+        }
     }
 }

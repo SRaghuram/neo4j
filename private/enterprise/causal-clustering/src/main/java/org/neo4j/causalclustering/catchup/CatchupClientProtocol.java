@@ -21,7 +21,7 @@ public class CatchupClientProtocol extends Protocol<CatchupClientProtocol.State>
         STORE_COPY_FINISHED,
         TX_STREAM_FINISHED,
         FILE_HEADER,
-        FILE_CONTENTS,
+        FILE_CHUNK,
         PREPARE_STORE_COPY_RESPONSE,
         INDEX_SNAPSHOT_RESPONSE,
         ERROR_RESPONSE

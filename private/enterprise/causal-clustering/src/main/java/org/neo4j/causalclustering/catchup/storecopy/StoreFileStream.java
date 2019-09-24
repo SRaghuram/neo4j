@@ -5,9 +5,11 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.IOException;
 
 public interface StoreFileStream extends AutoCloseable
 {
-    void write( byte[] data ) throws IOException;
+    void write( ByteBuf byteBuf ) throws IOException;
 }

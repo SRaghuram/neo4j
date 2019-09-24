@@ -7,11 +7,11 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.ReadableByteChannel;
 import java.util.Objects;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
+import org.neo4j.io.fs.StoreChannel;
 
 class StoreResource
 {
@@ -28,7 +28,7 @@ class StoreResource
         this.fs = fs;
     }
 
-    ReadableByteChannel open() throws IOException
+    StoreChannel open() throws IOException
     {
         return fs.open( file, OpenMode.READ );
     }

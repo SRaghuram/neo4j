@@ -7,6 +7,7 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.ReferenceCountUtil;
 
 import org.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import org.neo4j.causalclustering.catchup.CatchupClientProtocol;
@@ -25,9 +26,16 @@ public class FileChunkHandler extends SimpleChannelInboundHandler<FileChunk>
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, FileChunk fileChunk ) throws Exception
     {
-        if ( handler.onFileContent( fileChunk ) )
+        try
         {
-            protocol.expect( CatchupClientProtocol.State.MESSAGE_TYPE );
+            if ( handler.onFileContent( fileChunk ) )
+            {
+                protocol.expect( CatchupClientProtocol.State.MESSAGE_TYPE );
+            }
+        }
+        finally
+        {
+            ReferenceCountUtil.release( fileChunk.payload() );
         }
     }
 }

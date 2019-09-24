@@ -5,12 +5,14 @@
  */
 package org.neo4j.causalclustering.catchup.storecopy;
 
+import io.netty.buffer.ByteBuf;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.io.File;
 
+import org.neo4j.causalclustering.helpers.Buffers;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.rule.PageCacheRule;
@@ -22,6 +24,9 @@ import static org.junit.Assert.assertTrue;
 
 public class StreamToDiskTest
 {
+    @Rule
+    public final Buffers buffers = new Buffers();
+
     private static final byte[] DATA = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
     private final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
@@ -57,7 +62,9 @@ public class StreamToDiskTest
     {
         try ( StoreFileStream acquire = writerProvider.acquire( file.getName(), 16 ) )
         {
-            acquire.write( DATA );
+            ByteBuf buffer = buffers.buffer();
+            buffer.writeBytes( DATA );
+            acquire.write( buffer );
         }
         assertTrue( "Streamed file created.", fs.fileExists( file ) );
         assertEquals( DATA.length, fs.getFileSize( file ) );
