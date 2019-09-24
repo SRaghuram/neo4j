@@ -869,22 +869,22 @@ class EndToEndTest
                 var query = String.join( "\n",
                         "CALL {",
                         "  FROM mega.graph(0)",
-                        "  CREATE (n:Test)",
-                        "  RETURN n",
+                        "  CREATE p = (:T)-[:R]->(:T)",
+                        "  RETURN p",
                         "}",
                         "CALL {",
                         "  FROM mega.graph(0)",
-                        "  WITH n",
+                        "  WITH p",
                         "  RETURN 1 AS x",
                         "}",
-                        "RETURN n, x"
+                        "RETURN p, x"
                 );
                 tx.run( query ).list();
                 tx.success();
             }
         } );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "node values" ) );
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "path values" ) );
         assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
     }
 
