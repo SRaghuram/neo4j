@@ -29,7 +29,7 @@ import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException
 import org.neo4j.io.IOUtils
 import org.neo4j.kernel.api.SilentTokenNameLookup
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
-import org.neo4j.kernel.impl.core.TransactionalProxyFactory
+import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.{Value, ValueComparator, Values}
 import org.neo4j.values.virtual._
@@ -154,8 +154,8 @@ object Templates {
     put(self(classHandle), typeRef[QueryContext], "queryContext", load("queryContext", typeRef[QueryContext])).
     put(self(classHandle), typeRef[QueryProfiler], "tracer", load("tracer", typeRef[QueryProfiler])).
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
-    put(self(classHandle), typeRef[TransactionalProxyFactory], "proxySpi",
-             invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, TransactionalProxyFactory]("entityAccessor"))).
+    put(self(classHandle), typeRef[TransactionalEntityFactory], "proxySpi",
+             invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, TransactionalEntityFactory]("entityAccessor"))).
     put(self(classHandle), typeRef[java.util.ArrayList[AutoCloseable]], "closeables",
         createNewInstance(typeRef[java.util.ArrayList[AutoCloseable]])).
     build()

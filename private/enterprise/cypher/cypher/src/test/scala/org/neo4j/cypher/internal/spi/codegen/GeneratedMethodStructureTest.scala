@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{CursorFactory, NodeCursor, PropertyCursor, Read, _}
-import org.neo4j.kernel.impl.core.TransactionalProxyFactory
+import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 
 /**
   * These are not test in the normal sense that they assert on some result,
@@ -211,7 +211,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
     implicit val context = new CodeGenContext(SemanticTable(), Map.empty)
     val clazz = using(codeGen.generateClass(packageName, "Test")) { body =>
       val fields = Fields(
-        entityAccessor = body.field(typeRef[TransactionalProxyFactory], "proxySpi"),
+        entityAccessor = body.field(typeRef[TransactionalEntityFactory], "proxySpi"),
         tracer = body.field(typeRef[QueryProfiler], "tracer"),
         params = body.field(typeRef[util.Map[String, Object]], "params"),
         queryContext = body.field(typeRef[QueryContext], "queryContext"),

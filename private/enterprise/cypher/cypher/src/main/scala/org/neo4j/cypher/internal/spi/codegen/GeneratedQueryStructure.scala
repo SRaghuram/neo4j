@@ -31,7 +31,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api._
-import org.neo4j.kernel.impl.core.TransactionalProxyFactory
+import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -160,7 +160,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
                                   "COLUMNS", newInitializedArray(typeRef[String], columns.map(key => constant(key)):_*))
 
     Fields(
-      entityAccessor = clazz.field(typeRef[TransactionalProxyFactory], "proxySpi"),
+      entityAccessor = clazz.field(typeRef[TransactionalEntityFactory], "proxySpi"),
       tracer = clazz.field(typeRef[QueryProfiler], "tracer"),
       params = clazz.field(typeRef[MapValue], "params"),
       queryContext = clazz.field(typeRef[QueryContext], "queryContext"),
