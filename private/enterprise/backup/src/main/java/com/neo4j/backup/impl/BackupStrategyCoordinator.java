@@ -57,7 +57,7 @@ class BackupStrategyCoordinator
 
         if ( context.consistencyCheckEnabled() )
         {
-            performConsistencyCheck( context, consistencyFlags, DatabaseLayout.of( destination ) );
+            performConsistencyCheck( context, consistencyFlags, DatabaseLayout.ofFlat( destination ) );
         }
     }
 

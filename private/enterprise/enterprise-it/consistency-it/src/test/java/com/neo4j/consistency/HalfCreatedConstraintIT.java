@@ -32,7 +32,7 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -42,20 +42,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class HalfCreatedConstraintIT
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     @Test
     void uniqueIndexWithoutOwningConstraintIsIgnoredDuringCheck() throws Exception
     {
-        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseLayout )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try

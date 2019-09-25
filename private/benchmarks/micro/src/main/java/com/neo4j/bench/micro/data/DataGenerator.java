@@ -276,7 +276,8 @@ public class DataGenerator
             Instant startTime = Instant.now();
 
             Map<String,String> neo4jConfigMap = Neo4jConfigBuilder.fromFile( neo4jConfig ).build().toMap();
-            inserter = BatchInserters.inserter( DatabaseLayout.of( store.graphDbDirectory().toFile() ), Config.newBuilder().setRaw( neo4jConfigMap ).build() );
+            inserter =
+                    BatchInserters.inserter( DatabaseLayout.ofFlat( store.graphDbDirectory().toFile() ), Config.newBuilder().setRaw( neo4jConfigMap ).build() );
 
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed

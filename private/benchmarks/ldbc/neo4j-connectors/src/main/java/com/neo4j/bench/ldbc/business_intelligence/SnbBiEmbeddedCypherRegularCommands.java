@@ -85,7 +85,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
 {
-    private final File dbDir;
+    private final File homeDir;
     private final File configFile;
     private final LoggingService loggingService;
     private Neo4jConnectionState connection;
@@ -99,7 +99,7 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
             AnnotatedQueries annotatedQueries,
             boolean doWarmup )
     {
-        this.dbDir = dbDir;
+        this.homeDir = dbDir;
         this.configFile = configFile;
         this.loggingService = loggingService;
         this.annotatedQueries = annotatedQueries;
@@ -109,7 +109,7 @@ public class SnbBiEmbeddedCypherRegularCommands implements Neo4jDbCommands
     @Override
     public void init() throws DbException
     {
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
+        DatabaseManagementService managementService = Neo4jDb.newDb( homeDir, configFile );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );

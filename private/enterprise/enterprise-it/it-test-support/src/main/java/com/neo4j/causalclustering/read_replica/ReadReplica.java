@@ -36,8 +36,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.LayoutConfig.of;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
@@ -60,7 +59,6 @@ public class ReadReplica implements ClusterMember
     private final Config memberConfig;
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
-    private final File databasesDirectory;
     private final ReadReplicaGraphDatabaseFactory dbFactory;
 
     private ReadReplicaGraphDatabase readReplicaGraphDatabase;
@@ -106,19 +104,16 @@ public class ReadReplica implements ClusterMember
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
-        config.set( GraphDatabaseSettings.logs_directory, new File( neo4jHome, "logs" ).toPath().toAbsolutePath() );
-        File transactionLogsRoot = new File( neo4jHome, "replica-tx-logs-" + serverId );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( neo4jHome, "replica-tx-logs-" + serverId ).toPath().toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
-        File dataDirectory = new File( neo4jHome, "data" );
-        databasesDirectory = new File( dataDirectory, "databases" );
-        neo4jLayout = Neo4jLayout.of( neo4jHome, databasesDirectory, () -> Optional.of( transactionLogsRoot ) );
         this.monitors = monitors;
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( neo4jHome, databasesDirectory, of( memberConfig ), DEFAULT_DATABASE_NAME );
+        this.neo4jLayout = Neo4jLayout.of( memberConfig );
+        this.defaultDatabaseLayout = neo4jLayout.databaseLayout( memberConfig.get( default_database ) );
+
     }
 
     @Override

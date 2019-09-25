@@ -130,7 +130,7 @@ public class ClusterSeedingIT
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
             Config config = Config.defaults( GraphDatabaseSettings.default_database, backups.defaultDb().getName() );
-            dataMatchesEventually( DbRepresentation.of( DatabaseLayout.of( backups.defaultDb() ), config ), DEFAULT_DATABASE_NAME, cluster.coreMembers() );
+            dataMatchesEventually( DbRepresentation.of( DatabaseLayout.ofFlat( backups.defaultDb() ), config ), DEFAULT_DATABASE_NAME, cluster.coreMembers() );
         }
         assertEquals( shouldStoreCopy, fileCopyDetector.anyFileInDirectoryWithName( DEFAULT_DATABASE_NAME ) );
     }

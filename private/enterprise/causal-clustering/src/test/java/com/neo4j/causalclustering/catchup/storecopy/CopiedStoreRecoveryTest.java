@@ -29,7 +29,7 @@ class CopiedStoreRecoveryTest
         copiedStoreRecovery.shutdown();
 
         Exception exception = assertThrows( Exception.class,
-                () -> copiedStoreRecovery.recoverCopiedStore( Config.defaults(), DatabaseLayout.of( new File( "nowhere" ) ) ) );
+                () -> copiedStoreRecovery.recoverCopiedStore( Config.defaults(), DatabaseLayout.ofFlat( new File( "nowhere" ) ) ) );
         assertEquals( "Abort store-copied store recovery due to database shutdown", exception.getMessage() );
     }
 }

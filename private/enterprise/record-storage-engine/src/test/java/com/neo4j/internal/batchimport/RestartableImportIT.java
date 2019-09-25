@@ -22,6 +22,7 @@ import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -39,7 +40,6 @@ import static java.time.Duration.ofSeconds;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
@@ -55,7 +55,7 @@ class RestartableImportIT
     private static final int RELATIONSHIP_COUNT = 10_000;
 
     @Inject
-    private TestDirectory directory;
+    private TestDirectory testDirectory;
     @Inject
     private DefaultFileSystemAbstraction fs;
     @Inject
@@ -66,19 +66,19 @@ class RestartableImportIT
     {
         assertTimeoutPreemptively( ofSeconds( 300 ), () ->
         {
-            File storeDir = directory.directory( "db" );
-            File databaseDirectory = directory.databaseDir( storeDir );
+            Neo4jLayout neo4jLayout = Neo4jLayout.ofFlat( testDirectory.homeDir() );
+            DatabaseLayout dbLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
             long startTime = System.currentTimeMillis();
-            int timeMeasuringImportExitCode = startImportInSeparateProcess( databaseDirectory ).waitFor();
+            int timeMeasuringImportExitCode = startImportInSeparateProcess( dbLayout.databaseDirectory() ).waitFor();
             long time = System.currentTimeMillis() - startTime;
             assertEquals( 0, timeMeasuringImportExitCode );
-            fs.deleteRecursively( storeDir );
-            fs.mkdir( storeDir );
+            fs.deleteRecursively( neo4jLayout.homeDirectory() );
+            fs.mkdir( neo4jLayout.homeDirectory() );
             Process process;
             int restartCount = 0;
             do
             {
-                process = startImportInSeparateProcess( databaseDirectory );
+                process = startImportInSeparateProcess( dbLayout.databaseDirectory() );
                 long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
                 process.waitFor( waitTime, TimeUnit.MILLISECONDS );
                 boolean manuallyDestroyed = false;
@@ -93,13 +93,11 @@ class RestartableImportIT
                     assertEquals( 0, exitCode );
                 }
 
-                zip( fs, storeDir, new File( directory.directory( "snapshots" ), String.format( "killed-%02d.zip", restartCount ) ) );
+                zip( fs, neo4jLayout.homeDirectory(), new File( testDirectory.directory( "snapshots" ), String.format( "killed-%02d.zip", restartCount ) ) );
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( storeDir )
-                    .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() )
-                    .build();
+            DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( dbLayout ).build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             try
             {
@@ -119,7 +117,7 @@ class RestartableImportIT
                 getClass().getCanonicalName(), databaseDirectory.getPath(), Long.toString( seed ) );
         File wd = new File( "target/test-classes" ).getAbsoluteFile();
         Files.createDirectories( wd.toPath() );
-        File reportFile = directory.createFile( "testReport" + seed );
+        File reportFile = testDirectory.createFile( "testReport" + seed );
         return pb.directory( wd )
                  .redirectOutput( appendTo( reportFile ) )
                  .redirectError( appendTo( reportFile ) )
@@ -135,7 +133,7 @@ class RestartableImportIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.of( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
+            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
                     RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );

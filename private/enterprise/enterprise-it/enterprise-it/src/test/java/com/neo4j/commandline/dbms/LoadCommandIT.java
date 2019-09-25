@@ -42,7 +42,7 @@ class LoadCommandIT extends AbstractCommandIT
     void failToLoadWhenDatabaseIsRunning()
     {
         var databaseName = databaseAPI.databaseName();
-        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().storeDirectory().toPath();
+        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
         var exception = assertThrows( CommandFailedException.class, () -> load( databaseName, destinationPath ) );
         assertThat( exception.getMessage(), containsString( "The database is in use. Stop database" ) );
     }
@@ -51,7 +51,7 @@ class LoadCommandIT extends AbstractCommandIT
     void failToLoadExistingShutdownDatabase()
     {
         var databaseName = databaseAPI.databaseName();
-        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().storeDirectory().toPath();
+        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
 
         managementService.shutdownDatabase( databaseName );
         var exception = assertThrows( CommandFailedException.class, () -> load( databaseName, destinationPath ) );

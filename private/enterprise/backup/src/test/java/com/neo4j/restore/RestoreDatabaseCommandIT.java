@@ -11,7 +11,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.configuration.Config;
@@ -28,7 +27,7 @@ import org.neo4j.kernel.internal.locker.DatabaseLocker;
 import org.neo4j.kernel.internal.locker.Locker;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
@@ -45,25 +44,27 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class RestoreDatabaseCommandIT
 {
     @Inject
     private TestDirectory directory;
     @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
+    private Neo4jLayout neo4jLayout;
     private static DatabaseManagementService managementService;
 
     @Test
     void forceShouldRespectDatabaseLock()
     {
         var databaseName =  "new" ;
-        Neo4jLayout testStore = directory.neo4jLayout( "testStore" );
-        Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
+        Neo4jLayout testStore = neo4jLayout;
+        Config config = configWith( testStore.databasesDirectory().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
 
@@ -90,8 +91,8 @@ class RestoreDatabaseCommandIT
     {
         // given
         var databaseName =  "new" ;
-        Neo4jLayout testStore = directory.neo4jLayout( "testStore" );
-        Config config = configWith( testStore.storeDirectory().getAbsolutePath() );
+        Neo4jLayout testStore = neo4jLayout;
+        Config config = configWith( testStore.databasesDirectory().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
         DatabaseLayout toLayout = testStore.databaseLayout( databaseName );
@@ -112,7 +113,7 @@ class RestoreDatabaseCommandIT
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
 
         File fromPath = new File( directory.absolutePath(), "old" );
-        DatabaseLayout toLayout = directory.databaseLayout( databaseName );
+        DatabaseLayout toLayout = neo4jLayout.databaseLayout( databaseName );
 
         createDbAt( toLayout.databaseDirectory(), 0 );
 
@@ -140,13 +141,13 @@ class RestoreDatabaseCommandIT
     void shouldAllowForcedCopyOverAnExistingDatabase() throws Exception
     {
         // given
-        Neo4jLayout toStoreLayout = directory.neo4jLayout( "new" );
-        Neo4jLayout fromStoreLayout = directory.neo4jLayout( "old" );
+        Neo4jLayout toStoreLayout = neo4jLayout;
+        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homeDir( "old" ) );
 
-        DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
+        DatabaseLayout fromLayout = fromStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         DatabaseLayout toLayout = toStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         Config config =
-                configWith( toStoreLayout.storeDirectory().getAbsolutePath(), toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
+                configWith( toStoreLayout.databasesDirectory().getAbsolutePath(), toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
         int fromNodeCount = 10;
         int toNodeCount = 20;
 
@@ -175,13 +176,18 @@ class RestoreDatabaseCommandIT
     void restoreTransactionLogsInCustomDirectoryForTargetDatabaseWhenConfigured()
             throws IOException
     {
-        Neo4jLayout toStoreLayout = directory.neo4jLayout( "new" );
-        Neo4jLayout fromStoreLayout = directory.neo4jLayout( "old" );
-        File customTxLogDirectory = directory.directory( "customLogicalLog" );
-        Config config = configWith( toStoreLayout.storeDirectory().getAbsolutePath(),  customTxLogDirectory.getAbsolutePath() );
+        Neo4jLayout fromStoreLayout = Neo4jLayout.ofFlat( directory.homeDir( "old" ) );
 
-        DatabaseLayout fromLayout = directory.databaseLayout( fromStoreLayout.storeDirectory(), () -> Optional.of( fromStoreLayout.storeDirectory() ) );
-        DatabaseLayout toLayout = directory.databaseLayout( toStoreLayout.storeDirectory(), of( config ) );
+        Path newHome = directory.homeDir( "new" ).toPath();
+        Config config = Config.newBuilder()
+                .set( neo4j_home, newHome )
+                .set( transaction_logs_root_path, newHome.resolve( "customLogicalLog" ) )
+                .build();
+
+        Neo4jLayout toStoreLayout = Neo4jLayout.of( config );
+
+        DatabaseLayout fromLayout = fromStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout toLayout = toStoreLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         int fromNodeCount = 10;
         int toNodeCount = 20;
         createDbAt( fromLayout, fromNodeCount );
@@ -253,7 +259,7 @@ class RestoreDatabaseCommandIT
 
     private void createDbAt( File fromPath, int nodesToCreate )
     {
-        GraphDatabaseService db = createDatabase( fromPath );
+        GraphDatabaseService db = createDatabase( DatabaseLayout.ofFlat( fromPath ) );
         createTestData( nodesToCreate, db );
         managementService.shutdown();
     }
@@ -265,26 +271,13 @@ class RestoreDatabaseCommandIT
         managementService.shutdown();
     }
 
-    private static GraphDatabaseService createDatabase( File databasePath )
-    {
-        File storeDir = databasePath.getParentFile();
-        managementService = new DatabaseManagementServiceBuilder( storeDir )
-                .setConfig( databases_root_path, storeDir.toPath().toAbsolutePath() )
-                .setConfig( online_backup_enabled, false )
-                .setConfig( transaction_logs_root_path, storeDir.toPath().toAbsolutePath() )
-                .setConfig( default_database, databasePath.getName() )
-                .build();
-        return managementService.database( databasePath.getName() );
-    }
-
     private static GraphDatabaseService createDatabase( DatabaseLayout databaseLayout )
     {
-        File storeDir = databaseLayout.getNeo4jLayout().storeDirectory();
-        Path txRootDirectory = databaseLayout.getTransactionLogsDirectory().getParentFile().toPath().toAbsolutePath();
-        managementService = new DatabaseManagementServiceBuilder( storeDir )
-                .setConfig( databases_root_path, storeDir.toPath().toAbsolutePath() )
+        Neo4jLayout neo4jLayout = databaseLayout.getNeo4jLayout();
+        managementService = new DatabaseManagementServiceBuilder( neo4jLayout.homeDirectory() )
+                .setConfig( databases_root_path, neo4jLayout.databasesDirectory().toPath() )
+                .setConfig( transaction_logs_root_path, neo4jLayout.txLogsDirectory().toPath() )
                 .setConfig( online_backup_enabled, false )
-                .setConfig( transaction_logs_root_path, txRootDirectory )
                 .setConfig( default_database, databaseLayout.getDatabaseName() )
                 .build();
         return managementService.database( databaseLayout.getDatabaseName() );

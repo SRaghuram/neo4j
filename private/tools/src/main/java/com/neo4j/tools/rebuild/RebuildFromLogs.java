@@ -131,13 +131,13 @@ class RebuildFromLogs
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.of( source ), DatabaseLayout.of( target ), txId );
+            new RebuildFromLogs( fileSystem ).rebuild( DatabaseLayout.ofFlat( source ), DatabaseLayout.ofFlat( target ), txId );
         }
     }
 
     private static boolean directoryContainsDb( Path path )
     {
-        return Files.exists( DatabaseLayout.of( path.toFile() ).metadataStore().toPath() );
+        return Files.exists( DatabaseLayout.ofFlat( path.toFile() ).metadataStore().toPath() );
     }
 
     public void rebuild( DatabaseLayout sourceDatabaseLayout, DatabaseLayout targetLayout, long txId ) throws Exception, InconsistentStoreException
@@ -282,13 +282,13 @@ class RebuildFromLogs
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
-        Neo4jLayout storeLayout = databaseLayout.getNeo4jLayout();
-        managementService = new EnterpriseDatabaseManagementServiceBuilder( storeLayout.storeDirectory() )
+        Neo4jLayout neo4jLayout = databaseLayout.getNeo4jLayout();
+        managementService = new EnterpriseDatabaseManagementServiceBuilder( neo4jLayout.homeDirectory() )
                 .setExternalDependencies( dependencies )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
-                .setConfig( GraphDatabaseSettings.databases_root_path, storeLayout.storeDirectory().toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeLayout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.databases_root_path, neo4jLayout.databasesDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, neo4jLayout.txLogsDirectory().toPath().toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }

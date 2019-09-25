@@ -17,23 +17,25 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class BatchInserterEnterpriseConstraintIT
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     @Test
     void startBatchInserterOnTopOfEnterpriseDatabase() throws IOException
     {
-        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+
         DatabaseManagementService
-                managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseLayout.databaseDirectory() ).build();
+                managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction transaction = database.beginTx() )
         {

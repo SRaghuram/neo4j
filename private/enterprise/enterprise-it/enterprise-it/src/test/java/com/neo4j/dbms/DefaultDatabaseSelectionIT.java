@@ -23,10 +23,11 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,12 +40,14 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class DefaultDatabaseSelectionIT
 {
     private static final String LEGACY_DATABASE_NAME = "graph.db";
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private Neo4jLayout neo4jLayout;
     @Inject
     private FileSystemAbstraction fileSystem;
     private DatabaseManagementService managementService;
@@ -124,7 +127,7 @@ class DefaultDatabaseSelectionIT
         DatabaseLayout neo4j = (getDatabaseApiByName( "neo4j" )).databaseLayout();
         managementService.shutdown();
 
-        DatabaseLayout legacyDbLayout = testDirectory.databaseLayout( LEGACY_DATABASE_NAME );
+        DatabaseLayout legacyDbLayout = neo4jLayout.databaseLayout( LEGACY_DATABASE_NAME );
         copyDatabaseToLegacyDatabase( neo4j, legacyDbLayout );
         managementService = createManagementService();
         Config systemConfig = getDatabaseApiByName( SYSTEM_DATABASE_NAME ).getDependencyResolver().resolveDependency( Config.class );
@@ -169,7 +172,7 @@ class DefaultDatabaseSelectionIT
     {
         startDatabase( databaseName );
         managementService.shutdown();
-        DatabaseLayout systemLayout = testDirectory.databaseLayout( SYSTEM_DATABASE_NAME );
+        DatabaseLayout systemLayout = neo4jLayout.databaseLayout( SYSTEM_DATABASE_NAME );
         assertTrue( systemLayout.metadataStore().exists() );
         FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
         fileSystem.deleteRecursively( systemLayout.getTransactionLogsDirectory() );

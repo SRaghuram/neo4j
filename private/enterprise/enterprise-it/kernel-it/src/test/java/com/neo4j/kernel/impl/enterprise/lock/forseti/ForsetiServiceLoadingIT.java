@@ -45,7 +45,8 @@ class ForsetiServiceLoadingTest
 
     private Locks getDBLocksInstance( Map<Setting<?>,Object> config )
     {
-        DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( directory.databaseDir() ).setConfig( config ).build();
+        DatabaseManagementService managementService =
+                new EnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).setConfig( config ).build();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         Locks locks = db.getDependencyResolver().resolveDependency( Locks.class );
         managementService.shutdown();

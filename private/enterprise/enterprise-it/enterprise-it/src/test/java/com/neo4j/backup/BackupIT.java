@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -66,6 +65,7 @@ import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -168,15 +168,16 @@ class BackupIT
     void beforeEach()
     {
         databases = new ArrayList<>();
-        serverHomeDir = testDirectory.homeDir( "server" );
-        serverDatabaseLayout =  DatabaseLayout.of( serverHomeDir, serverHomeDir, () -> Optional.of( serverHomeDir ), DEFAULT_DATABASE_NAME );
+        var serverLayout = Neo4jLayout.ofFlat( testDirectory.homeDir( "server" ) );
+        serverHomeDir = serverLayout.homeDirectory();
+        serverDatabaseLayout = serverLayout.databaseLayout( DEFAULT_DATABASE_NAME );
 
-        File otherServer = testDirectory.homeDir( "otherServer" );
-        otherServerPath = DatabaseLayout.of( otherServer, otherServer, () -> Optional.of( otherServer ), DEFAULT_DATABASE_NAME ).databaseDirectory();
+        var otherServerLayout = Neo4jLayout.ofFlat( testDirectory.homeDir( "otherServer" ) );
+        otherServerPath = otherServerLayout.databaseLayout( DEFAULT_DATABASE_NAME ).databaseDirectory();
 
         backupsDir = testDirectory.homeDir( "backups" );
 
-        backupDatabaseLayout = DatabaseLayout.of( backupsDir, backupsDir, () -> Optional.of( backupsDir ), DEFAULT_DATABASE_NAME );
+        backupDatabaseLayout = DatabaseLayout.ofFlat( new File( backupsDir, DEFAULT_DATABASE_NAME ) );
         backupDatabasePath = backupDatabaseLayout.databaseDirectory();
     }
 

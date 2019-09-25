@@ -191,7 +191,7 @@ class EnterpriseSystemDatabaseIT
         DatabaseManagementService managementService = null;
         try
         {
-            File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
+            File disabledSystemDbDirectory = testDirectory.homeDir( "withSystemDd" );
             managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledSystemDbDirectory ).build();
             databaseWithSystemDb = managementService.database( DEFAULT_DATABASE_NAME );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );

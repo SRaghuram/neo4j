@@ -62,7 +62,7 @@ class BackupStrategyWrapper
         Path backupLocation = onlineBackupContext.getDatabaseBackupDir();
         SocketAddress address = onlineBackupContext.getAddress();
         Config config = onlineBackupContext.getConfig();
-        DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation.toFile() );
+        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation.toFile() );
 
         boolean previousBackupExists = backupCopyService.backupExists( backupLayout );
         boolean fallbackToFull = onlineBackupContext.fallbackToFullBackupEnabled();
@@ -141,7 +141,7 @@ class BackupStrategyWrapper
         }
 
         SocketAddress address = onlineBackupContext.getAddress();
-        DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
+        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( temporaryFullBackupLocation.toFile() );
         backupStrategy.performFullBackup( backupLayout, address, databaseName );
 
         performRecovery( onlineBackupContext.getConfig(), backupLayout );

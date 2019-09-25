@@ -80,6 +80,7 @@ import com.neo4j.bench.ldbc.utils.AnnotatedQueries;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -88,7 +89,7 @@ import static java.lang.String.format;
 
 public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbCommands
 {
-    private final File dbDir;
+    private final File homeDir;
     private final File configFile;
     private final LoggingService loggingService;
     private Neo4jConnectionState connection;
@@ -102,7 +103,7 @@ public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbComma
             AnnotatedQueries annotatedQueries,
             boolean doWarmup )
     {
-        this.dbDir = dbDir;
+        this.homeDir = dbDir;
         this.configFile = configFile;
         this.loggingService = loggingService;
         this.annotatedQueries = annotatedQueries;
@@ -112,8 +113,8 @@ public class SnbInteractiveEmbeddedCypherRegularCommands implements Neo4jDbComma
     @Override
     public void init() throws DbException
     {
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( homeDir, configFile );
+        GraphDatabaseService db = managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         LdbcIndexer.waitForIndexesToBeOnline( db );
         registerShutdownHook( managementService );
 

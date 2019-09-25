@@ -20,12 +20,11 @@ import org.neo4j.commandline.dbms.DatabaseLockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
-import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.Option;
 
@@ -58,14 +57,11 @@ class UnbindFromClusterCommand extends AbstractCommand
         try
         {
             Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
-            File dataDirectory = config.get( GraphDatabaseSettings.data_directory ).toFile();
-            File databasesRoot = config.get( databases_root_path ).toFile();
-            File homeDir = config.get( neo4j_home ).toFile();
-            DatabaseLayout databaseLayout = DatabaseLayout.of( homeDir, databasesRoot, database );
+            DatabaseLayout databaseLayout = Neo4jLayout.of( config ).databaseLayout( database );
 
             try ( Closeable ignored = validateDatabase( databaseLayout ) )
             {
-                File clusterStateDirectory = ClusterStateLayout.of( dataDirectory ).getClusterStateDirectory();
+                File clusterStateDirectory = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).getClusterStateDirectory();
 
                 if ( ctx.fs().fileExists( clusterStateDirectory ) )
                 {

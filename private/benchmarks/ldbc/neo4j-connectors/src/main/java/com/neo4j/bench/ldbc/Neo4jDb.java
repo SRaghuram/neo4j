@@ -28,15 +28,11 @@ import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
-import org.neo4j.batchinsert.BatchInserter;
-import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -47,8 +43,7 @@ import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.io.layout.DatabaseLayout;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 public class Neo4jDb extends Db
 {
@@ -411,38 +406,19 @@ public class Neo4jDb extends Db
     // ==========================================  UTILS  =============================================================
     // ================================================================================================================
 
-    public static DatabaseLayout layoutWithTxLogLocation( File storeDir )
+    public static DatabaseLayout layoutWithTxLogLocation( File homeDir )
     {
-        File txLogsDir = new File( storeDir, "data/tx-logs/" );
-        return DatabaseLayout.of( storeDir, storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
+        return DatabaseLayout.of( Config.defaults( neo4j_home, homeDir.toPath().toAbsolutePath() ) );
     }
 
-    public static BatchInserter newInserter( File storeDir, File importerPropertiesFile )
+    public static DatabaseManagementService newDb( File homeDir, File configFile )
     {
-        try
-        {
-            Config importerConfig = Config.newBuilder().fromFile( importerPropertiesFile ).build();
-            File txLogsDir = new File( storeDir, "data/tx-logs/" );
-            DatabaseLayout layout = DatabaseLayout.of( storeDir, storeDir, () -> Optional.of( txLogsDir ), DEFAULT_DATABASE_NAME );
-            return BatchInserters.inserter( layout, importerConfig );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( "Error creating batch inserter\n" +
-                                            "Store directory: " + storeDir.getAbsolutePath(), e );
-        }
+        return newDbBuilder( homeDir, configFile ).build();
     }
 
-    public static DatabaseManagementService newDb( File dbDir, File configFile )
+    private static DatabaseManagementServiceBuilder newDbBuilder( File homeDir, File configFile )
     {
-        return newDbBuilder( dbDir, configFile ).build();
-    }
-
-    private static DatabaseManagementServiceBuilder newDbBuilder( File dbDir, File configFile )
-    {
-        File storeDir = dbDir.getParentFile();
-        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( storeDir );
-        builder.setConfig( databases_root_path, storeDir.toPath().toAbsolutePath() );
+        DatabaseManagementServiceBuilder builder = new EnterpriseDatabaseManagementServiceBuilder( homeDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );
@@ -450,21 +426,21 @@ public class Neo4jDb extends Db
         return builder;
     }
 
-    public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
+    public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File homeDir, File configFile, URI uri )
     {
         String withoutProtocol = uri.toString().substring( uri.toString().indexOf( "://" ) + 3 );
         int portIndex = withoutProtocol.lastIndexOf( ':' );
         int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1 ) );
         return newDbBuilderForBolt(
-                dbDir,
+                homeDir,
                 configFile,
                 withoutProtocol.substring( 0, portIndex ),
                 port );
     }
 
-    public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File dbDir, File configFile, String uriString, int port )
+    public static DatabaseManagementServiceBuilder newDbBuilderForBolt( File homeDir, File configFile, String uriString, int port )
     {
-        return newDbBuilder( dbDir, configFile )
+        return newDbBuilder( homeDir, configFile )
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( uriString, port ) );

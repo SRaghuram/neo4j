@@ -15,7 +15,7 @@ public class BackupStoreWithSomeDataAndNoIdFiles extends BackupStoreWithSomeData
     @Override
     void modify( File backup ) throws Exception
     {
-        DatabaseLayout layout = DatabaseLayout.of( backup );
+        DatabaseLayout layout = DatabaseLayout.ofFlat( backup );
         for ( File idFile : layout.idFiles() )
         {
             Files.delete( idFile.toPath() );

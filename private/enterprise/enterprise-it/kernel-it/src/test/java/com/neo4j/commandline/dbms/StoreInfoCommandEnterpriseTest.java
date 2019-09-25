@@ -80,7 +80,7 @@ class StoreInfoCommandEnterpriseTest
     private File createNeoStoreFile() throws IOException
     {
         fileSystem.mkdir( databaseDirectory.toFile() );
-        File neoStoreFile = DatabaseLayout.of( databaseDirectory.toFile() ).metadataStore();
+        File neoStoreFile = DatabaseLayout.ofFlat( databaseDirectory.toFile() ).metadataStore();
         fileSystem.write( neoStoreFile ).close();
         return neoStoreFile;
     }

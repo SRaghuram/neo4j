@@ -18,13 +18,14 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -44,11 +45,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class BackupStrategyWrapperTest
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private Neo4jLayout neo4jLayout;
 
     private final BackupStrategy backupStrategyImplementation = mock( BackupStrategy.class );
     private final BackupCopyService backupCopyService = mock( BackupCopyService.class );
@@ -71,7 +74,7 @@ class BackupStrategyWrapperTest
     @BeforeEach
     void setup() throws Exception
     {
-        desiredBackupLayout = testDirectory.databaseLayout( "desiredBackupLayout" );
+        desiredBackupLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
         reportDir = testDirectory.directory( "reportDir" ).toPath();
         availableFreshBackupLocation = testDirectory.directory( "availableFreshBackupLocation" ).toPath();
         availableOldBackupLocation = testDirectory.directory( "availableOldBackupLocation" ).toPath();
@@ -238,8 +241,8 @@ class BackupStrategyWrapperTest
         File backupsDir = testDirectory.directory( "backups" );
         File databaseBackupDir = new File( backupsDir, DEFAULT_DATABASE_NAME );
 
-        desiredBackupLayout = DatabaseLayout.of( backupsDir );
-        when( backupCopyService.backupExists( DatabaseLayout.of( databaseBackupDir ) ) ).thenReturn( true );
+        desiredBackupLayout = DatabaseLayout.ofFlat( backupsDir );
+        when( backupCopyService.backupExists( DatabaseLayout.ofFlat( databaseBackupDir ) ) ).thenReturn( true );
 
         // and fallback to full flag has been set
         onlineBackupContext = newBackupContext( true );

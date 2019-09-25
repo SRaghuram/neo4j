@@ -21,6 +21,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
@@ -42,7 +43,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
@@ -55,11 +56,13 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.function.Suppliers.singleton;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class DatabaseMetricsExtensionTest
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
     private ExtensionContext context;
 
     private static final DatabaseId DATABASE_ID = randomDatabaseId();
@@ -67,7 +70,7 @@ class DatabaseMetricsExtensionTest
     @BeforeEach
     void setUp()
     {
-        context = new DatabaseExtensionContext( testDirectory.databaseLayout(), DatabaseInfo.TOOL, new Dependencies() );
+        context = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.TOOL, new Dependencies() );
     }
 
     @Test

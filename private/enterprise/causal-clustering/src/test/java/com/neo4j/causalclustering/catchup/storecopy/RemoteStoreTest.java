@@ -56,7 +56,7 @@ class RemoteStoreTest
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
     private SocketAddress localhost = new SocketAddress( "127.0.0.1", 1234 );
-    private DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "destination" ) );
+    private DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "destination" ) );
     private CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( localhost );
     private TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 

@@ -47,6 +47,7 @@ import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
@@ -160,9 +161,10 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
-            store.prepareDirectory( testDir.databaseDir() );
+            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory() );
 
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
@@ -178,15 +180,15 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( databaseLayout );
-            assertFalse( new File( testDir.databaseLayout().countStore().getAbsolutePath() + ".a" ).exists() );
-            assertFalse( new File( testDir.databaseLayout().countStore().getAbsolutePath() + ".b" ).exists() );
+            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
         }
 
         @Test
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
             File rootDir = testDir.homeDir();
-            DatabaseLayout databaseLayout = DatabaseLayout.of( rootDir, rootDir, DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDir.directory( DEFAULT_DATABASE_NAME ) );
 
             store.prepareDirectory( databaseLayout.databaseDirectory() );
 
@@ -227,13 +229,14 @@ public class StoreUpgradeIT
         public void transactionLogsMovedToConfiguredLocationAfterUpgrade() throws IOException
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            File databaseDir = testDir.databaseDir();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
 
             // migrated databases have their transaction logs located in
             Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
             DatabaseManagementService managementService = builder.build();
@@ -251,7 +254,8 @@ public class StoreUpgradeIT
         public void transactionLogsMovedToConfiguredLocationAfterUpgradeFromCustomLocation() throws IOException
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
-            File databaseDir = testDir.databaseDir();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
             File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
             File customTransactionLogsLocation = testDir.directory( "transactionLogsCustom" );
             File databaseDirectory = store.prepareDirectory( databaseDir );
@@ -326,9 +330,13 @@ public class StoreUpgradeIT
         public void migrationShouldFail() throws Throwable
         {
             // migrate the store using a single instance
-            File databaseDirectory = Unzip.unzip( getClass(), dbFileName, testDir.databaseDir() );
+
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
+            testDir.getFileSystem().mkdirs( databaseDir );
+            File databaseDirectory = Unzip.unzip( getClass(), dbFileName, databaseDir );
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( pagecache_memory, "8m" );
             DatabaseManagementService managementService = builder.build();
@@ -365,10 +373,13 @@ public class StoreUpgradeIT
         @Test
         public void shouldBeAbleToUpgradeAStoreWithoutIdFilesAsBackups() throws Throwable
         {
-            File databaseDirectory = store.prepareDirectory( testDir.databaseDir() );
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
+
+            File databaseDirectory = store.prepareDirectory( databaseDir );
 
             // remove id files
-            for ( File idFile : DatabaseLayout.of( databaseDirectory ).idFiles() )
+            for ( File idFile : DatabaseLayout.ofFlat( databaseDirectory ).idFiles() )
             {
                 if ( idFile.exists() )
                 {
@@ -376,12 +387,11 @@ public class StoreUpgradeIT
                 }
             }
 
-            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( testDir.homeDir() );
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
-            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );

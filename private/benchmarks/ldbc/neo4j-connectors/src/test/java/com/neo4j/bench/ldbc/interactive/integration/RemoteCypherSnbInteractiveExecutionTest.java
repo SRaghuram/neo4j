@@ -54,12 +54,12 @@ public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecu
     }
 
     @Override
-    DatabaseAndUrl createRemoteConnector( File dbDir )
+    DatabaseAndUrl createRemoteConnector( File homeDir )
     {
         int port = PortAuthority.allocatePort();
         String boltAddressWithoutPort = "localhost";
         DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt(
-                dbDir,
+                homeDir,
                 getResource( "/neo4j/neo4j_sf001.conf" ),
                 boltAddressWithoutPort,
                 port

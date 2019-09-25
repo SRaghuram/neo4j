@@ -24,8 +24,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
@@ -33,19 +33,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
 class CompositeConstraintIT
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     @Test
     void compositeNodeKeyConstraintUpdate() throws Exception
     {
         DatabaseManagementService managementService =
-                new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+                new TestEnterpriseDatabaseManagementServiceBuilder( databaseLayout ).build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
 
         Label label = Label.label( "label" );
@@ -76,7 +78,7 @@ class CompositeConstraintIT
         }
         managementService.shutdown();
 
-        ConsistencyCheckService.Result consistencyCheckResult = checkDbConsistency( testDirectory.databaseLayout() );
+        ConsistencyCheckService.Result consistencyCheckResult = checkDbConsistency( databaseLayout );
         assertTrue( consistencyCheckResult.isSuccessful(), "Database is consistent" );
     }
 

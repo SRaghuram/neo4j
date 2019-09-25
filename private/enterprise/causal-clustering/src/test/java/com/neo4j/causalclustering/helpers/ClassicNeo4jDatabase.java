@@ -27,7 +27,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
-import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
@@ -125,7 +124,6 @@ public class ClassicNeo4jDatabase
 
         public ClassicNeo4jDatabase build() throws IOException
         {
-            File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseId.name() );
             managementService = new TestDatabaseManagementServiceBuilder( baseDirectoryAbsolute )
                     .setFileSystem( fileSystem )
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
@@ -155,8 +153,7 @@ public class ClassicNeo4jDatabase
                 managementService.shutdown();
             }
 
-            return new ClassicNeo4jDatabase(
-                    DatabaseLayout.of( databasesRootDirectoryAbsolute, databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
+            return new ClassicNeo4jDatabase( ((GraphDatabaseAPI) db).databaseLayout() );
         }
 
         private Path getTransactionLogsRoot()

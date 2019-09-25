@@ -64,8 +64,8 @@ class BackupCopyService
 
     void deletePreExistingBrokenBackupIfPossible( Path preExistingBrokenBackupDir, Path newSuccessfulBackupDir ) throws IOException
     {
-        DatabaseLayout preExistingBrokenBackupLayout = DatabaseLayout.of( preExistingBrokenBackupDir.toFile() );
-        DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.of( newSuccessfulBackupDir.toFile() );
+        DatabaseLayout preExistingBrokenBackupLayout = DatabaseLayout.ofFlat( preExistingBrokenBackupDir.toFile() );
+        DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.ofFlat( newSuccessfulBackupDir.toFile() );
 
         StoreId preExistingBrokenBackupStoreId;
         try

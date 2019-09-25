@@ -20,6 +20,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -29,14 +30,14 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( LifeExtension.class )
 class CsvOutputTest
 {
@@ -46,6 +47,8 @@ class CsvOutputTest
     private TestDirectory directory;
     @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
+    private DatabaseLayout databaseLayout;
     private final JobScheduler jobScheduler = new OnDemandJobScheduler();
 
     private ExtensionContext extensionContext;
@@ -53,7 +56,7 @@ class CsvOutputTest
     @BeforeEach
     void setup()
     {
-        extensionContext = new DatabaseExtensionContext( directory.databaseLayout(), DatabaseInfo.UNKNOWN, new Dependencies() );
+        extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, new Dependencies() );
     }
 
     @Test

@@ -40,7 +40,7 @@ class SystemGraphRealmTestHelper
 
         TestDatabaseManager( TestDirectory testDir )
         {
-            managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDir.databaseDir() ).impermanent()
+            managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homeDir() ).impermanent()
                     .setConfig( GraphDatabaseSettings.auth_enabled, false ).build();
             testSystemDb = (GraphDatabaseFacade) managementService.database( SYSTEM_DATABASE_NAME );
         }

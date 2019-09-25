@@ -178,7 +178,7 @@ class UnbindFromClusterCommandTest
     private void createUnlockedFakeDbDir( Path homeDir ) throws IOException
     {
         Path fakeDbDir = createFakeDbDir( homeDir );
-        Files.createFile( DatabaseLayout.of( fakeDbDir.toFile() ).getNeo4jLayout().storeLockFile().toPath() );
+        Files.createFile( DatabaseLayout.ofFlat( fakeDbDir.toFile() ).getNeo4jLayout().storeLockFile().toPath() );
     }
 
     private FileLock createLockedFakeDbDir( Path homeDir ) throws IOException
@@ -196,7 +196,7 @@ class UnbindFromClusterCommandTest
 
     private FileLock createLockedStoreLockFileIn( Path databaseDir ) throws IOException
     {
-        Path storeLockFile = Files.createFile( DatabaseLayout.of( databaseDir.toFile() ).databaseLockFile().toPath() );
+        Path storeLockFile = Files.createFile( DatabaseLayout.ofFlat( databaseDir.toFile() ).databaseLockFile().toPath() );
         channel = FileChannel.open( storeLockFile, READ, WRITE );
         return channel.lock( 0, Long.MAX_VALUE, true );
     }

@@ -45,7 +45,7 @@ public class PrepareStoreCopyFilesTest
     {
         Database dataSource = mock( Database.class );
         fileListingBuilder = mock( DatabaseFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
-        databaseLayout = testDirectory.databaseLayout();
+        databaseLayout = DatabaseLayout.ofFlat( testDirectory.directory( "neo4j", "data", "databases" ) );
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );
         DatabaseFileListing storeFileListing = mock( DatabaseFileListing.class );
         when( storeFileListing.builder() ).thenReturn( fileListingBuilder );

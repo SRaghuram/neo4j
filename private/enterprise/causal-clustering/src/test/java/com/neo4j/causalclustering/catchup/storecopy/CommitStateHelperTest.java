@@ -13,7 +13,6 @@ import java.io.IOException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.LayoutConfig;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -36,7 +35,6 @@ class CommitStateHelperTest
     @Inject
     private PageCache pageCache;
 
-    private Config config;
     private CommitStateHelper commitStateHelper;
     private DatabaseLayout databaseLayout;
 
@@ -44,9 +42,11 @@ class CommitStateHelperTest
     void setUp()
     {
         File txLogLocation = new File( testDirectory.homeDir(), "txLogLocation" );
-        config = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, txLogLocation.toPath().toAbsolutePath() );
-        databaseLayout = DatabaseLayout.of( testDirectory.homeDir(), testDirectory.homeDir(), LayoutConfig.of( config ),
-                config.get( GraphDatabaseSettings.default_database ) );
+        var config = Config.newBuilder()
+                .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath() )
+                .set( GraphDatabaseSettings.transaction_logs_root_path, txLogLocation.toPath().toAbsolutePath() )
+                .build();
+        databaseLayout = DatabaseLayout.of( config );
         commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine() );
     }
 

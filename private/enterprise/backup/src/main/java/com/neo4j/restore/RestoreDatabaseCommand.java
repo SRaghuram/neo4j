@@ -12,18 +12,16 @@ import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
 import org.neo4j.commandline.dbms.DatabaseLockChecker;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.LayoutConfig;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
 
 import static java.lang.String.format;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
-import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 
 public class RestoreDatabaseCommand
 {
@@ -132,10 +130,7 @@ public class RestoreDatabaseCommand
 
     private static DatabaseLayout buildTargetDatabaseLayout( String databaseName, Config config )
     {
-        var homedir = config.get( neo4j_home ).toFile();
-        var rootFile = config.get( databases_root_path ).toFile();
-        var layoutConfig = LayoutConfig.of( config );
         var normalizedDatabaseName = new NormalizedDatabaseName( databaseName );
-        return DatabaseLayout.of( homedir, rootFile, layoutConfig, normalizedDatabaseName.name() );
+        return Neo4jLayout.of( config ).databaseLayout( normalizedDatabaseName.name() );
     }
 }

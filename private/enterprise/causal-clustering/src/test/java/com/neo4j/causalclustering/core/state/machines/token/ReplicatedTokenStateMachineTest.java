@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -193,7 +194,7 @@ public class ReplicatedTokenStateMachineTest
 
     private TransactionCommitProcess labelRegistryUpdatingCommitProcess( TokenRegistry registry ) throws Exception
     {
-        DatabaseLayout layout = testDirectory.databaseLayout();
+        DatabaseLayout layout = DatabaseLayout.ofFlat( testDirectory.homeDir( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
         Config config = Config.defaults();
         PageCache pageCache = pageCacheRule.getPageCache( fs );
         IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs, immediate() );

@@ -19,6 +19,7 @@ import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class IdFilesDeleterTest
 {
@@ -33,7 +34,7 @@ public class IdFilesDeleterTest
     public void shouldReturnFalseWhenNoIdFilesDeleted()
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.homeDir() );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDirectory.homeDir( DEFAULT_DATABASE_NAME ) );
 
         // when
         boolean anyIdFilesDeleted = IdFilesDeleter.deleteIdFiles( databaseLayout, fs );
@@ -46,11 +47,11 @@ public class IdFilesDeleterTest
     public void shouldDeleteIdFiles()
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.homeDir() );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDirectory.homeDir( DEFAULT_DATABASE_NAME ) );
 
         for ( File idFile : databaseLayout.idFiles() )
         {
-            testDirectory.createFile( idFile.getName() );
+            testDirectory.createFile( idFile.getName(), DEFAULT_DATABASE_NAME );
         }
 
         // when
@@ -64,12 +65,12 @@ public class IdFilesDeleterTest
     public void shouldNotDeleteUnknownFiles()
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.homeDir() );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( testDirectory.homeDir( DEFAULT_DATABASE_NAME ) );
 
-        File unknownA = testDirectory.createFile( "unknown" );
-        File unknownB = testDirectory.createFile( "unknown.id" );
+        File unknownA = testDirectory.createFile( "unknown", DEFAULT_DATABASE_NAME );
+        File unknownB = testDirectory.createFile( "unknown.id", DEFAULT_DATABASE_NAME );
         String nodeIdFileName = databaseLayout.idFile( DatabaseFile.NODE_STORE ).orElseThrow( IllegalStateException::new ).getName();
-        File known = testDirectory.createFile( nodeIdFileName );
+        File known = testDirectory.createFile( nodeIdFileName, DEFAULT_DATABASE_NAME );
 
         // when
         boolean anyIdFilesDeleted = IdFilesDeleter.deleteIdFiles( databaseLayout, fs );

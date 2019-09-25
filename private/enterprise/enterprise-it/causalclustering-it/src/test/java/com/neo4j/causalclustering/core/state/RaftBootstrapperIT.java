@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.EnterpriseTemporaryDatabaseFactory;
@@ -17,6 +16,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,11 +46,11 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN;
-import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -58,13 +58,13 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @PageCacheExtension
+@Neo4jLayoutExtension
 class RaftBootstrapperIT
 {
     @Inject
@@ -73,6 +73,8 @@ class RaftBootstrapperIT
     private PageCache pageCache;
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
@@ -109,7 +111,6 @@ class RaftBootstrapperIT
     void shouldBootstrapWhenNoDirectoryExists() throws Exception
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( neo4jHome, storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
@@ -128,7 +129,6 @@ class RaftBootstrapperIT
     void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( neo4jHome, storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         fileSystem.mkdirs( databaseLayout.databaseDirectory() );
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( databaseLayout );

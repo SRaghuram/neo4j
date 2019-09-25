@@ -6,8 +6,8 @@
 package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
-import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 
 import java.io.File;
 import java.io.IOException;

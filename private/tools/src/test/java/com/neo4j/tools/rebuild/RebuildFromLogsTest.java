@@ -32,21 +32,22 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
 class RebuildFromLogsTest
@@ -55,6 +56,8 @@ class RebuildFromLogsTest
     private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
+    private Neo4jLayout neo4jLayout;
 
     private DatabaseManagementService managementService;
 
@@ -77,8 +80,8 @@ class RebuildFromLogsTest
     void shouldRebuildFromLog( WorkLog workLog ) throws Exception, InconsistentStoreException
     {
         // given
-        var prototypeLayout = testDirectory.databaseLayout( "prototype" );
-        var rebuildLayout = testDirectory.databaseLayout( "rebuild" );
+        var prototypeLayout = neo4jLayout.databaseLayout( "prototype" );
+        var rebuildLayout = neo4jLayout.databaseLayout( "rebuild" );
         populatePrototype( prototypeLayout, workLog );
 
         // when
@@ -92,8 +95,8 @@ class RebuildFromLogsTest
     @MethodSource( value = "commands" )
     void failRebuildFromLogIfStoreIsInconsistentAfterRebuild( WorkLog workLog )
     {
-        var prototypeLayout = testDirectory.databaseLayout( "prototype" );
-        var rebuildLayout = testDirectory.databaseLayout( "rebuild" );
+        var prototypeLayout = neo4jLayout.databaseLayout( "prototype" );
+        var rebuildLayout = neo4jLayout.databaseLayout( "rebuild" );
         populatePrototype( prototypeLayout, workLog );
 
         // when
@@ -109,9 +112,9 @@ class RebuildFromLogsTest
     void shouldRebuildFromLogUpToATx( WorkLog workLog ) throws Exception, InconsistentStoreException
     {
         // given
-        var prototypeLayout = testDirectory.databaseLayout( "prototype" );
-        var copyLayout = testDirectory.databaseLayout( "copy" );
-        var rebuildLayout = testDirectory.databaseLayout( "rebuild" );
+        var prototypeLayout = neo4jLayout.databaseLayout( "prototype" );
+        var copyLayout = neo4jLayout.databaseLayout( "copy" );
+        var rebuildLayout = neo4jLayout.databaseLayout( "rebuild" );
         long txId = populatePrototype( prototypeLayout, workLog );
 
         FileUtils.copyRecursively( prototypeLayout.databaseDirectory(), copyLayout.databaseDirectory() );

@@ -95,7 +95,7 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
     private final LoggingService loggingService;
     private final AnnotatedQueries annotatedQueries;
     private Neo4jConnectionState dbConnectionState;
-    private final File dbDir;
+    private final File homeDir;
     private final File configFile;
 
     public SnbInteractiveRemoteCypherRegularCommands(
@@ -110,16 +110,16 @@ public class SnbInteractiveRemoteCypherRegularCommands implements Neo4jDbCommand
         this.authToken = authToken != null ? authToken : AuthTokens.none();
         this.loggingService = loggingService;
         this.annotatedQueries = annotatedQueries;
-        this.dbDir = dbDir;
+        this.homeDir = dbDir;
         this.configFile = configFile;
     }
 
     @Override
     public void init() throws DbException
     {
-        if ( null != dbDir )
+        if ( null != homeDir )
         {
-            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( dbDir, configFile, uri ).build();
+            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( homeDir, configFile, uri ).build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             LdbcIndexer.waitForIndexesToBeOnline( db );
             registerShutdownHook( managementService );

@@ -128,7 +128,7 @@ class GlobalMetricsExtensionFactoryIT
     void mustBeAbleToStartWithNullTracer()
     {
         // Start the database
-        File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
+        File disabledTracerDb = directory.homeDir( "disabledTracerDb" );
 
         DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledTracerDb )
                 .setConfig( MetricsSettings.metricsEnabled, true )

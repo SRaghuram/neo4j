@@ -87,7 +87,7 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
                 throw invalidUsage( "not a chain store: " + storeFile.getName() );
             }
         }
-        tool.dump( DatabaseLayout.of( storeFile ) );
+        tool.dump( DatabaseLayout.ofFlat( storeFile ) );
     }
 
     long firstRecord;

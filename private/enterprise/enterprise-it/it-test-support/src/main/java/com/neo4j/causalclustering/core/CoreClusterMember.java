@@ -48,8 +48,8 @@ import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
+import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
 
@@ -77,7 +77,6 @@ public class CoreClusterMember implements ClusterMember
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
     private final Monitors monitors = new Monitors();
-    private final File databasesDirectory;
     private final CoreGraphDatabaseFactory dbFactory;
     private DatabaseIdRepository databaseIdRepository;
 
@@ -141,20 +140,16 @@ public class CoreClusterMember implements ClusterMember
 
         this.neo4jHome = new File( parentDir, "server-core-" + serverId );
         config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath().toAbsolutePath() );
-        config.set( GraphDatabaseSettings.logs_directory, new File( neo4jHome, "logs" ).toPath().toAbsolutePath() );
-        File transactionLogsRoot = new File( parentDir, "core-tx-logs-" + serverId );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( neo4jHome, "core-tx-logs-" + serverId ).toPath().toAbsolutePath() );
+        memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
-        File dataDir = new File( neo4jHome, "data" );
-        clusterStateLayout = ClusterStateLayout.of( dataDir );
-        databasesDirectory = new File( dataDir, "databases" );
-        neo4jLayout = Neo4jLayout.of( neo4jHome, databasesDirectory, () -> Optional.of( transactionLogsRoot ) );
-        memberConfig = config.build();
+        clusterStateLayout = ClusterStateLayout.of( memberConfig.get( data_directory ).toFile() );
 
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( neo4jHome, databasesDirectory, of( memberConfig ), memberConfig.get( default_database ) );
+        this.neo4jLayout = Neo4jLayout.of( memberConfig );
+        this.defaultDatabaseLayout = neo4jLayout.databaseLayout( memberConfig.get( default_database ) );
     }
 
     @Override

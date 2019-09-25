@@ -73,7 +73,7 @@ class BackupCoreIT
             DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
             // Verify that old data is back
-            DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( coreDefaultDbBackupDir ) );
+            DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( coreDefaultDbBackupDir ) );
             assertEquals( beforeChange, backupRepresentation );
             assertNotEquals( backupRepresentation, afterChange );
         }

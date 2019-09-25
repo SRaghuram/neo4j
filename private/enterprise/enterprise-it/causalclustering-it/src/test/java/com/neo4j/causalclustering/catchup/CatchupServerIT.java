@@ -45,7 +45,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
@@ -65,7 +65,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.fs.FileUtils.relativePath;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class CatchupServerIT
 {
     private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
@@ -81,6 +81,8 @@ class CatchupServerIT
     private FileSystemAbstraction fs;
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     private GraphDatabaseAPI db;
     private TestCatchupServer catchupServer;
@@ -279,14 +281,14 @@ class CatchupServerIT
 
     private File databaseFileToClientFile( File file ) throws IOException
     {
-        String relativePathToDatabaseDir = relativePath( testDirectory.databaseDir(), file );
+        String relativePathToDatabaseDir = relativePath( databaseLayout.databaseDirectory(), file );
         return new File( temporaryDirectory, relativePathToDatabaseDir );
     }
 
     private File clientFileToDatabaseFile( File file ) throws IOException
     {
         String relativePathToDatabaseDir = relativePath( temporaryDirectory, file );
-        return new File( testDirectory.databaseDir(), relativePathToDatabaseDir );
+        return new File( databaseLayout.databaseDirectory(), relativePathToDatabaseDir );
     }
 
     private void fileContentEquals( File fileA, File fileB ) throws IOException

@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.collection.PrimitiveLongArrayQueue;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
@@ -45,8 +46,8 @@ import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.RandomExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -57,16 +58,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( { LifeExtension.class, RandomExtension.class} )
 class TransactionLogAnalyzerTest
 {
     @Inject
-    private TestDirectory directory;
+    private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fs;
     @Inject
     private LifeSupport life;
+    @Inject
+    private DatabaseLayout databaseLayout;
     @Inject
     private RandomRule random;
     private LogFile logFile;
@@ -82,7 +85,7 @@ class TransactionLogAnalyzerTest
     {
         lastCommittedTxId = new AtomicLong( BASE_TX_ID );
         logVersionRepository = new SimpleLogVersionRepository();
-        logFiles = LogFilesBuilder.builder( directory.databaseLayout(), fs )
+        logFiles = LogFilesBuilder.builder( databaseLayout, fs )
                 .withLogVersionRepository( logVersionRepository )
                 .withTransactionIdStore( new SimpleTransactionIdStore() )
                 .withStoreId( StoreId.UNKNOWN )
@@ -117,7 +120,7 @@ class TransactionLogAnalyzerTest
     @Test
     void throwExceptionWithErrorMessageIfLogFilesNotFound() throws Exception
     {
-        File emptyDirectory = directory.directory( "empty" );
+        File emptyDirectory = testDirectory.directory( "empty" );
         assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, monitor ) );
     }
 
@@ -222,7 +225,7 @@ class TransactionLogAnalyzerTest
 
     private void analyzeAllTransactionLogs() throws IOException
     {
-        TransactionLogAnalyzer.analyze( fs, directory.databaseLayout().getTransactionLogsDirectory(), monitor );
+        TransactionLogAnalyzer.analyze( fs, databaseLayout.getTransactionLogsDirectory(), monitor );
     }
 
     private long rotate() throws IOException

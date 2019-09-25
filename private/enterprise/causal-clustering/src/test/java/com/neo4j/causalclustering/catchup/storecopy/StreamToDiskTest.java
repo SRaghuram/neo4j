@@ -13,6 +13,7 @@ import org.junit.rules.RuleChain;
 
 import java.io.File;
 
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.rule.PageCacheRule;
@@ -21,6 +22,7 @@ import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class StreamToDiskTest
 {
@@ -39,17 +41,18 @@ public class StreamToDiskTest
     @Test
     public void shouldLetPageCacheHandleRecordStoresAndNativeLabelScanStoreFiles() throws Exception
     {
+        DatabaseLayout layout = DatabaseLayout.ofFlat( directory.file( DEFAULT_DATABASE_NAME ) );
         // GIVEN
         Monitors monitors = new Monitors();
-        StreamToDiskProvider writerProvider = new StreamToDiskProvider( directory.databaseDir(), fs, monitors );
+        StreamToDiskProvider writerProvider = new StreamToDiskProvider( layout.databaseDirectory(), fs, monitors );
 
         // WHEN
         for ( StoreType type : StoreType.values() )
         {
-            File file = directory.databaseLayout().file( type.getDatabaseFile() );
+            File file = layout.file( type.getDatabaseFile() );
             writeAndVerify( writerProvider, file );
         }
-        writeAndVerify( writerProvider, directory.databaseLayout().labelScanStore() );
+        writeAndVerify( writerProvider, layout.labelScanStore() );
     }
 
     private void writeAndVerify( StreamToDiskProvider writerProvider, File file ) throws Exception

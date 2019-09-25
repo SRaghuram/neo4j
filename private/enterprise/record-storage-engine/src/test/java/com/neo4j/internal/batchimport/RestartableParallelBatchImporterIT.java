@@ -33,13 +33,14 @@ import org.neo4j.internal.batchimport.WriteGroupsStage;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.RandomExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
@@ -51,7 +52,7 @@ import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.invisible;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
 class RestartableParallelBatchImporterIT
 {
@@ -63,7 +64,9 @@ class RestartableParallelBatchImporterIT
     @Inject
     private RandomRule random;
     @Inject
-    private TestDirectory directory;
+    private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
     private static final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
 
     @AfterAll
@@ -254,7 +257,7 @@ class RestartableParallelBatchImporterIT
         importer( invisible() ).doImport( input );
 
         // then
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( directory.homeDir() ).build();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try
         {
@@ -268,8 +271,7 @@ class RestartableParallelBatchImporterIT
 
     private BatchImporter importer( ExecutionMonitor monitor )
     {
-        return BatchImporterFactory.withHighestPriority().instantiate(
-              directory.databaseLayout(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, DEFAULT, NullLogService.getInstance(), monitor,
               EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
     }
 }

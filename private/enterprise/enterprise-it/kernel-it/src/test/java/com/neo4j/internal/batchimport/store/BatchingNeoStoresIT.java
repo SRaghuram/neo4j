@@ -28,21 +28,21 @@ import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class BatchingNeoStoresIT
 {
     @Inject
     private TestDirectory testDirectory;
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
-
+    @Inject
     private DatabaseLayout databaseLayout;
     private AssertableLogProvider provider;
     private SimpleLogService logService;
@@ -50,7 +50,6 @@ class BatchingNeoStoresIT
     @BeforeEach
     void setUp()
     {
-        databaseLayout = testDirectory.databaseLayout();
         provider = new AssertableLogProvider();
         logService = new SimpleLogService( provider, provider );
     }

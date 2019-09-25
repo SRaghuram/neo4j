@@ -221,7 +221,7 @@ public class RunCommand implements Runnable
             if ( !neo4jConnector.equals( Neo4jDb.DB_TYPE_VALUE__REMOTE_CYPHER ) )
             {
                 Store store = Store.createFrom( storeDir.toPath() );
-                ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_PATH_KEY, store.graphDbDirectory().toAbsolutePath().toString() );
+                ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_PATH_KEY, store.topLevelDirectory().toAbsolutePath().toString() );
             }
             ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_TYPE_KEY, neo4jConnector );
             if ( !neo4jConnector.equals( Neo4jDb.DB_TYPE_VALUE__REMOTE_CYPHER ) )
@@ -368,7 +368,7 @@ public class RunCommand implements Runnable
             return Neo4jSchema.NEO4J_REGULAR;
         }
         Store store = Store.createFrom( storeDir.toPath() );
-        DatabaseManagementService managementService = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
+        DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, neo4jConfig );
         GraphDatabaseService db = managementService.database( store.graphDbDirectory().getFileName().toString() );
         try
         {

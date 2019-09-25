@@ -18,10 +18,12 @@ import java.util.stream.Collectors;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -38,7 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.graphdb.Label.label;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
 class EnterpriseGraphDatabaseBackupIT
@@ -47,6 +49,10 @@ class EnterpriseGraphDatabaseBackupIT
     private TestDirectory testDirectory;
     @Inject
     private SuppressOutput suppressOutput;
+    @Inject
+    private Neo4jLayout neo4jLayout;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     private GraphDatabaseAPI db;
     private DatabaseManagementService managementService;
@@ -82,7 +88,7 @@ class EnterpriseGraphDatabaseBackupIT
         var unknownDbName = "unknown_db";
         db = newEnterpriseDb( testDirectory.homeDir(), true );
 
-        var exitCode = runBackupToolFromSameJvm( testDirectory.databaseDir(),
+        var exitCode = runBackupToolFromSameJvm( databaseLayout.databaseDirectory(),
                 "--from=" + backupAddress( db ),
                 "--backup-dir=" + testDirectory.directory( "backups" ),
                 "--database=" + unknownDbName );
@@ -94,7 +100,7 @@ class EnterpriseGraphDatabaseBackupIT
 
     private File performBackup() throws Exception
     {
-        var storeDir = testDirectory.storeDir();
+        var storeDir = neo4jLayout.databasesDirectory();
         var backupsDir = testDirectory.directory( "backups" );
 
         var exitCode = runBackupToolFromOtherJvmToGetExitCode( storeDir,

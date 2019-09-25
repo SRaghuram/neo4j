@@ -220,7 +220,7 @@ class OnlineBackupCommandCcIT
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
         File backupLocation = new File( backupsDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
+        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation );
 
         // when
         assertEquals( 0, runBackupToolAndGetExitCode( address, DEFAULT_DATABASE_NAME ) );
@@ -239,7 +239,7 @@ class OnlineBackupCommandCcIT
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
         File backupLocation = new File( backupsDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
+        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation );
 
         // when
         assertEquals( 0, runBackupToolAndGetExitCode( address, DEFAULT_DATABASE_NAME ) );
@@ -443,7 +443,7 @@ class OnlineBackupCommandCcIT
     private static DbRepresentation getBackupDbRepresentation( File backupDir, String databaseName )
     {
         Config config = Config.defaults( OnlineBackupSettings.online_backup_enabled, false );
-        return DbRepresentation.of( DatabaseLayout.of( backupDir, backupDir, databaseName ), config );
+        return DbRepresentation.of( DatabaseLayout.ofFlat( new File( backupDir, databaseName ) ), config );
     }
 
     private int runBackupToolAndGetExitCode( String address, String databaseName )
@@ -473,7 +473,7 @@ class OnlineBackupCommandCcIT
 
     private static LogFiles logFilesFromBackup( File backupDir, String databaseName ) throws IOException
     {
-        DatabaseLayout backupLayout = DatabaseLayout.of( new File( backupDir, databaseName ) );
+        DatabaseLayout backupLayout = DatabaseLayout.ofFlat( new File( backupDir, databaseName ) );
         return BackupTransactionLogFilesHelper.readLogFiles( backupLayout );
     }
 

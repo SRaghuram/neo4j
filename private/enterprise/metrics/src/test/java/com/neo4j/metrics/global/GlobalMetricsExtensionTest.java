@@ -13,6 +13,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.extension.context.GlobalExtensionContext;
@@ -24,7 +25,7 @@ import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -32,17 +33,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class GlobalMetricsExtensionTest
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private Neo4jLayout neo4jLayout;
     private ExtensionContext context;
 
     @BeforeEach
     void setUp()
     {
-        context = new GlobalExtensionContext( testDirectory.neo4jLayout(), DatabaseInfo.TOOL, new Dependencies() );
+        context = new GlobalExtensionContext( neo4jLayout, DatabaseInfo.TOOL, new Dependencies() );
     }
 
     @Test

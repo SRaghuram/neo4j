@@ -32,6 +32,8 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.MyRelTypes;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
@@ -67,8 +69,9 @@ public class BatchInsertEnterpriseIT
     @Test
     public void shouldInsertDifferentTypesOfThings() throws Exception
     {
+        DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
         // GIVEN
-        BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get(),
+        BatchInserter inserter = BatchInserters.inserter( layout, fileSystemRule.get(),
                 Config.newBuilder()
                         .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
                         .set( GraphDatabaseSettings.record_format, recordFormat )
@@ -127,7 +130,9 @@ public class BatchInsertEnterpriseIT
             managementService.shutdown();
         }
 
-        BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get() );
+        DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+
+        BatchInserter inserter = BatchInserters.inserter( layout, fileSystemRule.get() );
         try
         {
             long start = inserter.createNode( someProperties( 5 ), Labels.One );

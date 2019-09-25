@@ -23,6 +23,8 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -39,6 +41,16 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     public TestEnterpriseDatabaseManagementServiceBuilder( File databaseRootDir )
     {
         super( databaseRootDir );
+    }
+
+    public TestEnterpriseDatabaseManagementServiceBuilder( Neo4jLayout layout )
+    {
+        super( layout );
+    }
+
+    public TestEnterpriseDatabaseManagementServiceBuilder( DatabaseLayout layout )
+    {
+        super( layout );
     }
 
     @Override

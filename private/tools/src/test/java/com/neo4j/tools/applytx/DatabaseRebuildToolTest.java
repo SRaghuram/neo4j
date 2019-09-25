@@ -15,7 +15,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -56,7 +55,7 @@ class DatabaseRebuildToolTest
 {
 
     @Inject
-    private TestDirectory directory;
+    private TestDirectory testDirectory;
 
     private DatabaseLayout fromLayout;
     private DatabaseLayout toLayout;
@@ -64,8 +63,9 @@ class DatabaseRebuildToolTest
     @BeforeEach
     void setup()
     {
-        fromLayout = DatabaseLayout.of( directory.homeDir(), directory.homeDir(), () -> Optional.of( directory.homeDir() ), "old" );
-        toLayout = DatabaseLayout.of( directory.homeDir(), directory.homeDir(), () -> Optional.of( directory.homeDir() ), "new" );
+        var neoLayout = Neo4jLayout.ofFlat( testDirectory.homeDir( "flat" ) );
+        fromLayout = neoLayout.databaseLayout( "old" );
+        toLayout = neoLayout.databaseLayout( "new" );
     }
 
     @Test
@@ -83,8 +83,8 @@ class DatabaseRebuildToolTest
         tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(),
                 "--fromTx", fromLayout.getTransactionLogsDirectory().getAbsolutePath(),
                 "--to", toLayout.databaseDirectory().getAbsolutePath(),
-                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.transactionLogsRootDirectory().getAbsolutePath(),
-                "-D" + GraphDatabaseSettings.databases_root_path.name(), toNeoLayout.storeDirectory().getAbsolutePath(),
+                "-D" + GraphDatabaseSettings.transaction_logs_root_path.name(), toNeoLayout.txLogsDirectory().getAbsolutePath(),
+                "-D" + GraphDatabaseSettings.databases_root_path.name(), toNeoLayout.databasesDirectory().getAbsolutePath(),
                 "apply last" );
 
         // THEN
@@ -208,8 +208,8 @@ class DatabaseRebuildToolTest
     {
         Neo4jLayout layout = databaseLayout.getNeo4jLayout();
         DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( layout.homeDirectory() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, layout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.databases_root_path, layout.storeDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, layout.txLogsDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.databases_root_path, layout.databasesDirectory().toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .build();
         GraphDatabaseService db = managementService.database( databaseLayout.getDatabaseName() );

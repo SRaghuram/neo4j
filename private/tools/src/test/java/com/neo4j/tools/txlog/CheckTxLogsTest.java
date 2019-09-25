@@ -24,6 +24,7 @@ import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -43,9 +44,9 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.CHECK_TYPES;
@@ -62,7 +63,7 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
-@EphemeralTestDirectoryExtension
+@EphemeralNeo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
 class CheckTxLogsTest
@@ -71,6 +72,8 @@ class CheckTxLogsTest
     private FileSystemAbstraction fs;
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     @Test
     void shouldReportNoInconsistenciesFromValidLog() throws Exception
@@ -117,7 +120,7 @@ class CheckTxLogsTest
 
     private LogFiles getLogFiles() throws IOException
     {
-        return LogFilesBuilder.logFilesBasedOnlyBuilder( testDirectory.databaseDir(), fs ).build();
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs ).build();
     }
 
     @Test
@@ -822,7 +825,7 @@ class CheckTxLogsTest
 
     private File logFile( long version )
     {
-        return new File( testDirectory.databaseDir(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
+        return new File( databaseLayout.databaseDirectory(), TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
     }
 
     private static PropertyRecord propertyRecord( long id, boolean inUse, long prevProp, long nextProp, long... blocks )

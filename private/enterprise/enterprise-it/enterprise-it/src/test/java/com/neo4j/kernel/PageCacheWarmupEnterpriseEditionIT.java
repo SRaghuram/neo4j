@@ -181,7 +181,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         File databaseDir = db.databaseLayout().databaseDirectory();
         File databases = new File( data, "databases" );
-        File graphdb = testDirectory.databaseDir( databases );
+        File graphdb = new File( databases, "neo4j" );
         FileUtils.copyRecursively( databaseDir, graphdb );
         deleteRecursively( databaseDir );
         Path homePath = data.toPath().getParent();

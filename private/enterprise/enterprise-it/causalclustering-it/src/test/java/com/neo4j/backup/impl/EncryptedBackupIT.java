@@ -47,7 +47,7 @@ import java.util.function.IntSupplier;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
@@ -336,7 +336,7 @@ class EncryptedBackupIT
 
             // and data matches
             assertEquals( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ),
-                    DbRepresentation.of( DatabaseLayout.of( backupHome, backupHome, DEFAULT_DATABASE_NAME ) ) );
+                    DbRepresentation.of( Neo4jLayout.ofFlat( backupHome ).databaseLayout( DEFAULT_DATABASE_NAME ) ) );
         }
 
         private static void shouldNotBeSuccessful( IntSupplier backupClient )

@@ -73,7 +73,7 @@ class CheckPointingLogRotationStressTesting
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             Config dbConfig = Config.defaults();
-            new ParallelBatchImporter( DatabaseLayout.of( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, DEFAULT,
+            new ParallelBatchImporter( DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
                     RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY,
                     TransactionLogsInitializer.INSTANCE )

@@ -25,27 +25,25 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
 class ConsistencyCheckServiceRecordFormatIT
 {
     @Inject
-    private TestDirectory testDirectory;
+    private DatabaseLayout databaseLayout;
 
     @ParameterizedTest
     @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME} )
     void checkTinyConsistentStore( String recordFormat ) throws Exception
     {
-        testDirectory.databaseLayout();
-        var managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        var managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseLayout )
                 .setConfig( record_format, recordFormat ).build();
         try
         {
@@ -56,7 +54,7 @@ class ConsistencyCheckServiceRecordFormatIT
         {
             managementService.shutdown();
         }
-        assertConsistentStore( testDirectory.databaseLayout() );
+        assertConsistentStore( databaseLayout );
     }
 
     private static void createTestData( GraphDatabaseService db )

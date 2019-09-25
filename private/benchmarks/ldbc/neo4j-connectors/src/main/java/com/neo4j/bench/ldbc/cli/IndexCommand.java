@@ -95,7 +95,7 @@ public class IndexCommand implements Runnable
         try
         {
             System.out.println( "Starting database..." );
-            DatabaseManagementService managementService = Neo4jDb.newDb( new File( storeDir, DEFAULT_DATABASE_NAME ), dbConfigurationFile );
+            DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, dbConfigurationFile );
 
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );

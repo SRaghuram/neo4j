@@ -133,7 +133,7 @@ abstract class SnbInteractiveExecutionTest
         File resultDir = createTempDirectory( temporaryFolder.absolutePath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
-        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
+        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.topLevelDirectory().toFile() ) )
         {
             int threadCount = 4;
             String resultDirPath = resultDir.getAbsolutePath();
@@ -172,7 +172,7 @@ abstract class SnbInteractiveExecutionTest
                             scenario.planner(),
                             scenario.runtime(),
                             scenario.neo4jSchema(),
-                            store.graphDbDirectory().toFile(),
+                            store.topLevelDirectory().toFile(),
                             DriverConfigUtils.neo4jTestConfig(),
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
@@ -266,7 +266,7 @@ abstract class SnbInteractiveExecutionTest
         Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
-        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
+        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.topLevelDirectory().toFile() ) )
         {
             int threadCount = 4;
             String resultDirPath = resultDir.getAbsolutePath();
@@ -308,7 +308,7 @@ abstract class SnbInteractiveExecutionTest
                             scenario.planner(),
                             scenario.runtime(),
                             scenario.neo4jSchema(),
-                            store.graphDbDirectory().toFile(),
+                            store.topLevelDirectory().toFile(),
                             DriverConfigUtils.neo4jTestConfig(),
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
@@ -413,7 +413,7 @@ abstract class SnbInteractiveExecutionTest
         Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
-        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
+        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.topLevelDirectory().toFile() ) )
         {
             int threadCount = 4;
             String resultDirPath = resultDir.getAbsolutePath();
@@ -450,7 +450,7 @@ abstract class SnbInteractiveExecutionTest
                             scenario.planner(),
                             scenario.runtime(),
                             scenario.neo4jSchema(),
-                            store.graphDbDirectory().toFile(),
+                            store.topLevelDirectory().toFile(),
                             DriverConfigUtils.neo4jTestConfig(),
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url

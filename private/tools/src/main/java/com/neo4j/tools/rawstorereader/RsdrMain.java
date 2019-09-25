@@ -72,7 +72,7 @@ public class RsdrMain
             }
 
             File databaseDirectory = new File( args[0] );
-            DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDirectory );
+            DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDirectory );
 
             Config config = buildConfig();
             JobScheduler jobScheduler = createInitialisedScheduler();
@@ -98,7 +98,7 @@ public class RsdrMain
     {
         IdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem, immediate() );
         NullLogProvider logProvider = NullLogProvider.getInstance();
-        return new StoreFactory( DatabaseLayout.of( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider );
+        return new StoreFactory( DatabaseLayout.ofFlat( storeDir ), config, idGeneratorFactory, pageCache, fileSystem, logProvider );
     }
 
     private static void interact( FileSystemAbstraction fileSystem, NeoStores neoStores, DatabaseLayout databaseLayout ) throws IOException

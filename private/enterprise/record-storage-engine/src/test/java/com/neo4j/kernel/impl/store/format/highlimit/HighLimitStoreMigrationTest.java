@@ -19,6 +19,7 @@ import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreType;
@@ -30,6 +31,7 @@ import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.format.CapabilityType;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
@@ -42,6 +44,7 @@ import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.imme
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 
 @PageCacheExtension
+@Neo4jLayoutExtension
 class HighLimitStoreMigrationTest
 {
     @Inject
@@ -50,6 +53,10 @@ class HighLimitStoreMigrationTest
     private FileSystemAbstraction fileSystem;
     @Inject
     private PageCache pageCache;
+    @Inject
+    private Neo4jLayout neo4jLayout;
+    @Inject
+    private DatabaseLayout databaseLayout;
 
     @Test
     void haveDifferentFormatCapabilitiesAsHighLimit3_0()
@@ -69,9 +76,7 @@ class HighLimitStoreMigrationTest
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler );
-
-            DatabaseLayout databaseLayout = testDirectory.databaseLayout();
-            DatabaseLayout migrationLayout = testDirectory.databaseLayout( "migration" );
+            DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
 
             prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 

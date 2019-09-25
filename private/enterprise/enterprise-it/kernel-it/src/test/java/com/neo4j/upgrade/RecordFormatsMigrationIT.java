@@ -28,6 +28,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
@@ -39,7 +40,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
@@ -51,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class RecordFormatsMigrationIT
 {
     private static final Label LABEL = Label.label( "Centipede" );
@@ -62,6 +63,8 @@ class RecordFormatsMigrationIT
     private DefaultFileSystemAbstraction fileSystem;
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DatabaseLayout databaseLayout;
     private DatabaseManagementService managementService;
 
     @Test
@@ -175,7 +178,7 @@ class RecordFormatsMigrationIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
               PageCache pageCache = ConfigurableStandalonePageCacheFactory.createPageCache( fileSystem, config, jobScheduler ) )
         {
-            RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, testDirectory.databaseLayout(),
+            RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, databaseLayout,
                     fileSystem, pageCache, NullLogProvider.getInstance() );
             assertNotNull( actual );
             assertEquals( formatName, actual.name() );

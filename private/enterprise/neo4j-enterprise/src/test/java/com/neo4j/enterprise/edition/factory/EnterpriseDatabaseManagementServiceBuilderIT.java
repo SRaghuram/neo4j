@@ -12,8 +12,9 @@ import java.io.File;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
@@ -24,13 +25,15 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class EnterpriseDatabaseManagementServiceBuilderIT
 {
     @Inject
     private FileSystemAbstraction fs;
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private Neo4jLayout neo4jLayout;
 
     @Test
     void configuredDatabasesRootPath()
@@ -60,7 +63,7 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     void notConfiguredDatabasesRootPath()
     {
         File factoryDir = testDirectory.homeDir();
-        File storeDir = testDirectory.storeDir();
+        File storeDir = neo4jLayout.databasesDirectory();
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( factoryDir ).build();
         try

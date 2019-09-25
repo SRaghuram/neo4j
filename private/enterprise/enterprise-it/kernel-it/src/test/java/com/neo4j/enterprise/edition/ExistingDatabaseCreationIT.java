@@ -16,10 +16,11 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,7 +29,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
-@TestDirectoryExtension
+@Neo4jLayoutExtension
 class ExistingDatabaseCreationIT
 {
     private static final String anotherDatabaseName = "anotherdatabase";
@@ -38,6 +39,8 @@ class ExistingDatabaseCreationIT
     private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
+    private Neo4jLayout neo4jLayout;
 
     private DatabaseManagementService managementService;
 
@@ -65,7 +68,7 @@ class ExistingDatabaseCreationIT
         DatabaseLayout databaseLayout = anotherDatabaseService.databaseLayout();
         managementService.shutdown();
 
-        DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
+        DatabaseLayout cloneLayout = neo4jLayout.databaseLayout( cloneDatabase );
         copyDatabase( databaseLayout, cloneLayout );
 
         managementService = startManagementService();
@@ -89,7 +92,7 @@ class ExistingDatabaseCreationIT
         DatabaseLayout databaseLayout = anotherDatabaseService.databaseLayout();
         managementService.shutdown();
 
-        DatabaseLayout cloneLayout = testDirectory.databaseLayout( cloneDatabase );
+        DatabaseLayout cloneLayout = neo4jLayout.databaseLayout( cloneDatabase );
         copyDatabaseData( databaseLayout, cloneLayout );
 
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
@@ -114,7 +117,7 @@ class ExistingDatabaseCreationIT
         var databaseLayout = anotherDatabaseService.databaseLayout();
         managementService.shutdown();
 
-        var cloneLayout = testDirectory.databaseLayout( cloneDatabase );
+        var cloneLayout = neo4jLayout.databaseLayout( cloneDatabase );
         copyDatabaseData( databaseLayout, cloneLayout );
 
         var logProvider = new AssertableLogProvider();

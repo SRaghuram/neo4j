@@ -25,6 +25,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -43,7 +44,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.graphdb.Label.label;
 
 @PageCacheExtension
@@ -101,8 +101,8 @@ class BackupCopyServiceTest
 
         startAndStopDb( oldDir );
 
-        DatabaseLayout oldLayout = DatabaseLayout.of( testDirectory.homeDir(), oldDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout newLayout = DatabaseLayout.of( testDirectory.homeDir(), newDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         fs.copyRecursively( oldLayout.databaseDirectory(), newLayout.databaseDirectory() );
 
@@ -142,8 +142,8 @@ class BackupCopyServiceTest
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        DatabaseLayout oldLayout = DatabaseLayout.of( testDirectory.homeDir(), oldDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout newLayout = DatabaseLayout.of( testDirectory.homeDir(), newDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
         assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
@@ -165,8 +165,8 @@ class BackupCopyServiceTest
         startAndStopDb( oldDir );
         startAndStopDb( newDir );
 
-        DatabaseLayout oldLayout = DatabaseLayout.of( testDirectory.homeDir(), oldDir, DEFAULT_DATABASE_NAME );
-        DatabaseLayout newLayout = DatabaseLayout.of( testDirectory.homeDir(), newDir, DEFAULT_DATABASE_NAME );
+        DatabaseLayout oldLayout = Neo4jLayout.of( oldDir ).databaseLayout( DEFAULT_DATABASE_NAME );
+        DatabaseLayout newLayout = Neo4jLayout.of( newDir ).databaseLayout( DEFAULT_DATABASE_NAME );
 
         assertTrue( fs.isDirectory( oldLayout.databaseDirectory() ) );
         assertTrue( fs.isDirectory( newLayout.databaseDirectory() ) );
@@ -182,9 +182,7 @@ class BackupCopyServiceTest
 
     private static void startAndStopDb( File databaseDir )
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDir )
-                .setConfig( databases_root_path, databaseDir.toPath().toAbsolutePath() )
-                .build();
+        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( databaseDir ).build();
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
         {

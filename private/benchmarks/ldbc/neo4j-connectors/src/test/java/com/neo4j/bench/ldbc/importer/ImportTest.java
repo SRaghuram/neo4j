@@ -533,7 +533,7 @@ class ImportTest
             LdbcDateCodec.Format neo4jFormat,
             LdbcDateCodec.Resolution timestampResolution ) throws DbException
     {
-        DatabaseManagementService managementService = Neo4jDb.newDb( new File( dbDir, DEFAULT_DATABASE_NAME ), DriverConfigUtils.neo4jTestConfig() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         QueryDateUtil dateUtil = QueryDateUtil.createFor( neo4jFormat, timestampResolution, new LdbcDateCodecUtil() );

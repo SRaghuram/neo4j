@@ -75,7 +75,7 @@ public class StoreFiles
         {
             for ( File file : files )
             {
-                File destination = logFiles.isLogFile( file ) ? logFiles.logFilesDirectory() : target.databaseDirectory();
+                File destination = logFiles.isLogFile( file ) ? target.getTransactionLogsDirectory() : target.databaseDirectory();
                 fs.moveToDirectory( file, destination );
             }
         }

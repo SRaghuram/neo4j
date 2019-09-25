@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
-import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +32,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.TriggerInfo;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,7 +66,7 @@ class GetStoreFileRequestHandlerTest
         dependencies.satisfyDependency( checkPointer );
         when( database.getStoreId() ).thenReturn( STORE_ID_MATCHING );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
-        when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.of( new File( "." ) ) );
+        when( database.getDatabaseLayout() ).thenReturn( DatabaseLayout.ofFlat( new File( "." ) ) );
         when( database.getScheduler() ).thenReturn( jobScheduler );
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 

@@ -758,9 +758,8 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         System.out.println( "Creating Indexes & Constraints" );
         startTime = System.currentTimeMillis();
 
-        File dbDir = new File( storeDir, DEFAULT_DATABASE_NAME );
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, importerProperties );
-        GraphDatabaseService db = managementService.database( dbDir.getName() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, importerProperties );
+        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
 
         GraphMetadataProxy.writeTo( db, GraphMetadataProxy.createFrom( metadataTracker ) );
 

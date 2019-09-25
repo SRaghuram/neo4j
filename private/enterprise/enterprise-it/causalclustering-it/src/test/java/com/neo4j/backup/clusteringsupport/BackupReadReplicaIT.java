@@ -87,7 +87,7 @@ class BackupReadReplicaIT
         DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
         // Verify that backed up database can be started and compare representation
-        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupsDir, DEFAULT_DATABASE_NAME ) ) );
+        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.ofFlat( new File( backupsDir, DEFAULT_DATABASE_NAME ) ) );
         assertEquals( beforeChange, backupRepresentation );
         assertNotEquals( backupRepresentation, afterChange );
     }

@@ -58,9 +58,9 @@ class StoreFilesTest
     void beforeEach() throws Exception
     {
         databaseDir = testDirectory.directory( "databaseDir" );
-        databaseLayout = DatabaseLayout.of( databaseDir );
+        databaseLayout = DatabaseLayout.ofFlat( databaseDir );
         otherDatabaseDir = testDirectory.directory( "otherDatabaseDir" );
-        otherDatabaseLayout = DatabaseLayout.of( otherDatabaseDir );
+        otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir );
         logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
         otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
     }
@@ -284,7 +284,7 @@ class StoreFilesTest
         StoreFiles storeFiles = newStoreFiles();
 
         File nonExistingDirectory = new File( "NonExistingDirectory" );
-        DatabaseLayout layout = DatabaseLayout.of( nonExistingDirectory );
+        DatabaseLayout layout = DatabaseLayout.ofFlat( nonExistingDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );
     }
@@ -295,7 +295,7 @@ class StoreFilesTest
         StoreFiles storeFiles = newStoreFiles();
 
         File emptyDirectory = testDirectory.directory( "EmptyDirectory" );
-        DatabaseLayout layout = DatabaseLayout.of( emptyDirectory );
+        DatabaseLayout layout = DatabaseLayout.ofFlat( emptyDirectory );
 
         assertTrue( storeFiles.isEmpty( layout ) );
     }
@@ -309,7 +309,7 @@ class StoreFilesTest
         createFile( databaseDir, DatabaseFile.NODE_STORE.getName() );
         createFile( databaseDir, DatabaseFile.RELATIONSHIP_STORE.getName() );
 
-        DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDir );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
         assertFalse( storeFiles.isEmpty( databaseLayout ) );
     }
@@ -334,7 +334,7 @@ class StoreFilesTest
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime );
         MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId );
 
-        DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDir );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
         StoreId storeId = storeFiles.readStoreId( databaseLayout );
 
@@ -346,7 +346,7 @@ class StoreFilesTest
     {
         StoreFiles storeFiles = newStoreFiles();
 
-        DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDir );
+        DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
         assertThrows( IOException.class, () -> storeFiles.readStoreId( databaseLayout ) );
     }

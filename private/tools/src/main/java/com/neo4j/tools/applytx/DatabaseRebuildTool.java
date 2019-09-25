@@ -15,7 +15,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -30,6 +29,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -139,7 +139,12 @@ public class DatabaseRebuildTool
         // try to get custom tx log root directory if specified
         String txRootDirectoryPath = args.get( "fromTx" );
         File txRootDirectory = txRootDirectoryPath != null ? new File( txRootDirectoryPath ).getParentFile() : sourceDirectory.getParentFile();
-        return DatabaseLayout.of( sourceDirectory, sourceDirectory, () -> Optional.of( txRootDirectory ) );
+
+        Config config = Config.newBuilder()
+                .set( GraphDatabaseSettings.databases_root_path, sourceDirectory.getParentFile().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.transaction_logs_root_path, txRootDirectory.toPath().toAbsolutePath() )
+                .build();
+        return Neo4jLayout.of( config ).databaseLayout( sourceDirectory.getName() );
     }
 
     private static DatabaseManagementServiceBuilder newDbBuilder( File storeDir, String databaseName, Args args )

@@ -173,7 +173,7 @@ class IntegrationValidationTest
                         scenario.planner(),
                         scenario.runtime(),
                         scenario.neo4jSchema(),
-                        store.graphDbDirectory().toFile(),
+                        store.topLevelDirectory().toFile(),
                         DriverConfigUtils.neo4jTestConfig(),
                         LdbcSnbInteractiveWorkload.class,
                         null
@@ -349,7 +349,7 @@ class IntegrationValidationTest
                         scenario.planner(),
                         scenario.runtime(),
                         scenario.neo4jSchema(),
-                        store.graphDbDirectory().toFile(),
+                        store.topLevelDirectory().toFile(),
                         DriverConfigUtils.neo4jTestConfig(),
                         LdbcSnbInteractiveWorkload.class,
                         null
