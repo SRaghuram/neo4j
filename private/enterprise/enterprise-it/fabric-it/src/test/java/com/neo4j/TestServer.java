@@ -28,6 +28,7 @@ public class TestServer implements AutoCloseable
     private Config config;
     private DatabaseManagementService dbms;
     private Path directory;
+    private boolean databaseRootDirProvided;
 
     public TestServer()
     {
@@ -39,6 +40,14 @@ public class TestServer implements AutoCloseable
         this.config = config;
     }
 
+    public TestServer( Config config, Path databaseRootDir )
+    {
+        this( config );
+
+        databaseRootDirProvided = true;
+        directory = databaseRootDir;
+    }
+
     public void addMocks( Object... mocks )
     {
         this.mocks.addAll( Arrays.asList( mocks ) );
@@ -46,7 +55,11 @@ public class TestServer implements AutoCloseable
 
     public void start()
     {
-        this.directory = createDirectory();
+
+        if ( !databaseRootDirProvided )
+        {
+            this.directory = createDirectory();
+        }
         var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory.toFile(), mocks );
         this.dbms = dbmsBuilder.setConfig( config )
                 .setConfig( GraphDatabaseSettings.auth_enabled , false )
@@ -67,7 +80,10 @@ public class TestServer implements AutoCloseable
         }
         finally
         {
-            deleteDirectory( this.directory );
+            if ( !databaseRootDirProvided )
+            {
+                deleteDirectory( this.directory );
+            }
         }
     }
 

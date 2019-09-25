@@ -17,7 +17,6 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
@@ -34,7 +33,6 @@ import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERT
 
 public class FabricDatabaseManager extends LifecycleAdapter
 {
-    private final Label databaseLabel = Label.label( "Database" );
     private final FabricConfig fabricConfig;
     private final DependencyResolver dependencyResolver;
     private DatabaseManager<DatabaseContext> databaseManager;
@@ -108,6 +106,7 @@ public class FabricDatabaseManager extends LifecycleAdapter
                 }
                 else
                 {
+                    fabricDb.setProperty( "status", "online" );
                     found = true;
                 }
             }
@@ -115,7 +114,7 @@ public class FabricDatabaseManager extends LifecycleAdapter
             return found;
         };
 
-        return iterator.apply( tx.findNodes( databaseLabel, "fabric", true ) );
+        return iterator.apply( tx.findNodes( DATABASE_LABEL, "fabric", true ) );
     }
 
     private void newFabricDb( Transaction tx, String dbName )
