@@ -263,7 +263,8 @@ class SchemaWithPECAcceptanceTest
         }
     }
 
-    private void assertExpectedConstraint( ConstraintDefinition constraint, String name, ConstraintType constraintType, Label expectedLabel, String... expectedProperties )
+    private void assertExpectedConstraint( ConstraintDefinition constraint, String name, ConstraintType constraintType, Label expectedLabel,
+            String... expectedProperties )
     {
         try ( Transaction tx = db.beginTx() )
         {
