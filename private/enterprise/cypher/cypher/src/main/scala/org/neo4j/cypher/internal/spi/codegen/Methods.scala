@@ -22,7 +22,7 @@ import org.neo4j.internal.helpers.collection.MapUtil
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{Read, TokenRead, _}
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
-import org.neo4j.kernel.impl.core.{NodeProxy, RelationshipProxy, TransactionalEntityFactory}
+import org.neo4j.kernel.impl.core.{NodeEntity, RelationshipProxy, TransactionalEntityFactory}
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
@@ -91,7 +91,7 @@ object Methods {
   val countsForRel: MethodReference = method[Read, Long]("countsForRelationship", typeRef[Int], typeRef[Int], typeRef[Int])
   val nextLong: MethodReference = method[LongIterator, Long]("next")
   val fetchNextRelationship: MethodReference = method[RelationshipIterator, Long]("next")
-  val newNodeProxyById: MethodReference = method[TransactionalEntityFactory, NodeProxy]("newNodeProxy", typeRef[Long])
+  val newNodeProxyById: MethodReference = method[TransactionalEntityFactory, NodeEntity]("newNodeProxy", typeRef[Long])
   val newRelationshipProxyById: MethodReference = method[TransactionalEntityFactory, RelationshipProxy]("newRelationshipProxy", typeRef[Long])
   val materializeAnyResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyResult", typeRef[TransactionalEntityFactory], typeRef[Object])
   val materializeAnyValueResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyValueResult", typeRef[TransactionalEntityFactory], typeRef[Object])

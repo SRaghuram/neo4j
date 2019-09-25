@@ -25,7 +25,7 @@ import org.neo4j.function.ThrowingBiConsumer
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.StubNodeCursor
-import org.neo4j.kernel.impl.core.{NodeProxy, TransactionalEntityFactory}
+import org.neo4j.kernel.impl.core.{NodeEntity, TransactionalEntityFactory}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -150,7 +150,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
 
   private def setUpNodeMocks(ids: Long*): Unit = {
     ids.foreach { id =>
-      val nodeMock = mock[NodeProxy]
+      val nodeMock = mock[NodeEntity]
       when(nodeMock.getId).thenReturn(id)
       when(entityAccessor.newNodeProxy(id)).thenReturn(nodeMock)
       allNodeIds += id
@@ -166,7 +166,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
   private def toObjectConverter(a: AnyRef): AnyRef = a match {
     case Values.NO_VALUE => null
     case n: NodeValue =>
-      val proxy = mock[NodeProxy]
+      val proxy = mock[NodeEntity]
       when(proxy.getId).thenReturn(n.id())
       proxy
 
