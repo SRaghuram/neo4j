@@ -80,9 +80,6 @@ class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      // Set the output row in the state, so that the feed pipe can access it to copy over data from the inputMorsel and pass it into the pipe
-      feedPipeQueryState.outputRow = outputRow
-
       if (resultIterator == null) {
         resultIterator = pipe.createResults(feedPipeQueryState)
       }
@@ -138,7 +135,7 @@ class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
                          resources: QueryResources): Unit = {
 
       // Set the output row in the state, so that the feed pipe can access it to iterate over
-      feedPipeQueryState.outputRow = outputRow
+      feedPipeQueryState.morsel = outputRow
 
       if (resultIterator == null) {
         resultIterator = pipe.createResults(feedPipeQueryState)
@@ -191,7 +188,7 @@ object SlottedPipeOperator {
                            memoryTracker,
                            pipeDecorator,
                            profileInformation = profileInformation,
-                           inputMorsel = inputMorsel)
+                           morsel = inputMorsel)
   }
 
   def updateProfileEvent(profileEvent: OperatorProfileEvent, profileInformation: InterpretedProfileInformation): Unit = {
@@ -215,67 +212,44 @@ class FeedPipeQueryState(query: QueryContext,
                          prePopulateResults: Boolean = false,
                          input: InputDataStream = NoInput,
                          val profileInformation: InterpretedProfileInformation = null,
-                         var inputMorsel: MorselExecutionContext = null,
-                         var outputRow: MorselExecutionContext = null)
+                         var morsel: MorselExecutionContext = null)
   extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, initialContext,
                             cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
-  override def withDecorator(decorator: PipeDecorator) = {
+  override def withDecorator(decorator: PipeDecorator): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
-                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, inputMorsel, outputRow)
+                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 
   override def withInitialContext(initialContext: ExecutionContext): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, Some(initialContext),
-                           cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, inputMorsel, outputRow)
+                           cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 
 
-  override def withQueryContext(query: QueryContext) = {
+  override def withQueryContext(query: QueryContext): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
-                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, inputMorsel, outputRow)
+                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 }
 
-case class InputMorselFeedPipe()(val id: Id = Id.INVALID_ID) extends Pipe {
+case class MorselFeedPipe()(val id: Id = Id.INVALID_ID) extends Pipe {
 
   override protected def internalCreateResults(state: pipes.QueryState): Iterator[ExecutionContext] = {
     val feedPipeQueryState = state.asInstanceOf[FeedPipeQueryState]
-    val inputMorsel = feedPipeQueryState.inputMorsel
+    val morsel = feedPipeQueryState.morsel
 
-    inputMorsel.resetToBeforeFirstRow()
+    morsel.resetToBeforeFirstRow()
 
     new Iterator[ExecutionContext] {
 
       override def hasNext: Boolean = {
-        inputMorsel.hasNextRow
+        morsel.hasNextRow
       }
 
       override def next(): ExecutionContext = {
-        inputMorsel.moveToNextRow()
-        inputMorsel
-      }
-    }
-  }
-}
-
-case class MiddleFeedPipe()(val id: Id = Id.INVALID_ID) extends Pipe {
-
-  override protected def internalCreateResults(state: pipes.QueryState): Iterator[ExecutionContext] = {
-    val feedPipeQueryState = state.asInstanceOf[FeedPipeQueryState]
-    val outputRow = feedPipeQueryState.outputRow
-
-    outputRow.resetToBeforeFirstRow()
-
-    new Iterator[ExecutionContext] {
-
-      override def hasNext: Boolean = {
-        outputRow.hasNextRow
-      }
-
-      override def next(): ExecutionContext = {
-        outputRow.moveToNextRow()
-        outputRow
+        morsel.moveToNextRow()
+        morsel
       }
     }
   }
