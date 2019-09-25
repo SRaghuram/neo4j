@@ -9,8 +9,7 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.cypher.CypherOperatorEngineOption
-import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes.{ALL_POSSIBLE_PLANS, DISABLED}
+import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
@@ -99,7 +98,7 @@ class MorselRuntime(parallelExecution: Boolean,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
     val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
-    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.config.useInterpretedPipes, parallelExecution)
+    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.config.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
@@ -128,7 +127,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     //=======================================================
     val slottedPipeBuilder =
-      if (context.config.useInterpretedPipes != DISABLED) {
+      if (context.config.interpretedPipesFallback != CypherInterpretedPipesFallbackOption.disabled) {
         val slottedPipeBuilderFallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
         Some(new SlottedPipeMapper(slottedPipeBuilderFallback, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable))
       }
@@ -138,11 +137,10 @@ class MorselRuntime(parallelExecution: Boolean,
 
     DebugLog.logDiff("PhysicalPlanner.plan")
     val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
-    val readOnly =
-      if (context.config.useInterpretedPipes == ALL_POSSIBLE_PLANS)
-        query.readOnly
-      else
-        true
+
+    // Currently only interpreted pipes can do writes. Ask the policy if it is allowed.
+    val readOnly = interpretedPipesFallbackPolicy.readOnly
+
     val operatorFactory = new OperatorFactory(executionGraphDefinition,
                                               converters,
                                               readOnly = readOnly,

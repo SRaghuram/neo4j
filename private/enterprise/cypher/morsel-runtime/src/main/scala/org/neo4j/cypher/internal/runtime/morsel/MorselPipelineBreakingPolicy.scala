@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes
+import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
@@ -101,6 +101,10 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, inte
  * Policy that determines if a plan can be backed by an interpreted pull pipe or not.
  */
 sealed trait InterpretedPipesFallbackPolicy {
+  /**
+   * True if the fallback only allows read-only plans
+   */
+  def readOnly: Boolean
 
   /**
    * True if the an operator should be the start of a new pipeline.
@@ -111,21 +115,24 @@ sealed trait InterpretedPipesFallbackPolicy {
 
 object InterpretedPipesFallbackPolicy {
 
-  def apply(useInterpretedPipes: CypherMorselUseInterpretedPipes, parallelExecution: Boolean): InterpretedPipesFallbackPolicy =
+  def apply(useInterpretedPipes: CypherInterpretedPipesFallbackOption, parallelExecution: Boolean): InterpretedPipesFallbackPolicy =
     useInterpretedPipes match {
-      case CypherMorselUseInterpretedPipes.DISABLED =>
+      case CypherInterpretedPipesFallbackOption.disabled =>
         INTERPRETED_PIPES_FALLBACK_DISABLED
 
-      case CypherMorselUseInterpretedPipes.WHITELISTED_PLANS_ONLY =>
+      case CypherInterpretedPipesFallbackOption.whitelistedPlansOnly =>
         INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution)
 
-      case CypherMorselUseInterpretedPipes.ALL_POSSIBLE_PLANS =>
+      case CypherInterpretedPipesFallbackOption.allPossiblePlans =>
         INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution)
     }
 
   //===================================
   // DISABLED
   private case object INTERPRETED_PIPES_FALLBACK_DISABLED extends InterpretedPipesFallbackPolicy {
+
+    override def readOnly: Boolean = true
+
     override def breakOn(lp: LogicalPlan): Boolean = {
       throw unsupported(lp.getClass.getSimpleName)
     }
@@ -134,6 +141,8 @@ object InterpretedPipesFallbackPolicy {
   //===================================
   // WHITELIST
   private case class INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
+
+    override def readOnly: Boolean = true
 
     val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
       // Whitelisted breaking plans - All cardinality increasing plans need to break
@@ -171,6 +180,9 @@ object InterpretedPipesFallbackPolicy {
   //===================================
   // BLACKLIST
   private case class INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
+
+    override def readOnly: Boolean = false
+
     private val WHITELIST = INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution).WHITELIST
 
     val BLACKLIST: PartialFunction[LogicalPlan, Boolean] = {

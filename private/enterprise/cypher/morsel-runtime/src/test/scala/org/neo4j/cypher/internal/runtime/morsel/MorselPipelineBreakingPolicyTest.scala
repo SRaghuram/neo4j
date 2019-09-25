@@ -5,11 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.configuration.GraphDatabaseSettings.CypherMorselUseInterpretedPipes.DISABLED
+import org.neo4j.cypher.CypherInterpretedPipesFallbackOption.disabled
 import org.neo4j.cypher.internal.compiler.helpers.LogicalPlanBuilder
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.scalatest.FunSuite
 
 class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
 
@@ -19,7 +18,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false),
-                                              InterpretedPipesFallbackPolicy(DISABLED, parallelExecution = false))
+                                              InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
     policy.breakOn(plan) shouldBe false
@@ -31,7 +30,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = true),
-                                              InterpretedPipesFallbackPolicy(DISABLED, parallelExecution = true))
+                                              InterpretedPipesFallbackPolicy(disabled, parallelExecution = true))
 
     //then
     policy.breakOn(plan) shouldBe true
@@ -48,7 +47,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false),
-                                              InterpretedPipesFallbackPolicy(DISABLED, parallelExecution = false))
+                                              InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
     policy.breakOn(plan) shouldBe true
@@ -66,7 +65,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false),
-                                              InterpretedPipesFallbackPolicy(DISABLED, parallelExecution = false))
+                                              InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
     policy.breakOn(plan) shouldBe false

@@ -7,9 +7,9 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.time.Clock
 
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal._
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
@@ -31,7 +31,7 @@ object ContextHelper extends MockitoSugar {
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
-    useInterpretedPipes = GraphDatabaseSettings.cypher_morsel_use_interpreted_pipes.defaultValue(),
+    interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_morsel_use_interpreted_pipes.defaultValue().toString),
     memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults())
   )
 
