@@ -34,7 +34,7 @@ public class EnterpriseBuiltInProcedures
             "YIELD index, providerName, status" )
     @Procedure( name = "db.createNodeKey", mode = SCHEMA )
     public Stream<BuiltInProcedures.SchemaIndexInfo> createNodeKey(
-            @Name( "indexName" ) String constraintName,
+            @Name( "constraintName" ) String constraintName,
             @Name( "index" ) String index,
             @Name( "providerName" ) String providerName )
             throws ProcedureException

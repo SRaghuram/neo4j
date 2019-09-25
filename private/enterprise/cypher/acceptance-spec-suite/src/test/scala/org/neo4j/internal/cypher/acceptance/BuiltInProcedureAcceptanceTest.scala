@@ -442,11 +442,12 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create index from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.ProcedureCall, "CALL db.createIndex(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.ProcedureCall, "CALL db.createIndex(\"MyIndex\", \":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
       List(Map(
+        "name" -> "MyIndex",
         "index" -> ":Person(name)",
         "providerName" -> "lucene+native-3.0",
         "status" -> "index created"))
@@ -463,7 +464,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     listResult.toList should equal(
       List(Map(
         "id" -> index.getId,
-        "name" -> index.getName,
+        "name" -> "MyIndex",
         "state" -> "ONLINE",
         "populationPercent" -> 100.0,
         "uniqueness" -> "NONUNIQUE",
@@ -476,11 +477,12 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create unique property constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.ProcedureCall, "CALL db.createUniquePropertyConstraint(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.ProcedureCall, "CALL db.createUniquePropertyConstraint(\"MyConstraint\", \":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
       List(Map(
+        "name" -> "MyConstraint",
         "index" -> ":Person(name)",
         "providerName" -> "lucene+native-3.0",
         "status" -> "uniqueness constraint online"))
@@ -497,7 +499,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     listResult.toList should equal(
       List(Map(
         "id" -> index.getId,
-        "name" -> index.getName,
+        "name" -> "MyConstraint",
         "state" -> "ONLINE",
         "populationPercent" -> 100.0,
         "uniqueness" -> "UNIQUE",
@@ -510,11 +512,12 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should create node key constraint from built-in-procedure") {
     // when
-    val createResult = executeWith(Configs.ProcedureCall, "CALL db.createNodeKey(\":Person(name)\",\"lucene+native-3.0\")")
+    val createResult = executeWith(Configs.ProcedureCall, "CALL db.createNodeKey(\"MyConstraint\", \":Person(name)\",\"lucene+native-3.0\")")
 
     // then
     createResult.toList should equal(
       List(Map(
+        "name" -> "MyConstraint",
         "index" -> ":Person(name)",
         "providerName" -> "lucene+native-3.0",
         "status" -> "node key constraint online"))
@@ -531,7 +534,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     listResult.toList should equal(
       List(Map(
         "id" -> index.getId,
-        "name" -> index.getName,
+        "name" -> "MyConstraint",
         "state" -> "ONLINE",
         "populationPercent" -> 100.0,
         "uniqueness" -> "UNIQUE",

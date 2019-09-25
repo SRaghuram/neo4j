@@ -268,6 +268,7 @@ class ProcedureResourcesIT
             proc.withParam( "'off'" );
             break;
         case "db.createIndex":
+            proc.withParam( "'This is my index name'" );
             proc.withParam( "':Person(name)'" );
             proc.withParam( "'lucene+native-3.0'" );
             break;
