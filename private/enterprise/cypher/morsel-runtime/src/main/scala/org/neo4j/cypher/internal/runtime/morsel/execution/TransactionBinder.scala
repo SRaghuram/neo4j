@@ -6,13 +6,14 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.kernel.api.KernelTransaction
+import org.neo4j.kernel.impl.util.NodeEntityWrappingNodeValue
 
 /**
   * Interface which binds a transaction to the current Thread. This is needed to accommodate
   * Core API functionality, which could be used to read entities in result visitors, procedures or
   * functions.
   *
-  * Ideally this should not be needed once we remove [[org.neo4j.kernel.impl.util.NodeProxyWrappingNodeValue]] and
+  * Ideally this should not be needed once we remove [[NodeEntityWrappingNodeValue]] and
   * [[org.neo4j.kernel.impl.util.RelationshipProxyWrappingValue]].
   */
 trait TransactionBinder {

@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscriberAdapter}
-import org.neo4j.kernel.impl.util.{NodeProxyWrappingNodeValue, RelationshipProxyWrappingValue}
+import org.neo4j.kernel.impl.util.{NodeEntityWrappingNodeValue, RelationshipProxyWrappingValue}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.values.virtual._
@@ -22,7 +22,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
     assertOnOnlyReturnValue(query, false,
       {
         case n: NodeReference => // ok
-        case n: NodeProxyWrappingNodeValue => if (n.isPopulated) fail("Node proxy is populated")
+        case n: NodeEntityWrappingNodeValue => if (n.isPopulated) fail("Node proxy is populated")
         case n: NodeValue => fail("did not expect populated node value")
       }
     )
@@ -95,7 +95,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
   private def assertPopulatedNode(value: AnyValue): Unit =
     value match {
       case n: NodeReference => fail("did not expect node reference")
-      case n: NodeProxyWrappingNodeValue => if (!n.isPopulated) fail("Node proxy is not populated")
+      case n: NodeEntityWrappingNodeValue => if (!n.isPopulated) fail("Node proxy is not populated")
       case n: NodeValue => // ok
     }
 
