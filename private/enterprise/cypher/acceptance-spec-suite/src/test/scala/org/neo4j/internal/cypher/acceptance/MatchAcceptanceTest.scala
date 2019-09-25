@@ -274,22 +274,16 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val c = createNode("C")
     val r = relate(a, b, "X")
 
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    executeWith(Configs.InterpretedAndSlotted,
       """
     match (a {name:'A'}), (x) where x.name in ['B', 'C']
     optional match p = shortestPath((a)-[*]->(x))
-    return x, p""").toSet
-
-    graph.withTx( tx => {
-      val localA = tx.getNodeById(a.getId)
-      val localB = tx.getNodeById(b.getId)
-      val localC = tx.getNodeById(c.getId)
-      val localR = tx.getRelationshipById(r.getId)
-      assert(Set(
-        Map("x" -> localB, "p" -> PathImpl(localA, localR, localB)),
-        Map("x" -> localC, "p" -> null)
-      ) === result)
-    })
+    return x, p""", resultAssertionInTx = Some(result => {
+        assert(Set(
+          Map("x" -> b, "p" -> PathImpl(a, r, b)),
+          Map("x" -> c, "p" -> null)
+        ) === result.toSet)
+      }))
   }
 
   test("should handle all shortest paths") {

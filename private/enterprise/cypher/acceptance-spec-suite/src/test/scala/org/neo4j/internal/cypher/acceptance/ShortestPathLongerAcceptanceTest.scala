@@ -300,12 +300,14 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("All shortest paths from first to last node") {
     val start = System.currentTimeMillis
-    val result = executeUsingCostPlannerOnly(
-      s"""MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
-         |RETURN p""".stripMargin)
+    graph.withTx( tx => {
+      val result = execute(
+        s"""MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
+           |RETURN p""".stripMargin, Map.empty[String, Any], tx )
 
-    val expectedPathCount = Map(3 -> 6, 4 -> 20, 5 -> 70)
-    evaluateAllShortestPathResults(result, "p", start, expectedPathCount(dim), Set(col(0) ++ row(dMax), row(0) ++ col(dMax)))
+      val expectedPathCount = Map(3 -> 6, 4 -> 20, 5 -> 70)
+      evaluateAllShortestPathResults(result, "p", start, expectedPathCount(dim), Set(col(0) ++ row(dMax), row(0) ++ col(dMax)))
+    })
   }
 
   test("All shortest paths from first to last node via bottom left") {
@@ -720,7 +722,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val matches = resultList.foldLeft(Map[Set[Node],Int]()) { (acc, row) =>
       if (row.isDefinedAt(identifier)) {
         val path: Path = row(identifier).asInstanceOf[Path]
-        val nodes: List[Node] = graph.inTx {
+        val nodes: List[Node] = {
           dprintln(path)
           path.nodes().asScala.toList
         }

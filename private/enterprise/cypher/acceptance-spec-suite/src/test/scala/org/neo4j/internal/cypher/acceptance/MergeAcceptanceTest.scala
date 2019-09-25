@@ -40,9 +40,10 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       row.get("r").asInstanceOf[Relationship]
     })
 
-    graph.withTx( _ => {
-      val labelB = r.getStartNode.getLabels.iterator().next()
-      val labelC = r.getEndNode.getLabels.iterator().next()
+    graph.withTx( tx => {
+      val relationship = tx.getRelationshipById(r.getId)
+      val labelB = relationship.getStartNode.getLabels.iterator().next()
+      val labelC = relationship.getEndNode.getLabels.iterator().next()
       labelB.name() shouldEqual "B"
       labelC.name() shouldEqual "C"
     } )

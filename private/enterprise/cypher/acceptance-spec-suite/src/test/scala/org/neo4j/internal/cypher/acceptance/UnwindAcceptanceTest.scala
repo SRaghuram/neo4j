@@ -6,9 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.time.LocalDate
+import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.helpers.collection.MapUtil
 
 class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -51,19 +53,22 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   test("should unwind nodes") {
     val n = createNode("prop" -> 42)
 
-    val query = "UNWIND $nodes AS n WITH n WHERE n.prop = 42 RETURN n"
-    val result = executeWith(Configs.All, query, params = Map("nodes" -> List(n)))
+    graph.withTx( tx => {
+      val query = "UNWIND $nodes AS n WITH n WHERE n.prop = 42 RETURN n"
+      val result = makeRewinadable(tx.execute(query, MapUtil.map("nodes", util.Arrays.asList(n))))
+      result.toList should equal(List(Map("n" -> n)))
+    })
 
-    result.toList should equal(List(Map("n" -> n)))
   }
 
   test("should unwind nodes from literal list") {
     val n = createNode("prop" -> 42)
 
-    val query = "UNWIND [$node] AS n WITH n WHERE n.prop = 42 RETURN n"
-    val result = executeWith(Configs.All, query, params = Map("node" -> n))
-
-    result.toList should equal(List(Map("n" -> n)))
+    graph.withTx( tx => {
+      val query = "UNWIND [$node] AS n WITH n WHERE n.prop = 42 RETURN n"
+      val result = makeRewinadable(tx.execute(query, MapUtil.map("node", n)))
+      result.toList should equal(List(Map("n" -> n)))
+    } )
   }
 
   test("should unwind scalar node") {
@@ -87,10 +92,11 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val b = createNode()
     val r = relate(a, b, "prop" -> 42)
 
-    val query = "UNWIND $relationships AS r WITH r WHERE r.prop = 42 RETURN r"
-    val result = executeWith(Configs.All, query, params = Map("relationships" -> List(r)))
-
-    result.toList should equal(List(Map("r" -> r)))
+    graph.withTx( tx => {
+      val query = "UNWIND $relationships AS r WITH r WHERE r.prop = 42 RETURN r"
+      val result = makeRewinadable(tx.execute(query, MapUtil.map("relationships", util.Arrays.asList(r))))
+      result.toList should equal(List(Map("r" -> r)))
+    } )
   }
 
   test("should unwind relationships from literal list") {
@@ -98,10 +104,11 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val b = createNode()
     val r = relate(a, b, "prop" -> 42)
 
-    val query = "UNWIND [$relationship] AS r WITH r WHERE r.prop = 42 RETURN r"
-    val result = executeWith(Configs.All, query, params = Map("relationship" -> r))
-
-    result.toList should equal(List(Map("r" -> r)))
+    graph.withTx( tx => {
+      val query = "UNWIND [$relationship] AS r WITH r WHERE r.prop = 42 RETURN r"
+      val result = makeRewinadable(tx.execute(query, MapUtil.map("relationship", r)))
+      result.toList should equal(List(Map("r" -> r)))
+    } )
   }
 
   test("should unwind scalar relationship") {
