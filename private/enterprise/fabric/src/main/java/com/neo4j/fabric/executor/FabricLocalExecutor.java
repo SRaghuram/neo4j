@@ -69,7 +69,6 @@ public class FabricLocalExecutor
 
         var internalTransaction = beginInternalTransaction( databaseFacade, transactionInfo );
         var kernelTransaction = txBridge.getKernelTransactionBoundToThisThread( false, databaseFacade.databaseId() );
-        System.out.println( Thread.currentThread().getName() );
 
         var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
         var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
@@ -139,7 +138,6 @@ public class FabricLocalExecutor
         {
             try
             {
-                System.out.println( Thread.currentThread().getName() );
                 var currentExecutionContext = transactionalContextFactory.newContext( internalTransaction, "", params );
                 return queryExecutionEngine.executeQuery( query, params, currentExecutionContext, true, input, subscriber );
             }

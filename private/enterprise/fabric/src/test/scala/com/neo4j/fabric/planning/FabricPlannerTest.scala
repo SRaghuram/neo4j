@@ -256,7 +256,6 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           |RETURN x, y, z
           |""".stripMargin
 
-      FabricPlanner.setPrintPlans(true)
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
@@ -443,7 +442,6 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(FabricQuery.pretty.pprint)
         .check(_.queries(0).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(literal(1).as("x")),
           create(nodePat("y")),

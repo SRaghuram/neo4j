@@ -131,7 +131,6 @@ class EndToEndTest
             tx.run( "CREATE (:Person {name: 'Dave'  , uid: 101, age: 90})" ).consume();
             tx.success();
         }
-        FabricPlanner.setPrintPlans( true );
     }
 
     @AfterAll
