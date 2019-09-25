@@ -8,7 +8,9 @@ package com.neo4j.tools.dump;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
 
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
@@ -16,10 +18,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
-import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.counts.CountsBuilder.EMPTY;
 import static org.neo4j.internal.counts.CountsKey.nodeKey;
@@ -37,9 +39,6 @@ class DumpCountsStoreTest
 
     @Inject
     private PageCache pageCache;
-
-    @Inject
-    private SuppressOutput suppressOutput;
 
     @Test
     void shouldDumpCountsStore() throws Exception
@@ -60,12 +59,16 @@ class DumpCountsStoreTest
         }
 
         // when
-        DumpCountsStore.main( new String[]{file.getAbsolutePath()} );
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream outStream = new PrintStream( out );
+        DumpCountsStore.main( new String[]{file.getAbsolutePath()}, outStream );
+        outStream.close();
 
         // then
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( nodeKey( 0 ) + " = 4" ) );
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( nodeKey( 1 ) + " = 5" ) );
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( nodeKey( -1 ) + " = 9" ) );
-        assertTrue( suppressOutput.getOutputVoice().containsMessage( relationshipKey( 0, 4, 1 ) + " = 67" ) );
+        String output = out.toString();
+        assertThat( output, containsString( nodeKey( 0 ) + " = 4" ) );
+        assertThat( output, containsString( nodeKey( 1 ) + " = 5" ) );
+        assertThat( output, containsString( nodeKey( -1 ) + " = 9" ) );
+        assertThat( output, containsString( relationshipKey( 0, 4, 1 ) + " = 67" ) );
     }
 }

@@ -6,6 +6,7 @@
 package com.neo4j.tools.dump;
 
 import java.io.File;
+import java.io.PrintStream;
 
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -29,6 +30,11 @@ public class DumpCountsStore
 {
     public static void main( String[] args ) throws Exception
     {
+        main( args, System.out );
+    }
+
+    public static void main( String[] args, PrintStream out ) throws Exception
+    {
         if ( args.length != 1 )
         {
             System.err.println( "Expecting exactly one argument describing the path to the store" );
@@ -39,7 +45,7 @@ public class DumpCountsStore
                 PageCache pageCache = new ConfiguringPageCacheFactory( fileSystem, defaults( pagecache_memory, "80M" ), PageCacheTracer.NULL,
                         PageCursorTracerSupplier.NULL, NullLog.getInstance(), EmptyVersionContextSupplier.EMPTY, jobScheduler ).getOrCreatePageCache() )
         {
-            GBPTreeCountsStore.dump( pageCache, new File( args[0] ), System.out );
+            GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out );
         }
     }
 }
