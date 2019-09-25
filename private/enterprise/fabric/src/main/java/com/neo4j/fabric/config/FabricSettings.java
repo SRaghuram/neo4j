@@ -14,8 +14,6 @@ import org.neo4j.configuration.GroupSetting;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.driver.Config.LoadBalancingStrategy;
-import org.neo4j.driver.Config.TrustStrategy.Strategy;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.logging.Level;
 
@@ -27,9 +25,6 @@ import static org.neo4j.configuration.SettingValueParsers.INT;
 import static org.neo4j.configuration.SettingValueParsers.LONG;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 import static org.neo4j.configuration.SettingValueParsers.ofEnum;
-import static org.neo4j.configuration.SettingValueParsers.ofPartialEnum;
-import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES;
-import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES;
 
 @ServiceProvider
 public class FabricSettings implements SettingsDeclaration
@@ -65,10 +60,10 @@ public class FabricSettings implements SettingsDeclaration
     static Setting<Duration> driverMaxConnectionLifetime = newBuilder( "fabric." + DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
     static Setting<Duration> driverConnectionAcquisitionTimeout = newBuilder( "fabric." + DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
     static Setting<Boolean> driverEncrypted = newBuilder( "fabric." + DRIVER_ENCRYPTED, BOOL, null ).build();
-    static Setting<Strategy> driverTrustStrategy =
-            newBuilder( "fabric." + DRIVER_TRUST_STRATEGY, ofPartialEnum( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, TRUST_ALL_CERTIFICATES ), null ).build();
-    static Setting<LoadBalancingStrategy> driverLoadBalancingStrategy =
-            newBuilder( "fabric." + DRIVER_LOAD_BALANCING_STRATEGY, ofEnum( LoadBalancingStrategy.class ), null ).build();
+    static Setting<DriverTrustStrategy> driverTrustStrategy =
+            newBuilder( "fabric." + DRIVER_TRUST_STRATEGY, ofEnum( DriverTrustStrategy.class ), null ).build();
+    static Setting<DriverLoadBalancingStrategy> driverLoadBalancingStrategy =
+            newBuilder( "fabric." + DRIVER_LOAD_BALANCING_STRATEGY, ofEnum( DriverLoadBalancingStrategy.class ), null ).build();
     static Setting<Duration> driverConnectTimeout = newBuilder( "fabric." + DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
     static Setting<Duration> driverRetryMaxTime = newBuilder( "fabric." + DRIVER_RETRY_MAX_TIME, DURATION, null ).build();
     static Setting<Boolean> driverMetricsEnabled = newBuilder( "fabric." + DRIVER_METRICS_ENABLED, BOOL, null ).build();
@@ -95,10 +90,9 @@ public class FabricSettings implements SettingsDeclaration
         public final Setting<Duration> driverMaxConnectionLifetime = getBuilder( DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
         public final Setting<Duration> driverConnectionAcquisitionTimeout = getBuilder( DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
         public final Setting<Boolean> driverEncrypted = getBuilder( DRIVER_ENCRYPTED, BOOL, null ).build();
-        public final Setting<Strategy> driverTrustStrategy =
-                getBuilder( DRIVER_TRUST_STRATEGY, ofPartialEnum( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, TRUST_ALL_CERTIFICATES ), null ).build();
-        public final Setting<LoadBalancingStrategy> driverLoadBalancingStrategy =
-                getBuilder( DRIVER_LOAD_BALANCING_STRATEGY, ofEnum( LoadBalancingStrategy.class ), null ).build();
+        public final Setting<DriverTrustStrategy> driverTrustStrategy = getBuilder( DRIVER_TRUST_STRATEGY, ofEnum( DriverTrustStrategy.class ), null ).build();
+        public final Setting<DriverLoadBalancingStrategy> driverLoadBalancingStrategy =
+                getBuilder( DRIVER_LOAD_BALANCING_STRATEGY, ofEnum( DriverLoadBalancingStrategy.class ), null ).build();
         public final Setting<Duration> driverConnectTimeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
         public final Setting<Duration> driverRetryMaxTime = getBuilder( DRIVER_RETRY_MAX_TIME, DURATION, null ).build();
         public final Setting<Boolean> driverMetricsEnabled = getBuilder( DRIVER_METRICS_ENABLED, BOOL, null ).build();
@@ -118,5 +112,17 @@ public class FabricSettings implements SettingsDeclaration
         {
             return "fabric.graph";
         }
+    }
+
+    public enum DriverTrustStrategy
+    {
+        TRUST_SYSTEM_CA_SIGNED_CERTIFICATES,
+        TRUST_ALL_CERTIFICATES
+    }
+
+    public enum DriverLoadBalancingStrategy
+    {
+        ROUND_ROBIN,
+        LEAST_CONNECTED
     }
 }

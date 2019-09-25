@@ -21,7 +21,6 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.driver.Config.TrustStrategy.Strategy;
 import org.neo4j.logging.Level;
 
 public class FabricConfig
@@ -311,15 +310,15 @@ public class FabricConfig
         private final Duration maxConnectionLifetime;
         private final Duration connectionAcquisitionTimeout;
         private final Boolean encrypted;
-        private final Strategy trustStrategy;
-        private final org.neo4j.driver.Config.LoadBalancingStrategy loadBalancingStrategy;
+        private final FabricSettings.DriverTrustStrategy trustStrategy;
+        private final FabricSettings.DriverLoadBalancingStrategy loadBalancingStrategy;
         private final Duration connectTimeout;
         private final Duration retryMaxTime;
         private final Boolean metricsEnabled;
 
         public DriverConfig( Level loggingLevel, Boolean logLeakedSessions, Integer maxConnectionPoolSize, Duration idleTimeBeforeConnectionTest,
-                Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Boolean encrypted, Strategy trustStrategy,
-                org.neo4j.driver.Config.LoadBalancingStrategy loadBalancingStrategy, Duration connectTimeout, Duration retryMaxTime, Boolean metricsEnabled )
+                Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Boolean encrypted, FabricSettings.DriverTrustStrategy trustStrategy,
+                FabricSettings.DriverLoadBalancingStrategy loadBalancingStrategy, Duration connectTimeout, Duration retryMaxTime, Boolean metricsEnabled )
         {
             this.loggingLevel = loggingLevel;
             this.logLeakedSessions = logLeakedSessions;
@@ -370,12 +369,12 @@ public class FabricConfig
             return encrypted;
         }
 
-        public Strategy getTrustStrategy()
+        public FabricSettings.DriverTrustStrategy getTrustStrategy()
         {
             return trustStrategy;
         }
 
-        public org.neo4j.driver.Config.LoadBalancingStrategy getLoadBalancingStrategy()
+        public FabricSettings.DriverLoadBalancingStrategy getLoadBalancingStrategy()
         {
             return loadBalancingStrategy;
         }

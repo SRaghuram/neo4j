@@ -104,7 +104,7 @@ class DriverConfigFactory
             builder.withMaxTransactionRetryTime( retryMaxTime.toMillis(), MILLISECONDS );
         }
 
-        var loadBalancingStrategy = getProperty( graph, FabricConfig.DriverConfig::getLoadBalancingStrategy );
+        var loadBalancingStrategy = getLoadBalancingStrategy( graph );
         if ( loadBalancingStrategy != null )
         {
             builder.withLoadBalancingStrategy( loadBalancingStrategy );
@@ -180,6 +180,25 @@ class DriverConfigFactory
             return Config.TrustStrategy.trustAllCertificates();
         default:
             throw new IllegalArgumentException( "Unexpected trust strategy: " + trustStrategy );
+        }
+    }
+
+    private Config.LoadBalancingStrategy getLoadBalancingStrategy( FabricConfig.Graph graph )
+    {
+        var loadBalancingStrategy = getProperty( graph, FabricConfig.DriverConfig::getLoadBalancingStrategy );
+        if ( loadBalancingStrategy == null )
+        {
+            return null;
+        }
+
+        switch ( loadBalancingStrategy )
+        {
+        case ROUND_ROBIN:
+            return Config.LoadBalancingStrategy.ROUND_ROBIN;
+        case LEAST_CONNECTED:
+            return Config.LoadBalancingStrategy.LEAST_CONNECTED;
+        default:
+            throw new IllegalArgumentException( "Unexpected load balancing strategy: " + loadBalancingStrategy );
         }
     }
 }
