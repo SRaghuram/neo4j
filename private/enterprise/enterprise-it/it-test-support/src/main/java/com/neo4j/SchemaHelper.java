@@ -34,12 +34,12 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties )
+                public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, String label, String... properties )
                 {
                     String keyProperties = Arrays.stream( properties )
                             .map( property -> format("n.`%s`", property))
                             .collect( joining( "," ) );
-                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT (%s) IS NODE KEY", label.name(), keyProperties ) );
+                    tx.execute( format( "CREATE CONSTRAINT ON (n:`%s`) ASSERT (%s) IS NODE KEY", label, keyProperties ) );
                 }
 
                 @Override
@@ -55,12 +55,13 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public void createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey )
+                public void createNodeKeyConstraintWithName( Transaction tx, String name, String label,
+                        String... propertyKey )
                 {
                     String keyProperties = Arrays.stream( propertyKey )
                             .map( property -> format("n.`%s`", property))
                             .collect( joining( "," ) );
-                    tx.execute( format( "CREATE CONSTRAINT `" + name + "` ON (n:`%s`) ASSERT (%s) IS NODE KEY", label.name(), keyProperties ) );
+                    tx.execute( format( "CREATE CONSTRAINT `%s` ON (n:`%s`) ASSERT (%s) IS NODE KEY", name, label, keyProperties ) );
                 }
             },
     CORE_API
@@ -78,9 +79,9 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties )
+                public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, String label, String... properties )
                 {
-                    ConstraintCreator creator = tx.schema().constraintFor( label );
+                    ConstraintCreator creator = tx.schema().constraintFor( Label.label( label ) );
                     for ( String property : properties )
                     {
                         creator = creator.assertPropertyIsNodeKey( property );
@@ -101,9 +102,9 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public void createNodeKeyConstraint( Transaction tx, String name, Label label, String... keys )
+                public void createNodeKeyConstraintWithName( Transaction tx, String name, String label, String... keys )
                 {
-                    ConstraintCreator creator = tx.schema().constraintFor( label ).withName( name );
+                    ConstraintCreator creator = tx.schema().constraintFor( Label.label( label ) ).withName( name );
                     for ( String key : keys )
                     {
                         creator = creator.assertPropertyIsNodeKey( key );
@@ -112,8 +113,10 @@ public enum SchemaHelper
                 }
             };
 
+    /* --- Index --- */
     public abstract void createIndex( GraphDatabaseService db, Transaction tx, String label, String property );
 
+    /* --- Uniqueness constraint --- */
     public void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, Label label, String property )
     {
         createUniquenessConstraint( db, tx, label.name(), property );
@@ -121,13 +124,22 @@ public enum SchemaHelper
 
     public abstract void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, String label, String property );
 
-    public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, String label, String... properties )
+    /* --- NodeKey constraint --- */
+    public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties )
     {
-        createNodeKeyConstraint( db, tx, Label.label( label ), properties );
+        createNodeKeyConstraint( db, tx, label.name(), properties );
     }
 
-    public abstract void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties );
+    public void createNodeKeyConstraintWithName( GraphDatabaseService db, Transaction tx, String name, Label label, String... propertyKey )
+    {
+        createNodeKeyConstraintWithName( tx, name, label.name(), propertyKey );
+    }
 
+    public abstract void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, String label, String... properties );
+
+    public abstract void createNodeKeyConstraintWithName( Transaction tx, String name, String label, String... propertyKey );
+
+    /* --- Node property existence constraint --- */
     public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, Label label, String property )
     {
         createNodePropertyExistenceConstraint( db, tx, label.name(), property );
@@ -135,6 +147,7 @@ public enum SchemaHelper
 
     public abstract void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String label, String property );
 
+    /* --- Relationship property existence constraint --- */
     public void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, RelationshipType type, String property )
     {
         createRelPropertyExistenceConstraint( db, tx, type.name(), property );
@@ -142,6 +155,7 @@ public enum SchemaHelper
 
     public abstract void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String type, String property );
 
+    /* --- Util --- */
     public void awaitIndexes( GraphDatabaseService db )
     {
         try ( Transaction tx = db.beginTx() )
@@ -150,6 +164,4 @@ public enum SchemaHelper
             tx.commit();
         }
     }
-
-    public abstract void createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey );
 }
