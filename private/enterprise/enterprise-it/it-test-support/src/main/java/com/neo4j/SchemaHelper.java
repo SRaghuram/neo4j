@@ -5,8 +5,6 @@
  */
 package com.neo4j;
 
-import org.opentest4j.TestAbortedException;
-
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
@@ -15,7 +13,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintCreator;
-import org.neo4j.graphdb.schema.ConstraintDefinition;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -58,9 +55,12 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public ConstraintDefinition createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey )
+                public void createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey )
                 {
-                    throw new TestAbortedException( "Cypher cannot yet create NAMED node key constraints." );
+                    String keyProperties = Arrays.stream( propertyKey )
+                            .map( property -> format("n.`%s`", property))
+                            .collect( joining( "," ) );
+                    tx.execute( format( "CREATE CONSTRAINT `" + name + "` ON (n:`%s`) ASSERT (%s) IS NODE KEY", label.name(), keyProperties ) );
                 }
             },
     CORE_API
@@ -101,14 +101,14 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public ConstraintDefinition createNodeKeyConstraint( Transaction tx, String name, Label label, String... keys )
+                public void createNodeKeyConstraint( Transaction tx, String name, Label label, String... keys )
                 {
                     ConstraintCreator creator = tx.schema().constraintFor( label ).withName( name );
                     for ( String key : keys )
                     {
                         creator = creator.assertPropertyIsNodeKey( key );
                     }
-                    return creator.create();
+                    creator.create();
                 }
             };
 
@@ -151,5 +151,5 @@ public enum SchemaHelper
         }
     }
 
-    public abstract ConstraintDefinition createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey );
+    public abstract void createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey );
 }

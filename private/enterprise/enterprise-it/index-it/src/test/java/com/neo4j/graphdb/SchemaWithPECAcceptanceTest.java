@@ -10,14 +10,19 @@ import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
+import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.test.extension.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -62,6 +67,7 @@ class SchemaWithPECAcceptanceTest
         {
             assertThat( getConstraints( transaction ), containsOnly( constraint ) );
         }
+        assertExpectedConstraint( constraint, ConstraintType.NODE_PROPERTY_EXISTENCE, label, propertyKey );
     }
 
     @ParameterizedTest
@@ -76,6 +82,7 @@ class SchemaWithPECAcceptanceTest
         {
             assertThat( getConstraints( transaction ), containsOnly( constraint ) );
         }
+        assertExpectedConstraint( constraint, ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE, Types.MY_TYPE, propertyKey );
     }
 
     @ParameterizedTest
@@ -132,7 +139,8 @@ class SchemaWithPECAcceptanceTest
     @EnumSource( SchemaHelper.class )
     void uniquenessConstraintIndexesMustBeNamedAfterTheirConstraints( SchemaHelper helper )
     {
-        createNodeKeyConstraint( helper, "MySchema", label, propertyKey );
+        final ConstraintDefinition constraint = createNodeKeyConstraint( helper, "MySchema", label, propertyKey );
+        assertExpectedConstraint( constraint, "MySchema", ConstraintType.NODE_KEY, label, propertyKey );
         try ( Transaction tx = db.beginTx() )
         {
             IndexDefinition index = tx.schema().getIndexByName( "MySchema" );
@@ -188,14 +196,13 @@ class SchemaWithPECAcceptanceTest
         }
     }
 
-    private void createNodeKeyConstraint( SchemaHelper helper, String name, Label label, String propertyKey )
+    private ConstraintDefinition createNodeKeyConstraint( SchemaHelper helper, String name, Label label, String propertyKey )
     {
         Collection<ConstraintDefinition> before;
-        ConstraintDefinition constraint;
         try ( Transaction transaction = db.beginTx() )
         {
             before = getConstraints( transaction ).collection();
-            constraint = helper.createNodeKeyConstraint( transaction, name, label, propertyKey );
+            helper.createNodeKeyConstraint( transaction, name, label, propertyKey );
             transaction.commit();
         }
 
@@ -203,8 +210,7 @@ class SchemaWithPECAcceptanceTest
 
         try ( Transaction transaction = db.beginTx() )
         {
-            ConstraintDefinition foundConstraint = getCreatedConstraint( transaction, before );
-            assertEquals( constraint, foundConstraint );
+            return getCreatedConstraint( transaction, before );
         }
     }
 
@@ -229,6 +235,44 @@ class SchemaWithPECAcceptanceTest
             var constraint = getCreatedConstraint( transaction, before );
             transaction.commit();
             return constraint;
+        }
+    }
+
+    private void assertExpectedConstraint( ConstraintDefinition constraint, ConstraintType constraintType, RelationshipType expectedType,
+            String... expectedProperties )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            List<String> propertyKeys = new ArrayList<>( Arrays.asList( expectedProperties ) );
+            assertEquals( expectedType.name(), constraint.getRelationshipType().name() );
+            assertEquals( propertyKeys, Iterables.asList( constraint.getPropertyKeys() ) );
+            assertEquals( constraintType, constraint.getConstraintType() );
+            tx.commit();
+        }
+    }
+
+    private void assertExpectedConstraint( ConstraintDefinition constraint, ConstraintType constraintType, Label expectedLabel, String... expectedProperties )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            List<String> propertyKeys = new ArrayList<>( Arrays.asList( expectedProperties ) );
+            assertEquals( expectedLabel.name(), constraint.getLabel().name() );
+            assertEquals( propertyKeys, Iterables.asList( constraint.getPropertyKeys() ) );
+            assertEquals( constraintType, constraint.getConstraintType() );
+            tx.commit();
+        }
+    }
+
+    private void assertExpectedConstraint( ConstraintDefinition constraint, String name, ConstraintType constraintType, Label expectedLabel, String... expectedProperties )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            List<String> propertyKeys = new ArrayList<>( Arrays.asList( expectedProperties ) );
+            assertEquals( name, constraint.getName() );
+            assertEquals( expectedLabel.name(), constraint.getLabel().name() );
+            assertEquals( propertyKeys, Iterables.asList( constraint.getPropertyKeys() ) );
+            assertEquals( constraintType, constraint.getConstraintType() );
+            tx.commit();
         }
     }
 }
