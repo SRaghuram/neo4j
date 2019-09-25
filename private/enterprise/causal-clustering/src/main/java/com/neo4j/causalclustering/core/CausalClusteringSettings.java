@@ -237,7 +237,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
 
     @Description( "The level of middleware logging" )
     public static final Setting<Level> middleware_logging_level =
-            newBuilder( "causal_clustering.middleware.logging.level", ofEnum( Level.class ), Level.NONE ).build();
+            newBuilder( "causal_clustering.middleware.logging.level", ofEnum( Level.class ), Level.WARN ).build();
 
     @Internal
     @Description( "External config file for Akka" )
