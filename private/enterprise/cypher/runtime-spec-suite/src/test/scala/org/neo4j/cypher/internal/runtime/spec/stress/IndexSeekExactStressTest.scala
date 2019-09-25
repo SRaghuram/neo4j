@@ -20,7 +20,8 @@ abstract class IndexSeekExactStressTest(edition: Edition[EnterpriseRuntimeContex
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator
-          y <- nodes.filter(_.getProperty("prop").asInstanceOf[Int] == x.getId)
+          y <- nodes.filter(n => runtimeTestSupport.txHolder.get().getNodeById(n.getId)
+            .getProperty("prop").asInstanceOf[Int] == x.getId)
         } yield Array(x, y)
     )
 }

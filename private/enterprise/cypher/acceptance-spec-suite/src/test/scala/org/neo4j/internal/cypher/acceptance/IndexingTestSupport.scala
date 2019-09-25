@@ -35,15 +35,15 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
   }
 
   protected def setIndexedValue(node: Node, value: Value): Unit = {
-    graph.inTx {
-      node.setProperty(PROPERTY, value.asObject())
-    }
+    graph.withTx( tx =>  {
+      tx.getNodeById(node.getId).setProperty(PROPERTY, value.asObject())
+    } )
   }
 
   protected def setNonIndexedValue(node: Node, value: Value): Unit = {
-    graph.inTx {
-      node.setProperty(NONINDEXED, value.asObject())
-    }
+    graph.withTx( tx => {
+      tx.getNodeById(node.getId).setProperty(NONINDEXED, value.asObject())
+    } )
   }
 
   protected def assertSeekMatchFor(value: Value, nodes: Node*): Unit = {

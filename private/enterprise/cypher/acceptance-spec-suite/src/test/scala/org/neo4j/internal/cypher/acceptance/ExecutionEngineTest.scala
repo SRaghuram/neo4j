@@ -200,12 +200,12 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     val result = executeWith(Configs.VarExpand, "match (a)-[:CONTAINS*0..1]->(b)-[:FRIEND*0..1]->(c) where id(a) = 0 return a,b,c")
 
-    graph.inTx({
+    graph.withTx( tx => {
       result.toSet should equal(
         Set(
-          Map("a" -> node("A"), "b" -> node("A"), "c" -> node("A")),
-          Map("a" -> node("A"), "b" -> node("B"), "c" -> node("B")),
-          Map("a" -> node("A"), "b" -> node("B"), "c" -> node("C"))
+          Map("a" -> node(tx, "A"), "b" -> node(tx, "A"), "c" -> node(tx, "A")),
+          Map("a" -> node(tx, "A"), "b" -> node(tx, "B"), "c" -> node(tx, "B")),
+          Map("a" -> node(tx, "A"), "b" -> node(tx, "B"), "c" -> node(tx, "C"))
         )
       )
     })
@@ -250,7 +250,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val query = "match (pA) where id(pA) IN $a return pA"
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map("a" -> Seq[Long](0)))
 
-    graph.inTx(result.toList should equal(List(Map("pA" -> node("A")))))
+    graph.withTx( tx => result.toList should equal(List(Map("pA" -> node(tx, "A")))))
   }
 
   test("shouldBeAbleToTakeParamsForEqualityComparisons") {
@@ -485,9 +485,9 @@ order by a.COL1""".format(a, b))
     val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = $id with n set n.foo= $id return n", params = Map("id" -> id)).toList
 
     result should have size 1
-    graph.inTx {
-      result.head("n").asInstanceOf[Node].getProperty("foo") should equal(id)
-    }
+    graph.withTx( tx => {
+      tx.getNodeById(result.head("n").asInstanceOf[Node].getId).getProperty("foo") should equal(id)
+    } )
   }
 
   test("shouldAllowArrayComparison") {

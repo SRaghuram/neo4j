@@ -39,7 +39,7 @@ abstract class AggregationStressTestBase(edition: Edition[EnterpriseRuntimeConte
           (g, rowsForXAndY) <- rowsForX.groupBy(_ (1).getId.toInt % 2) // group by y.prop % 2
           amount = rowsForXAndY.map { row =>
             val Array(x, y) = row
-            x.getProperty("propWithDuplicates").asInstanceOf[Int] + y.getId
+            runtimeTestSupport.txHolder.get().getNodeById(x.getId).getProperty("propWithDuplicates").asInstanceOf[Int] + y.getId
           }.sum
         } yield Array(g, amount)
       ,

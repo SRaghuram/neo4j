@@ -89,10 +89,11 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     executeWith(Configs.InterpretedAndSlotted, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> n))
 
-    graph.inTx {
-      n.getProperty("lastname") should equal("Anders")
-      n.hasProperty("name") should equal(false)
-    }
+    graph.withTx( tx => {
+      val node = tx.getNodeById(n.getId)
+      node.getProperty("lastname") should equal("Anders")
+      node.hasProperty("name") should equal(false)
+    } )
   }
 
   test("removing property when not sure if it is a node or relationship should still work - REL") {
@@ -100,10 +101,11 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     executeWith(Configs.InterpretedAndSlotted, "WITH $p as p SET p.lastname = p.name REMOVE p.name", params = Map("p" -> r))
 
-    graph.inTx {
-      r.getProperty("lastname") should equal("Anders")
-      r.hasProperty("name") should equal(false)
-    }
+    graph.withTx( tx => {
+      val relationship = tx.getRelationshipById(r.getId)
+      relationship.getProperty("lastname") should equal("Anders")
+      relationship.hasProperty("name") should equal(false)
+    } )
   }
 
   test("match with missing parameter should return error for empty db") {

@@ -238,9 +238,9 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     executeWith(Configs.InterpretedAndSlotted, "MATCH (p:Person {firstname: 'John', surname: 'Wood'}) REMOVE p.foo".fixNewLines)
 
     // Then
-    graph.inTx {
-      node.hasProperty("foo") shouldBe false
-    }
+    graph.withTx( tx => {
+      tx.getNodeById(node.getId).hasProperty("foo") shouldBe false
+    } )
   }
 
   test("Should be able to delete node constrained with node key constraint") {

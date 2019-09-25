@@ -85,14 +85,16 @@ class IdReuseTest
         long rolledBackRelationshipId;
         try ( Transaction tx = db.beginTx() )
         {
-            rolledBackRelationshipId = node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) ).getId();
+            rolledBackRelationshipId = tx.getNodeById( node1.getId() )
+                    .createRelationshipTo( tx.getNodeById( node2.getId() ), RelationshipType.withName( "LIKE" ) ).getId();
 
             tx.rollback();
         }
 
         try ( Transaction tx = db.beginTx() )
         {
-            node1.createRelationshipTo( node2, RelationshipType.withName( "LIKE" ) ).getId();
+            tx.getNodeById( node1.getId() )
+                    .createRelationshipTo( tx.getNodeById( node2.getId() ), RelationshipType.withName( "LIKE" ) ).getId();
 
             tx.commit();
         }

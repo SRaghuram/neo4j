@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.helpers.{NodeKeyConstraintCreator, UniquenessCo
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.exceptions.MergeConstraintConflictException
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 import scala.collection.Map
 
@@ -32,11 +32,12 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // then
       countNodes() should equal(1)
-      graph.inTx {
-        result.getProperty("id") should equal(23)
-        result.getProperty("mail") should equal("emil@neo.com")
-        result.getProperty("country") should equal("Sweden")
-      }
+      graph.withTx( tx => {
+        val node = tx.getNodeById(result.getId)
+        node.getProperty("id") should equal(23)
+        node.getProperty("mail") should equal("emil@neo.com")
+        node.getProperty("country") should equal("Sweden")
+      } )
     }
 
     test(s"$constraintCreator: should_match_on_merge_using_multiple_unique_indexes_and_labels_if_only_found_single_node_for_both_indexes") {
@@ -53,11 +54,12 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // then
       countNodes() should equal(1)
-      graph.inTx {
-        result.getProperty("id") should equal(23)
-        result.getProperty("mail") should equal("emil@neo.com")
-        result.getProperty("country") should equal("Sweden")
-      }
+      graph.withTx( tx => {
+        val node = tx.getNodeById(result.getId)
+        node.getProperty("id") should equal(23)
+        node.getProperty("mail") should equal("emil@neo.com")
+        node.getProperty("country") should equal("Sweden")
+      } )
     }
 
     test(s"$constraintCreator: should_match_on_merge_using_multiple_unique_indexes_using_same_key_if_only_found_single_node_for_both_indexes") {
@@ -74,10 +76,11 @@ class MergeNodeCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
       // then
       countNodes() should equal(1)
-      graph.inTx {
-        result.getProperty("id") should equal(23)
-        result.getProperty("country") should equal("Sweden")
-      }
+      graph.withTx( tx => {
+        val node = tx.getNodeById(result.getId)
+        node.getProperty("id") should equal(23)
+        node.getProperty("country") should equal("Sweden")
+      } )
     }
 
     test(s"$constraintCreator: should_fail_on_merge_using_multiple_unique_indexes_using_same_key_if_found_different_nodes") {

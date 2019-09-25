@@ -18,7 +18,9 @@ abstract class IndexContainsScanStressTestBase(edition: Edition[EnterpriseRuntim
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator
-          y <- nodes.filter(_.getProperty("text").asInstanceOf[String].contains(x.getId.toString))
+          y <- nodes.filter(n =>
+            runtimeTestSupport.txHolder.get().getNodeById(n.getId)
+              .getProperty("text").asInstanceOf[String].contains(x.getId.toString))
         } yield Array(x, y)
     )
 }

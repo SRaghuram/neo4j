@@ -146,8 +146,8 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val res = executeWith(Configs.CachedProperty, "MATCH (n) WHERE NOT EXISTS(n.foo) RETURN EXISTS(n.foo) AS x, n.foo",
       executeBefore = tx => {
-        n2.setProperty("foo", 2)
-        n3.removeProperty("foo")
+        tx.getNodeById(n2.getId).setProperty("foo", 2)
+        tx.getNodeById(n3.getId).removeProperty("foo")
         tx.createNode()
         val node = tx.createNode()
         node.setProperty("foo", 5);
@@ -176,8 +176,8 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     val res = executeWith(Configs.CachedProperty, "MATCH ()-[r]->() WHERE NOT EXISTS(r.foo) RETURN EXISTS(r.foo) AS x, r.foo",
       executeBefore = tx => {
-        r2.setProperty("foo", 2)
-        r3.removeProperty("foo")
+        tx.getRelationshipById(r2.getId).setProperty("foo", 2)
+        tx.getRelationshipById(r3.getId).removeProperty("foo")
         tx.createNode().createRelationshipTo(tx.createNode(), REL)
         tx.createNode().createRelationshipTo(tx.createNode(), REL).setProperty("foo", 5)
       })

@@ -221,13 +221,13 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.ShortestPath,
       "match p = shortestPath((a {name:'A'})-[*..15]-(b {name:'B'})) return p").toList.head("p").asInstanceOf[Path]
 
-    graph.inTx {
+    graph.withTx( tx => {
       val number_of_relationships_in_path = result.length()
       number_of_relationships_in_path should equal(1)
-      result.startNode() should equal(node("A"))
-      result.endNode() should equal(node("B"))
+      result.startNode() should equal(node(tx, "A"))
+      result.endNode() should equal(node(tx, "B"))
       result.lastRelationship() should equal(r1)
-    }
+    } )
   }
 
   test("should return shortest path unbound length") {
@@ -280,10 +280,16 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     optional match p = shortestPath((a)-[*]->(x))
     return x, p""").toSet
 
-    graph.inTx(assert(Set(
-      Map("x" -> b, "p" -> PathImpl(a, r, b)),
-      Map("x" -> c, "p" -> null)
-    ) === result))
+    graph.withTx( tx => {
+      val localA = tx.getNodeById(a.getId)
+      val localB = tx.getNodeById(b.getId)
+      val localC = tx.getNodeById(c.getId)
+      val localR = tx.getRelationshipById(r.getId)
+      assert(Set(
+        Map("x" -> localB, "p" -> PathImpl(localA, localR, localB)),
+        Map("x" -> localC, "p" -> null)
+      ) === result)
+    })
   }
 
   test("should handle all shortest paths") {
@@ -435,10 +441,11 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     executeWith(Configs.InterpretedAndSlotted, "MATCH (n:FOO) SET n = { first: 'value' }")
     executeWith(Configs.InterpretedAndSlotted, "MATCH (n:FOO) SET n = { second: 'value' }")
 
-    graph.inTx {
-      node.getProperty("first", null) should equal(null)
-      node.getProperty("second") should equal("value")
-    }
+    graph.withTx( tx => {
+      val localNode = tx.getNodeById(node.getId)
+      localNode.getProperty("first", null) should equal(null)
+      localNode.getProperty("second") should equal("value")
+    })
   }
 
   // Not TCK material -- indexes
