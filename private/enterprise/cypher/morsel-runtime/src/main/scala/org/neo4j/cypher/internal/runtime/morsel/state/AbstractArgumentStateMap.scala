@@ -8,6 +8,8 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
+import org.neo4j.util.Preconditions
+
 import scala.collection.JavaConverters._
 
 /**
@@ -140,9 +142,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
     val previousValue = controllers.put(argument, newController)
-    if (previousValue != null) {
-      throw new IllegalStateException(s"ArgumentStateMap cannot re-initiate the same argument (argument: $argument)")
-    }
+    Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }
 
   override def increment(argument: Long): Unit = {

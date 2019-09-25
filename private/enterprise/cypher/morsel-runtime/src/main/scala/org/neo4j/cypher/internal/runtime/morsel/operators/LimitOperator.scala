@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
@@ -218,7 +219,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     // does not work so well when exceptions are thrown from evaluateCountValue (which can be expected due to it performing user error checking!)
     block(
       condition(invoke(loadField(limitStateField), method[StlLimitState, Boolean]("isUninitialized")))(
-        invoke(loadField(limitStateField), method[StlLimitState, Unit, Long]("setCount"),
+        invoke(loadField(limitStateField), method[StlLimitState, Unit, Long]("initialize"),
           invokeStatic(method[LimitOperator, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
       ),
       assign(reservedVar, invoke(loadField(limitStateField), method[LimitState, Long, Long]("reserve"), howMuchToReserve)),
@@ -280,9 +281,34 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     * }}}
     */
   abstract class StlLimitState extends LimitState {
-    def setCount(count: Long): Unit // Initialize the count. Intended to be called only once.
-    def isUninitialized: Boolean // True iff setCount has never been called
-    def update(usedCount: Long): Unit // Update this state with the number of rows that passed the limit.
+
+    protected def getCount: Long
+    protected def setCount(count: Long): Unit
+
+    // True iff initialize has never been called
+    def isUninitialized: Boolean = getCount == -1L
+
+    // Initialize the count. Intended to be called only once.
+    def initialize(count: Long): Unit = {
+      Preconditions.checkState(isUninitialized, "Can only call initialize once")
+      setCount(count)
+    }
+
+    // Update this state with the number of rows that passed the limit.
+    def update(usedCount: Long): Unit = {
+      Preconditions.checkState(usedCount >= 0, "Can not have used a negative number of rows")
+      val newCount = getCount - usedCount
+      Preconditions.checkState(newCount >= 0, "Used more rows than had count left")
+      setCount(newCount)
+    }
+
+    override def reserve(wanted: Long): Long = {
+      val count = getCount
+      Preconditions.checkState(count != -1, "StlLimitState has not been initialized")
+      math.min(count, wanted)
+    }
+
+    override def isCancelled: Boolean = getCount == 0
   }
 
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
@@ -300,26 +326,8 @@ object SerialTopLevelLimitOperatorTaskTemplate {
 
     private var countLeft: Long = -1L
 
-    override def isUninitialized: Boolean = countLeft == -1L
-
-    override def setCount(count: Long): Unit = {
-      AssertionRunner.runUnderAssertion{() => countLeft == -1}
-      countLeft = count
-    }
-
-    override def reserve(wanted: Long): Long = {
-      AssertionRunner.runUnderAssertion{() => countLeft != -1}
-      math.min(countLeft, wanted)
-    }
-
-    override def update(usedCount: Long): Unit = {
-      assert(usedCount >= 0)
-      countLeft -= usedCount
-      AssertionRunner.runUnderAssertion{() => countLeft >= 0}
-    }
-
-    override def isCancelled: Boolean = countLeft == 0
-
+    override protected def getCount: Long = countLeft
+    override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardStlLimitState($argumentRowId, countLeft=$countLeft)"
   }
 
@@ -333,26 +341,8 @@ object SerialTopLevelLimitOperatorTaskTemplate {
 
     @volatile private var countLeft: Long = -1L
 
-    override def isUninitialized: Boolean = countLeft == -1L
-
-    override def setCount(count: Long): Unit = {
-      AssertionRunner.runUnderAssertion{() => countLeft == -1}
-      countLeft = count
-    }
-
-    override def reserve(wanted: Long): Long = {
-      AssertionRunner.runUnderAssertion{() => countLeft != -1}
-      math.min(countLeft, wanted)
-    }
-
-    override def update(usedCount: Long): Unit = {
-      assert(usedCount >= 0)
-      countLeft -= usedCount
-      AssertionRunner.runUnderAssertion{() => countLeft >= 0}
-    }
-
-    override def isCancelled: Boolean = countLeft == 0
-
+    override protected def getCount: Long = countLeft
+    override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"VolatileStlLimitState($argumentRowId, countLeft=$countLeft)"
   }
 }
