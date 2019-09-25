@@ -55,8 +55,7 @@ for i in "${db_and_workloads[@]}"; do
     tar xzvf "${zip_file}" -C old
     rm "${zip_file}"
     mkdir -p old/"${db_name}"/data/databases
-    mv old/"${db_name}"/graph.db old/"${db_name}"/data/databases
-    mv old/"${db_name}"/data/databases/graph.db old/"${db_name}"/data/databases/neo4j
+    mv old/"${db_name}"/graph.db old/"${db_name}"/data/databases/neo4j
 
     "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
                                --original-db old/"${db_name}"/ \
