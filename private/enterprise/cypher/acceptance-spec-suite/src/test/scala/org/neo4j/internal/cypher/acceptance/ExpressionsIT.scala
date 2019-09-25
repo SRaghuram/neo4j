@@ -514,14 +514,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("labels", parameter(0)))
 
     val labels = Values.stringArray("A", "B", "C")
-    val node = ValueUtils.fromNodeProxy(createLabeledNode("A", "B", "C"))
+    val node = ValueUtils.fromNodeEntity(createLabeledNode("A", "B", "C"))
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
     evaluate(compiled, params(node)) should equal(labels)
   }
 
   test("type function") {
     val compiled = compile(function("type", parameter(0)))
-    val rel = ValueUtils.fromRelationshipProxy(relate(createNode(), createNode(), "R"))
+    val rel = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), "R"))
 
     evaluate(compiled, params(rel)) should equal(stringValue("R"))
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
@@ -1274,7 +1274,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("LabelsFromSlot") {
     // Given
     val labels = Values.stringArray("A", "B", "C")
-    val node = ValueUtils.fromNodeProxy(createLabeledNode("A", "B", "C"))
+    val node = ValueUtils.fromNodeEntity(createLabeledNode("A", "B", "C"))
 
     val offset = 0
     val expression = LabelsFromSlot(offset)
@@ -1292,7 +1292,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("RelationshipTypeFromSlot") {
     // Given
     val relType = Values.stringValue("R")
-    val r = ValueUtils.fromRelationshipProxy(relate(createNode(), createNode(), "R"))
+    val r = ValueUtils.fromRelationshipEntity(relate(createNode(), createNode(), "R"))
 
     val offset = 0
     val expression = RelationshipTypeFromSlot(offset)
@@ -3737,7 +3737,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
         node.setProperty(t, u.asInstanceOf[Value].asObject())
       })
 
-      ValueUtils.fromNodeProxy(node)
+      ValueUtils.fromNodeEntity(node)
     }
   }
 
@@ -3751,7 +3751,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       properties.foreach((t: String, u: AnyValue) => {
         r.setProperty(t, u.asInstanceOf[Value].asObject())
       })
-      ValueUtils.fromRelationshipProxy(r)
+      ValueUtils.fromRelationshipEntity(r)
     } )
   }
 

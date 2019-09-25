@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.{Node, Relationship}
-import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeProxy, fromRelationshipProxy}
+import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeEntity, fromRelationshipEntity}
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.{longValue, stringArray, stringValue}
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -38,13 +38,13 @@ class UnionSlottedPipeTest extends CypherFunSuite with AstConstructionTestSuppor
     val nodeOps = mock[NodeOperations]
     when(nodeOps.getById(any())).thenAnswer(new Answer[NodeValue] {
       override def answer(invocation: InvocationOnMock): NodeValue =
-        fromNodeProxy(newMockedNode(invocation.getArgument[Long](0)))
+        fromNodeEntity(newMockedNode(invocation.getArgument[Long](0)))
     })
     when(context.nodeOps).thenReturn(nodeOps)
     val relOps = mock[RelationshipOperations]
     when(relOps.getById(any())).thenAnswer(new Answer[RelationshipValue] {
       override def answer(invocation: InvocationOnMock): RelationshipValue =
-        fromRelationshipProxy(newMockedRelationship(invocation.getArgument[Long](0)))
+        fromRelationshipEntity(newMockedRelationship(invocation.getArgument[Long](0)))
     })
     when(context.relationshipOps).thenReturn(relOps)
     val res = union.createResults(QueryStateHelper.emptyWith(query = context)).toList.map {

@@ -80,7 +80,7 @@ class MultiDatabaseLockManagerIT
 
             try ( Transaction transaction = database.beginTx() )
             {
-                NodeEntity nodeEntity = ((InternalTransaction) transaction).newNodeProxy( NODE_ID );
+                NodeEntity nodeEntity = ((InternalTransaction) transaction).newNodeEntity( NODE_ID );
                 transaction.acquireWriteLock( nodeEntity );
                 lockNodeWithSameIdInAnotherDatabase( transactionExecutor, secondDatabase, lockAcquiredLatch );
                 lockAcquiredLatch.await();
@@ -104,7 +104,7 @@ class MultiDatabaseLockManagerIT
         transactionExecutor.execute( () -> {
             try ( Transaction transaction = databaseService.beginTx() )
             {
-                NodeEntity nodeEntity = ((InternalTransaction) transaction).newNodeProxy( NODE_ID );
+                NodeEntity nodeEntity = ((InternalTransaction) transaction).newNodeEntity( NODE_ID );
                 transaction.acquireWriteLock( nodeEntity );
                 latch.countDown();
             }

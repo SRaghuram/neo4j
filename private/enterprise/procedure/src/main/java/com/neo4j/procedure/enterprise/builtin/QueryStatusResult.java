@@ -121,23 +121,23 @@ public class QueryStatusResult
 
     private static class ParameterWriter extends BaseToObjectValueWriter<RuntimeException>
     {
-        private final TransactionalEntityFactory nodeManager;
+        private final TransactionalEntityFactory entityFactory;
 
-        private ParameterWriter( TransactionalEntityFactory nodeManager )
+        private ParameterWriter( TransactionalEntityFactory entityFactory )
         {
-            this.nodeManager = nodeManager;
+            this.entityFactory = entityFactory;
         }
 
         @Override
-        protected Node newNodeProxyById( long id )
+        protected Node newNodeEntityById( long id )
         {
-            return nodeManager.newNodeProxy( id );
+            return entityFactory.newNodeEntity( id );
         }
 
         @Override
-        protected Relationship newRelationshipProxyById( long id )
+        protected Relationship newRelationshipEntityById( long id )
         {
-            return nodeManager.newRelationshipProxy( id );
+            return entityFactory.newRelationshipEntity( id );
         }
 
         @Override

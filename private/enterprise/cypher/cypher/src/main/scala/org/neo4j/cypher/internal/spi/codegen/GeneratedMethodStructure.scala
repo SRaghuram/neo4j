@@ -356,11 +356,11 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   override def materializeNode(nodeIdVar: String, codeGenType: CodeGenType) =
     if (codeGenType.isPrimitive)
-      invoke(nodeManager, newNodeProxyById, generator.load(nodeIdVar))
+      invoke(nodeManager, newNodeEntityById, generator.load(nodeIdVar))
     else if (codeGenType.isAnyValue)
       invoke(materializeNodeValue, nodeManager, generator.load(nodeIdVar))
     else
-      invoke(nodeManager, newNodeProxyById,
+      invoke(nodeManager, newNodeEntityById,
         invoke(cast(typeRef[VirtualNodeValue], generator.load(nodeIdVar)), nodeId))
 
   override def node(nodeIdVar: String, codeGenType: CodeGenType) =
@@ -388,11 +388,11 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   override def materializeRelationship(relIdVar: String, codeGenType: CodeGenType) =
     if (codeGenType.isPrimitive)
-      invoke(nodeManager, newRelationshipProxyById, generator.load(relIdVar))
+      invoke(nodeManager, newRelationshipEntityById, generator.load(relIdVar))
     else if (codeGenType.isAnyValue)
       invoke(materializeRelationshipValue, nodeManager, generator.load(relIdVar))
     else
-      invoke(nodeManager, newRelationshipProxyById,
+      invoke(nodeManager, newRelationshipEntityById,
         invoke(cast(typeRef[VirtualRelationshipValue], generator.load(relIdVar)), relId))
 
   override def relationship(relIdVar: String, codeGenType: CodeGenType) =

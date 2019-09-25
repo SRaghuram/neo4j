@@ -152,7 +152,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     ids.foreach { id =>
       val nodeMock = mock[NodeEntity]
       when(nodeMock.getId).thenReturn(id)
-      when(entityAccessor.newNodeProxy(id)).thenReturn(nodeMock)
+      when(entityAccessor.newNodeEntity(id)).thenReturn(nodeMock)
       allNodeIds += id
     }
   }

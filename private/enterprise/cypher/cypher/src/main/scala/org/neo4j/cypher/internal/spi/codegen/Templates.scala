@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.javacompat.ResultRowImpl
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
-import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeProxyById, newRelationshipProxyById}
+import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeEntityById, newRelationshipEntityById}
 import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
 import org.neo4j.exceptions.{CypherExecutionException, KernelException}
 import org.neo4j.graphdb.{Direction, Node, Relationship}
@@ -58,12 +58,12 @@ object Templates {
     Expression.invoke(method[VirtualValues, RelationshipReference]("relationship", typeRef[Long]), expression)
 
   def createNewNodeValueFromPrimitive(proxySpi: Expression, expression: Expression) =
-    Expression.invoke(method[ValueUtils, NodeValue]("fromNodeProxy", typeRef[Node]),
-      Expression.invoke(proxySpi, newNodeProxyById, expression))
+    Expression.invoke(method[ValueUtils, NodeValue]("fromNodeEntity", typeRef[Node]),
+      Expression.invoke(proxySpi, newNodeEntityById, expression))
 
   def createNewRelationshipValueFromPrimitive(proxySpi: Expression, expression: Expression) =
-    Expression.invoke(method[ValueUtils, RelationshipValue]("fromRelationshipProxy", typeRef[Relationship]),
-      Expression.invoke(proxySpi, newRelationshipProxyById, expression))
+    Expression.invoke(method[ValueUtils, RelationshipValue]("fromRelationshipEntity", typeRef[Relationship]),
+      Expression.invoke(proxySpi, newRelationshipEntityById, expression))
 
   def asList[T](values: Seq[Expression])(implicit manifest: Manifest[T]): Expression = Expression.invoke(
     methodReference(typeRef[util.Arrays], typeRef[util.List[T]], "asList", typeRef[Array[Object]]),

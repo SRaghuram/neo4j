@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeFromSlot, Refe
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NodeOperations, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.kernel.impl.util.ValueUtils.fromNodeProxy
+import org.neo4j.kernel.impl.util.ValueUtils.fromNodeEntity
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.VirtualValues
@@ -107,8 +107,8 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     }
     val nodeOps = Mockito.mock(classOf[NodeOperations])
     when(queryContext.nodeOps).thenReturn(nodeOps)
-    when(nodeOps.getById(0)).thenReturn(fromNodeProxy(node0))
-    when(nodeOps.getById(1)).thenReturn(fromNodeProxy(node1))
+    when(nodeOps.getById(0)).thenReturn(fromNodeEntity(node0))
+    when(nodeOps.getById(1)).thenReturn(fromNodeEntity(node1))
     val queryState = QueryStateHelper.emptyWith(query = queryContext)
 
     // when
@@ -119,8 +119,8 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     val x_offset = slots.get("x").get.offset
     result.head.getRefAt(a_offset) should equal(Values.longValue(1))
     result.head.getRefAt(x_offset) should equal(VirtualValues.list(
-      fromNodeProxy(node0),
-      fromNodeProxy(node1)))
+      fromNodeEntity(node0),
+      fromNodeEntity(node1)))
   }
 
   test("should set the QueryState when calling down to the RHS") {

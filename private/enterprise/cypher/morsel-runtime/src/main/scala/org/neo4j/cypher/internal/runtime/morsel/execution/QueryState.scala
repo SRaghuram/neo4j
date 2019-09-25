@@ -18,7 +18,7 @@ case class QueryState(params: Array[AnyValue],
                       flowControl: FlowControl,
                       morselSize: Int,
                       queryIndexes: Array[IndexReadSession],
-                      transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic
+                      transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeEntity logic
                       numberOfWorkers: Int,
                       nExpressionSlots: Int,
                       prepopulateResults: Boolean,

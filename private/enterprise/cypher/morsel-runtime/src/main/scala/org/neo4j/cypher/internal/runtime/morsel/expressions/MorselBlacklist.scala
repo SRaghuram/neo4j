@@ -25,7 +25,7 @@ object MorselBlacklist {
         case f: FunctionInvocation if f.function == Linenumber || f.function == Filename =>
           _ + (f.functionName.name+"()")
 
-        // type() uses thread-unsafe RelationshipProxy.type()
+        // type() uses thread-unsafe RelationshipEntity.type()
         case f: FunctionInvocation if f.function == Type && parallelExecution =>
           _ + (f.functionName.name+"()")
       }

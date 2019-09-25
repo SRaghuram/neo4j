@@ -102,7 +102,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
               if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, state.query.relationshipById(relId)) &&
                   predicateIsTrue(row, state, tempNodeOffset, nodePredicate, state.query.nodeById(relationship.otherNodeId(fromNode)))
               ) {
-                // TODO: This call creates an intermediate NodeProxy which should not be necessary
+                // TODO: This call creates an intermediate NodeEntity which should not be necessary
                 stackOfNodes.push(relationship.otherNodeId(fromNode))
                 stackOfRelContainers.push(rels.append(relationship))
               }
