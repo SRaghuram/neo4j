@@ -39,9 +39,7 @@ import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.logging.Level;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -118,6 +116,8 @@ public class HalfAppliedConstraintRecoveryIT
     public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     @Rule
     public final OtherThreadRule<Void> t2 = new OtherThreadRule<>( "T2" );
+    @Rule
+    public final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private final Monitors monitors = new Monitors();
 
     @Test
@@ -176,7 +176,6 @@ public class HalfAppliedConstraintRecoveryIT
         }
 
         // WHEN
-        LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.err );
         TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .setFileSystem( crashSnapshot )
                 .impermanent()
