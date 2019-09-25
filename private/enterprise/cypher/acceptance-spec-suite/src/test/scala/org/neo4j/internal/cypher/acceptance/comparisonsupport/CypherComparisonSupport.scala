@@ -9,6 +9,7 @@ import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import cypher.features.Phase
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
@@ -326,7 +327,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
             scenario.checkResultForSuccess(query, thisResult)
             Some(scenario -> thisResult)
           case Failure(e) =>
-            fail(s"Expected to succeed in ${scenario.name} but got exception", e)
+            fail(s"Expected to succeed in ${scenario.name} but got exception\nRoot cause: ${ExceptionUtils.getRootCauseMessage(e)}\n", e)
         }
       } else {
         val maybePhase = tryRes match {

@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
 
-// TODO: Replace config with interpretedPipesPolicy
 case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, interpretedPipesPolicy: InterpretedPipesFallbackPolicy) extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
@@ -145,6 +144,7 @@ object InterpretedPipesFallbackPolicy {
     override def readOnly: Boolean = true
 
     val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
+      //------------------------------------------------------------------------------------
       // Whitelisted breaking plans - All cardinality increasing plans need to break
       case e: Expand if e.mode == ExpandInto =>
         true
@@ -157,10 +157,12 @@ object InterpretedPipesFallbackPolicy {
       case p: ProjectEndpoints if !p.directed => // Undirected is cardinality increasing
         true
 
-      // Whitelisted breaking plans, but not for parallel
+      //------------------------------------------------------------------------------------
+      // Whitelisted breaking plans not supported with parallel execution
       case _: ProcedureCall if !parallelExecution =>
         true
 
+      //------------------------------------------------------------------------------------
       // Whitelisted non-breaking plans
       case p: ProjectEndpoints if p.directed =>  // Directed is not cardinality increasing
         false
@@ -187,7 +189,7 @@ object InterpretedPipesFallbackPolicy {
 
     val BLACKLIST: PartialFunction[LogicalPlan, Boolean] = {
       // Blacklisted non-eager plans
-      case lp: Skip => // Maintains state a
+      case lp: Skip => // Maintains state
         throw unsupported(lp.getClass.getSimpleName)
 
       // Not supported in parallel execution

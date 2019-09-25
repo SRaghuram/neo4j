@@ -501,7 +501,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values when procedure call before aggregation") {
     val query = "MATCH (n:Awesome) CALL db.labels() YIELD label RETURN count(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.ProcedureCall, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop1\\]".r)

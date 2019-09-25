@@ -340,11 +340,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] = {
-    val maybeSlottedPipeOperator =
-      if (headOperator.isInstanceOf[SlottedPipeOperator])
+    val maybeSlottedPipeOperator = headOperator match {
+      case _: SlottedPipeOperator =>
         Some(headOperator.asInstanceOf[SlottedPipeOperator])
-      else
+      case _ =>
         None
+    }
 
     val middleOperatorBuilder = new ArrayBuffer[MiddleOperator]
     middlePlans.foldLeft(middleOperatorBuilder, maybeSlottedPipeOperator)(createMiddle)
@@ -386,7 +387,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperator)
 
         case _ =>
-          // TODO: SlottedPipeMiddleOperator
           throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a middle plan, use another runtime.")
       }
     middleOperators ++= maybeOperator
@@ -475,7 +475,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         // We chain the new pipe to the existing pipe in the previous operator
         val chainedPipe = slottedPipeBuilder.get.onOneChildPlan(plan, slottedPipeOperator.pipe)
         slottedPipeOperator.setPipe(chainedPipe)
-        println(s"CHAINED PIPE $chainedPipe")
         None
 
       case None =>

@@ -16,6 +16,8 @@ object Configs {
 
   def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.Morsel))
 
+  def Parallel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel))
+
   def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
 
   def SlottedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions))
@@ -61,16 +63,17 @@ object Configs {
   val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
-  val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled
-  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
+  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val ProcedureCall         : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
 }

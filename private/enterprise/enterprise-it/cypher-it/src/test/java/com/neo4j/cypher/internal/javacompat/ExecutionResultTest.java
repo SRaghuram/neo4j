@@ -325,8 +325,8 @@ class ExecutionResultTest
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
             assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
             assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "MORSEL" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "MORSEL" ) );
             transaction.commit();
         }
     }
@@ -347,8 +347,8 @@ class ExecutionResultTest
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
             assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
             assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "SLOTTED" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "SLOTTED" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "MORSEL" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "MORSEL" ) );
             transaction.commit();
         }
     }

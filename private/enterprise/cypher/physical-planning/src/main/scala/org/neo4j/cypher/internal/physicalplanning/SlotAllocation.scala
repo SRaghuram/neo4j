@@ -452,8 +452,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case _: LockNodes =>
 
       case ProjectEndpoints(_, _, start, startInScope, end, endInScope, _, _, _) =>
-        // Because of the way the interpreted pipe works, we already have to do the necessary allocations in allocateExpressions(),
-        // before the pipeline breaking
+        // Because of the way the interpreted pipe works, we already have to do the necessary allocations in allocateExpressions(), before the pipeline breaking.
+        // Legacy interpreted pipes write directly to the incoming context, so to support pipeline breaking, the slots have to be allocated
+        // on the source slot configuration.
 
       case LoadCSV(_, _, variableName, NoHeaders, _, _, _) =>
         slots.newReference(variableName, nullable, CTList(CTAny))
@@ -468,8 +469,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
 
       case _: FindShortestPaths =>
-        // Because of the way the interpreted pipe works, we already have to do the necessary allocations in allocateExpressions(),
-        // before the pipeline breaking
+        // Because of the way the interpreted pipe works, we already have to do the necessary allocations in allocateExpressions(), before the pipeline breaking.
+        // Legacy interpreted pipes write directly to the incoming context, so to support pipeline breaking, the slots have to be allocated
+        // on the source slot configuration.
 
       case p =>
         throw new SlotAllocationFailed(s"Don't know how to handle $p")

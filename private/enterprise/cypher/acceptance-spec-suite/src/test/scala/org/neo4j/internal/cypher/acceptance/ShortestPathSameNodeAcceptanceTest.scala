@@ -59,7 +59,8 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   test("shortest paths that discover at runtime that the start and end nodes are the same should throw exception by default") {
     setupModel(graph)
     val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*]-(b)) RETURN p"
-    failWithError(Configs.ShortestPath, query, List("The shortest path algorithm does not work when the start and end nodes are the same."))
+    failWithError(Configs.ShortestPath /\ Configs.CartesianProduct,
+      query, List("The shortest path algorithm does not work when the start and end nodes are the same."))
   }
 
   test("shortest paths that discover at runtime that the start and end nodes are the same should throw exception when configured to do so") {
@@ -83,7 +84,8 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   test("shortest paths with min length 0 that discover at runtime that the start and end nodes are the same should not throw exception by default") {
     setupModel(graph)
     val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*0..]-(b)) RETURN p"
-    executeWith(Configs.ShortestPath, query).toList.length should be(9)
+    executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+      query).toList.length should be(9)
   }
 
   test("shortest paths with min length 0 that discover at runtime that the start and end nodes are the same should throw exception even when when configured to do so") {

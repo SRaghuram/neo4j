@@ -218,7 +218,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNodes("A", "B")
     val r1 = relate("A" -> "KNOWS" -> "B")
 
-    val result = executeWith(Configs.ShortestPath,
+    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
       "match p = shortestPath((a {name:'A'})-[*..15]-(b {name:'B'})) return p").toList.head("p").asInstanceOf[Path]
 
     graph.withTx( tx => {
@@ -235,7 +235,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate("A" -> "KNOWS" -> "B")
 
     //Checking that we don't get an exception
-    executeWith(Configs.ShortestPath, "match p = shortestPath((a {name:'A'})-[*]-(b {name:'B'})) return p").toList
+    executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+      "match p = shortestPath((a {name:'A'})-[*]-(b {name:'B'})) return p").toList
   }
 
   test("should not traverse same relationship twice in shortest path") {
@@ -244,7 +245,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate("A" -> "KNOWS" -> "B")
 
     // when
-    val result = executeWith(Configs.ShortestPath, "MATCH (a{name:'A'}), (b{name:'B'}) MATCH p=allShortestPaths((a)-[:KNOWS|KNOWS*]->(b)) RETURN p").
+    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+      "MATCH (a{name:'A'}), (b{name:'B'}) MATCH p=allShortestPaths((a)-[:KNOWS|KNOWS*]->(b)) RETURN p").
       toList
 
     // then
@@ -289,7 +291,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("should handle all shortest paths") {
     val (a, b, c, d) = createDiamond()
 
-    val result = executeWith(Configs.ShortestPath,
+    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
       """
     match (a), (d) where id(a) = %d and id(d) = %d
     match p = allShortestPaths( (a)-[*]->(d) )
@@ -302,7 +304,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val a = createNode()
     val b = createNode()
     relate(a, b)
-    val result = executeWith(Configs.ShortestPath, "match (a), (b) where id(a) = 0 and id(b) = 1 match p=shortestPath((b)<-[*]-(a)) return p").toList.head("p").asInstanceOf[Path]
+    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+      "match (a), (b) where id(a) = 0 and id(b) = 1 match p=shortestPath((b)<-[*]-(a)) return p").toList.head("p").asInstanceOf[Path]
 
     result.startNode() should equal(b)
     result.endNode() should equal(a)
@@ -313,7 +316,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val b = createLabeledNode("B")
     val r1 = relate(a, b)
 
-    val result = executeWith(Configs.ShortestPath, "match (a:A) match p = shortestPath( (a)-[*]->(b:B) ) return p").toList.head("p").asInstanceOf[Path]
+    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+      "match (a:A) match p = shortestPath( (a)-[*]->(b:B) ) return p").toList.head("p").asInstanceOf[Path]
 
 
     graph.inTx {
@@ -1018,7 +1022,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |  RETURN DISTINCT req.eid, y.eid
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     result.toList should equal(List(Map("req.eid" -> null, "y.eid" -> null)))
   }

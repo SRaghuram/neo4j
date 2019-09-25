@@ -186,7 +186,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // We actually execute it rather than just EXPLAIN, just to make sure that physical planning also happens in all versions of Neo4j
     val params = Map("param0" -> "", "param1" -> "", "param2" -> "")
 
-    val result = executeWith(Configs.OptionalExpand, query, params = params)
+    val result = executeWith(Configs.OptionalExpand /\ Configs.CartesianProduct, query, params = params)
 
     result.toList shouldBe empty
 

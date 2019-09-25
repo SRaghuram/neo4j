@@ -87,7 +87,6 @@ class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
       while (outputRow.isValidRow && resultIterator.hasNext) {
         val resultRow = resultIterator.next()
         outputRow.copyFrom(resultRow, outputRow.getLongsPerRow, outputRow.getRefsPerRow)
-        //println(s"SlottedPipeOperator OUTPUT: $outputRow")
         outputRow.moveToNextRow()
       }
       if (profileEvent != null && feedPipeQueryState.profileInformation != null) {
@@ -147,7 +146,6 @@ class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
         if (!(resultRow eq outputRow)) {
           outputRow.copyFrom(resultRow, outputRow.getLongsPerRow, outputRow.getRefsPerRow)
         }
-        //println(s"SlottedPipeOperator OUTPUT: $outputRow")
         outputRow.moveToNextRow()
       }
       if (profileEvent != null && feedPipeQueryState.profileInformation != null) {

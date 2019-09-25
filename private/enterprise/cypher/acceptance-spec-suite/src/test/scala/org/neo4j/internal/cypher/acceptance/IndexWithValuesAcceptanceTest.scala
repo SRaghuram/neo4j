@@ -597,7 +597,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("index-backed property values should be updated on procedure property write") {
     registerTestProcedures()
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 CALL org.neo4j.setProperty(n, 'prop1', 'newValue') YIELD node RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     assertIndexSeek(result)
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
@@ -605,7 +605,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("index-backed property values should be updated on procedure property remove") {
     registerTestProcedures()
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 CALL org.neo4j.setProperty(n, 'prop1', null) YIELD node RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     assertIndexSeek(result)
     result.toList should equal(List(Map("n.prop1" -> null)))
   }
