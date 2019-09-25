@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscriberAdapter}
-import org.neo4j.kernel.impl.util.{NodeEntityWrappingNodeValue, RelationshipProxyWrappingValue}
+import org.neo4j.kernel.impl.util.{NodeEntityWrappingNodeValue, RelationshipEntityWrappingValue}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.values.virtual._
@@ -37,7 +37,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
     assertOnOnlyReturnValue(query, false,
       {
         case r: RelationshipReference => // ok
-        case r: RelationshipProxyWrappingValue => if (r.isPopulated) fail("Relationship proxy is populated")
+        case r: RelationshipEntityWrappingValue => if (r.isPopulated) fail("Relationship proxy is populated")
         case r: RelationshipValue => fail("did not expect populated relationship value")
       }
     )
@@ -102,7 +102,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
   private def assertPopulatedRelationship(value: AnyValue): Unit =
     value match {
       case r: RelationshipReference => fail("did not expect relationship reference")
-      case r: RelationshipProxyWrappingValue => if (!r.isPopulated) fail("Relationship proxy is not populated")
+      case r: RelationshipEntityWrappingValue => if (!r.isPopulated) fail("Relationship proxy is not populated")
       case r: RelationshipValue => // ok
     }
 
