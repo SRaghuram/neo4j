@@ -46,26 +46,19 @@ for i in "${dbs[@]}"; do
     echo "Preparing temporary locations"
 	temp_old_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
 
-	temp_new_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
-	
     echo "Temporary old db path : ${temp_old_db_path}"
-    echo "Temporary new db path : ${temp_new_db_path}"
 
 	mkdir -p ${temp_old_db_path}/data/databases/neo4j
 	mv "${old_db_path}"/* "${temp_old_db_path}/data/databases/neo4j"
 	
     "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
-        --upgraded-db "${temp_new_db_path}" \
+        --upgraded-db "${new_db_path}" \
         --recreate-indexes  \
         --config "${neo4j_config}"
-
-	mkdir "${new_db_path}"
-	mv "${temp_new_db_path}"/* "${new_db_path}"
 
     aws s3 sync "${new_db_path}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_db_name}" --no-progress --delete
     rm -rf "${old_db_path}"
     rm -rf "${new_db_path}"
     rm -rf "${temp_old_db_path}"
-    rm -rf "${temp_new_db_path}"
 done
