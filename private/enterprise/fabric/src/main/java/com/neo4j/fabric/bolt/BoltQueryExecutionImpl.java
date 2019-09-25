@@ -10,7 +10,7 @@ import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.EmptySummary;
+import com.neo4j.fabric.stream.summary.Summary;
 import reactor.core.Exceptions;
 
 import java.util.List;
@@ -25,9 +25,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber;
 
 public class BoltQueryExecutionImpl implements BoltQueryExecution
 {
-
     private final QueryExecutionImpl queryExecution;
-    private final EmptySummary summary = new EmptySummary();
 
     public BoltQueryExecutionImpl( StatementResult statementResult, QuerySubscriber subscriber, FabricConfig fabricConfig )
     {
@@ -54,7 +52,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         queryExecution.cancel();
     }
 
-    private class QueryExecutionImpl implements QueryExecution
+    static private class QueryExecutionImpl implements QueryExecution
     {
 
         private final Rx2SyncStream rx2SyncStream;
@@ -62,6 +60,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         private final List<String> columns;
         private boolean hasMore = true;
         private boolean initialised;
+        private Summary summary;
 
         private QueryExecutionImpl( Rx2SyncStream rx2SyncStream, QuerySubscriber subscriber )
         {
@@ -70,22 +69,31 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
             columns = rx2SyncStream.getColumns();
         }
 
+        private Summary getSummary()
+        {
+            if ( summary == null )
+            {
+                summary = rx2SyncStream.summary();
+            }
+            return summary;
+        }
+
         @Override
         public QueryExecutionType executionType()
         {
-            return summary.executionType();
+            return getSummary().executionType();
         }
 
         @Override
         public ExecutionPlanDescription executionPlanDescription()
         {
-            return summary.executionPlanDescription();
+            return getSummary().executionPlanDescription();
         }
 
         @Override
         public Iterable<Notification> getNotifications()
         {
-            return summary.getNotifications();
+            return getSummary().getNotifications();
         }
 
         @Override
@@ -117,7 +125,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
                     if ( record == null )
                     {
                         hasMore = false;
-                        subscriber.onResultCompleted( summary.getQueryStatistics() );
+                        subscriber.onResultCompleted( getSummary().getQueryStatistics() );
                         return;
                     }
 

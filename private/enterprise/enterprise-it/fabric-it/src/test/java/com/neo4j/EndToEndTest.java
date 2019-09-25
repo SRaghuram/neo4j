@@ -33,6 +33,7 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.internal.InProcessNeo4j;
@@ -448,6 +449,12 @@ class EndToEndTest
         verifyPerson( persons, 1, "Bob" );
         verifyPerson( persons, 2, "Carrie" );
         verifyPerson( persons, 3, "Dave" );
+    }
+
+    private void verifyPerson( List<Node> r, int index, String name )
+    {
+        assertThat( r.get( index ).labels(), contains( equalTo( "Person" ) ) );
+        assertThat( r.get( index ).get( "name" ).asString(), equalTo( name ) );
     }
 
     @Test
@@ -906,9 +913,49 @@ class EndToEndTest
         assertThat( ex.getMessage(), containsStringIgnoringCase( "periodic commit" ) );
     }
 
-    private void verifyPerson( List<Node> r, int index, String name )
+    @Test
+    void testQuerySummaryCounters()
     {
-        assertThat( r.get( index ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( index ).get( "name" ).asString(), equalTo( name ) );
+        ResultSummary r;
+
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        {
+            var query = String.join( "\n",
+                    "UNWIND [1, 2, 3] AS x",
+                    "CALL {",
+                    "  WITH x",
+                    "  FROM mega.graph(0)",
+                    "  CREATE (n:T {p: x})",
+                    "  RETURN n",
+                    "}",
+                    "CALL {",
+                    "  FROM mega.graph(0)",
+                    "  MATCH (m:T {p: 1})",
+                    "  CREATE (m)-[r:R]->(x:X)",
+                    "  SET x:Y, x.y = 10",
+                    "  REMOVE x:Y",
+                    "  REMOVE x.y",
+                    "  DETACH DELETE m",
+                    "  RETURN m",
+                    "}",
+                    "RETURN x"
+            );
+
+            r = tx.run( query ).summary();
+            tx.success();
+        }
+
+        assertThat( r.counters().containsUpdates(), is( true ) );
+        assertThat( r.counters().nodesCreated(), is( 4 ) );
+        assertThat( r.counters().nodesDeleted(), is( 1 ) );
+        assertThat( r.counters().relationshipsCreated(), is( 1 ) );
+        assertThat( r.counters().relationshipsDeleted(), is( 1 ) );
+        assertThat( r.counters().propertiesSet(), is( 5 ) );
+        assertThat( r.counters().labelsAdded(), is( 5 ) );
+        assertThat( r.counters().labelsRemoved(), is( 1 ) );
+        assertThat( r.counters().indexesAdded(), is( 0 ) );
+        assertThat( r.counters().indexesRemoved(), is( 0 ) );
+        assertThat( r.counters().constraintsAdded(), is( 0 ) );
+        assertThat( r.counters().constraintsRemoved(), is( 0 ) );
     }
 }

@@ -9,6 +9,7 @@ import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
+import com.neo4j.fabric.stream.summary.PartialSummary;
 import com.neo4j.fabric.stream.summary.Summary;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -89,7 +90,10 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
         @Override
         public Mono<Summary> summary()
         {
-            return Mono.empty();
+            return statementResultCursor
+                    .map( StatementResultCursor::summaryAsync )
+                    .flatMap( Mono::fromCompletionStage )
+                    .map( s -> new PartialSummary( s.counters() ) );
         }
     }
 

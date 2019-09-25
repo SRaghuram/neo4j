@@ -88,7 +88,7 @@ public class Rx2SyncStream
 
     public Summary summary()
     {
-        throw new UnsupportedOperationException( "Statement execution summary is not supported yet" );
+        return statementResult.summary().block();
     }
 
     public void close()

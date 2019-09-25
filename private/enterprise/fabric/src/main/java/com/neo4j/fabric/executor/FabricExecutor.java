@@ -17,8 +17,11 @@ import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
 import com.neo4j.fabric.stream.SyncPublisher;
+import com.neo4j.fabric.stream.summary.MergedQueryStatistics;
+import com.neo4j.fabric.stream.summary.PartialSummary;
 import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransaction;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -71,12 +74,14 @@ public class FabricExecutor
         private final FabricQuery query;
         private final MapValue params;
         private final FabricTransaction.FabricExecutionContext ctx;
+        private final MergedQueryStatistics queryStatistics;
 
         FabricStatementExecution( FabricQuery query, MapValue params, FabricTransaction.FabricExecutionContext ctx )
         {
             this.query = query;
             this.params = params;
             this.ctx = ctx;
+            this.queryStatistics = new MergedQueryStatistics();
         }
 
         private StatementResult run()
@@ -84,7 +89,7 @@ public class FabricExecutor
             Flux<Record> unit = Flux.just( Records.empty() );
             Flux<String> columns = Flux.fromIterable( asJavaIterable( query.columns().output() ) );
             Flux<Record> records = run( query, unit );
-            Mono<Summary> summary = Mono.empty();
+            Mono<Summary> summary = Mono.just( new PartialSummary( queryStatistics ) );
             return StatementResults.create( columns, records, summary );
         }
 
@@ -174,14 +179,15 @@ public class FabricExecutor
                 FabricConfig.Graph graph = evalFrom( query.from(), recordValues );
                 MapValue parameters = addImportParams( recordValues, mapAsJavaMap( query.parameters() ) );
 
-                StatementResult statementResult = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
+                StatementResult result = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
 
-                Rx2SyncStream syncStream = new Rx2SyncStream( statementResult,
+                Rx2SyncStream syncStream = new Rx2SyncStream( result,
                         config.getDataStream().getBufferLowWatermark(),
                         config.getDataStream().getBufferSize(),
                         config.getDataStream().getSyncBatchSize() );
 
-                return Flux.from( new SyncPublisher( syncStream ) );
+                return Flux.from( new SyncPublisher( syncStream ) )
+                        .doOnComplete( () -> updateSummary( syncStream.summary() ) );
             } );
         }
 
@@ -229,6 +235,11 @@ public class FabricExecutor
             {
                 return value;
             }
+        }
+
+        private void updateSummary( Summary summary )
+        {
+            this.queryStatistics.add( summary.getQueryStatistics() );
         }
 
         private UnsupportedOperationException notImplemented( String msg, FabricQuery query )
