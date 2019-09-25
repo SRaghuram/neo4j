@@ -37,6 +37,7 @@ abstract class VarExpandCursor(val fromNode: Long,
 
   private var expandStatus: ExpandStatus = NOT_STARTED
   private var pathLength: Int = 0
+  private var event: OperatorProfileEvent = OperatorProfileEvent.NONE
 
   private val relTraCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
   private val relGroupCursors: GrowingArray[RelationshipGroupCursor] = new GrowingArray[RelationshipGroupCursor]()
@@ -119,8 +120,16 @@ abstract class VarExpandCursor(val fromNode: Long,
 
   private def expand(node: Long): Unit = {
 
-    val groupCursor = relGroupCursors.computeIfAbsent(pathLength, cursorPools.relationshipGroupCursorPool.allocate)
-    val traversalCursor = relTraCursors.computeIfAbsent(pathLength, cursorPools.relationshipTraversalCursorPool.allocate)
+    val groupCursor = relGroupCursors.computeIfAbsent(pathLength, () => {
+      val cursor = cursorPools.relationshipGroupCursorPool.allocate()
+      cursor.setTracer(event)
+      cursor
+    })
+    val traversalCursor = relTraCursors.computeIfAbsent(pathLength, () => {
+      val cursor = cursorPools.relationshipTraversalCursorPool.allocate()
+      cursor.setTracer(event)
+      cursor
+    })
 
     read.singleNode(node, nodeCursor)
 
@@ -162,6 +171,7 @@ abstract class VarExpandCursor(val fromNode: Long,
   }
 
   def setTracer(event: OperatorProfileEvent): Unit = {
+    this.event = event
     nodeCursor.setTracer(event)
     relTraCursors.foreach(_.setTracer(event))
     relGroupCursors.foreach(_.setTracer(event))
