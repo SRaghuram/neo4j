@@ -16,6 +16,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexPrototype;
+import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
@@ -138,7 +140,8 @@ class GraphDbStructureGuideTest
         commitAndReOpen();
 
         ConstraintDescriptor constraint = createUniqueConstraint( labelId, pkId );
-        IndexDescriptor descriptor = TestIndexDescriptorFactory.uniqueForLabel( labelId, pkId );
+        IndexProviderDescriptor indexProvider = new IndexProviderDescriptor( "native-btree", "1.0" );
+        IndexDescriptor descriptor = IndexPrototype.uniqueForSchema( constraint.schema(), indexProvider ).withName( constraint.getName() ).materialise( 1 );
 
         // WHEN
         accept( visitor );
