@@ -45,14 +45,14 @@ for i in "${dbs[@]}"; do
     echo "---------------"
     echo "Preparing temporary locations"
 	temp_old_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
-	mkdir -p "$temp_old_db_path/graph.db"
-	
+
 	temp_new_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
 	
     echo "Temporary old db path : ${temp_old_db_path}"
     echo "Temporary new db path : ${temp_new_db_path}"
-	
-	mv "${old_db_path}"/* "${temp_old_db_path}/graph.db"
+
+	mkdir -p ${temp_old_db_path}/data/databases/neo4j
+	mv "${old_db_path}"/* "${temp_old_db_path}/data/databases/neo4j"
 	
     "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \

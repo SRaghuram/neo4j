@@ -49,7 +49,7 @@ for i in "${db_and_workloads[@]}"; do
     echo "---------------"
     echo Working on file: "${zip_file}"
     echo With workload: "${workload}"
-    aws s3 cp s3://benchmarking.neo4j.com/datasets/macro/"${old_neo4j_version}"-enterprise-datasets/"${zip_file}" ./
+    aws s3 cp s3://benchmarking.neo4j.com/datasets/macro/"${old_neo4j_version}"-enterprise-datasets/"${zip_file}" ./ --no-progress
     rm -rf old
     mkdir old
     tar xzvf "${zip_file}" -C old
