@@ -46,7 +46,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+    val result = executeWith(Configs.ShortestPathExpr /\ Configs.CartesianProduct,
       query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
@@ -63,7 +63,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+    val result = executeWith(Configs.ShortestPathExpr /\ Configs.CartesianProduct,
       query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(null))
@@ -81,7 +81,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+    val result = executeWith(Configs.ShortestPathExpr /\ Configs.CartesianProduct,
       query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
@@ -99,7 +99,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
+    val result = executeWith(Configs.ShortestPathExpr /\ Configs.CartesianProduct,
       query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List.empty)

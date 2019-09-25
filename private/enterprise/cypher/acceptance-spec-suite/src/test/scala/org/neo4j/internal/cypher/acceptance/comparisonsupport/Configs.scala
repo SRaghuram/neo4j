@@ -66,6 +66,7 @@ object Configs {
   val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
   val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val ShortestPathExpr      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime

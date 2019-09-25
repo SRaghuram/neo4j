@@ -341,7 +341,6 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct with two renamed nodes") {
-    val config = Configs.InterpretedAndSlotted + Configs.Compiled
     val query =
       """
         |PROFILE
@@ -349,7 +348,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |WITH DISTINCT a as n, n as m
         |RETURN n.prop1, m.prop1
       """.stripMargin
-    val result = executeWith(config, query, executeBefore = createSomeNodes,
+    val result = executeWith(Configs.All, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection")
           .withDBHits(0)
