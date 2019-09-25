@@ -60,15 +60,15 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
             MemberId myself, RemoteMembersResolver remoteMembersResolver,
-            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory )
+            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
     {
         return new AkkaTopologyClient(
                 config,
                 logProvider,
                 myself,
                 actorSystemLifecycle( config, executorService( config, jobScheduler ), logProvider, remoteMembersResolver, sslPolicyLoader ),
-                discoveryMemberFactory
-        );
+                discoveryMemberFactory,
+                clock );
     }
 
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, Executor executor, LogProvider logProvider, RemoteMembersResolver resolver,

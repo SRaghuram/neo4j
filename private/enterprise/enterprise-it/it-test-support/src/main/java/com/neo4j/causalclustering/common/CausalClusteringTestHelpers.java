@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.neo4j.common.DependencyResolver;
@@ -64,6 +65,7 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -178,6 +180,23 @@ public final class CausalClusteringTestHelpers
         }
 
         assertThat( checkPointsRemoved, greaterThan( 0 ) );
+    }
+
+    public static Set<String> listDatabases( Cluster cluster ) throws Exception
+    {
+        var ref = new AtomicReference<Set<String>>();
+        cluster.systemTx( ( sys, tx ) ->
+        {
+            try ( var result = tx.execute( "SHOW DATABASES" ) )
+            {
+                var databaseNames = result.stream()
+                        .map( row -> (String) row.get( "name" ) )
+                        .collect( toSet() );
+                ref.set( databaseNames );
+            }
+            tx.commit();
+        } );
+        return ref.get();
     }
 
     public static void createDatabase( String databaseName, Cluster cluster ) throws Exception

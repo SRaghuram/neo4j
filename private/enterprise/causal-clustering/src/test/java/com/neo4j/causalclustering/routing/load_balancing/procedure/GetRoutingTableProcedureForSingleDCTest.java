@@ -457,8 +457,8 @@ class GetRoutingTableProcedureForSingleDCTest
     {
         var unknownDatabaseId = databaseManager.databaseIdRepository().getByName( "unknown" ).get();
         var topologyService = mock( CoreTopologyService.class );
-        when( topologyService.coreTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseCoreTopology.EMPTY );
-        when( topologyService.readReplicaTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseReadReplicaTopology.EMPTY );
+        when( topologyService.coreTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseCoreTopology.empty( unknownDatabaseId ) );
+        when( topologyService.readReplicaTopologyForDatabase( unknownDatabaseId ) ).thenReturn( DatabaseReadReplicaTopology.empty( unknownDatabaseId ) );
 
         var leaderService = newLeaderService( leaderIsMemberId( 0 ), topologyService );
         var config = Config.defaults();

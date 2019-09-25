@@ -25,5 +25,5 @@ public interface DiscoveryServiceFactory
 
     TopologyService readReplicaTopologyService( Config config, LogProvider logProvider,
             JobScheduler jobScheduler, MemberId myself, RemoteMembersResolver remoteMembersResolver,
-            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory );
+            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock );
 }

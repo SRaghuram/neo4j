@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Map;
 import java.util.Objects;
@@ -14,20 +14,24 @@ import java.util.Objects;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
 
 public class DatabaseCoreTopology implements Topology<CoreServerInfo>
 {
-    public static final DatabaseCoreTopology EMPTY = new DatabaseCoreTopology( null, null, emptyMap() );
-
     private final DatabaseId databaseId;
     private final RaftId raftId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
 
     public DatabaseCoreTopology( DatabaseId databaseId, RaftId raftId, Map<MemberId,CoreServerInfo> coreMembers )
     {
-        this.databaseId = databaseId;
+        this.databaseId = requireNonNull( databaseId );
         this.raftId = raftId;
         this.coreMembers = Map.copyOf( coreMembers );
+    }
+
+    public static DatabaseCoreTopology empty( DatabaseId databaseId )
+    {
+        return new DatabaseCoreTopology( databaseId, null, emptyMap() );
     }
 
     @Override

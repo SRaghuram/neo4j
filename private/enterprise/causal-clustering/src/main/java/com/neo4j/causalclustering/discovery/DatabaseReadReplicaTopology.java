@@ -13,18 +13,22 @@ import java.util.Objects;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Objects.requireNonNull;
 
 public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
 {
-    public static final DatabaseReadReplicaTopology EMPTY = new DatabaseReadReplicaTopology( null, emptyMap() );
-
     private final DatabaseId databaseId;
     private final Map<MemberId,ReadReplicaInfo> readReplicaMembers;
 
     public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
-        this.databaseId = databaseId;
+        this.databaseId = requireNonNull( databaseId );
         this.readReplicaMembers = readReplicaMembers;
+    }
+
+    public static DatabaseReadReplicaTopology empty( DatabaseId databaseId )
+    {
+        return new DatabaseReadReplicaTopology( databaseId, emptyMap() );
     }
 
     @Override

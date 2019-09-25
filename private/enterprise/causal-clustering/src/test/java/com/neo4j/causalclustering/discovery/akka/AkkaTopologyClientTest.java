@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
@@ -40,7 +41,7 @@ class AkkaTopologyClientTest
         var memberId3 = new MemberId( UUID.randomUUID() );
 
         var topologyClient = new AkkaTopologyClient( Config.defaults(), nullLogProvider(), memberId1,
-                mock( ActorSystemLifecycle.class, RETURNS_MOCKS ), TestDiscoveryMember::new );
+                mock( ActorSystemLifecycle.class, RETURNS_MOCKS ), TestDiscoveryMember::new, Clocks.systemClock() );
 
         topologyClient.init();
         topologyClient.start();

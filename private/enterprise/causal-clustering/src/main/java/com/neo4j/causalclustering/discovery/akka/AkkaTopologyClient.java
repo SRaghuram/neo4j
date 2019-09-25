@@ -26,6 +26,7 @@ import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.time.Clock;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
@@ -44,12 +45,13 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final DiscoveryMemberFactory discoveryMemberFactory;
     private final MemberId myself;
     private final LogProvider logProvider;
+    private final Clock clock;
 
     private volatile ActorRef clientTopologyActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
     AkkaTopologyClient( Config config, LogProvider logProvider, MemberId myself, ActorSystemLifecycle actorSystemLifecycle,
-            DiscoveryMemberFactory discoveryMemberFactory )
+            DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
     {
         this.config = config;
         this.myself = myself;
@@ -57,6 +59,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         this.discoveryMemberFactory = discoveryMemberFactory;
         this.logProvider = logProvider;
         this.globalTopologyState = newGlobalTopologyState( logProvider );
+        this.clock = clock;
     }
 
     @Override
@@ -84,7 +87,8 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 directorySink,
                 clusterClient,
                 config,
-                logProvider);
+                logProvider,
+                clock );
         clientTopologyActorRef = actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
     }
 

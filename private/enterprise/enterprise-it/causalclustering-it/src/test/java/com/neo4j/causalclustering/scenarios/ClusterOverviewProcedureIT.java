@@ -7,48 +7,51 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Stream;
 
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.listDatabases;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 class ClusterOverviewProcedureIT
 {
-    private static final int CORES = 3;
-    private static final int REPLICAS = 2;
-    private static final int EXPECTED_COLUMNS = 4;
-
-    private static final TestDatabaseIdRepository DATABASE_ID_REPOSITORY = new TestDatabaseIdRepository();
-    private static final DatabaseId DEFAULT_DB = DATABASE_ID_REPOSITORY.defaultDatabase();
+    private static final Set<String> defaultDatabases = Set.of( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME );
 
     @Inject
     private static ClusterFactory clusterFactory;
@@ -62,18 +65,53 @@ class ClusterOverviewProcedureIT
         cluster.start();
     }
 
+    @BeforeEach
+    void dropNonDefaultDatabases() throws Exception
+    {
+        for ( var databaseName : listDatabases( cluster ) )
+        {
+            if ( !defaultDatabases.contains( databaseName ) )
+            {
+                dropDatabase( databaseName, cluster );
+            }
+        }
+    }
+
     @Test
     void shouldReturnClusterOverview() throws Exception
     {
-        var leader = cluster.awaitLeader();
-        var membersById = cluster.allMembers().stream().collect( toMap( ClusterMember::id, identity() ) );
-        assertEquals( CORES + REPLICAS, membersById.size() );
+        var clusterOverviewMatcher = new ClusterOverviewMatcher( cluster, defaultDatabases );
 
-        var clusterOverviewMatcher = buildClusterOverviewMatcher( membersById );
+        awaitClusterOverviewToMatch( clusterOverviewMatcher );
+    }
 
-        for ( var member : membersById.values() )
+    @Test
+    void shouldReturnClusterOverviewForRestartedDatabase() throws Exception
+    {
+        var newDatabaseName = "foo";
+        var clusterOverviewWithoutNewDatabase = new ClusterOverviewMatcher( cluster, defaultDatabases );
+        var clusterOverviewWitNewDatabase = new ClusterOverviewMatcher( cluster, Set.of( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME, newDatabaseName ) );
+
+        awaitClusterOverviewToMatch( clusterOverviewWithoutNewDatabase );
+
+        createDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyStarted( newDatabaseName, cluster );
+        awaitClusterOverviewToMatch( clusterOverviewWitNewDatabase );
+
+        stopDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyStopped( newDatabaseName, cluster );
+        awaitClusterOverviewToMatch( clusterOverviewWithoutNewDatabase );
+
+        startDatabase( newDatabaseName, cluster );
+        assertDatabaseEventuallyStarted( newDatabaseName, cluster );
+        awaitClusterOverviewToMatch( clusterOverviewWitNewDatabase );
+    }
+
+    private static void awaitClusterOverviewToMatch( ClusterOverviewMatcher matcher ) throws InterruptedException
+    {
+        for ( var member : cluster.allMembers() )
         {
-            assertEventually( () -> invokeClusterOverviewProcedure( member ), clusterOverviewMatcher, 2, MINUTES );
+            assertEventually( () -> invokeClusterOverviewProcedure( member ), matcher, 2, MINUTES );
         }
     }
 
@@ -89,126 +127,34 @@ class ClusterOverviewProcedureIT
         }
     }
 
-    private static ClusterOverviewMatcher buildClusterOverviewMatcher( Map<MemberId,ClusterMember> membersById )
-    {
-        var sortedMemberIds = membersById.keySet()
-                .stream()
-                .sorted( Comparator.comparing( MemberId::getUuid ) )
-                .collect( toList() );
-
-        var expectedMemberIds = sortedMemberIds.stream()
-                .map( id -> id.getUuid().toString() )
-                .collect( toList() );
-
-        var expectedAddresses = sortedMemberIds.stream()
-                .map( membersById::get )
-                .map( ClusterOverviewProcedureIT::expectedAddresses )
-                .collect( toList() );
-
-        var expectedDatabases = sortedMemberIds.stream()
-                .map( membersById::get )
-                .map( ClusterOverviewProcedureIT::expectedDatabases )
-                .collect( toList() );
-
-        var expectedGroups = sortedMemberIds.stream()
-                .map( membersById::get )
-                .map( ClusterOverviewProcedureIT::expectedGroups )
-                .collect( toList() );
-
-        return new ClusterOverviewMatcher( expectedMemberIds, expectedAddresses, expectedDatabases, expectedGroups );
-    }
-
-    private static List<String> expectedAddresses( ClusterMember member )
-    {
-        return member.clientConnectorAddresses()
-                .uriList()
-                .stream()
-                .map( URI::toString )
-                .collect( toList() );
-    }
-
-    private static Map<String,String> expectedDatabases( ClusterMember member )
-    {
-        return Map.of(
-                SYSTEM_DATABASE_ID.name(), expectedRole( member, SYSTEM_DATABASE_ID ).toString(),
-                DEFAULT_DB.name(), expectedRole( member, DEFAULT_DB ).toString() );
-    }
-
-    private static RoleInfo expectedRole( ClusterMember member, DatabaseId databaseId )
-    {
-        if ( isLeader( member, databaseId ) )
-        {
-            return RoleInfo.LEADER;
-        }
-        if ( isCore( member ) )
-        {
-            return RoleInfo.FOLLOWER;
-        }
-        if ( isReadReplica( member ) )
-        {
-            return RoleInfo.READ_REPLICA;
-        }
-        throw new IllegalArgumentException( "Unable to find role for " + member );
-    }
-
-    private static List<String> expectedGroups( ClusterMember member )
-    {
-        if ( isCore( member ) )
-        {
-            return List.of( "core", "eu-" + member.serverId() );
-        }
-        if ( isReadReplica( member ) )
-        {
-            return List.of( "replica", "us-" + member.serverId() );
-        }
-        throw new IllegalArgumentException( "Unable to find groups for " + member );
-    }
-
-    private static boolean isLeader( ClusterMember member, DatabaseId databaseId )
-    {
-        CoreClusterMember leader = cluster.getMemberWithAnyRole( databaseId.name(), Role.LEADER );
-        return Objects.equals( member, leader );
-    }
-
-    private static boolean isCore( ClusterMember member )
-    {
-        return cluster.coreMembers().contains( member );
-    }
-
-    private static boolean isReadReplica( ClusterMember member )
-    {
-        return cluster.readReplicas().contains( member );
-    }
-
     private static ClusterConfig buildClusterConfig()
     {
         return clusterConfig()
-                .withNumberOfCoreMembers( CORES )
-                .withNumberOfReadReplicas( REPLICAS )
+                .withSharedCoreParam( online_backup_enabled, FALSE )
+                .withSharedReadReplicaParam( online_backup_enabled, FALSE )
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 2 )
                 .withInstanceCoreParam( server_groups, id -> "core,eu-" + id )
                 .withInstanceReadReplicaParam( server_groups, id -> "replica,us-" + id );
     }
 
     private static class ClusterOverviewMatcher extends TypeSafeMatcher<List<Map<String,Object>>>
     {
-        final List<String> expectedMemberIds;
-        final List<List<String>> expectedAddresses;
-        final List<Map<String,String>> expectedDatabases;
-        final List<List<String>> expectedGroups;
+        static final int EXPECTED_COLUMNS = 4;
 
-        ClusterOverviewMatcher( List<String> expectedMemberIds, List<List<String>> expectedAddresses,
-                List<Map<String,String>> expectedDatabases, List<List<String>> expectedGroups )
+        final Cluster cluster;
+        final Set<String> databaseNames;
+
+        ClusterOverviewMatcher( Cluster cluster, Set<String> databaseNames )
         {
-            this.expectedMemberIds = expectedMemberIds;
-            this.expectedAddresses = expectedAddresses;
-            this.expectedDatabases = expectedDatabases;
-            this.expectedGroups = expectedGroups;
+            this.cluster = cluster;
+            this.databaseNames = databaseNames;
         }
 
         @Override
         protected boolean matchesSafely( List<Map<String,Object>> rows )
         {
-            if ( rows.size() != CORES + REPLICAS )
+            if ( rows.size() != cluster.allMembers().size() )
             {
                 return false;
             }
@@ -220,8 +166,25 @@ class ClusterOverviewProcedureIT
                    groupsMatch( rows );
         }
 
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "result with " + cluster.allMembers().size() + " rows and " + EXPECTED_COLUMNS + " columns" )
+                    .appendText( "\n" ).appendText( "ids: " + expectedMemberIds() )
+                    .appendText( "\n" ).appendText( "addresses: " + expectedAddresses() )
+                    .appendText( "\n" ).appendText( "databases: " + expectedDatabases() )
+                    .appendText( "\n" ).appendText( "groups: " + expectedGroups() );
+        }
+
+        static boolean numberOfColumnsMatch( List<Map<String,Object>> rows )
+        {
+            return rows.stream().allMatch( row -> row.size() == EXPECTED_COLUMNS );
+        }
+
         boolean memberIdsMatch( List<Map<String,Object>> rows )
         {
+            var expectedMemberIds = expectedMemberIds();
+
             var actualMemberIds = rows.stream()
                     .map( row -> (String) row.get( "id" ) )
                     .collect( toList() );
@@ -232,6 +195,8 @@ class ClusterOverviewProcedureIT
         @SuppressWarnings( "unchecked" )
         boolean addressesMatch( List<Map<String,Object>> rows )
         {
+            var expectedAddresses = expectedAddresses();
+
             var actualAddresses = rows.stream()
                     .map( row -> (List<String>) row.get( "addresses" ) )
                     .collect( toList() );
@@ -242,6 +207,8 @@ class ClusterOverviewProcedureIT
         @SuppressWarnings( "unchecked" )
         boolean databasesMatch( List<Map<String,Object>> rows )
         {
+            var expectedDatabases = expectedDatabases();
+
             var actualDatabases = rows.stream()
                     .map( row -> (Map<String,String>) row.get( "databases" ) )
                     .collect( toList() );
@@ -252,6 +219,8 @@ class ClusterOverviewProcedureIT
         @SuppressWarnings( "unchecked" )
         boolean groupsMatch( List<Map<String,Object>> rows )
         {
+            var expectedGroups = expectedGroups();
+
             var actualGroups = rows.stream()
                     .map( row -> (List<String>) row.get( "groups" ) )
                     .collect( toList() );
@@ -259,19 +228,100 @@ class ClusterOverviewProcedureIT
             return Objects.equals( expectedGroups, actualGroups );
         }
 
-        static boolean numberOfColumnsMatch( List<Map<String,Object>> rows )
+        List<String> expectedMemberIds()
         {
-            return rows.stream().allMatch( row -> row.size() == EXPECTED_COLUMNS );
+            return sortedClusterMembers()
+                    .map( member -> member.id().getUuid().toString() )
+                    .collect( toList() );
         }
 
-        @Override
-        public void describeTo( Description description )
+        List<List<String>> expectedAddresses()
         {
-            description.appendText( "result with " + (CORES + REPLICAS) + " rows and " + EXPECTED_COLUMNS + " columns" )
-                    .appendText( "\n" ).appendText( "ids: " + expectedMemberIds )
-                    .appendText( "\n" ).appendText( "addresses: " + expectedAddresses )
-                    .appendText( "\n" ).appendText( "databases: " + expectedDatabases )
-                    .appendText( "\n" ).appendText( "groups: " + expectedGroups );
+            return sortedClusterMembers()
+                    .map( ClusterOverviewMatcher::expectedAddressesForMember )
+                    .collect( toList() );
+        }
+
+        static List<String> expectedAddressesForMember( ClusterMember member )
+        {
+            return member.clientConnectorAddresses()
+                    .uriList()
+                    .stream()
+                    .map( URI::toString )
+                    .collect( toList() );
+        }
+
+        List<Map<String,String>> expectedDatabases()
+        {
+            return sortedClusterMembers()
+                    .map( member -> expectedDatabasesForMember( member, databaseNames ) )
+                    .collect( toList() );
+        }
+
+        Map<String,String> expectedDatabasesForMember( ClusterMember member, Set<String> databaseNames )
+        {
+            return databaseNames.stream()
+                    .collect( toMap( identity(), name -> expectedRole( member, name ).toString() ) );
+        }
+
+        List<List<String>> expectedGroups()
+        {
+            return sortedClusterMembers()
+                    .map( this::expectedGroupsForMember )
+                    .collect( toList() );
+        }
+
+        List<String> expectedGroupsForMember( ClusterMember member )
+        {
+            if ( isCore( member ) )
+            {
+                return List.of( "core", "eu-" + member.serverId() );
+            }
+            if ( isReadReplica( member ) )
+            {
+                return List.of( "replica", "us-" + member.serverId() );
+            }
+            throw new IllegalArgumentException( "Unable to find groups for " + member );
+        }
+
+        Stream<ClusterMember> sortedClusterMembers()
+        {
+            return cluster.allMembers()
+                    .stream()
+                    .sorted( comparing( member -> member.id().getUuid() ) );
+        }
+
+        RoleInfo expectedRole( ClusterMember member, String databaseName )
+        {
+            if ( isLeader( member, databaseName ) )
+            {
+                return RoleInfo.LEADER;
+            }
+            if ( isCore( member ) )
+            {
+                return RoleInfo.FOLLOWER;
+            }
+            if ( isReadReplica( member ) )
+            {
+                return RoleInfo.READ_REPLICA;
+            }
+            throw new IllegalArgumentException( "Unable to find role for " + member );
+        }
+
+        boolean isLeader( ClusterMember member, String databaseName )
+        {
+            var leader = cluster.getMemberWithAnyRole( databaseName, Role.LEADER );
+            return Objects.equals( member, leader );
+        }
+
+        boolean isCore( ClusterMember member )
+        {
+            return cluster.coreMembers().contains( member );
+        }
+
+        boolean isReadReplica( ClusterMember member )
+        {
+            return cluster.readReplicas().contains( member );
         }
     }
 }

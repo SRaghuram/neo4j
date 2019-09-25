@@ -19,11 +19,12 @@ import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage,
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
-import com.neo4j.causalclustering.identity.{MemberId, RaftId, RaftIdFactory}
+import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.logging.NullLogProvider
+import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -157,8 +158,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   }
 
   trait Fixture {
-    var actualCoreTopology = DatabaseCoreTopology.EMPTY
-    var actualReadReplicaTopology = DatabaseReadReplicaTopology.EMPTY
+    var actualCoreTopology: DatabaseCoreTopology = _
+    var actualReadReplicaTopology: DatabaseReadReplicaTopology = _
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
 
     val updateSink = new TopologyUpdateSink with DirectoryUpdateSink {
@@ -205,7 +206,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       discoverySink,
       clusterClientProbe.ref,
       config,
-      NullLogProvider.getInstance()
+      NullLogProvider.getInstance(),
+      Clocks.systemClock()
     )
 
     val topologyActorRef = system.actorOf(props)

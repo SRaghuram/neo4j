@@ -133,12 +133,14 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return coreTopologiesByDatabase.getOrDefault( databaseId, DatabaseCoreTopology.EMPTY );
+        var topology = coreTopologiesByDatabase.get( databaseId );
+        return topology != null ? topology : DatabaseCoreTopology.empty( databaseId );
     }
 
     public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return readReplicaTopologiesByDatabase.getOrDefault( databaseId, DatabaseReadReplicaTopology.EMPTY );
+        var topology = readReplicaTopologiesByDatabase.get( databaseId );
+        return topology != null ? topology : DatabaseReadReplicaTopology.empty( databaseId );
     }
 
     SocketAddress retrieveCatchupServerAddress( MemberId memberId )

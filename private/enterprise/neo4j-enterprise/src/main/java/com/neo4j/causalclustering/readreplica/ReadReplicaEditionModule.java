@@ -8,8 +8,6 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
@@ -25,10 +23,10 @@ import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
-import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
-import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
@@ -261,7 +259,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globalConfig, logService );
         return discoveryServiceFactory.readReplicaTopologyService( globalConfig, logProvider, jobScheduler, myIdentity, hostnameResolver,
-                sslPolicyLoader, discoveryMemberFactory );
+                sslPolicyLoader, discoveryMemberFactory, globalModule.getGlobalClock() );
     }
 
     ReadReplicaDatabaseFactory readReplicaDatabaseFactory()

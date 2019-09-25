@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
@@ -34,21 +35,22 @@ import org.neo4j.logging.LogProvider;
 public class ClientTopologyActor extends AbstractActorWithTimers
 {
     private static final String REFRESH = "topology refresh";
+    private static final int REFRESHES_BEFORE_REMOVE_TOPOLOGY = 3;
 
     public static Props props( DiscoveryMember myself, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
-            ActorRef clusterClient, Config config, LogProvider logProvider )
+            ActorRef clusterClient, Config config, LogProvider logProvider, Clock clock )
     {
         return Props.create( ClientTopologyActor.class,
-                () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config, logProvider ) );
+                () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config, logProvider, clock ) );
     }
 
     public static final String NAME = "cc-client-topology-actor";
 
     private final Duration refresh;
     private final DiscoveryMember myself;
-    private final SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink;
-    private final SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink;
+    private final TopologiesUpdater<DatabaseCoreTopology> coreTopologiesUpdater;
+    private final TopologiesUpdater<DatabaseReadReplicaTopology> rrTopologiesUpdater;
     private final SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink;
     private final ActorRef clusterClient;
     private final Config config;
@@ -58,26 +60,27 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     private ClientTopologyActor( DiscoveryMember myself, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
-            ActorRef clusterClient, Config config, LogProvider logProvider )
+            ActorRef clusterClient, Config config, LogProvider logProvider, Clock clock )
     {
         this.myself = myself;
-        this.coreTopologySink = coreTopologySink;
-        this.rrTopologySink = rrTopologySink;
+        this.refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
+        var maxTopologyLifetime = refresh.multipliedBy( REFRESHES_BEFORE_REMOVE_TOPOLOGY );
+        this.coreTopologiesUpdater = TopologiesUpdater.forCoreTopologies( coreTopologySink, maxTopologyLifetime, clock, logProvider );
+        this.rrTopologiesUpdater = TopologiesUpdater.forReadReplicaTopologies( rrTopologySink, maxTopologyLifetime, clock, logProvider );
         this.discoverySink = discoverySink;
         this.clusterClient = clusterClient;
         this.config = config;
         this.log = logProvider.getLog( getClass() );
-        this.refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
     }
 
     @Override
     public Receive createReceive()
     {
         return ReceiveBuilder.create()
-                .match( DatabaseCoreTopology.class, coreTopologySink::offer )
-                .match( DatabaseReadReplicaTopology.class, rrTopologySink::offer )
+                .match( DatabaseCoreTopology.class, coreTopologiesUpdater::offer )
+                .match( DatabaseReadReplicaTopology.class, rrTopologiesUpdater::offer )
                 .match( LeaderInfoDirectoryMessage.class, msg -> discoverySink.offer( msg.leaders() ) )
-                .match( Refresh.class, ignored -> sendReadReplicaInfo() )
+                .match( Refresh.class, ignored -> handleRefresh() )
                 .match( DatabaseStartedMessage.class, this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class, this::handleDatabaseStoppedMessage )
                 .build();
@@ -105,6 +108,14 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         {
             sendReadReplicaInfo();
         }
+    }
+
+    private void handleRefresh()
+    {
+        coreTopologiesUpdater.pruneStaleTopologies();
+        rrTopologiesUpdater.pruneStaleTopologies();
+
+        sendReadReplicaInfo();
     }
 
     private void sendReadReplicaInfo()
