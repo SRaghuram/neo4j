@@ -193,8 +193,9 @@ public class UserManagementProcedures extends AuthProceduresBase
     }
 
     @SystemProcedure
+    @Deprecated
     @Description( "List all roles assigned to the specified user." )
-    @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS )
+    @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
         var result = new HashSet<StringResult>();
@@ -225,8 +226,9 @@ public class UserManagementProcedures extends AuthProceduresBase
 
     @Admin
     @SystemProcedure
+    @Deprecated
     @Description( "List all users currently assigned the specified role." )
-    @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS )
+    @Procedure( name = "dbms.security.listUsersForRole", mode = DBMS, deprecatedBy = "Administration command: SHOW ROLES WITH USERS" )
     public Stream<StringResult> listUsersForRole( @Name( "roleName" ) String roleName ) throws ProcedureException, InvalidArgumentsException
     {
         var roleExists = new AtomicBoolean( false );

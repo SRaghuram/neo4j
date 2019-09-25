@@ -141,6 +141,20 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
                 deprecatedProcedureNotification( "dbms.security.listRoles", "Administration command: SHOW ROLES" ) );
     }
 
+    @Test
+    void shouldGiveDeprecatedNotificationsForListRolesForUser()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.listRolesForUser('readSubject')",
+                deprecatedProcedureNotification( "dbms.security.listRolesForUser", "Administration command: SHOW USERS" ) );
+    }
+
+    @Test
+    void shouldGiveDeprecatedNotificationsForListUsersForRole()
+    {
+        assertNotificationForSystemCommand( "explain CALL dbms.security.listUsersForRole('" + READER + "')",
+                deprecatedProcedureNotification( "dbms.security.listUsersForRole", "Administration command: SHOW ROLES WITH USERS" ) );
+    }
+
     @SuppressWarnings( "SameParameterValue" )
     private void assertNotificationForSystemCommand( String call, Notification wantedNotification )
     {
