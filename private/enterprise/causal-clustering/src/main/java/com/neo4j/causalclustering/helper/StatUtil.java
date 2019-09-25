@@ -6,8 +6,10 @@
 package com.neo4j.causalclustering.helper;
 
 import org.neo4j.logging.Log;
+import org.neo4j.time.Stopwatch;
 
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
 @SuppressWarnings( "unused" ) // for easy debugging, leave it
@@ -114,7 +116,7 @@ public class StatUtil
     public static class TimingContext
     {
         private final StatContext context;
-        private final long startTime = System.currentTimeMillis();
+        private final Stopwatch startTime = Stopwatch.start();
 
         TimingContext( StatContext context )
         {
@@ -123,7 +125,7 @@ public class StatUtil
 
         public void end()
         {
-            context.collect( System.currentTimeMillis() - startTime );
+            context.collect( startTime.elapsed( MILLISECONDS ) );
         }
     }
 

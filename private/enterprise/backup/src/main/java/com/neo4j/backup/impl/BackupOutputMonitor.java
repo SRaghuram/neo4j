@@ -7,11 +7,13 @@ package com.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 
-import java.time.Clock;
-
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.Stopwatch;
+import org.neo4j.time.SystemNanoClock;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.internal.helpers.Format.duration;
 
 /**
@@ -20,16 +22,16 @@ import static org.neo4j.internal.helpers.Format.duration;
 class BackupOutputMonitor implements StoreCopyClientMonitor
 {
     private final Log log;
-    private final Clock clock;
-    private long startTime;
-    private long partStartTime;
+    private final SystemNanoClock clock;
+    private Stopwatch startTime;
+    private Stopwatch partStartTime;
 
     BackupOutputMonitor( LogProvider logProvider )
     {
-        this( logProvider, Clock.systemUTC() );
+        this( logProvider, Clocks.nanoClock() );
     }
 
-    BackupOutputMonitor( LogProvider logProvider, Clock clock )
+    BackupOutputMonitor( LogProvider logProvider, SystemNanoClock clock )
     {
         log = logProvider.getLog( getClass() );
         this.clock = clock;
@@ -38,7 +40,7 @@ class BackupOutputMonitor implements StoreCopyClientMonitor
     @Override
     public void start()
     {
-        startTime = clock.millis();
+        startTime = clock.startStopWatch();
     }
 
     @Override
@@ -120,22 +122,16 @@ class BackupOutputMonitor implements StoreCopyClientMonitor
     @Override
     public void finish()
     {
-        log.info( "Finished, took %s", durationSinceStartTime( startTime ) );
+        log.info( "Finished, took %s", duration( startTime.elapsed( MILLISECONDS ) ) );
     }
 
     private void notePartStartTime()
     {
-        partStartTime = clock.millis();
+        partStartTime = clock.startStopWatch();
     }
 
     private String durationSincePartStartTime()
     {
-        return durationSinceStartTime( partStartTime );
-    }
-
-    private String durationSinceStartTime( long startTime )
-    {
-        long time = clock.millis() - startTime;
-        return duration( time );
+        return duration( partStartTime.elapsed( MILLISECONDS ) );
     }
 }

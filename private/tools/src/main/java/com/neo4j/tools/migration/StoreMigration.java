@@ -43,6 +43,7 @@ import org.neo4j.logging.internal.StoreLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.time.Stopwatch;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
@@ -116,7 +117,7 @@ public class StoreMigration
             // Add the kernel store migrator
             life.start();
 
-            long startTime = System.currentTimeMillis();
+            Stopwatch startTime = Stopwatch.start();
             DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
                     indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator, storageEngineFactory );
             migrator.migrate();
@@ -124,8 +125,7 @@ public class StoreMigration
             // Append checkpoint so the last log entry will have the latest version
             appendCheckpoint( logFiles, tailScanner );
 
-            long duration = System.currentTimeMillis() - startTime;
-            log.info( format( "Migration completed in %d s%n", duration / 1000 ) );
+            log.info( format( "Migration completed in %d s%n", startTime.elapsed().getSeconds() ) );
         }
         catch ( Exception e )
         {

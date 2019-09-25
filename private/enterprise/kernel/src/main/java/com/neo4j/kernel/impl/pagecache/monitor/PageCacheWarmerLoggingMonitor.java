@@ -7,14 +7,15 @@ package com.neo4j.kernel.impl.pagecache.monitor;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
+import org.neo4j.time.Stopwatch;
 
-import static java.lang.System.currentTimeMillis;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.internal.helpers.Format.duration;
 
 public class PageCacheWarmerLoggingMonitor extends PageCacheWarmerMonitorAdapter
 {
     private final Log log;
-    private long warmupStartMillis;
+    private Stopwatch warmupStart;
 
     public PageCacheWarmerLoggingMonitor( Log log )
     {
@@ -24,18 +25,13 @@ public class PageCacheWarmerLoggingMonitor extends PageCacheWarmerMonitorAdapter
     @Override
     public void warmupStarted( DatabaseId databaseId )
     {
-        warmupStartMillis = currentTimeMillis();
+        warmupStart = Stopwatch.start();
         log.info( "Page cache warmup started." );
     }
 
     @Override
     public void warmupCompleted( DatabaseId databaseId, long pagesLoaded )
     {
-        log.info( "Page cache warmup completed. %d pages loaded. Duration: %s.", pagesLoaded, getDuration( warmupStartMillis ) );
-    }
-
-    private static String getDuration( long startTimeMillis )
-    {
-        return duration( currentTimeMillis() - startTimeMillis );
+        log.info( "Page cache warmup completed. %d pages loaded. Duration: %s.", pagesLoaded, duration( warmupStart.elapsed( MILLISECONDS ) ) );
     }
 }

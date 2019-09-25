@@ -83,17 +83,17 @@ public class ConfigurableIOLimiter implements IOLimiter
         }
     }
 
-    private long composeState( int disabledCounter, int iopq )
+    private static long composeState( int disabledCounter, int iopq )
     {
         return ((long) disabledCounter) << 32 | iopq;
     }
 
-    private int getIOPQ( long state )
+    private static int getIOPQ( long state )
     {
         return (int) (state & 0x00000000_FFFFFFFFL);
     }
 
-    private int getDisabledCounter( long state )
+    private static int getDisabledCounter( long state )
     {
         return (int) (state >>> 32);
     }
@@ -179,8 +179,8 @@ public class ConfigurableIOLimiter implements IOLimiter
         return getDisabledCounter( state ) == 0;
     }
 
-    private long currentTimeMillis()
+    private static long currentTimeMillis()
     {
-        return System.currentTimeMillis();
+        return TimeUnit.NANOSECONDS.toMillis( System.nanoTime() );
     }
 }

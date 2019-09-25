@@ -7,11 +7,12 @@ package com.neo4j.causalclustering.core.consensus;
 
 import java.time.Duration;
 
+import org.neo4j.time.Stopwatch;
 import org.neo4j.time.SystemNanoClock;
 
 public class DurationSinceLastMessageMonitor implements RaftMessageTimerResetMonitor
 {
-    private long lastMessageNanos = -1;
+    private Stopwatch lastMessage;
     private final SystemNanoClock clock;
 
     public DurationSinceLastMessageMonitor( SystemNanoClock clock )
@@ -22,16 +23,12 @@ public class DurationSinceLastMessageMonitor implements RaftMessageTimerResetMon
     @Override
     public void timerReset()
     {
-        lastMessageNanos = clock.nanos();
+        lastMessage = clock.startStopWatch();
     }
 
     public Duration durationSinceLastMessage()
     {
-        if ( lastMessageNanos == -1 )
-        {
-            return null;
-        }
-        return Duration.ofNanos( clock.nanos() - lastMessageNanos );
+        return lastMessage == null ? null : lastMessage.elapsed();
     }
 }
 
