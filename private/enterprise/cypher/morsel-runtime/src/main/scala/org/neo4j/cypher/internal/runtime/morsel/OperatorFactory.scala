@@ -340,9 +340,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] = {
-    val maybeSlottedPipeOperator = headOperator match {
-      case _: SlottedPipeOperator =>
-        Some(headOperator.asInstanceOf[SlottedPipeOperator])
+    val maybeSlottedPipeOperator: Option[SlottedPipeOperator] = headOperator match {
+      case op: SlottedPipeOperator =>
+        Some(op)
       case _ =>
         None
     }

@@ -16,10 +16,12 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.morsel.execution.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
-import org.neo4j.cypher.internal.runtime.{ParameterMapping, QueryIndexRegistrator}
+import org.neo4j.cypher.internal.runtime.{ParameterMapping, QueryContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
@@ -319,9 +321,14 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       mock[Operator](RETURNS_DEEP_STUBS)
 
     override def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] =
-      mock[Array[MiddleOperator]](RETURNS_DEEP_STUBS)
+      middlePlans.map(_ => new DummyMiddleOperator).toArray
 
     override def createProduceResults(plan: ProduceResult): ProduceResultOperator =
       mock[ProduceResultOperator](RETURNS_DEEP_STUBS)
+  }
+
+  class DummyMiddleOperator extends MiddleOperator {
+    override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = null
+    override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "middle")
   }
 }
