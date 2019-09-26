@@ -1491,7 +1491,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
     generator.assign(typeRef[IndexDescriptor], referenceVar,
                      invoke(schemaRead,
-                           method[SchemaRead, IndexDescriptor]("index", typeRef[Int], typeRef[Array[Int]]),
+                           method[SchemaRead, IndexDescriptor]("indexGetForLabelAndPropertiesForCompiledRuntime", typeRef[Int], typeRef[Array[Int]]),
                             generator.load(labelVar), propertyIdsExpr)
     )
   }
