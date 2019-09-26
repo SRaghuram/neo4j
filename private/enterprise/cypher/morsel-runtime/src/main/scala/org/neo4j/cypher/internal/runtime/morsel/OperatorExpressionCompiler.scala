@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
-import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
 import org.neo4j.values.storable.Value
 
 import scala.collection.mutable.ArrayBuffer
@@ -93,7 +93,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         // It is sub-optimal to check this every time at runtime, so we should come up with a better solution
         // e.g. to do this initialization only once at the entry-point of each nested fused loop
         //      or if possible, save the state when we exit with a continuation, and restore it when we come back
-        condition(equal(load(local), constant(-2L)))( // TODO: Define constant for uninitialized long slot local
+        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
           // We need to initialize the local from the execution context
           assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
         ),
@@ -108,7 +108,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
       // (See full comment in getLongAt above)
       block(
-        condition(equal(load(local), constant(-2L)))( // TODO: Define constant for uninitialized long slot local
+        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
           // We need to initialize the local from the execution context
           assign(local, orElse),
         ),

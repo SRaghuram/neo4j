@@ -47,6 +47,8 @@ object OperatorCodeGenHelperTemplates {
     override def name: String = "relationshipScanCursorPool"
   }
 
+  val UNINITIALIZED_LONG_SLOT_VALUE = constant(-2L)
+
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
   val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
