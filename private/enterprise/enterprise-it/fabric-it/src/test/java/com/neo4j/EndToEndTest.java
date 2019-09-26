@@ -5,7 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.utils.CustomFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,12 +53,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class EndToEndTest
 {
 
-    static private Driver clientDriver;
-    static private TestServer testServer;
-    static private InProcessNeo4j shard0;
-    static private InProcessNeo4j shard1;
-    static private Driver shard0Driver;
-    static private Driver shard1Driver;
+    private static Driver clientDriver;
+    private static TestServer testServer;
+    private static InProcessNeo4j shard0;
+    private static InProcessNeo4j shard1;
+    private static Driver shard0Driver;
+    private static Driver shard1Driver;
 
     @BeforeAll
     static void beforeAll() throws KernelException
