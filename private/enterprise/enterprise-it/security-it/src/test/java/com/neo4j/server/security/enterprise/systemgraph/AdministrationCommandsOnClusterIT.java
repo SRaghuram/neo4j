@@ -532,9 +532,18 @@ class AdministrationCommandsOnClusterIT
             }
         } );
 
-        // But it works on leader
-        // Current user is '' so nothing will happen but we don't throw any exceptions
-        leaderTx( ( sys, tx ) -> tx.execute( "ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'" ) );
+        // But it works on leader (gives correct error for the command and setup)
+        leaderTx( ( sys, tx ) -> {
+            try
+            {
+                tx.execute( "ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'" );
+                fail( "Should have failed to change password due to auth disabled, but succeeded." );
+            }
+            catch ( IllegalStateException e )
+            {
+                assertEquals( "User failed to alter their own password: Command not available with auth disabled.", e.getMessage() );
+            }
+        } );
     }
 
     // Role commands tests
