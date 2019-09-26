@@ -1310,7 +1310,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("HasLabelsFromSlot - resolved - positive") {
     // Given
     val labels = Seq("A", "B", "C")
-    val n = ValueUtils.fromNodeProxy(createLabeledNode(labels: _*))
+    val n = ValueUtils.fromNodeEntity(createLabeledNode(labels: _*))
 
     val offset = 0
     val resolvedLabelTokenIds = labels.flatMap(l => query.getOptLabelId(l))
@@ -1331,7 +1331,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("HasLabelsFromSlot - resolved - negative") {
     // Given
     val labels = Seq("A", "B", "C")
-    val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B"))
+    val n = ValueUtils.fromNodeEntity(createLabeledNode("A", "B"))
     createLabeledNode("C")
 
     val offset = 0
@@ -1353,7 +1353,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("HasLabelsFromSlot - late - positive") {
     // Given
     val labels = Seq("A", "B", "C")
-    val n = ValueUtils.fromNodeProxy(createLabeledNode(labels: _*))
+    val n = ValueUtils.fromNodeEntity(createLabeledNode(labels: _*))
 
     val offset = 0
     val expression = HasLabelsFromSlot(offset, Seq.empty, labels)
@@ -1371,7 +1371,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("HasLabelsFromSlot - late - negative") {
     // Given
     val labels = Seq("A", "B", "C")
-    val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B"))
+    val n = ValueUtils.fromNodeEntity(createLabeledNode("A", "B"))
 
     val offset = 0
     val expression = HasLabelsFromSlot(offset, Seq.empty, labels)
@@ -1390,7 +1390,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Given
     val resolvedLabels = Seq("A", "B")
     val lateLabels = Seq("C", "D")
-    val n = ValueUtils.fromNodeProxy(createLabeledNode(resolvedLabels ++ lateLabels: _*))
+    val n = ValueUtils.fromNodeEntity(createLabeledNode(resolvedLabels ++ lateLabels: _*))
 
     val offset = 0
     val resolvedLabelTokenIds = resolvedLabels.flatMap(l => query.getOptLabelId(l))
@@ -1412,7 +1412,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Given
     val resolvedLabels = Seq("A", "B")
     val lateLabels = Seq("C", "D")
-    val n = ValueUtils.fromNodeProxy(createLabeledNode("A", "B", "D"))
+    val n = ValueUtils.fromNodeEntity(createLabeledNode("A", "B", "D"))
 
     val offset = 0
     val resolvedLabelTokenIds = resolvedLabels.flatMap(l => query.getOptLabelId(l))
