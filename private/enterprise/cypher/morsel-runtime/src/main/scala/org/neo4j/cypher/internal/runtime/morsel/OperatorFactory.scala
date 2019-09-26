@@ -6,7 +6,8 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LazyLogicalPlan, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LogicalPlan}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
@@ -19,13 +20,14 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -36,6 +38,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val readOnly: Boolean,
                       val indexRegistrator: QueryIndexRegistrator,
                       semanticTable: SemanticTable,
+                      val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
                       val slottedPipeBuilder: Option[SlottedPipeMapper]) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
@@ -332,6 +335,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                              physicalPlan.argumentSizes(id))
 
       case _ if slottedPipeBuilder.isDefined =>
+        // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
+        interpretedPipesFallbackPolicy.breakOn(plan)
         createSlottedPipeHeadOperator(plan)
 
       case _ =>
@@ -374,7 +379,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings))
 
         case plans.Projection(_, expressions) =>
-          val projectionOps: CommandProjection = converters.toCommandProjection(id, expressions)
+          val toProject = expressions collect {
+            case (k, e) if isRefSlotAndNotAlias(slots, k) => k -> e
+          }
+          val projectionOps: CommandProjection = converters.toCommandProjection(id, toProject)
           Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
 
         case plans.CacheProperties(_, properties) =>
@@ -384,6 +392,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         case _: plans.Argument => None
 
         case _ if slottedPipeBuilder.isDefined =>
+          // Validate that we support fallback for this plan (throws CantCompileQueryException)
+          if (interpretedPipesFallbackPolicy.breakOn(plan)) {
+            // Plan is supported, but only as a head plan
+            throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a fallback middle plan, use another runtime.")
+          }
           createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperator)
 
         case _ =>
@@ -461,15 +474,30 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
+  private def workIdentityFromSlottedPipePlan(opName: String, plan: LogicalPlan, pipe: Pipe): WorkIdentity = {
+    @tailrec
+    def collectPipeNames(pipe: Pipe, acc: List[String]): List[String] = {
+      val pipeName = pipe.getClass.getSimpleName
+      pipe match {
+        case p: PipeWithSource =>
+          collectPipeNames(p.getSource, pipeName :: acc)
+        case _ =>
+          acc
+      }
+    }
+
+    val pipeNames = collectPipeNames(pipe, Nil)
+    WorkIdentityImpl(plan.id, s"$opName[${plan.getClass.getSimpleName}](${pipeNames.mkString("->")})")
+  }
+
   def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
-    val workIdentity = WorkIdentity.fromPlan(plan)
     val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
     val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
+    val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeHead", plan, pipe)
     new SlottedPipeHeadOperator(workIdentity, pipe)
   }
 
   def createSlottedPipeMiddleOperator(plan: LogicalPlan, maybeSlottedPipeOperator: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
-    val workIdentity = WorkIdentity.fromPlan(plan)
     maybeSlottedPipeOperator match {
       case Some(slottedPipeOperator) =>
         // We chain the new pipe to the existing pipe in the previous operator
@@ -480,6 +508,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case None =>
         val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
         val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
+        val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeMiddle", plan, pipe)
         Some(new SlottedPipeMiddleOperator(workIdentity, pipe))
     }
   }

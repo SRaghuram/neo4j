@@ -40,7 +40,7 @@ abstract class SlottedPipeOperator(initialPipe: Pipe) {
 class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
                               initialPipe: Pipe) extends SlottedPipeOperator(initialPipe) with Operator {
 
-  override def toString: String = "SlottedPipe"
+  override def toString: String = workIdentity.toString
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -108,7 +108,7 @@ class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
 class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
                                 val initialPipe: Pipe) extends SlottedPipeOperator(initialPipe) with MiddleOperator {
 
-  override def toString: String = "SlottedPipeMiddle"
+  override def toString: String = workIdentity.toString
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,

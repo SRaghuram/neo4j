@@ -114,8 +114,8 @@ sealed trait InterpretedPipesFallbackPolicy {
 
 object InterpretedPipesFallbackPolicy {
 
-  def apply(useInterpretedPipes: CypherInterpretedPipesFallbackOption, parallelExecution: Boolean): InterpretedPipesFallbackPolicy =
-    useInterpretedPipes match {
+  def apply(interpretedPipesFallbackOption: CypherInterpretedPipesFallbackOption, parallelExecution: Boolean): InterpretedPipesFallbackPolicy =
+    interpretedPipesFallbackOption match {
       case CypherInterpretedPipesFallbackOption.disabled =>
         INTERPRETED_PIPES_FALLBACK_DISABLED
 
@@ -128,7 +128,7 @@ object InterpretedPipesFallbackPolicy {
 
   //===================================
   // DISABLED
-  private case object INTERPRETED_PIPES_FALLBACK_DISABLED extends InterpretedPipesFallbackPolicy {
+  case object INTERPRETED_PIPES_FALLBACK_DISABLED extends InterpretedPipesFallbackPolicy {
 
     override def readOnly: Boolean = true
 
@@ -224,5 +224,5 @@ object InterpretedPipesFallbackPolicy {
   }
 
   private def unsupported(thing: String): CantCompileQueryException =
-    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing`, use another runtime.")
+    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing` with fallback, use another runtime.")
 }

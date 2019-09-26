@@ -31,6 +31,11 @@ object SlotConfiguration {
   object Size {
     val zero = Size(nLongs = 0, nReferences = 0)
   }
+
+  final def isRefSlotAndNotAlias(slots: SlotConfiguration, k: String): Boolean = {
+    !slots.isAlias(k) &&
+      slots.get(k).forall(_.isInstanceOf[RefSlot])
+  }
 }
 
 /**

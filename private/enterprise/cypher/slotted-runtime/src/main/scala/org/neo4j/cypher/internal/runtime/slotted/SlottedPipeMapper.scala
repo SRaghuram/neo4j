@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning._
@@ -161,7 +162,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case Projection(_, expressions) =>
         val toProject = expressions collect {
-          case (k, e) if refSlotAndNotAlias(slots, k) => k -> e
+          case (k, e) if isRefSlotAndNotAlias(slots, k) => k -> e
         }
         ProjectionPipe(source, expressionConverters.toCommandProjection(id, toProject))(id)
 
@@ -337,11 +338,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
     }
     pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
     pipe
-  }
-
-  private def refSlotAndNotAlias(slots: SlotConfiguration, k: String) = {
-    !slots.isAlias(k) &&
-      slots.get(k).forall(_.isInstanceOf[RefSlot])
   }
 
   private def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): ColumnOrder = s match {

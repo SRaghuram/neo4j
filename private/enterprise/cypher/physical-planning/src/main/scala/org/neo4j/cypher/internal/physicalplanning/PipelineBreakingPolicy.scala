@@ -115,7 +115,7 @@ object OperatorFusionPolicy {
     override def canFuseOverPipeline(lp: LogicalPlan): Boolean = canFuse(lp)
   }
 
-  private case object OPERATOR_FUSION_WITHIN_PIPELINE extends OperatorFusionPolicy {
+  case object OPERATOR_FUSION_WITHIN_PIPELINE extends OperatorFusionPolicy {
 
     override def canFuse(lp: LogicalPlan): Boolean = OPERATOR_FUSION_OVER_PIPELINES.canFuse(lp)
 

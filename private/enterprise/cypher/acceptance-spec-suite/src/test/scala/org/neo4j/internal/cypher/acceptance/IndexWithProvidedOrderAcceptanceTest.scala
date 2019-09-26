@@ -80,10 +80,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       )))
     }
 
-    // TODO: FIXME morsel returned different result!!! (Missing one Map("nnn.prop3" -> "footurama")
-    //       (No interpreted fallback pipes are used)
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH") {
-      val result = executeWith(Configs.CachedProperty - Configs.Morsel, // Morsel has a bug when fusing over pipelines
+      val result = executeWith(Configs.CachedProperty,
         s"""MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo'
            |WITH n AS nnn
            |MATCH (m)<-[r]-(nnn)
@@ -98,9 +96,6 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
               .withOrder(providedOrder(prop("n", "prop3")))
             )
         )
-
-      // Morsel returned:
-      // List(Map("nnn.prop3" -> "fooism"), Map("nnn.prop3" -> "fooism"), Map("nnn.prop3" -> "footurama"))
 
       result.toList should be(expectedOrder(List(
         Map("nnn.prop3" -> "fooism"), Map("nnn.prop3" -> "fooism"),

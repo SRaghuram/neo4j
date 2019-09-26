@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.morsel.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
 import org.neo4j.cypher.internal.runtime.morsel.execution.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
@@ -314,6 +315,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                             readOnly = true,
                             indexRegistrator = mock[QueryIndexRegistrator],
                             semanticTable = mock[SemanticTable],
+                            INTERPRETED_PIPES_FALLBACK_DISABLED,
                             slottedPipeBuilder = None) {
 
     override def create(plan: LogicalPlan,
