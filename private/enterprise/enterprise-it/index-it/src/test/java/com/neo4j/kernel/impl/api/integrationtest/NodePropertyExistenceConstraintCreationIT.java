@@ -98,7 +98,7 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
         ConstraintDescriptor constraint;
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            constraint = statement.uniquePropertyConstraintCreate( descriptor, "constraint name" );
+            constraint = statement.uniquePropertyConstraintCreate( schema, "constraint name" );
             commit();
         }
 
@@ -121,7 +121,7 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
         {
             KernelTransaction transaction = newTransaction();
 
-            Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetForSchema( descriptor );
+            Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetForSchema( schema );
 
             assertEquals( constraint, single( constraints ) );
             commit();

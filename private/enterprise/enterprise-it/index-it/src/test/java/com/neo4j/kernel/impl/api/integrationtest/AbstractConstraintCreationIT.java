@@ -65,7 +65,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
     int typeId;
     int propertyKeyId;
-    DESCRIPTOR descriptor;
+    DESCRIPTOR schema;
 
     abstract int initializeLabelOrRelType( TokenWrite tokenWrite, String name )
             throws KernelException;
@@ -90,7 +90,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         TokenWrite tokenWrite = tokenWriteInNewTransaction();
         this.typeId = initializeLabelOrRelType( tokenWrite, KEY );
         this.propertyKeyId = tokenWrite.propertyKeyGetOrCreateForName( PROP );
-        this.descriptor = makeDescriptor( typeId, propertyKeyId );
+        this.schema = makeDescriptor( typeId, propertyKeyId );
         commit();
     }
 
@@ -107,7 +107,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         KernelTransaction transaction = newTransaction( AUTH_DISABLED );
 
         // when
-        ConstraintDescriptor constraint = createConstraint( transaction.schemaWrite(), descriptor );
+        ConstraintDescriptor constraint = createConstraint( transaction.schemaWrite(), schema );
 
         // then
         assertEquals( constraint, single( transaction.schemaRead().constraintsGetAll() ) );
@@ -131,7 +131,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         KernelTransaction transaction = newTransaction( AUTH_DISABLED );
 
         // when
-        ConstraintDescriptor constraint = createConstraint( transaction.schemaWrite(), descriptor );
+        ConstraintDescriptor constraint = createConstraint( transaction.schemaWrite(), schema );
 
         // then
         assertEquals( constraint, single( transaction.schemaRead().constraintsGetAll() ) );
@@ -156,7 +156,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // given
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
 
-        createConstraint( schemaWriteOperations, descriptor );
+        createConstraint( schemaWriteOperations, schema );
 
         // when
         rollback();
@@ -175,7 +175,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // given
         KernelTransaction transaction = newTransaction( AUTH_DISABLED );
 
-        Constraint constraint = createConstraint( transaction.schemaWrite(), descriptor );
+        Constraint constraint = createConstraint( transaction.schemaWrite(), schema );
 
         // when
         dropConstraint( transaction.schemaWrite(), constraint );
@@ -200,7 +200,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         Constraint constraint;
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            constraint = createConstraint( statement, descriptor );
+            constraint = createConstraint( statement, schema );
             commit();
         }
 
@@ -227,23 +227,28 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // given
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            createConstraint( statement, descriptor );
+            createConstraint( statement, schema );
             commit();
         }
 
         SchemaWrite statement = schemaWriteInNewTransaction();
-        assertThrows( EquivalentSchemaRuleAlreadyExistsException.class, () -> createConstraint( statement, descriptor ) );
+        assertThrows( EquivalentSchemaRuleAlreadyExistsException.class, () -> createConstraint( statement, schema ) );
         commit();
     }
 
     @Test
-    void shouldNotRemoveConstraintThatGetsReAdded() throws Exception
+    void shouldNotRemoveIndexFreeConstraintThatGetsReAdded() throws Exception
     {
         // given
         Constraint constraint;
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            constraint = createConstraint( statement, descriptor );
+            constraint = createConstraint( statement, schema );
+            if ( constraint.isIndexBackedConstraint() )
+            {
+                // Ignore index-backed constraints in this test.
+                return;
+            }
             commit();
         }
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -251,21 +256,62 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             // Make sure all schema changes are stable, to avoid any synchronous schema state invalidation
             tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
         }
-        SchemaStateCheck schemaState = new SchemaStateCheck().setUp();
+        SchemaStateCheck schemaState = new SchemaStateCheck().setUp(); // +1
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
 
             // when
             dropConstraint( statement, constraint );
-            createConstraint( statement, descriptor );
-            commit();
+            constraint = createConstraint( statement, schema ); // clear
+            commit(); // clear
         }
         {
            KernelTransaction transaction = newTransaction();
 
             // then
-            assertEquals( singletonList( constraint ), asCollection( transaction.schemaRead().constraintsGetAll() ) );
+            Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetAll();
+            assertEquals( singletonList( constraint ), asCollection( constraints ) );
             schemaState.assertNotCleared( transaction );
+            commit();
+        }
+    }
+
+    @Test
+    void shouldRemoveIndexBackedConstraintThatGetsReAdded() throws Exception
+    {
+        // given
+        Constraint constraint;
+        {
+            SchemaWrite statement = schemaWriteInNewTransaction();
+            constraint = createConstraint( statement, schema );
+            if ( !constraint.isIndexBackedConstraint() )
+            {
+                // Ignore non-index-backed constraints in this test.
+                return;
+            }
+            commit();
+        }
+        try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
+        {
+            // Make sure all schema changes are stable, to avoid any synchronous schema state invalidation
+            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+        }
+        SchemaStateCheck schemaState = new SchemaStateCheck().setUp(); // +1
+        {
+            SchemaWrite statement = schemaWriteInNewTransaction();
+
+            // when
+            dropConstraint( statement, constraint );
+            constraint = createConstraint( statement, schema ); // clear
+            commit(); // clear
+        }
+        {
+           KernelTransaction transaction = newTransaction();
+
+            // then
+            Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetAll();
+            assertEquals( singletonList( constraint ), asCollection( constraints ) );
+            schemaState.assertCleared( transaction );
             commit();
         }
     }
@@ -279,7 +325,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         SchemaWrite statement = schemaWriteInNewTransaction();
 
         // when
-        createConstraint( statement, descriptor );
+        createConstraint( statement, schema );
         commit();
 
         // then
@@ -295,7 +341,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         SchemaStateCheck schemaState;
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            constraint = createConstraint( statement, descriptor );
+            constraint = createConstraint( statement, schema );
             commit();
 
             schemaState = new SchemaStateCheck().setUp();
@@ -318,7 +364,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     void shouldNotDropConstraintThatDoesNotExist() throws Exception
     {
         // given
-        Constraint constraint = newConstraintObject( descriptor );
+        Constraint constraint = newConstraintObject( schema );
 
         // when
         {
@@ -401,7 +447,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
 
         // then - this should not fail
         SchemaWrite statement = schemaWriteInNewTransaction();
-        createConstraint( statement, descriptor );
+        createConstraint( statement, schema );
         commit();
     }
 

@@ -61,7 +61,6 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 {
     private static final String DUPLICATED_VALUE = "apa";
     private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-    private IndexDescriptor uniqueIndex;
 
     @Override
     protected TestDatabaseManagementServiceBuilder configure( TestDatabaseManagementServiceBuilder factory )
@@ -124,7 +123,6 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     @Override
     LabelSchemaDescriptor makeDescriptor( int typeId, int propertyKeyId )
     {
-        uniqueIndex = TestIndexDescriptorFactory.uniqueForLabel( typeId, propertyKeyId );
         return SchemaDescriptor.forLabel( typeId, propertyKeyId );
     }
 
@@ -172,7 +170,9 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // when
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
-        schemaWriteOperations.uniquePropertyConstraintCreate( descriptor, "constraint name" );
+        ConstraintDescriptor constraint = schemaWriteOperations.uniquePropertyConstraintCreate( schema, "constraint name" );
+        IndexDescriptor uniqueIndex = kernelTransaction.schemaRead().indexGetForName( constraint.getName() );
+
         commit();
 
         // then
@@ -186,7 +186,8 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         KernelTransaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
-        transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor, "constraint name" );
+        ConstraintDescriptor constraint = transaction.schemaWrite().uniquePropertyConstraintCreate( schema, "constraint name" );
+        IndexDescriptor uniqueIndex = kernelTransaction.schemaRead().indexGetForName( constraint.getName() );
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
 
         // when
@@ -204,7 +205,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         SchemaWrite schemaWriteOperations = schemaWriteInNewTransaction();
-        schemaWriteOperations.nodePropertyExistenceConstraintCreate( descriptor, "constraint name" );
+        schemaWriteOperations.nodePropertyExistenceConstraintCreate( schema, "constraint name" );
         commit();
 
         // when
@@ -213,7 +214,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
             try
             {
                 SchemaWrite statement = schemaWriteInNewTransaction();
-                statement.constraintDrop( ConstraintDescriptorFactory.uniqueForSchema( descriptor ).withName( "other constraint" ) );
+                statement.constraintDrop( ConstraintDescriptorFactory.uniqueForSchema( schema ).withName( "other constraint" ) );
             }
             finally
             {
@@ -228,9 +229,9 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         {
             KernelTransaction transaction = newTransaction();
 
-            Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetForSchema( descriptor );
+            Iterator<ConstraintDescriptor> constraints = transaction.schemaRead().constraintsGetForSchema( schema );
 
-            assertEquals( ConstraintDescriptorFactory.existsForSchema( descriptor ), single( constraints ) );
+            assertEquals( ConstraintDescriptorFactory.existsForSchema( schema ), single( constraints ) );
             commit();
         }
     }
@@ -240,7 +241,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // when
         SchemaWrite statement = schemaWriteInNewTransaction();
-        statement.uniquePropertyConstraintCreate( descriptor, "constraint name" );
+        statement.uniquePropertyConstraintCreate( schema, "constraint name" );
         commit();
 
         // then
@@ -272,7 +273,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         var e = assertThrows( Exception.class, () ->
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            statement.uniquePropertyConstraintCreate( descriptor, "constraint name" );
+            statement.uniquePropertyConstraintCreate( schema, "constraint name" );
             commit();
         } );
 
@@ -298,8 +299,8 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         // given
         KernelTransaction transaction = newTransaction( LoginContext.AUTH_DISABLED );
-        ConstraintDescriptor constraint =
-                transaction.schemaWrite().uniquePropertyConstraintCreate( descriptor, "constraint name" );
+        ConstraintDescriptor constraint = transaction.schemaWrite().uniquePropertyConstraintCreate( schema, "constraint name" );
+        IndexDescriptor uniqueIndex = kernelTransaction.schemaRead().indexGetForName( constraint.getName() );
         assertEquals( asSet( uniqueIndex ), asSet( transaction.schemaRead().indexesGetAll() ) );
         commit();
 
