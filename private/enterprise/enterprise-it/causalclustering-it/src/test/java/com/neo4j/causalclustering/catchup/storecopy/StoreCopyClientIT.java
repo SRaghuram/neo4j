@@ -87,6 +87,7 @@ class StoreCopyClientIT
     private StoreCopyClient subject;
     private Server catchupServer;
     private FakeCatchupServer serverHandler;
+    private int maxChunkSize = 32768;
 
     private static void writeContents( FileSystemAbstraction fileSystemAbstraction, File file, String contents )
     {
@@ -222,7 +223,7 @@ class StoreCopyClientIT
                         sendFile( ctx, fileCopy );
                         StoreCopyFinishedResponse.Status status =
                                 contents.hasNext() ? StoreCopyFinishedResponse.Status.E_UNKNOWN : StoreCopyFinishedResponse.Status.SUCCESS;
-                        new StoreFileStreamingProtocol().end( ctx, status, -1 );
+                        new StoreFileStreamingProtocol( maxChunkSize ).end( ctx, status, -1 );
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
                     }
 
@@ -230,7 +231,7 @@ class StoreCopyClientIT
                     {
                         ctx.write( ResponseMessageType.FILE );
                         ctx.write( new FileHeader( file.getName() ) );
-                        ctx.writeAndFlush( new FileSender( new StoreResource( file, file.getName(), 16, fs ) ) ).addListener(
+                        ctx.writeAndFlush( new FileSender( new StoreResource( file, file.getName(), 16, fs ), maxChunkSize ) ).addListener(
                                 future -> fs.deleteFile( file ) );
                     }
                 };

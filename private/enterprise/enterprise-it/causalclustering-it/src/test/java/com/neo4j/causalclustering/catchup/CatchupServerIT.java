@@ -105,8 +105,7 @@ class CatchupServerIT
 
         DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         databaseIdRepository = databaseManager.databaseIdRepository();
-        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fs,
-                LOG_PROVIDER );
+        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fs, 32768, LOG_PROVIDER );
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );

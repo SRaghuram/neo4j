@@ -33,10 +33,12 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     private final DatabaseManager<?> databaseManager;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
+    private final int maxChunkSize;
 
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, FileSystemAbstraction fs, LogProvider logProvider )
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, FileSystemAbstraction fs, int maxChunkSize, LogProvider logProvider )
     {
         this.databaseManager = databaseManager;
+        this.maxChunkSize = maxChunkSize;
         this.logProvider = logProvider;
         this.fs = fs;
     }
@@ -94,12 +96,12 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 
     private PrepareStoreCopyRequestHandler buildStoreListingRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new PrepareStoreCopyRequestHandler( protocol, db, new PrepareStoreCopyFilesProvider( fs ) );
+        return new PrepareStoreCopyRequestHandler( protocol, db, new PrepareStoreCopyFilesProvider( fs ), maxChunkSize );
     }
 
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs );
+        return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol( maxChunkSize ), fs );
     }
 
     private static CoreSnapshotRequestHandler buildCoreSnapshotRequestRequestHandler( Database db, CatchupServerProtocol protocol )

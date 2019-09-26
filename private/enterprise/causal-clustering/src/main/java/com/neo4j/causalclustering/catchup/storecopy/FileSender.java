@@ -15,7 +15,6 @@ import java.util.Objects;
 
 import org.neo4j.io.fs.StoreChannel;
 
-import static com.neo4j.causalclustering.catchup.storecopy.FileChunk.MAX_PAYLOAD_SIZE;
 import static com.neo4j.causalclustering.catchup.storecopy.FileSender.State.FINISHED;
 import static com.neo4j.causalclustering.catchup.storecopy.FileSender.State.FULL_PENDING;
 import static com.neo4j.causalclustering.catchup.storecopy.FileSender.State.LAST_PENDING;
@@ -25,14 +24,16 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 class FileSender implements ChunkedInput<FileChunk>
 {
     private final StoreResource resource;
+    private final int maxChunkSize;
 
     private StoreChannel channel;
     private ByteBuf nextPayload;
     private State state = PRE_INIT;
 
-    FileSender( StoreResource resource )
+    FileSender( StoreResource resource, int maxChunkSize )
     {
         this.resource = resource;
+        this.maxChunkSize = maxChunkSize;
     }
 
     @Override
@@ -66,11 +67,11 @@ class FileSender implements ChunkedInput<FileChunk>
             if ( nextPayload == null )
             {
                 state = FINISHED;
-                return FileChunk.create( EMPTY_BUFFER, true );
+                return FileChunk.create( EMPTY_BUFFER, true, maxChunkSize );
             }
             else
             {
-                state = nextPayload.readableBytes() < MAX_PAYLOAD_SIZE ? LAST_PENDING : FULL_PENDING;
+                state = nextPayload.readableBytes() < maxChunkSize ? LAST_PENDING : FULL_PENDING;
             }
         }
 
@@ -82,22 +83,22 @@ class FileSender implements ChunkedInput<FileChunk>
             if ( nextPayload == null )
             {
                 state = FINISHED;
-                return FileChunk.create( toSend, true );
+                return FileChunk.create( toSend, true, maxChunkSize );
             }
-            else if ( nextPayload.readableBytes() < MAX_PAYLOAD_SIZE )
+            else if ( nextPayload.readableBytes() < maxChunkSize )
             {
                 state = LAST_PENDING;
-                return FileChunk.create( toSend, false );
+                return FileChunk.create( toSend, false, maxChunkSize );
             }
             else
             {
-                return FileChunk.create( toSend, false );
+                return FileChunk.create( toSend, false, maxChunkSize );
             }
         }
         else if ( state == LAST_PENDING )
         {
             state = FINISHED;
-            return FileChunk.create( nextPayload, true );
+            return FileChunk.create( nextPayload, true, maxChunkSize );
         }
         else
         {
@@ -146,7 +147,7 @@ class FileSender implements ChunkedInput<FileChunk>
 
     private ByteBuf prefetch( ByteBufAllocator allocator ) throws IOException
     {
-        ByteBuf payload = allocator.ioBuffer( MAX_PAYLOAD_SIZE );
+        ByteBuf payload = allocator.ioBuffer( maxChunkSize );
 
         int totalRead = 0;
         try
@@ -170,14 +171,14 @@ class FileSender implements ChunkedInput<FileChunk>
         int totalRead = 0;
         do
         {
-            int bytesReadOrEOF = payload.writeBytes( channel, MAX_PAYLOAD_SIZE - totalRead );
+            int bytesReadOrEOF = payload.writeBytes( channel, maxChunkSize - totalRead );
             if ( bytesReadOrEOF < 0 )
             {
                 break;
             }
             totalRead += bytesReadOrEOF;
         }
-        while ( totalRead < MAX_PAYLOAD_SIZE );
+        while ( totalRead < maxChunkSize );
         return totalRead;
     }
 

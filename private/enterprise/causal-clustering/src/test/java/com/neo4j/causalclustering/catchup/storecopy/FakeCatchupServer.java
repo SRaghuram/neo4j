@@ -37,6 +37,7 @@ class FakeCatchupServer implements CatchupServerHandler
     private TestDirectory testDirectory;
     private FileSystemAbstraction fileSystemAbstraction;
     private long startTxId;
+    private int maxChunkSize = 32768;
 
     FakeCatchupServer( LogProvider logProvider, TestDirectory testDirectory, FileSystemAbstraction fileSystemAbstraction )
     {
@@ -97,7 +98,7 @@ class FakeCatchupServer implements CatchupServerHandler
 
     private void failed( ChannelHandlerContext channelHandlerContext )
     {
-        new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND, -1 );
+        new StoreFileStreamingProtocol( maxChunkSize ).end( channelHandlerContext, StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND, -1 );
     }
 
     private FakeFile findFile( Set<FakeFile> filesystem, String filename )
@@ -114,8 +115,8 @@ class FakeCatchupServer implements CatchupServerHandler
         channelHandlerContext.writeAndFlush( ResponseMessageType.FILE );
         channelHandlerContext.writeAndFlush( new FileHeader( file.getName() ) );
         StoreResource storeResource = storeResourceFromEntry( file );
-        channelHandlerContext.writeAndFlush( new FileSender( storeResource ) );
-        new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS, startTxId );
+        channelHandlerContext.writeAndFlush( new FileSender( storeResource, 32768 ) );
+        new StoreFileStreamingProtocol( maxChunkSize ).end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS, startTxId );
     }
 
     private void incrementRequestCount( File file )

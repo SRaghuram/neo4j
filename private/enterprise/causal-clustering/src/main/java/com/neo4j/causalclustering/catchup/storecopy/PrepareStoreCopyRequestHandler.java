@@ -26,15 +26,16 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     private final CatchupServerProtocol protocol;
     private final PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider;
     private final Database db;
-    private final StoreFileStreamingProtocol streamingProtocol = new StoreFileStreamingProtocol();
+    private final StoreFileStreamingProtocol streamingProtocol;
     private final Log log;
 
     public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Database db,
-            PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider )
+            PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider, int maxChunkSize )
     {
         this.protocol = catchupServerProtocol;
         this.prepareStoreCopyFilesProvider = prepareStoreCopyFilesProvider;
         this.db = db;
+        this.streamingProtocol = new StoreFileStreamingProtocol( maxChunkSize );
         this.log = db.getInternalLogProvider().getLog( getClass() );
     }
 

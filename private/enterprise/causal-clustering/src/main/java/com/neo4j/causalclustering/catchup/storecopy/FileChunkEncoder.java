@@ -13,22 +13,23 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import java.util.List;
 
 import static com.neo4j.causalclustering.catchup.storecopy.FileChunk.HEADER_SIZE;
+import static com.neo4j.causalclustering.catchup.storecopy.FileChunk.makeHeader;
 
 public class FileChunkEncoder extends MessageToMessageEncoder<FileChunk>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, FileChunk msg, List<Object> out )
+    protected void encode( ChannelHandlerContext ctx, FileChunk chunk, List<Object> out )
     {
         ByteBuf header = ctx.alloc().ioBuffer( HEADER_SIZE );
-        header.writeInt( msg.encodedLength() );
+        header.writeInt( makeHeader( chunk.isLast() ) );
 
-        ByteBuf payload = msg.payload();
+        ByteBuf payload = chunk.payload();
 
-        CompositeByteBuf composite = ctx.alloc().compositeBuffer( 2 );
+        CompositeByteBuf frame = ctx.alloc().compositeBuffer( 2 );
 
-        composite.addComponent( true, header );
-        composite.addComponent( true, payload );
+        frame.addComponent( true, header );
+        frame.addComponent( true, payload );
 
-        out.add( composite );
+        out.add( frame );
     }
 }

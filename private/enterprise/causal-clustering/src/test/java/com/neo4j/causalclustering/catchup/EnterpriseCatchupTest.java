@@ -84,7 +84,7 @@ abstract class EnterpriseCatchupTest
                 .withStoreId( StoreId.DEFAULT )
                 .withDatabaseAvailabilityGuard( availabilityGuard )
                 .register();
-        serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fsa, LOG_PROVIDER );
+        serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fsa, 32768, LOG_PROVIDER );
     }
 
     void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception

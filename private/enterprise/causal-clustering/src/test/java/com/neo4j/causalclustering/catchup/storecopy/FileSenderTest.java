@@ -25,7 +25,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static com.neo4j.causalclustering.catchup.storecopy.FileChunk.MAX_PAYLOAD_SIZE;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -46,6 +45,7 @@ public class FileSenderTest
     @Rule
     public TestDirectory testDirectory = TestDirectory.testDirectory( fsRule.get() );
     private PageCache pageCache = mock( PageCache.class );
+    private int maxChunkSize = 32768;
 
     @Before
     public void setup() throws IOException
@@ -59,11 +59,11 @@ public class FileSenderTest
         // given
         File emptyFile = testDirectory.file( "emptyFile" );
         fs.write( emptyFile ).close();
-        FileSender fileSender = new FileSender( new StoreResource( emptyFile, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( emptyFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
-        assertEquals( FileChunk.create( EMPTY_BUFFER, true ), fileSender.readChunk( allocator ) );
+        assertEquals( FileChunk.create( EMPTY_BUFFER, true, maxChunkSize ), fileSender.readChunk( allocator ) );
         assertNull( fileSender.readChunk( allocator ) );
         assertTrue( fileSender.isEndOfInput() );
     }
@@ -80,7 +80,7 @@ public class FileSenderTest
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
@@ -93,7 +93,7 @@ public class FileSenderTest
     public void sendLargeFile() throws Exception
     {
         // given
-        int totalSize = MAX_PAYLOAD_SIZE + (MAX_PAYLOAD_SIZE / 2);
+        int totalSize = maxChunkSize + (maxChunkSize / 2);
         ByteBuf buffer = getRandomBuffer( totalSize );
 
         File smallFile = testDirectory.file( "smallFile" );
@@ -102,12 +102,12 @@ public class FileSenderTest
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
-        assertNextChunkEquals( fileSender, buffer, 0, MAX_PAYLOAD_SIZE, false );
-        assertNextChunkEquals( fileSender, buffer, MAX_PAYLOAD_SIZE, MAX_PAYLOAD_SIZE / 2, true );
+        assertNextChunkEquals( fileSender, buffer, 0, maxChunkSize, false );
+        assertNextChunkEquals( fileSender, buffer, maxChunkSize, maxChunkSize / 2, true );
         assertNull( fileSender.readChunk( allocator ) );
         assertTrue( fileSender.isEndOfInput() );
     }
@@ -116,7 +116,7 @@ public class FileSenderTest
     public void sendLargeFileWithSizeMultipleOfTheChunkSize() throws Exception
     {
         // given
-        ByteBuf buffer = getRandomBuffer( MAX_PAYLOAD_SIZE * 3 );
+        ByteBuf buffer = getRandomBuffer( maxChunkSize * 3 );
 
         File smallFile = testDirectory.file( "smallFile" );
         try ( StoreChannel channel = fs.write( smallFile ) )
@@ -124,13 +124,13 @@ public class FileSenderTest
             buffer.readBytes( channel, buffer.readableBytes() );
         }
 
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, fs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
-        assertNextChunkEquals( fileSender, buffer, 0, MAX_PAYLOAD_SIZE, false );
-        assertNextChunkEquals( fileSender, buffer, MAX_PAYLOAD_SIZE, MAX_PAYLOAD_SIZE, false );
-        assertNextChunkEquals( fileSender, buffer, MAX_PAYLOAD_SIZE * 2, MAX_PAYLOAD_SIZE, true );
+        assertNextChunkEquals( fileSender, buffer, 0, maxChunkSize, false );
+        assertNextChunkEquals( fileSender, buffer, maxChunkSize, maxChunkSize, false );
+        assertNextChunkEquals( fileSender, buffer, maxChunkSize * 2, maxChunkSize, true );
         assertNull( fileSender.readChunk( allocator ) );
         assertTrue( fileSender.isEndOfInput() );
     }
@@ -141,7 +141,7 @@ public class FileSenderTest
         // given
         File file = testDirectory.file( "file" );
         StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
         ByteBuf buffer = writeRandomBytes( channel, 1024 );
@@ -159,21 +159,21 @@ public class FileSenderTest
         // given
         File file = testDirectory.file( "file" );
         StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf chunkA = writeRandomBytes( channel, MAX_PAYLOAD_SIZE );
-        ByteBuf chunkB = writeRandomBytes( channel, MAX_PAYLOAD_SIZE / 2 );
+        ByteBuf chunkA = writeRandomBytes( channel, maxChunkSize );
+        ByteBuf chunkB = writeRandomBytes( channel, maxChunkSize / 2 );
 
         // then
-        assertNextChunkEquals( fileSender, chunkA, 0, MAX_PAYLOAD_SIZE, false );
+        assertNextChunkEquals( fileSender, chunkA, 0, maxChunkSize, false );
         assertFalse( fileSender.isEndOfInput() );
 
         // when
-        writeRandomBytes( channel, MAX_PAYLOAD_SIZE / 2 );
+        writeRandomBytes( channel, maxChunkSize / 2 );
 
         // then
-        assertNextChunkEquals( fileSender, chunkB, 0, MAX_PAYLOAD_SIZE / 2, true );
+        assertNextChunkEquals( fileSender, chunkB, 0, maxChunkSize / 2, true );
         assertTrue( fileSender.isEndOfInput() );
         assertNull( fileSender.readChunk( allocator ) );
     }
@@ -184,17 +184,17 @@ public class FileSenderTest
         // given
         File file = testDirectory.file( "file" );
         StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf chunkA = writeRandomBytes( channel, MAX_PAYLOAD_SIZE );
+        ByteBuf chunkA = writeRandomBytes( channel, maxChunkSize );
 
         // then
-        assertNextChunkEquals( fileSender, chunkA, 0, MAX_PAYLOAD_SIZE, true );
+        assertNextChunkEquals( fileSender, chunkA, 0, maxChunkSize, true );
         assertTrue( fileSender.isEndOfInput() );
 
         // when
-        writeRandomBytes( channel, MAX_PAYLOAD_SIZE );
+        writeRandomBytes( channel, maxChunkSize );
 
         // then
         assertTrue( fileSender.isEndOfInput() );
@@ -207,25 +207,25 @@ public class FileSenderTest
         // given
         File file = testDirectory.file( "file" );
         StoreChannel channel = fs.write( file );
-        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ) );
+        FileSender fileSender = new FileSender( new StoreResource( file, null, 16, fs ), maxChunkSize );
 
         // when
-        ByteBuf chunkA = writeRandomBytes( channel, MAX_PAYLOAD_SIZE );
-        ByteBuf chunkB = writeRandomBytes( channel, MAX_PAYLOAD_SIZE );
+        ByteBuf chunkA = writeRandomBytes( channel, maxChunkSize );
+        ByteBuf chunkB = writeRandomBytes( channel, maxChunkSize );
 
         // then
-        assertNextChunkEquals( fileSender, chunkA, 0, MAX_PAYLOAD_SIZE, false );
+        assertNextChunkEquals( fileSender, chunkA, 0, maxChunkSize, false );
         assertFalse( fileSender.isEndOfInput() );
 
         // when
-        ByteBuf chunkC = writeRandomBytes( channel, MAX_PAYLOAD_SIZE );
+        ByteBuf chunkC = writeRandomBytes( channel, maxChunkSize );
 
         // then
-        assertNextChunkEquals( fileSender, chunkB, 0, MAX_PAYLOAD_SIZE, false );
+        assertNextChunkEquals( fileSender, chunkB, 0, maxChunkSize, false );
         assertFalse( fileSender.isEndOfInput() );
 
         // when
-        assertNextChunkEquals( fileSender, chunkC, 0, MAX_PAYLOAD_SIZE, true );
+        assertNextChunkEquals( fileSender, chunkC, 0, maxChunkSize, true );
 
         // then
         assertTrue( fileSender.isEndOfInput() );
@@ -236,7 +236,7 @@ public class FileSenderTest
     public void sendLargeFileWithUnreliableReadBufferSize() throws Exception
     {
         // given
-        ByteBuf buffer = getRandomBuffer( MAX_PAYLOAD_SIZE * 3 );
+        ByteBuf buffer = getRandomBuffer( maxChunkSize * 3 );
 
         File smallFile = testDirectory.file( "smallFile" );
         try ( StoreChannel channel = fs.write( smallFile ) )
@@ -246,20 +246,20 @@ public class FileSenderTest
 
         Adversary adversary = new RandomAdversary( 0.9, 0.0, 0.0 );
         AdversarialFileSystemAbstraction afs = new AdversarialFileSystemAbstraction( adversary, fs );
-        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, afs ) );
+        FileSender fileSender = new FileSender( new StoreResource( smallFile, null, 16, afs ), maxChunkSize );
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
-        assertNextChunkEquals( fileSender, buffer, 0, MAX_PAYLOAD_SIZE, false );
-        assertNextChunkEquals( fileSender, buffer, MAX_PAYLOAD_SIZE, MAX_PAYLOAD_SIZE, false );
-        assertNextChunkEquals( fileSender, buffer, MAX_PAYLOAD_SIZE * 2, MAX_PAYLOAD_SIZE, true );
+        assertNextChunkEquals( fileSender, buffer, 0, maxChunkSize, false );
+        assertNextChunkEquals( fileSender, buffer, maxChunkSize, maxChunkSize, false );
+        assertNextChunkEquals( fileSender, buffer, maxChunkSize * 2, maxChunkSize, true );
         assertNull( fileSender.readChunk( allocator ) );
         assertTrue( fileSender.isEndOfInput() );
     }
 
     private void assertNextChunkEquals( FileSender fileSender, ByteBuf expected, int startIndex, int length, boolean isLast ) throws Exception
     {
-        assertEquals( FileChunk.create( expected.slice( startIndex, length ), isLast ), fileSender.readChunk( allocator ) );
+        assertEquals( FileChunk.create( expected.slice( startIndex, length ), isLast, maxChunkSize ), fileSender.readChunk( allocator ) );
     }
 
     private ByteBuf getRandomBuffer( int numberOfBytes )

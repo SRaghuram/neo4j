@@ -123,6 +123,7 @@ class StoreCopyCheckpointMutexIT
         var regularCatchupServerHandler = new MultiDatabaseCatchupServerHandler(
                 databaseManager,
                 injectingFS,
+                32768,
                 FormattedLogProvider.toOutputStream( System.out ) );
 
         return CatchupServerBuilder.builder()

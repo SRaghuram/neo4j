@@ -11,6 +11,13 @@ import io.netty.util.concurrent.Future;
 
 public class StoreFileStreamingProtocol
 {
+    private final int maxChunkSize;
+
+    public StoreFileStreamingProtocol( int maxChunkSize )
+    {
+        this.maxChunkSize = maxChunkSize;
+    }
+
     /**
      * This sends operations on the outgoing pipeline or the file, including
      * chunking {@link FileSender} handlers.
@@ -21,7 +28,7 @@ public class StoreFileStreamingProtocol
     {
         ctx.write( ResponseMessageType.FILE );
         ctx.write( new FileHeader( resource.path(), resource.recordSize() ) );
-        ctx.write( new FileSender( resource ) );
+        ctx.write( new FileSender( resource, maxChunkSize ) );
     }
 
     Future<Void> end( ChannelHandlerContext ctx, StoreCopyFinishedResponse.Status status, long lastCheckpointedTx )

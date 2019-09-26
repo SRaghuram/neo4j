@@ -44,6 +44,8 @@ import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
 import static org.neo4j.configuration.SettingValueParsers.listOf;
 import static org.neo4j.configuration.SettingValueParsers.ofEnum;
+import static org.neo4j.io.ByteUnit.kibiBytes;
+import static org.neo4j.io.ByteUnit.mebiBytes;
 
 @Description( "Settings for Causal Clustering" )
 @ServiceProvider
@@ -421,6 +423,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
     @Internal
     public static final Setting<Duration> store_copy_backoff_max_wait =
             newBuilder( "causal_clustering.store_copy_backoff_max_wait", DURATION, ofSeconds( 5 ) ).build();
+
+    @Description( "Store copy chunk size" )
+    public static final Setting<Integer> store_copy_chunk_size =
+            newBuilder( "causal_clustering.store_copy_chunk_size", INT, (int) kibiBytes( 32 ) )
+                    .addConstraint( range( (int) kibiBytes( 4 ), (int) mebiBytes( 1 ) ) )
+                    .build();
 
     @Description( "Throttle limit for logging unknown cluster member address" )
     public static final Setting<Duration> unknown_address_logging_throttle =

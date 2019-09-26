@@ -192,7 +192,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )
     {
-        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, logProvider );
+        int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
+        CatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, maxChunkSize, logProvider );
         Server catchupServer = catchupComponentsProvider.createCatchupServer( serverInstalledProtocolHandler, catchupServerHandler );
         life.add( catchupServer );
         // used by ReadReplicaHierarchicalCatchupIT

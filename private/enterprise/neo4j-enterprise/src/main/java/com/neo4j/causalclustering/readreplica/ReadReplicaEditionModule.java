@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
@@ -201,7 +202,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
         globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
-        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, logProvider );
+        int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
+        var catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, fileSystem, maxChunkSize, logProvider );
         var installedProtocolsHandler = new InstalledProtocolHandler();
 
         var catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler );

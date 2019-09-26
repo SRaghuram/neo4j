@@ -170,7 +170,7 @@ class PrepareStoreCopyRequestHandlerTest
         PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider = mock( PrepareStoreCopyFilesProvider.class );
         when( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( any() ) ).thenReturn( prepareStoreCopyFiles );
 
-        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, db, prepareStoreCopyFilesProvider );
+        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, db, prepareStoreCopyFilesProvider, 32768 );
     }
 
     private void configureProvidedStoreCopyFiles( StoreResource[] atomicFiles, File[] files, long lastCommitedTx )

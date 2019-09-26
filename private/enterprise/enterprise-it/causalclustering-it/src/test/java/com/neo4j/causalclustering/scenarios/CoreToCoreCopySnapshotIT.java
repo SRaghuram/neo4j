@@ -37,6 +37,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.store_copy_chunk_size;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -61,6 +62,33 @@ class CoreToCoreCopySnapshotIT
     {
         // given
         Cluster cluster = startCluster( emptyMap() );
+
+        CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
+
+        // when
+        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 5, TimeUnit.SECONDS );
+
+        // shutdown the follower, remove the store, restart
+        follower.shutdown();
+        fs.deleteRecursively( follower.databaseLayout().databaseDirectory() );
+        fs.deleteRecursively( follower.clusterStateDirectory() );
+        follower.start();
+
+        // then
+        assertEquals( DbRepresentation.of( source.defaultDatabase() ), DbRepresentation.of( follower.defaultDatabase() ) );
+    }
+
+    @Test
+    void shouldSupportDifferentChunkSizesInStoreCopy() throws Exception
+    {
+        // given
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withInstanceCoreParam( store_copy_chunk_size, i -> String.valueOf( (i + 1) * 4096 ) );
+
+        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
 
         CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 

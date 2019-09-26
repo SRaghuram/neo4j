@@ -12,43 +12,37 @@ import java.util.Objects;
 
 public class FileChunk
 {
-    static final int HEADER_SIZE = 4;
-    static final int MAX_PAYLOAD_SIZE = 8192;
+    static final int HEADER_SIZE = Integer.BYTES;
 
-    static final int USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS = -1;
+    private static final int HEADER_IS_LAST_FALSE = 0;
+    private static final int HEADER_IS_LAST_TRUE = 1;
 
-    private final int encodedLength;
+    private final boolean isLast;
     private final ByteBuf payload;
 
-    static FileChunk create( ByteBuf payload, boolean isLast )
+    static FileChunk create( ByteBuf payload, boolean isLast, int chunkSize )
     {
-        if ( !isLast && payload.readableBytes() != MAX_PAYLOAD_SIZE )
+        if ( !isLast && payload.readableBytes() != chunkSize )
         {
             throw new IllegalArgumentException( "All chunks except for the last must be of max size." );
         }
-        int encodedLength = isLast ? payload.readableBytes() : USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS;
-        return new FileChunk( encodedLength, payload );
+        return new FileChunk( isLast, payload );
     }
 
-    FileChunk( int encodedLength, ByteBuf payload )
+    FileChunk( boolean isLast, ByteBuf payload )
     {
-        this.encodedLength = encodedLength;
+        this.isLast = isLast;
         this.payload = payload;
     }
 
     public boolean isLast()
     {
-        return encodedLength != USE_MAX_SIZE_AND_EXPECT_MORE_CHUNKS;
+        return isLast;
     }
 
     ByteBuf payload()
     {
         return payload;
-    }
-
-    int encodedLength()
-    {
-        return encodedLength;
     }
 
     @Override
@@ -63,18 +57,39 @@ public class FileChunk
             return false;
         }
         FileChunk fileChunk = (FileChunk) o;
-        return encodedLength == fileChunk.encodedLength && ByteBufUtil.equals( payload, fileChunk.payload );
+        return isLast == fileChunk.isLast && ByteBufUtil.equals( payload, fileChunk.payload );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( encodedLength, Objects.hashCode( payload ) );
+        return Objects.hash( isLast, payload );
     }
 
     @Override
     public String toString()
     {
-        return "FileChunk{" + "encodedLength=" + encodedLength + ", payload=" + payload + '}';
+        return "FileChunk{" + "isLast=" + isLast + ", payload=" + payload + '}';
+    }
+
+    static int makeHeader( boolean isLast )
+    {
+        return isLast ? HEADER_IS_LAST_TRUE : HEADER_IS_LAST_FALSE;
+    }
+
+    static boolean parseHeader( int header )
+    {
+        if ( header == HEADER_IS_LAST_TRUE )
+        {
+            return true;
+        }
+        else if ( header == HEADER_IS_LAST_FALSE )
+        {
+            return false;
+        }
+        else
+        {
+            throw new IllegalStateException( "Illegal header value: " + header );
+        }
     }
 }

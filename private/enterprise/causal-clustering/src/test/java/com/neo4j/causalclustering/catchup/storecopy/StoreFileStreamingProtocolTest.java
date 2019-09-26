@@ -36,12 +36,13 @@ public class StoreFileStreamingProtocolTest
 
     @Rule
     public PageCacheRule pageCacheRule = new PageCacheRule();
+    private int maxChunkSize = 32768;
 
     @Test
     public void shouldStreamResources() throws Exception
     {
         // given
-        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol();
+        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol( maxChunkSize );
         ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
 
         fs.mkdir( new File( "dirA" ) );
@@ -69,7 +70,7 @@ public class StoreFileStreamingProtocolTest
         {
             inOrder.verify( ctx ).write( ResponseMessageType.FILE );
             inOrder.verify( ctx ).write( new FileHeader( resource.path(), resource.recordSize() ) );
-            inOrder.verify( ctx ).write( new FileSender( resource ) );
+            inOrder.verify( ctx ).write( new FileSender( resource, 32768 ) );
         }
         verifyNoMoreInteractions( ctx );
     }
@@ -78,7 +79,7 @@ public class StoreFileStreamingProtocolTest
     public void shouldBeAbleToEndWithFailure()
     {
         // given
-        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol();
+        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol( maxChunkSize );
         ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
 
         // when
@@ -95,7 +96,7 @@ public class StoreFileStreamingProtocolTest
     public void shouldBeAbleToEndWithSuccess()
     {
         // given
-        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol();
+        StoreFileStreamingProtocol protocol = new StoreFileStreamingProtocol( maxChunkSize );
         ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
 
         // when

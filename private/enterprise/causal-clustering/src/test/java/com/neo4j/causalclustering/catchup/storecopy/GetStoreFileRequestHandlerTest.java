@@ -55,6 +55,7 @@ class GetStoreFileRequestHandlerTest
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
     private JobScheduler jobScheduler = new CallingThreadJobScheduler();
+    private int maxChunkSize = 32768;
 
     @BeforeEach
     void setup()
@@ -70,7 +71,7 @@ class GetStoreFileRequestHandlerTest
         when( database.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         GetStoreFileRequestHandler getStoreFileRequestHandler = new NiceGetStoreFileRequestHandler( catchupServerProtocol, database,
-                new StoreFileStreamingProtocol(), fileSystemAbstraction );
+                new StoreFileStreamingProtocol( maxChunkSize ), fileSystemAbstraction );
         embeddedChannel = new EmbeddedChannel( getStoreFileRequestHandler );
     }
 
@@ -122,7 +123,7 @@ class GetStoreFileRequestHandlerTest
     void shouldResetProtocolAndGiveErrorIfFilesThrowException()
     {
         EmbeddedChannel alternativeChannel = new EmbeddedChannel(
-                new EvilGetStoreFileRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(), fileSystemAbstraction ) );
+                new EvilGetStoreFileRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol( maxChunkSize ), fileSystemAbstraction ) );
 
         assertThrows( IllegalStateException.class,
                 () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_ID ) ) );

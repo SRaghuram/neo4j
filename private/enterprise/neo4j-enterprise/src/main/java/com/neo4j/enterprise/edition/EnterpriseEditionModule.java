@@ -8,6 +8,7 @@ package com.neo4j.enterprise.edition;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
@@ -290,11 +291,12 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
         PipelineBuilders pipelineBuilders = new PipelineBuilders( sslPolicyLoader );
 
+        int maxChunkSize = config.get( CausalClusteringSettings.store_copy_chunk_size );
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new MultiDatabaseCatchupServerHandler( databaseManager, fs, internalLogProvider ),
+                new MultiDatabaseCatchupServerHandler( databaseManager, fs, maxChunkSize, internalLogProvider ),
                 new InstalledProtocolHandler(),
                 jobScheduler,
                 portRegister
