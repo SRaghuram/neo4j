@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.cache
 
-import com.neo4j.fabric.planning.FabricQuery
+import com.neo4j.fabric.planning.FabricPlan
 import org.neo4j.cypher.internal.QueryCache
 import org.neo4j.cypher.internal.cache.LFUCache
 import org.neo4j.values.virtual.MapValue
@@ -13,15 +13,17 @@ import org.neo4j.values.virtual.MapValue
 class FabricQueryCache {
 
   type Query = String
+  type Params = MapValue
   type ParamTypes = Map[String, Class[_]]
   type Key = (Query, ParamTypes)
+  type Value = FabricPlan
 
-  private val cache = new LFUCache[Key, FabricQuery](100)
+  private val cache = new LFUCache[Key, Value](100)
 
   private var hits: Long = 0
   private var misses: Long = 0
 
-  def computeIfAbsent(query: String, params: MapValue, compute: (String, MapValue) => FabricQuery): FabricQuery = {
+  def computeIfAbsent(query: String, params: MapValue, compute: (String, MapValue) => FabricPlan): FabricPlan = {
     val paramTypes = QueryCache.extractParameterTypeMap(params)
     val key = (query, paramTypes)
     cache.get(key) match {

@@ -59,15 +59,14 @@ case class FabricPlanner(
   def plan(
     query: String,
     parameters: MapValue
-  ): FabricQuery = {
+  ): FabricPlan = {
 
     val result = queryCache.computeIfAbsent(
-      query, parameters,
-      (q, p) => init(q, p).fabricQuery
+      query, parameters, (q, p) => init(q, p).plan
     )
 
     if (FabricPlanner.printPlans) {
-      FabricQuery.pretty.pprint(result)
+      FabricQuery.pretty.pprint(result.query)
     }
 
     result
@@ -241,6 +240,9 @@ case class FabricPlanner(
         }
       }
     }
+
+    def plan: FabricPlan =
+      FabricPlan(fabricQuery, queryType, executionType)
 
     def fabricQuery: FabricQuery = {
       val frag = fragment
@@ -436,6 +438,20 @@ case class FabricPlanner(
 
       override def withParams(p: Map[String, Any]): BaseState = fail("withParams")
     }
+
+
+    def queryType: FabricPlan.QueryType = original match {
+      case q: ast.Query => q.part.containsUpdates match {
+        case true  => FabricPlan.ReadWrite
+        case false => FabricPlan.Read
+      }
+
+      case d: ast.CatalogDDL => Errors.unimplemented("Support for DDL", d)
+      case c: ast.Command    => Errors.unimplemented("Support for commands", c)
+    }
+
+    def executionType: FabricPlan.ExecutionType =
+      FabricPlan.Execute
 
   }
 

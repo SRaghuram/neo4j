@@ -93,7 +93,7 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
             return statementResultCursor
                     .map( StatementResultCursor::summaryAsync )
                     .flatMap( Mono::fromCompletionStage )
-                    .map( s -> new PartialSummary( s.counters() ) );
+                    .map( ResultSummaryWrapper::new );
         }
     }
 

@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.stream.summary;
 
+import java.util.Collection;
+
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryExecutionType;
@@ -25,7 +27,7 @@ public interface Summary
     /**
      * @return all notifications and warnings of the query.
      */
-    Iterable<Notification> getNotifications();
+    Collection<Notification> getNotifications();
 
     QueryStatistics getQueryStatistics();
 }

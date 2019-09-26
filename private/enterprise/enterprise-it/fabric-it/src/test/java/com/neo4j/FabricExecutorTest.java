@@ -10,6 +10,7 @@ import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
+import com.neo4j.fabric.stream.summary.PartialSummary;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AccessMode;
@@ -29,13 +31,24 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.driver.summary.Notification;
+import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.driver.summary.StatementType;
+import org.neo4j.graphdb.InputPosition;
+import org.neo4j.graphdb.QueryStatistics;
+import org.neo4j.graphdb.impl.notification.NotificationCode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,7 +57,7 @@ class FabricExecutorTest
 
     private final PortUtils.Ports ports = PortUtils.findFreePorts();
 
-    private final Map<String, String> configProperties = Map.of(
+    private final Map<String,String> configProperties = Map.of(
             "fabric.database.name", "mega",
             "fabric.graph.0.uri", "bolt://localhost:1111",
             "fabric.graph.1.uri", "bolt://localhost:2222",
@@ -54,35 +67,43 @@ class FabricExecutorTest
     );
 
     private final Config config = Config.newBuilder()
-            .setRaw(configProperties)
+            .setRaw( configProperties )
             .build();
 
     private TestServer testServer;
     private Driver clientDriver;
     private ArgumentCaptor<org.neo4j.bolt.runtime.AccessMode> accessModeArgument = ArgumentCaptor.forClass( org.neo4j.bolt.runtime.AccessMode.class );
-    private StatementResult mockStatementResult;
+    private StatementResult graph0Result;
+    private StatementResult graph1Result;
 
-    PooledDriver createMockDriver()
+    StatementResult createMockResult()
+    {
+        StatementResult mockStatementResult = mock( StatementResult.class );
+        when( mockStatementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
+        when( mockStatementResult.records() ).thenReturn( Flux.empty() );
+        when( mockStatementResult.summary() ).thenReturn( Mono.empty() );
+        return mockStatementResult;
+    }
+
+    PooledDriver createMockDriver( StatementResult mockStatementResult )
     {
         PooledDriver mockDriver = mock( PooledDriver.class );
 
         FabricDriverTransaction tx = mock( FabricDriverTransaction.class );
-        mockStatementResult = mock( StatementResult.class );
-        when( mockStatementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
-        when( mockStatementResult.records() ).thenReturn( Flux.empty() );
 
         when( tx.run( any(), any() ) ).thenReturn( mockStatementResult );
         when( tx.commit() ).thenReturn( Mono.empty() );
         when( tx.rollback() ).thenReturn( Mono.empty() );
 
-        when( mockDriver.beginTransaction(any(), accessModeArgument.capture(), any() )).thenReturn( Mono.just( tx ) );
+        when( mockDriver.beginTransaction( any(), accessModeArgument.capture(), any() ) ).thenReturn( Mono.just( tx ) );
         return mockDriver;
     }
 
-    DriverPool createMockDriverPool( PooledDriver pooledDriver )
+    DriverPool createMockDriverPool( PooledDriver graph0, PooledDriver graph1 )
     {
         DriverPool pool = mock( DriverPool.class );
-        when( pool.getDriver( any(), any() ) ).thenReturn( pooledDriver );
+        doReturn( graph0 ).when( pool ).getDriver( argThat( g -> g.getId() == 0 ), any() );
+        doReturn( graph1 ).when( pool ).getDriver( argThat( g -> g.getId() == 1 ), any() );
         return pool;
     }
 
@@ -90,10 +111,10 @@ class FabricExecutorTest
     void setUp()
     {
         testServer = new TestServer( config );
+        graph0Result = createMockResult();
+        graph1Result = createMockResult();
 
-        PooledDriver mockDriver = createMockDriver();
-
-        testServer.addMocks( createMockDriverPool( mockDriver )  );
+        testServer.addMocks( createMockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) ) );
         testServer.start();
 
         clientDriver = GraphDatabase.driver(
@@ -254,9 +275,12 @@ class FabricExecutorTest
     @Test
     void testRemoteFlatCompositeQuery()
     {
-        when( mockStatementResult.records() ).thenReturn(
-                recs( rec( Values.stringValue( "a" )), rec( Values.stringValue( "b"  ) )) ,
-                recs( rec( Values.stringValue( "k" )), rec( Values.stringValue( "l"  ) ))
+        when( graph0Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
+        );
+
+        when( graph1Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
         Transaction tx = transaction( "mega", AccessMode.READ );
@@ -280,6 +304,90 @@ class FabricExecutorTest
         assertEquals( list.get( 3 ).get( "y" ).asString(), "l" );
     }
 
+    @Test
+    void testSummaryAggregation()
+    {
+        QueryStatistics stats0 = mock( QueryStatistics.class );
+        when( stats0.getNodesCreated() ).thenReturn( 1 );
+        when( stats0.getNodesDeleted() ).thenReturn( 1 );
+        when( stats0.getRelationshipsCreated() ).thenReturn( 1 );
+        when( stats0.getRelationshipsDeleted() ).thenReturn( 1 );
+        when( stats0.getPropertiesSet() ).thenReturn( 1 );
+        when( stats0.getLabelsAdded() ).thenReturn( 1 );
+        when( stats0.getLabelsRemoved() ).thenReturn( 1 );
+        when( stats0.getIndexesAdded() ).thenReturn( 1 );
+        when( stats0.getIndexesRemoved() ).thenReturn( 1 );
+        when( stats0.getConstraintsAdded() ).thenReturn( 1 );
+        when( stats0.getConstraintsRemoved() ).thenReturn( 1 );
+        when( stats0.getSystemUpdates() ).thenReturn( 1 );
+        when( stats0.containsUpdates() ).thenReturn( true );
+        when( stats0.containsSystemUpdates() ).thenReturn( false );
+
+        QueryStatistics stats1 = mock( QueryStatistics.class );
+        when( stats1.getNodesCreated() ).thenReturn( 2 );
+        when( stats1.getNodesDeleted() ).thenReturn( 2 );
+        when( stats1.getRelationshipsCreated() ).thenReturn( 2 );
+        when( stats1.getRelationshipsDeleted() ).thenReturn( 2 );
+        when( stats1.getPropertiesSet() ).thenReturn( 2 );
+        when( stats1.getLabelsAdded() ).thenReturn( 2 );
+        when( stats1.getLabelsRemoved() ).thenReturn( 2 );
+        when( stats1.getIndexesAdded() ).thenReturn( 2 );
+        when( stats1.getIndexesRemoved() ).thenReturn( 2 );
+        when( stats1.getConstraintsAdded() ).thenReturn( 2 );
+        when( stats1.getConstraintsRemoved() ).thenReturn( 2 );
+        when( stats1.getSystemUpdates() ).thenReturn( 2 );
+        when( stats1.containsUpdates() ).thenReturn( false );
+        when( stats1.containsSystemUpdates() ).thenReturn( true );
+
+        when( graph0Result.summary() ).thenReturn( Mono.just( new PartialSummary(
+                stats0, null,
+                List.of( NotificationCode.DEPRECATED_PROCEDURE.notification( new InputPosition( 100, 10, 5 ) ) )
+        ) ) );
+
+        when( graph0Result.records() ).thenReturn(
+                recs( rec( Values.of( null ) ) )
+        );
+
+        when( graph1Result.summary() ).thenReturn( Mono.just( new PartialSummary(
+                stats1, null,
+                List.of( NotificationCode.RUNTIME_UNSUPPORTED.notification( new InputPosition( 1, 1, 1 ) ) )
+        ) ) );
+
+        Transaction tx = transaction( "mega", AccessMode.READ );
+        ResultSummary summary = tx.run( String.join( "\n",
+                "CALL { FROM mega.graph(0) RETURN 1 AS x }",
+                "CALL { FROM mega.graph(1) CREATE () RETURN 1 AS y }",
+                "RETURN 1"
+        ) ).summary();
+        tx.success();
+
+        assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
+
+        assertThat( summary.hasPlan(), is( false ) );
+        assertThat( summary.hasProfile(), is( false ) );
+
+        assertThat( summary.counters().nodesCreated(), is( 3 ) );
+        assertThat( summary.counters().nodesDeleted(), is( 3 ) );
+        assertThat( summary.counters().relationshipsCreated(), is( 3 ) );
+        assertThat( summary.counters().relationshipsDeleted(), is( 3 ) );
+        assertThat( summary.counters().propertiesSet(), is( 3 ) );
+        assertThat( summary.counters().labelsAdded(), is( 3 ) );
+        assertThat( summary.counters().labelsRemoved(), is( 3 ) );
+        assertThat( summary.counters().indexesAdded(), is( 3 ) );
+        assertThat( summary.counters().indexesRemoved(), is( 3 ) );
+        assertThat( summary.counters().constraintsAdded(), is( 3 ) );
+        assertThat( summary.counters().constraintsRemoved(), is( 3 ) );
+        assertThat( summary.counters().containsUpdates(), is( true ) );
+
+        var codes = summary.notifications().stream().map( Notification::code ).collect( Collectors.toList() );
+        assertThat( codes, containsInAnyOrder( codeOf( NotificationCode.DEPRECATED_PROCEDURE ), codeOf( NotificationCode.RUNTIME_UNSUPPORTED ) ) );
+    }
+
+    private String codeOf( NotificationCode notificationCode )
+    {
+        return notificationCode.notification( new InputPosition( 0, 0, 0 ) ).getCode();
+    }
+
     private Flux<com.neo4j.fabric.stream.Record> recs( com.neo4j.fabric.stream.Record... records )
     {
         return Flux.just( records );
@@ -287,7 +395,7 @@ class FabricExecutorTest
 
     private com.neo4j.fabric.stream.Record rec( AnyValue... vals )
     {
-        return Records.of(vals);
+        return Records.of( vals );
     }
 
     private void verifySessionConfig( int times, org.neo4j.bolt.runtime.AccessMode accessMode )

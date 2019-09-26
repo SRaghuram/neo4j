@@ -11,6 +11,24 @@ import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{FromGraph, Query}
 
+case class FabricPlan(
+  query: FabricQuery,
+  queryType: FabricPlan.QueryType,
+  executionType: FabricPlan.ExecutionType,
+)
+
+object FabricPlan {
+  sealed trait QueryType
+  case object Read extends QueryType
+  case object ReadWrite extends QueryType
+  val READ: QueryType = Read
+  val READ_WRITE: QueryType = ReadWrite
+
+  sealed trait ExecutionType
+  case object Execute extends ExecutionType
+  val EXECUTE: ExecutionType = Execute
+}
+
 sealed trait FabricQuery {
   def columns: Columns
 }

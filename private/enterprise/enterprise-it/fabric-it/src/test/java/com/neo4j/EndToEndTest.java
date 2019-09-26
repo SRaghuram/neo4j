@@ -34,6 +34,7 @@ import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.driver.summary.StatementType;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.internal.InProcessNeo4j;
@@ -945,6 +946,7 @@ class EndToEndTest
             tx.success();
         }
 
+        assertThat( r.statementType(), is( StatementType.READ_WRITE ) );
         assertThat( r.counters().containsUpdates(), is( true ) );
         assertThat( r.counters().nodesCreated(), is( 4 ) );
         assertThat( r.counters().nodesDeleted(), is( 1 ) );

@@ -85,7 +85,7 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
         public Mono<Summary> summary()
         {
             return Mono.from( rxStatementResult.summary() )
-                    .map( s -> new PartialSummary( s.counters() ) );
+                    .map( ResultSummaryWrapper::new );
         }
     }
 }

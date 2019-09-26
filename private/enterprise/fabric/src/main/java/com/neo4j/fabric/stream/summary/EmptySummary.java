@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.stream.summary;
 
+import java.util.Collection;
 import java.util.Collections;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
@@ -30,7 +31,7 @@ public class EmptySummary implements Summary
     }
 
     @Override
-    public Iterable<Notification> getNotifications()
+    public Collection<Notification> getNotifications()
     {
         return Collections.emptyList();
     }
