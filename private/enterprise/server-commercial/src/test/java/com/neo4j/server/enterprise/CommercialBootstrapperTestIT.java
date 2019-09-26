@@ -66,6 +66,7 @@ public class CommercialBootstrapperTestIT extends BaseBootstrapperTestIT
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
                 "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ),
+                "-c", "dbms.connector.bolt.listen_address=:0",
                 "-c", "dbms.connector.1.type=HTTP",
                 "-c", "dbms.connector.1.encryption=NONE",
                 "-c", "dbms.connector.1.enabled=true" );
