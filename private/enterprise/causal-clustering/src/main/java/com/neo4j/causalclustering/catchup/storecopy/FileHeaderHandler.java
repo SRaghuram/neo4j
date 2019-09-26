@@ -27,6 +27,6 @@ public class FileHeaderHandler extends SimpleChannelInboundHandler<FileHeader>
     protected void channelRead0( ChannelHandlerContext ctx, FileHeader fileHeader )
     {
         handler.onFileHeader( fileHeader );
-        protocol.expect( State.FILE_CONTENTS );
+        protocol.expect( State.FILE_CHUNK );
     }
 }

@@ -5,8 +5,12 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.HashMap;
 import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class InMemoryStoreStreamProvider implements StoreFileStreamProvider
 {
@@ -34,12 +38,9 @@ public class InMemoryStoreStreamProvider implements StoreFileStreamProvider
         }
 
         @Override
-        public void write( byte[] data )
+        public void write( ByteBuf data )
         {
-            for ( byte b : data )
-            {
-                stringBuffer.append( (char) b );
-            }
+            stringBuffer.append( data.toString( UTF_8 ) );
         }
 
         @Override

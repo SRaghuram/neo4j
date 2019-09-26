@@ -9,7 +9,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.util.ReferenceCounted;
 import org.junit.rules.ExternalResource;
 
 import java.util.LinkedList;
@@ -170,6 +169,12 @@ public class Buffers extends ExternalResource implements ByteBufAllocator
     @Override
     protected void after()
     {
-        buffersList.forEach( ReferenceCounted::release );
+        for ( ByteBuf byteBuf : buffersList )
+        {
+            if ( byteBuf.refCnt() > 0 )
+            {
+                byteBuf.release( byteBuf.refCnt() );
+            }
+        }
     }
 }

@@ -97,7 +97,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
         decoderDispatcher.register( CatchupClientProtocol.State.TX_STREAM_FINISHED, new TxStreamFinishedResponseDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.FILE_HEADER, new FileHeaderDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.PREPARE_STORE_COPY_RESPONSE, new PrepareStoreCopyResponse.Decoder() );
-        decoderDispatcher.register( CatchupClientProtocol.State.FILE_CONTENTS, new FileChunkDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.FILE_CHUNK, new FileChunkDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.ERROR_RESPONSE, new CatchupErrorResponseDecoder() );
 
         pipelineBuilder.client( channel, log )
