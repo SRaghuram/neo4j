@@ -55,7 +55,6 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
     void startDatabase()
     {
         startDatabaseWithSettings( Collections.emptyMap() );
-        systemDb = (GraphDatabaseFacade) dbRule.getManagementService().database( SYSTEM_DATABASE_NAME );
     }
 
     void startDatabaseWithSettings( Map<Setting<?>,Object> settings )
