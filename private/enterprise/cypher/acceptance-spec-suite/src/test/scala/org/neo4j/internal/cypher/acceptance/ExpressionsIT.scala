@@ -3463,11 +3463,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       evaluate(compiled, context) should equal(Values.FALSE)
     }
 
-    test(s"$time cached $name property existence with tx state deleted value") {
+    ignore(s"$time cached $name property existence with tx state deleted value") {
       val node = entity("hello from disk")
       startNewTransaction()
 
-      node.removeProperty("prop")
+      tx.getNodeById(node.getId).removeProperty("prop")
       val pkn = PropertyKeyName("prop")(pos)
       val token = tokenReader(_.propertyKey("prop"))
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
@@ -3746,14 +3746,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def relationshipValue(from: NodeValue, to: NodeValue, properties: MapValue): RelationshipValue = {
-    withTx( tx => {
       val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
       properties.foreach((t: String, u: AnyValue) => {
         r.setProperty(t, u.asInstanceOf[Value].asObject())
       })
       ValueUtils.fromRelationshipEntity(r)
-    } )
-  }
+}
 
   def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression
 

@@ -74,7 +74,7 @@ class IdFilesSanityCheckIT
 
         var leader = cluster.coreTx( ( db, tx ) ->
         {
-            nodes.forEach( Node::delete );
+            nodes.forEach( n -> tx.getNodeById( n.getId() ).delete() );
             tx.commit();
         } );
 

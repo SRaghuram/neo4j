@@ -98,9 +98,9 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
     val result = executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = 0 match (a)-[r]->() delete r")
     assertStats( result, relationshipsDeleted = 3  )
 
-    graph.inTx {
-      a.getRelationships.asScala shouldBe empty
-    }
+    graph.withTx( tx => {
+      tx.getNodeById(a.getId).getRelationships.asScala shouldBe empty
+    } )
   }
 
   test("create multiple relationships in one query") {
@@ -114,11 +114,11 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       relationshipsCreated = 3
     )
 
-    graph.inTx {
-      a.getRelationships.asScala should have size 1
-      b.getRelationships.asScala should have size 1
-      c.getRelationships.asScala should have size 1
-    }
+    graph.withTx( tx => {
+      tx.getNodeById(a.getId).getRelationships.asScala should have size 1
+      tx.getNodeById(b.getId).getRelationships.asScala should have size 1
+      tx.getNodeById(c.getId).getRelationships.asScala should have size 1
+    } )
   }
 
   test("set a property to a collection") {
