@@ -138,15 +138,16 @@ class SecurityAdministrationCommandLoggingIT
     {
         // GIVEN
         // adminContext is a user that doesn't exist in the system graph and does not have a password.
-        // This test will still show the logging of the command but nothing will actually get executed.
+        // we therefore need to first add it to the system graph to be able to change the password
+        execute( adminContext, String.format("CREATE USER %s SET PASSWORD 'bar' CHANGE NOT REQUIRED", adminContext.subject.username() ) );
 
         // WHEN
-        execute( adminContext, "ALTER CURRENT USER SET PASSWORD FROM '???' TO 'baz'" );
+        execute( adminContext, "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 1 ) );
-        assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'" ) ) );
+        assertThat( logLines, hasSize( 2 ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'" ) ) );
     }
 
     @Test
