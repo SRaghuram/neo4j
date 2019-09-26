@@ -18,7 +18,6 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.PlannerDescription;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -55,7 +54,6 @@ class PlannerDescriptionIT
     @Inject
     private TestDirectory temporaryFolder;
 
-    @Disabled
     @Test
     void shouldExtractPlans() throws IOException
     {
@@ -69,9 +67,9 @@ class PlannerDescriptionIT
                                                                        createTempDirectoryPath( temporaryFolder.absolutePath() ), /* store */
                                                                        neo4jConfigFile ) )
                 {
-                    for ( Query query : workload.queries() )
+                    try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
                     {
-                        try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
+                        for ( Query query : workload.queries() )
                         {
                             try ( Transaction tx = database.inner().beginTx() )
                             {
