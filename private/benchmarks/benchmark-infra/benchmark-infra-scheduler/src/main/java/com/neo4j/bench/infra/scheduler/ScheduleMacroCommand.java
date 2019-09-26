@@ -90,7 +90,11 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                     .filter( JobStatus::isFailed )
                     .count() != 0 )
             {
-                throw new RuntimeException( "there are failed jobs" );
+                throw new RuntimeException( "there are failed jobs:\n" +
+                                            jobsStatuses.stream()
+                                                .filter( JobStatus::isFailed )
+                                                .map( Object::toString )
+                                                .collect( joining( "\n" ) ) );
             }
 
         }
