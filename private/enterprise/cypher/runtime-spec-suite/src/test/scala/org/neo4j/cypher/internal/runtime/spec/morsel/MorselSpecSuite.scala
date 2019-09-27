@@ -161,6 +161,9 @@ class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(NO_FUS
 class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(FUSING, MORSEL)
 class MorselSubscriberErrorTest extends SubscriberErrorTestBase(FUSING, MORSEL)
 
+// SLOTTED PIPE FALLBACK OPERATOR
+class MorselSlottedPipeFallbackTest extends SlottedPipeFallbackTestBase(FUSING, MORSEL, SIZE_HINT)
+
 // WORKLOAD
 class MorselWorkloadTest extends WorkloadTestBase(FUSING, MORSEL, SIZE_HINT)
 class MorselNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, MORSEL, SIZE_HINT)
