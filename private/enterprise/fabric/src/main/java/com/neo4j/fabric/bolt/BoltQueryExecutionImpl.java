@@ -52,7 +52,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         queryExecution.cancel();
     }
 
-    static private class QueryExecutionImpl implements QueryExecution
+    private static class QueryExecutionImpl implements QueryExecution
     {
 
         private final Rx2SyncStream rx2SyncStream;
