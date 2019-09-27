@@ -14,6 +14,12 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.morsel.state.{ArgumentCountUpdater, ArgumentStateMap, MorselParallelizer, QueryCompletionTracker}
 import org.neo4j.util.Preconditions
+import MorselBuffer._
+
+object MorselBuffer {
+  private val INVALID_ARG_ROW_ID = -1L
+  private val INVALID_ARG_SLOT_OFFSET = -2
+}
 
 /**
   * Morsel buffer which adds reference counting of arguments to the regular buffer semantics.
@@ -99,11 +105,11 @@ class MorselBuffer(id: BufferId,
   }
 
   /**
-    * Remove all rows related to cancelled argumentRowIds from `morsel`.
-    *
-    * @param morsel the input morsel
-    * @return `true` iff the morsel is cancelled
-    */
+   * Remove all rows related to cancelled argumentRowIds from `morsel`.
+   *
+   * @param morsel the input morsel
+   * @return `true` iff the morsel is cancelled
+   */
   def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
     if (workCancellers.nonEmpty) {
       val currentRow = morsel.getCurrentRow // Save current row
@@ -114,51 +120,101 @@ class MorselBuffer(id: BufferId,
       val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
       filteringMorsel.resetToFirstRow()
 
-      val reducerArguments = new Array[Long](downstreamArgumentReducers.size)
-      util.Arrays.fill(reducerArguments, -1) // otherwise we do not decrement for argumentRowId 0
+      val rowsToCancel = determineCancelledRows(filteringMorsel)
 
-      while (filteringMorsel.isValidRow) {
-        var i = 0
-        var isCancelled = false
-        var argumentRowId: Long = -1L
-        var argumentSlotOffset: Int = -2
-
-        while (i < workCancellers.size && !isCancelled) {
-          val cancellerMap = cancellerMaps(i)
-          argumentRowId = filteringMorsel.getArgumentAt(cancellerMap.argumentSlotOffset)
-          if (cancellerMap.peek(argumentRowId).isCancelled) {
-            argumentSlotOffset = cancellerMap.argumentSlotOffset
-            isCancelled = true // break
-          }
-          i += 1
-        }
-        if (isCancelled) {
-
-          // Cancel all rows up to the next argument
-          do {
-            var i = 0
-            while (i < downstreamArgumentReducers.size) {
-              val reducer = downstreamArgumentReducers(i)
-              val arg = filteringMorsel.getArgumentAt(reducer.argumentSlotOffset)
-              if (arg != reducerArguments(i)) {
-                reducer.decrement(arg)
-                reducerArguments(i) = arg
-              }
-              i += 1
-            }
-            filteringMorsel.cancelCurrentRow()
-            filteringMorsel.moveToNextRow()
-          } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(argumentSlotOffset) == argumentRowId)
-
-        } else {
-          filteringMorsel.moveToNextRow()
-        }
+      // Second loop: decrement for reducers
+      if(!rowsToCancel.isEmpty) {
+        decrementReducers(filteringMorsel, rowsToCancel)
+        // Actually cancel all rows
+        filteringMorsel.cancelAllRows(rowsToCancel)
       }
-
       filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
     }
 
     morsel.isEmpty
+  }
+
+  private def decrementReducers(filteringMorsel: FilteringMorselExecutionContext, rowsToCancel: util.BitSet): Unit = {
+    filteringMorsel.resetToFirstRow()
+
+    val reducerArgumentRowIds = new Array[Long](downstreamArgumentReducers.size)
+    util.Arrays.fill(reducerArgumentRowIds, INVALID_ARG_ROW_ID) // otherwise we do not decrement for argumentRowId 0
+    val reducerDecrementFlags = new util.BitSet(downstreamArgumentReducers.size) // OBS: We interpret "set" as leave the row alone and "unset" as decrement.
+    while (filteringMorsel.isValidRow) {
+      var j = 0
+      while (j < downstreamArgumentReducers.size) {
+        val reducer = downstreamArgumentReducers(j)
+        val reducerArgumentSlotOffset = reducer.argumentSlotOffset
+
+        // Get and update the reducer argument row id
+        val currentReducerArgumentRowId = reducerArgumentRowIds(j)
+        val nextReducerArgumentRowId = if (filteringMorsel.isValidRow) filteringMorsel.getArgumentAt(reducerArgumentSlotOffset) else INVALID_ARG_ROW_ID
+        reducerArgumentRowIds(j) = nextReducerArgumentRowId
+
+        // If we reached a new argument id at the reducers offset
+        if (!filteringMorsel.isValidRow ||
+          (currentReducerArgumentRowId != INVALID_ARG_ROW_ID && currentReducerArgumentRowId != nextReducerArgumentRowId)) {
+
+          // If all rows were cancelled
+          if (!reducerDecrementFlags.get(j)) {
+            reducer.decrement(currentReducerArgumentRowId)
+          }
+          // Reset flag for the next argument row id
+          reducerDecrementFlags.clear(j)
+        }
+
+        // If the row is not cancelled, remember to not decrement this reducer
+        if (!rowsToCancel.get(filteringMorsel.getCurrentRow)) {
+          reducerDecrementFlags.set(j)
+        }
+
+        j += 1
+      }
+      filteringMorsel.moveToNextRow()
+    }
+    // Any remaining decrement for the last block for each reducer
+    var j = 0
+    while (j < downstreamArgumentReducers.size) {
+      val reducer = downstreamArgumentReducers(j)
+
+      if (!reducerDecrementFlags.get(j) && reducerArgumentRowIds(j) != INVALID_ARG_ROW_ID) {
+        reducer.decrement(reducerArgumentRowIds(j))
+      }
+      j += 1
+    }
+  }
+
+  private def determineCancelledRows(filteringMorsel: FilteringMorselExecutionContext): java.util.BitSet = {
+    val rowsToCancel =  new java.util.BitSet(filteringMorsel.maxNumberOfRows)
+    while (filteringMorsel.isValidRow) {
+      var i = 0
+      var isCancelled = false
+      var cancellerArgumentRowId: Long = -INVALID_ARG_ROW_ID
+      var cancellerArgumentSlotOffset: Int = INVALID_ARG_SLOT_OFFSET
+
+      // Determine if the current row is cancelled by any canceller
+      while (i < workCancellers.size && !isCancelled) {
+        val cancellerMap = cancellerMaps(i)
+        cancellerArgumentRowId = filteringMorsel.getArgumentAt(cancellerMap.argumentSlotOffset)
+        if (cancellerMap.peek(cancellerArgumentRowId).isCancelled) {
+          cancellerArgumentSlotOffset = cancellerMap.argumentSlotOffset
+          isCancelled = true // break
+        }
+        i += 1
+      }
+      if (isCancelled) {
+        // Cancel all rows up to the next argument id at the slot offset of the canceller
+        do {
+          // Remember which rows to cancel
+          rowsToCancel.set(filteringMorsel.getCurrentRow)
+          filteringMorsel.moveToNextRow()
+        } while (filteringMorsel.isValidRow && filteringMorsel.getArgumentAt(cancellerArgumentSlotOffset) == cancellerArgumentRowId)
+
+      } else {
+        filteringMorsel.moveToNextRow()
+      }
+    }
+    rowsToCancel
   }
 
   /**

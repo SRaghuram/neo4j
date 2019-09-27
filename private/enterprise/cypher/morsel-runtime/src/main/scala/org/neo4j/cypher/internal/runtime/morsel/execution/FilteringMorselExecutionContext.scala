@@ -61,6 +61,11 @@ class FilteringMorselExecutionContext(morsel: Morsel,
     cancelRow(getCurrentRow)
   }
 
+  def cancelAllRows(cancelledRows: java.util.BitSet): Unit = {
+    ensureCancelledRows()
+    this.cancelledRows.or(cancelledRows)
+  }
+
   // ARGUMENT COLUMNS
 
   override def shallowCopy(): FilteringMorselExecutionContext =

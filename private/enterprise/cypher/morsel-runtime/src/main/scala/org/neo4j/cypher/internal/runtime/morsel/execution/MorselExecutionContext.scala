@@ -42,7 +42,7 @@ object MorselExecutionContext {
 
 class MorselExecutionContext(private[execution] final val morsel: Morsel,
                              final val slots: SlotConfiguration,
-                             private[execution] final val maxNumberOfRows: Int,
+                             final val maxNumberOfRows: Int,
                              private[execution] var currentRow: Int = 0,
                              private[execution] var startRow: Int = 0,
                              private[execution] var endRow: Int = 0,
