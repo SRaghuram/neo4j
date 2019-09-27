@@ -216,7 +216,7 @@ class DriverAuthHelper
         return connectDriver( uri, token, username, password );
     }
 
-    private static Driver connectDriver( String uri, AuthToken token )
+    static Driver connectDriver( String uri, AuthToken token )
     {
         return connectDriver( uri, token, null, null );
     }

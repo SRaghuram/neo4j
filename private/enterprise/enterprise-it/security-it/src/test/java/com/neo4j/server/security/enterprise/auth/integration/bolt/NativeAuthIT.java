@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
@@ -64,7 +66,7 @@ public class NativeAuthIT
 
     private String boltUri;
 
-    protected String getPassword()
+    private String getPassword()
     {
         return password;
     }
@@ -281,6 +283,29 @@ public class NativeAuthIT
                     assertPropertyFunctionWorks( session, user, "types", "CALL db.relationshipTypes", this::typeOf, expectedResults );
                     assertPropertyFunctionWorks( session, user, "props", "CALL db.propertyKeys", this::propOf, expectedResults );
                 }
+            }
+        }
+    }
+
+    @Test
+    public void shouldSetPasswordWithAuthDisabled() throws Exception
+    {
+        dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
+        boltUri = DriverAuthHelper.boltUri( dbRule );
+        try ( Driver driver = connectDriver( boltUri, AuthTokens.none() ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED" ).consume();
+            }
+        }
+        dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, true ) );
+        boltUri = DriverAuthHelper.boltUri( dbRule );
+        try ( Driver driver = connectDriver( boltUri, "foo", "bar" ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'" ).consume();
             }
         }
     }
