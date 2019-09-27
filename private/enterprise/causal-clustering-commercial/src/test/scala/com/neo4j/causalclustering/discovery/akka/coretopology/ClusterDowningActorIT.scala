@@ -76,7 +76,7 @@ class ClusterDowningActorIT extends BaseAkkaIT("ClusterDowningActor") {
     val cluster = mock[Cluster]
     val logProvider = NullLogProvider.getInstance()
 
-    val actorRef = system.actorOf(ClusterDowningActor.props(cluster, logProvider))
+    val actorRef = system.actorOf(ClusterDowningActor.props(cluster))
 
     var port = new AtomicInteger(0)
     val unreachable1, unreachable2, reachable1, reachable2 = ClusterViewMessageTest.createMember(port.getAndIncrement(), MemberStatus.Up)

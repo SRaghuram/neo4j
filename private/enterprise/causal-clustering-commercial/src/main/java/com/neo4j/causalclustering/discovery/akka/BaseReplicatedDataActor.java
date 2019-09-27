@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.cluster.Cluster;
 import akka.cluster.ddata.Key;
@@ -18,10 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
-
-public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActor
+public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractLoggingActor
 {
     private static final Replicator.WriteConsistency METADATA_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
 
@@ -30,16 +27,14 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     protected final Key<T> key;
     protected final Supplier<T> emptyData;
     protected T data;
-    protected final Log log;
 
-    protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Key<T> key, Supplier<T> emptyData, LogProvider logProvider )
+    protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Key<T> key, Supplier<T> emptyData )
     {
         this.cluster = cluster;
         this.replicator = replicator;
         this.key = key;
         this.emptyData = emptyData;
         this.data = emptyData.get();
-        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -74,7 +69,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
                 T newData = (T) message.dataValue();
                 handleIncomingData( newData );
             } ).match( Replicator.UpdateResponse.class, updated -> {
-                log.debug( "Update: %s", updated );
+                log().debug( "Update: {}", updated );
             } );
     }
 

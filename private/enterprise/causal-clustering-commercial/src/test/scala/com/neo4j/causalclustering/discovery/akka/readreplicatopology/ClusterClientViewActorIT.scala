@@ -82,7 +82,7 @@ class ClusterClientViewActorIT extends BaseAkkaIT("LocallyConnectedReadReplicas"
     val client1, client2 = TestProbe().ref
     val bothClients = Set(client1, client2)
 
-    val props = ClusterClientViewActor.props(parent.ref, receptionist.ref, NullLogProvider.getInstance())
+    val props = ClusterClientViewActor.props(parent.ref, receptionist.ref)
     val actorRef = system.actorOf(props)
   }
 }

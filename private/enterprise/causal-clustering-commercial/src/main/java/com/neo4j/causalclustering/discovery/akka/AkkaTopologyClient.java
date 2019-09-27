@@ -34,7 +34,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final MemberId myself;
     private final Log log;
-    private final LogProvider logProvider;
     private final TopologyState topologyState;
 
     public AkkaTopologyClient( Config config, LogProvider logProvider, MemberId myself, ActorSystemLifecycle actorSystemLifecycle )
@@ -44,7 +43,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.topologyState = new TopologyState( config, logProvider, ignored -> {} );
         this.log = logProvider.getLog( getClass() );
-        this.logProvider = logProvider;
     }
 
     @Override
@@ -69,8 +67,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 rrTopologySink,
                 directorySink,
                 clusterClient,
-                config,
-                logProvider);
+                config );
         actorSystemLifecycle.applicationActorOf( clientTopologyProps, ClientTopologyActor.NAME );
     }
 

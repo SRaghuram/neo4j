@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.client.ClusterClientUnreachable;
@@ -18,26 +18,21 @@ import akka.japi.pf.ReceiveBuilder;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
-
-class ClusterClientViewActor extends AbstractActor
+class ClusterClientViewActor extends AbstractLoggingActor
 {
-    static Props props( ActorRef parent, ActorRef receptionist, LogProvider logProvider )
+    static Props props( ActorRef parent, ActorRef receptionist )
     {
-        return Props.create( ClusterClientViewActor.class, () -> new ClusterClientViewActor( parent, receptionist, logProvider ) );
+        return Props.create( ClusterClientViewActor.class, () -> new ClusterClientViewActor( parent, receptionist ) );
     }
 
-    private final Log log;
     private final ActorRef parent;
     private final ActorRef receptionist;
     private Set<ActorRef> clusterClients = new HashSet<>();
 
-    private ClusterClientViewActor( ActorRef parent, ActorRef receptionist, LogProvider logProvider )
+    private ClusterClientViewActor( ActorRef parent, ActorRef receptionist )
     {
         this.parent = parent;
         this.receptionist = receptionist;
-        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -65,21 +60,21 @@ class ClusterClientViewActor extends AbstractActor
 
     private void handleClusterClients( ClusterClients msg )
     {
-        log.debug( "All cluster clients: %s", msg );
+        log().debug( "All cluster clients: {}", msg );
         clusterClients.addAll( msg.getClusterClients() );
         sendToParent();
     }
 
     private void handleClusterClientUp( ClusterClientUp msg )
     {
-        log.debug( "Cluster client up: %s", msg );
+        log().debug( "Cluster client up: {}", msg );
         clusterClients.add( msg.clusterClient() );
         sendToParent();
     }
 
     private void handleClusterClientUnreachable( ClusterClientUnreachable msg )
     {
-        log.debug( "Cluster client down: %s", msg );
+        log().debug( "Cluster client down: {}", msg );
         clusterClients.remove( msg.clusterClient() );
         sendToParent();
     }

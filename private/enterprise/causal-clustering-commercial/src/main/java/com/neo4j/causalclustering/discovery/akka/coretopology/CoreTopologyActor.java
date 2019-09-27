@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
 import akka.actor.Address;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -21,16 +21,14 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
-public class CoreTopologyActor extends AbstractActorWithTimers
+public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 {
     public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef rrTopologyActor, ActorRef replicator,
-            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
+            Cluster cluster, TopologyBuilder topologyBuilder, Config config )
     {
         return Props.create( CoreTopologyActor.class,
-                () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster, topologyBuilder, config, logProvider ) );
+                () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster, topologyBuilder, config ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
@@ -40,8 +38,6 @@ public class CoreTopologyActor extends AbstractActorWithTimers
     private final String databaseName;
 
     private final Address myAddress;
-
-    private final Log log;
 
     private final ActorRef clusterIdActor;
     private final ActorRef readReplicaTopologyActor;
@@ -59,8 +55,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
             ActorRef replicator,
             Cluster cluster,
             TopologyBuilder topologyBuilder,
-            Config config,
-            LogProvider logProvider )
+            Config config )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
@@ -68,16 +63,15 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.memberData = MetadataMessage.EMPTY;
         this.clusterIdPerDb = ClusterIdDirectoryMessage.EMPTY;
         this.databaseName = config.get( CausalClusteringSettings.database );
-        this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
         this.coreTopology = CoreTopology.EMPTY;
         this.myAddress = cluster.selfAddress();
 
         // Children, who will be sending messages to us
-        ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
-        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, logProvider ) );
-        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, logProvider ) );
-        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), logProvider ) );
+        ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config ) );
+        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster ) );
+        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config ) );
+        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf() ) );
     }
 
     @Override
@@ -116,7 +110,9 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void buildTopology()
     {
+        log().debug( "Building new view of Topology from actor {}, cluster state is: {}, metadata is {}", myAddress, clusterView, memberData );
         CoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( clusterIdPerDb.get( databaseName ), clusterView, memberData );
+        log().debug( "Returned topology: {}", newCoreTopology );
         if ( !this.coreTopology.equals( newCoreTopology ) || !Objects.equals( this.coreTopology.clusterId(),  newCoreTopology.clusterId() ) )
         {
             this.coreTopology = newCoreTopology;

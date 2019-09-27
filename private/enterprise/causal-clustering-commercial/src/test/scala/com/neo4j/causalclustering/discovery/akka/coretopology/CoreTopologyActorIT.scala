@@ -176,8 +176,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       replicatorProbe.ref,
       cluster,
       topologyBuilder,
-      config,
-      NullLogProvider.getInstance())
+      config)
     val topologyActorRef = system.actorOf(props)
 
     def awaitExpectedCoreTopology(newCoreTopology: CoreTopology = expectedCoreTopology) = {

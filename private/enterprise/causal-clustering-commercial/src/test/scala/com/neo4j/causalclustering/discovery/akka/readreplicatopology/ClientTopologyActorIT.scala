@@ -164,8 +164,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       readReplicaTopologySink,
       discoverySink,
       clusterClientProbe.ref,
-      config,
-      NullLogProvider.getInstance()
+      config
     )
 
     val topologyActorRef = system.actorOf(props)

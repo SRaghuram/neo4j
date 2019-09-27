@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
-import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.japi.pf.ReceiveBuilder;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -19,14 +19,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
-
-class ReadReplicaViewActor extends AbstractActorWithTimers
+class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
 {
-    static Props props( ActorRef parent, ClusterClientReceptionist receptionist, Clock clock, Duration refresh, LogProvider logProvider )
+    static Props props( ActorRef parent, ClusterClientReceptionist receptionist, Clock clock, Duration refresh )
     {
-        return Props.create( ReadReplicaViewActor.class, () -> new ReadReplicaViewActor( parent, receptionist, clock, refresh, logProvider ) );
+        return Props.create( ReadReplicaViewActor.class, () -> new ReadReplicaViewActor( parent, receptionist, clock, refresh ) );
     }
 
     static final String READ_REPLICA_TOPIC = "rr-topic";
@@ -37,16 +34,14 @@ class ReadReplicaViewActor extends AbstractActorWithTimers
     private final ClusterClientReceptionist receptionist;
     private final Clock clock;
     private final Duration refresh;
-    private final Log log;
     private Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas = new HashMap<>();
 
-    private ReadReplicaViewActor( ActorRef parent, ClusterClientReceptionist receptionist, Clock clock, Duration refresh, LogProvider logProvider )
+    private ReadReplicaViewActor( ActorRef parent, ClusterClientReceptionist receptionist, Clock clock, Duration refresh )
     {
         this.parent = parent;
         this.receptionist = receptionist;
         this.clock = clock;
         this.refresh = refresh;
-        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -76,13 +71,13 @@ class ReadReplicaViewActor extends AbstractActorWithTimers
     private void handleRemovalMessage( ReadReplicaRemovalMessage msg )
     {
         ReadReplicaViewRecord removed = clusterClientReadReplicas.remove( msg.clusterClient() );
-        log.debug( "Removed shut down read replica %s -> %s", msg.clusterClient(), removed );
+        log().debug( "Removed shut down read replica {} -> {}", msg.clusterClient(), removed );
         sendClusterView();
     }
 
     private void handleRefreshMessage( ReadReplicaRefreshMessage msg )
     {
-        log.debug( "Received %s", msg );
+        log().debug( "Received {}", msg );
         clusterClientReadReplicas.put( msg.clusterClient(), new ReadReplicaViewRecord( msg, clock ) );
         sendClusterView();
     }
@@ -94,7 +89,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimers
         List<ActorRef> remove = clusterClientReadReplicas.entrySet()
                 .stream()
                 .filter( entry -> entry.getValue().timestamp().isBefore( nTicksAgo ) )
-                .peek( entry -> log.debug( "Removing %s after inactivity", entry ) )
+                .peek( entry -> log().debug( "Removing {} after inactivity", entry ) )
                 .map( Map.Entry::getKey )
                 .collect( Collectors.toList() );
 
