@@ -224,5 +224,5 @@ object InterpretedPipesFallbackPolicy {
   }
 
   private def unsupported(thing: String): CantCompileQueryException =
-    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing` with fallback, use another runtime.")
+    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing`, use another runtime.")
 }
