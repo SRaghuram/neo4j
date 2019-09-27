@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
 import org.neo4j.cypher.internal.{CypherConfiguration, CypherPreParser, FullyParsedQuery, PreParser, QueryOptions}
-import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption}
+import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
@@ -54,7 +54,7 @@ case class FabricPlanner(
     cypherConfig.queryCacheSize,
   )
   private val catalog = Catalog.fromConfig(config)
-  private[planning] val queryCache = new FabricQueryCache()
+  private[planning] val queryCache = new FabricQueryCache(cypherConfig.queryCacheSize)
 
   def plan(
     query: String,
@@ -83,8 +83,9 @@ case class FabricPlanner(
       original = state.statement(),
       parameters = parameters,
       semantic = state.semantics(),
+      options = preParsed.options,
       catalog = catalog,
-      pipeline = pipeline
+      pipeline = pipeline,
     )
   }
 
@@ -92,8 +93,9 @@ case class FabricPlanner(
     original: Statement,
     parameters: MapValue,
     semantic: SemanticState,
+    options: QueryOptions,
     catalog: Catalog,
-    pipeline: Pipeline.Instance
+    pipeline: Pipeline.Instance,
   ) {
 
     def fragment: Fragment = original match {
@@ -241,8 +243,25 @@ case class FabricPlanner(
       }
     }
 
-    def plan: FabricPlan =
+    def plan: FabricPlan = {
+      val queryType: FabricPlan.QueryType = original match {
+        case q: ast.Query => q.part.containsUpdates match {
+          case true  => FabricPlan.ReadWrite
+          case false => FabricPlan.Read
+        }
+
+        case d: ast.CatalogDDL => Errors.unimplemented("Support for DDL", d)
+        case c: ast.Command    => Errors.unimplemented("Support for commands", c)
+      }
+
+      val executionType: FabricPlan.ExecutionType = options.executionMode match {
+        case CypherExecutionMode.normal  => FabricPlan.Execute
+        case CypherExecutionMode.explain => FabricPlan.Explain
+        case CypherExecutionMode.profile => FabricPlan.Profile
+      }
+
       FabricPlan(fabricQuery, queryType, executionType)
+    }
 
     def fabricQuery: FabricQuery = {
       val frag = fragment
@@ -438,20 +457,6 @@ case class FabricPlanner(
 
       override def withParams(p: Map[String, Any]): BaseState = fail("withParams")
     }
-
-
-    def queryType: FabricPlan.QueryType = original match {
-      case q: ast.Query => q.part.containsUpdates match {
-        case true  => FabricPlan.ReadWrite
-        case false => FabricPlan.Read
-      }
-
-      case d: ast.CatalogDDL => Errors.unimplemented("Support for DDL", d)
-      case c: ast.Command    => Errors.unimplemented("Support for commands", c)
-    }
-
-    def executionType: FabricPlan.ExecutionType =
-      FabricPlan.Execute
 
   }
 

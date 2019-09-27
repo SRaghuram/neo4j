@@ -17,7 +17,6 @@ import com.neo4j.fabric.util.Errors.InvalidQueryException
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal.CypherConfiguration
-import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny

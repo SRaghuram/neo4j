@@ -27,7 +27,6 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 import org.neo4j.cypher.internal.v4_0.ast.FromGraph;
-import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
@@ -70,25 +69,35 @@ public class FabricExecutor
 
     class FabricStatementExecution
     {
-        private final FabricQuery query;
+        private final FabricPlan plan;
         private final MapValue params;
         private final FabricTransaction.FabricExecutionContext ctx;
         private final MergedSummary mergedSummary;
 
         FabricStatementExecution( FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx )
         {
-            this.query = plan.query();
+            this.plan = plan;
             this.params = params;
             this.ctx = ctx;
-            this.mergedSummary = new MergedSummary( queryExecutionType( plan ) );
+            this.mergedSummary = new MergedSummary( plan );
         }
 
         private StatementResult run()
         {
+            var query = plan.query();
             Flux<Record> unit = Flux.just( Records.empty() );
             Flux<String> columns = Flux.fromIterable( asJavaIterable( query.columns().output() ) );
-            Flux<Record> records = run( query, unit );
             Mono<Summary> summary = Mono.just( mergedSummary );
+
+            Flux<Record> records;
+            if ( plan.executionType() == FabricPlan.EXPLAIN() )
+            {
+                records = Flux.empty();
+            }
+            else
+            {
+                records = run( query, unit );
+            }
             return StatementResults.create( columns, records, summary );
         }
 
@@ -243,37 +252,6 @@ public class FabricExecutor
                 this.mergedSummary.add( summary.getQueryStatistics() );
                 this.mergedSummary.add( summary.getNotifications() );
             }
-        }
-
-        private QueryExecutionType queryExecutionType( FabricPlan plan )
-        {
-            QueryExecutionType.QueryType type;
-            if ( plan.queryType() == FabricPlan.READ() )
-            {
-                type = QueryExecutionType.QueryType.READ_ONLY;
-            }
-            else if ( plan.queryType() == FabricPlan.READ_WRITE() )
-            {
-                type = QueryExecutionType.QueryType.READ_WRITE;
-            }
-            else
-            {
-                throw unexpected( "query type", plan.queryType().toString() );
-            }
-
-            if ( plan.executionType() == FabricPlan.EXECUTE() )
-            {
-                return QueryExecutionType.query( type );
-            }
-            else
-            {
-                throw unexpected( "execution type", plan.executionType().toString() );
-            }
-        }
-
-        private IllegalArgumentException unexpected( String type, String got )
-        {
-            return new IllegalArgumentException( "Unexpected " + type + ": " + got );
         }
 
         private UnsupportedOperationException notImplemented( String msg, FabricQuery query )

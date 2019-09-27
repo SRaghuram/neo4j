@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.QueryCache
 import org.neo4j.cypher.internal.cache.LFUCache
 import org.neo4j.values.virtual.MapValue
 
-class FabricQueryCache {
+class FabricQueryCache(size: Int) {
 
   type Query = String
   type Params = MapValue
@@ -18,7 +18,7 @@ class FabricQueryCache {
   type Key = (Query, ParamTypes)
   type Value = FabricPlan
 
-  private val cache = new LFUCache[Key, Value](100)
+  private val cache = new LFUCache[Key, Value](size)
 
   private var hits: Long = 0
   private var misses: Long = 0

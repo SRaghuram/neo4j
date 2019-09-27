@@ -32,6 +32,7 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.Notification;
+import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.StatementType;
 import org.neo4j.graphdb.InputPosition;
@@ -41,6 +42,7 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -381,6 +383,63 @@ class FabricExecutorTest
 
         var codes = summary.notifications().stream().map( Notification::code ).collect( Collectors.toList() );
         assertThat( codes, containsInAnyOrder( codeOf( NotificationCode.DEPRECATED_PROCEDURE ), codeOf( NotificationCode.RUNTIME_UNSUPPORTED ) ) );
+    }
+
+    @Test
+    void testExplain()
+    {
+        when( graph0Result.columns() ).thenReturn( null );
+        when( graph0Result.summary() ).thenReturn( null );
+        when( graph0Result.records() ).thenReturn( null );
+        when( graph1Result.columns() ).thenReturn( null );
+        when( graph1Result.summary() ).thenReturn( null );
+        when( graph1Result.records() ).thenReturn( null );
+
+        Transaction tx = transaction( "mega", AccessMode.READ );
+        ResultSummary summary = tx.run( String.join( "\n",
+                "EXPLAIN",
+                "CALL { FROM mega.graph(0) RETURN 1 AS x }",
+                "CALL { FROM mega.graph(1) CREATE () RETURN 1 AS y }",
+                "RETURN y, x"
+        ) ).summary();
+        tx.success();
+
+        assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
+
+        assertThat( summary.hasPlan(), is( true ) );
+        Plan plan = summary.plan();
+        assertThat( plan.operatorType(), is( "ChainedQuery" ) );
+        assertThat( plan.identifiers(), contains( "y", "x" ) );
+        assertThat( plan.children().size(), is( 3 ) );
+
+        Plan c0 = plan.children().get( 0 );
+        assertThat( c0.operatorType(), is( "Apply" ) );
+        assertThat( c0.identifiers(), containsInAnyOrder( "x" ) );
+        Plan c0c0 = c0.children().get( 0 );
+        assertThat( c0c0.operatorType(), is( "Direct" ) );
+        assertThat( c0c0.identifiers(), containsInAnyOrder( "x" ) );
+        Plan c0c0c0 = c0c0.children().get( 0 );
+        assertThat( c0c0c0.operatorType(), is( "RemoteQuery" ) );
+        assertThat( c0c0c0.identifiers(), containsInAnyOrder( "x" ) );
+        assertThat( c0c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "RETURN 1 AS x" ) ) );
+
+        Plan c1 = plan.children().get( 1 );
+        assertThat( c1.operatorType(), is( "Apply" ) );
+        assertThat( c1.identifiers(), containsInAnyOrder( "x", "y" ) );
+        Plan c1c0 = c1.children().get( 0 );
+        assertThat( c1c0.operatorType(), is( "Direct" ) );
+        assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
+        Plan c1c0c0 = c1c0.children().get( 0 );
+        assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
+        assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "CREATE ()\nRETURN 1 AS y" ) ) );
+        assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
+
+        Plan c2 = plan.children().get( 2 );
+        assertThat( c2.operatorType(), is( "Direct" ) );
+        assertThat( c2.identifiers(), containsInAnyOrder( "x", "y" ) );
+        Plan c2c0 = c2.children().get( 0 );
+        assertThat( c2c0.operatorType(), is( "LocalQuery" ) );
+        assertThat( c2c0.identifiers(), containsInAnyOrder( "x", "y" ) );
     }
 
     private String codeOf( NotificationCode notificationCode )

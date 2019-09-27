@@ -26,11 +26,16 @@ object FabricPlan {
 
   sealed trait ExecutionType
   case object Execute extends ExecutionType
+  case object Explain extends ExecutionType
+  case object Profile extends ExecutionType
   val EXECUTE: ExecutionType = Execute
+  val EXPLAIN: ExecutionType = Explain
+  val PROFILE: ExecutionType = Profile
 }
 
 sealed trait FabricQuery {
   def columns: Columns
+  def children: Seq[FabricQuery]
 }
 
 object FabricQuery {
@@ -63,12 +68,16 @@ object FabricQuery {
   case class Direct(
     query: FabricQuery,
     columns: Columns
-  ) extends FabricQuery
+  ) extends FabricQuery {
+    def children: Seq[FabricQuery] = Seq(query)
+  }
 
   case class Apply(
     query: FabricQuery,
     columns: Columns
-  ) extends FabricQuery
+  ) extends FabricQuery {
+    def children: Seq[FabricQuery] = Seq(query)
+  }
 
   sealed trait LeafQuery extends FabricQuery
 
@@ -79,6 +88,8 @@ object FabricQuery {
 
     def input: Seq[String] =
       Columns.combine(columns.local, columns.imports)
+
+    def children: Seq[FabricQuery] = Seq.empty
   }
 
   case class RemoteQuery(
@@ -92,6 +103,8 @@ object FabricQuery {
         .map(n => n -> Columns.paramName(n)).toMap
 
     def queryString: String = renderer.asString(query)
+
+    def children: Seq[FabricQuery] = Seq.empty
   }
 
   sealed trait CompositeQuery
@@ -102,12 +115,16 @@ object FabricQuery {
     rhs: FabricQuery,
     distinct: Boolean,
     columns: Columns
-  ) extends CompositeQuery
+  ) extends CompositeQuery {
+    def children: Seq[FabricQuery] = Seq(lhs, rhs)
+  }
 
   case class ChainedQuery(
     queries: Seq[FabricQuery],
     columns: Columns
-  ) extends CompositeQuery
+  ) extends CompositeQuery {
+    def children: Seq[FabricQuery] = queries
+  }
 
   val pretty: PrettyPrinting[FabricQuery] = new PrettyPrinting[FabricQuery] {
     def pretty: FabricQuery => Stream[String] = {
