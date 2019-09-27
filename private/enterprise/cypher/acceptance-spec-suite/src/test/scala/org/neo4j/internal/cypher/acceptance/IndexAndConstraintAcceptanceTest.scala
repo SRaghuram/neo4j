@@ -685,7 +685,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node key constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    executeSingle(s"DROP CONSTRAINT `Node key constraint on :Label (prop)`") // needed to test the uniqueness constraint
+    executeSingle("DROP CONSTRAINT `Node key constraint on :Label (prop)`") // needed to test the uniqueness constraint
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
@@ -1033,6 +1033,147 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     } should have message "Unable to drop constraint my_constraint: No such constraint my_constraint."
   }
 
+  test("should be able to drop correct (node key) constraint by schema when overlapping") {
+    // TODO this should not throw on dropping but drop it and throw on getting the index (now non-existing)
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("nodeKey", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    val exception = the[CypherExecutionException] thrownBy {
+      executeSingle("DROP CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    }
+    exception.getCause.getMessage should (
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( EXISTS, :Label(prop) )") or
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( UNIQUE_EXISTS, :Label(prop) )")
+    )
+
+    // THEN
+    graph.getConstraintSchemaByName("existence") should equal(("Label", Seq("prop")))
+    graph.getConstraintSchemaByName("nodeKey") should equal(("Label", Seq("prop")))
+  }
+
+  test("should be able to drop correct (existence) constraint by schema when overlapping") {
+    // TODO this should not throw on dropping but drop it and throw on getting the index (now non-existing)
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("nodeKey", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    val exception = the[CypherExecutionException] thrownBy {
+      executeSingle("DROP CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    }
+    exception.getCause.getMessage should (
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( EXISTS, :Label(prop) )") or
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( UNIQUE_EXISTS, :Label(prop) )")
+    )
+
+    // THEN
+    graph.getConstraintSchemaByName("nodeKey") should equal(("Label", Seq("prop")))
+    graph.getConstraintSchemaByName("existence") should equal(("Label", Seq("prop")))
+  }
+
+  test("should be able to drop correct (node key) constraint by name when overlapping") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("nodeKey", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    executeSingle("DROP CONSTRAINT nodeKey")
+
+    // THEN
+    graph.getConstraintSchemaByName("existence") should equal(("Label", Seq("prop")))
+    the[IllegalArgumentException] thrownBy {
+      graph.getConstraintSchemaByName("nodeKey")
+    } should have message "No constraint found with the name 'nodeKey'."
+  }
+
+  test("should be able to drop correct (existence) constraint by name when overlapping") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("nodeKey", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    executeSingle("DROP CONSTRAINT existence")
+
+    // THEN
+    graph.getConstraintSchemaByName("nodeKey") should equal(("Label", Seq("prop")))
+    the[IllegalArgumentException] thrownBy {
+      graph.getConstraintSchemaByName("existence")
+    } should have message "No constraint found with the name 'existence'."
+  }
+
+  test("should be able to drop correct (uniqueness) constraint by schema when not overlapping") {
+    // TODO this should not throw on dropping but drop it and throw on getting the index (now non-existing)
+    // GIVEN
+    graph.createUniqueConstraintWithName("uniqueness", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+    graph.getNodeConstraint("Label", Seq("prop"))
+
+    // WHEN
+    val exception = the[CypherExecutionException] thrownBy {
+      executeSingle("DROP CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    }
+    exception.getCause.getMessage should (
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( EXISTS, :Label(prop) )") or
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( UNIQUE, :Label(prop) )")
+    )
+
+    // THEN
+    graph.getConstraintSchemaByName("existence") should equal(("Label", Seq("prop")))
+    graph.getConstraintSchemaByName("uniqueness") should equal(("Label", Seq("prop")))
+  }
+
+  test("should be able to drop correct (existence) constraint by schema when not overlapping") {
+    // TODO this should not throw on dropping but drop it and throw on getting the index (now non-existing)
+    // GIVEN
+    graph.createUniqueConstraintWithName("uniqueness", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    val exception = the[CypherExecutionException] thrownBy {
+      executeSingle("DROP CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
+    }
+    exception.getCause.getMessage should (
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( EXISTS, :Label(prop) )") or
+      include("More than one constraint was found with the ':Label(prop)' schema: Constraint( UNIQUE, :Label(prop) )")
+    )
+
+    // THEN
+    graph.getConstraintSchemaByName("uniqueness") should equal(("Label", Seq("prop")))
+    graph.getConstraintSchemaByName("existence") should equal(("Label", Seq("prop")))
+  }
+
+  test("should be able to drop correct (uniqueness) constraint by name when not overlapping") {
+    // GIVEN
+    graph.createUniqueConstraintWithName("uniqueness", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    executeSingle("DROP CONSTRAINT uniqueness")
+
+    // THEN
+    graph.getConstraintSchemaByName("existence") should equal(("Label", Seq("prop")))
+    the[IllegalArgumentException] thrownBy {
+      graph.getConstraintSchemaByName("uniqueness")
+    } should have message "No constraint found with the name 'uniqueness'."
+  }
+
+  test("should be able to drop correct (existence) constraint by name when not overlapping") {
+    // GIVEN
+    graph.createUniqueConstraintWithName("uniqueness", "Label", "prop")
+    graph.createNodeExistenceConstraintWithName("existence", "Label", "prop")
+
+    // WHEN
+    executeSingle("DROP CONSTRAINT existence")
+
+    // THEN
+    graph.getConstraintSchemaByName("uniqueness") should equal(("Label", Seq("prop")))
+    the[IllegalArgumentException] thrownBy {
+      graph.getConstraintSchemaByName("existence")
+    } should have message "No constraint found with the name 'existence'."
+  }
+
   // Combination
 
   test("should create unrelated indexes and constraints") {
@@ -1321,5 +1462,107 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       executeSingle("CREATE INDEX mine4 FOR (n:Label) ON (n.prop4)")
       // THEN
     } should have message "There already exists a constraint called 'mine4'."
+  }
+
+  test("should fail when dropping constraint when only index exists") {
+    // GIVEN
+    graph.createIndexWithName("my_index", "Person", "name")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
+      // THEN
+    } should have message "Unable to drop constraint on :Person(name): No such constraint :Person(name)."
+
+    // Uniqueness constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
+      // THEN
+    } should have message "Unable to drop constraint on :Person(name): No such constraint :Person(name)."
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT EXISTS (n.name)")
+      // THEN
+    } should have message "Unable to drop constraint on :Person(name): No such constraint :Person(name)."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT ON ()-[n:Person]-() ASSERT EXISTS (n.name)")
+      // THEN
+    } should have message "Unable to drop constraint on -[:Person(name)]-: No such constraint -[:Person(name)]-."
+
+    // Drop by name
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP CONSTRAINT my_index")
+      // THEN
+    } should have message "Unable to drop constraint my_index: No such constraint my_index."
+  }
+
+  test("should fail when dropping index when only constraint exists") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("mine1", "Label", "prop1")
+    graph.createUniqueConstraintWithName("mine2", "Label", "prop2")
+    graph.createNodeExistenceConstraintWithName("mine3", "Label", "prop3")
+    graph.createRelationshipExistenceConstraintWithName("mine4", "Label", "prop4")
+    graph.awaitIndexesOnline()
+
+    // Node key constraint (backed by index)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX ON :Label(prop1)")
+      // THEN
+    } should have message "Unable to drop index on :Label(prop1): Index belongs to constraint: :Label(prop1)"
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX mine1")
+      // THEN
+    } should have message "Unable to drop index on :Label(prop1): Index belongs to constraint: :Label(prop1)"
+
+    // Uniqueness constraint (backed by index)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX ON :Label(prop2)")
+      // THEN
+    } should have message "Unable to drop index on :Label(prop2): Index belongs to constraint: :Label(prop2)"
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX mine2")
+      // THEN
+    } should have message "Unable to drop index on :Label(prop2): Index belongs to constraint: :Label(prop2)"
+
+    // Node property existence constraint
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX ON :Label(prop3)")
+      // THEN
+    } should have message "Unable to drop index on :Label(prop3): No such index :Label(prop3)."
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX mine3")
+      // THEN
+    } should have message "Unable to drop index mine3: No such index mine3."
+
+    // Relationship property existence constraint (close as can get to same schema)
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX ON :Label(prop4)")
+      // THEN
+    } should have message "Unable to drop index on :Label(prop4): No such index :Label(prop4)."
+
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("DROP INDEX mine4")
+      // THEN
+    } should have message "Unable to drop index mine4: No such index mine4."
   }
 }

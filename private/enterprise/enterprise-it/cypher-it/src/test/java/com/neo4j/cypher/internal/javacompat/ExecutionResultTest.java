@@ -382,10 +382,10 @@ class ExecutionResultTest
 
             // Then
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-            assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "planner" ), equalTo( "ADMINISTRATION" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "ADMINISTRATION" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "SCHEMA" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "SCHEMA" ) );
             assertThat( arguments.get( "IndexName" ), equalTo( null ) );
             transaction.commit();
         }
@@ -400,10 +400,10 @@ class ExecutionResultTest
 
             // Then
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-            assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "planner" ), equalTo( "ADMINISTRATION" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "ADMINISTRATION" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "SCHEMA" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "SCHEMA" ) );
             assertThat( arguments.get( "IndexName" ), equalTo( "my_index" ) );
             transaction.commit();
         }
@@ -418,10 +418,10 @@ class ExecutionResultTest
 
             // Then
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
-            assertThat( arguments.get( "planner" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "planner-impl" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "PROCEDURE" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "PROCEDURE" ) );
+            assertThat( arguments.get( "planner" ), equalTo( "ADMINISTRATION" ) );
+            assertThat( arguments.get( "planner-impl" ), equalTo( "ADMINISTRATION" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "SCHEMA" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "SCHEMA" ) );
             assertThat( arguments.get( "ConstraintName" ), equalTo( "my_constraint" ) );
             transaction.commit();
         }
