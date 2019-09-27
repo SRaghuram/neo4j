@@ -32,7 +32,6 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
@@ -57,7 +56,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
-import static org.neo4j.configuration.ssl.SslPolicyScope.BOLT;
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 abstract class AbstractRESTInteraction extends CommunityServerTestBase implements NeoInteractionLevel<RESTSubject>
@@ -79,7 +77,6 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         config.forEach( ( setting, s ) -> stringMap.put( setting.name(), s ) );
 
         CommunityServerBuilder builder = EnterpriseServerBuilder.serverOnRandomPorts();
-        PemSslPolicyConfig.forScope( BOLT );
         builder = builder
                 .persistent()
                 .usingDataDir( dataDir.getAbsolutePath() )

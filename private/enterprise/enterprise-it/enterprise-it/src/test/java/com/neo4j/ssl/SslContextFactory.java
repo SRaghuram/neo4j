@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
@@ -86,11 +86,12 @@ public class SslContextFactory
         Config.Builder config = Config.newBuilder();
         config.set( SslSystemSettings.netty_ssl_provider, sslProvider );
 
-        PemSslPolicyConfig policyConfig = PemSslPolicyConfig.forScope( scope );
+        SslPolicyConfig policyConfig = SslPolicyConfig.forScope( scope );
         File baseDirectory = sslResource.privateKey().getParentFile();
         new File( baseDirectory, "trusted" ).mkdirs();
         new File( baseDirectory, "revoked" ).mkdirs();
 
+        config.set( policyConfig.enabled, Boolean.TRUE );
         config.set( policyConfig.base_directory, baseDirectory.toPath() );
         config.set( policyConfig.private_key, sslResource.privateKey().toPath() );
         config.set( policyConfig.public_certificate, sslResource.publicCertificate().toPath() );

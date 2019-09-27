@@ -17,7 +17,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ssl.ClientAuth;
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.ssl.SelfSignedCertificateFactory;
@@ -30,7 +30,7 @@ public class HostnameVerificationHelper
     public static Config aConfig( String hostname, TestDirectory testDirectory, SslPolicyScope scope )
             throws GeneralSecurityException, IOException, OperatorCreationException
     {
-        PemSslPolicyConfig policy = PemSslPolicyConfig.forScope( scope );
+        SslPolicyConfig policy = SslPolicyConfig.forScope( scope );
         String random = UUID.randomUUID().toString();
         File baseDirectory = testDirectory.directory( "base_directory_" + random );
         File validCertificatePath = new File( baseDirectory, "certificate.crt" );
@@ -42,6 +42,7 @@ public class HostnameVerificationHelper
         certFactory.createSelfSignedCertificate( validCertificatePath, validPrivateKeyPath, hostname ); // Sets Subject Alternative Name(s) to hostname
         return Config.newBuilder()
 
+                .set( policy.enabled, Boolean.TRUE )
                 .set( policy.base_directory, baseDirectory.toPath() )
                 .set( policy.trusted_dir, trusted.toPath() )
                 .set( policy.revoked_dir, revoked.toPath() )
@@ -61,7 +62,7 @@ public class HostnameVerificationHelper
 
     public static void trust( Config target, Config subject, SslPolicyScope scope ) throws IOException
     {
-        PemSslPolicyConfig sslPolicyConfig = PemSslPolicyConfig.forScope( scope );
+        SslPolicyConfig sslPolicyConfig = SslPolicyConfig.forScope( scope );
         Path trustedDirectory = target.get( sslPolicyConfig.trusted_dir );
         File certificate = subject.get( sslPolicyConfig.public_certificate ).toFile();
         Path trustedCertFilePath = trustedDirectory.resolve( certificate.getName() );

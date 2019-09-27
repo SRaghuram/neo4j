@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.helpers.collection.MapUtil;
@@ -64,17 +63,19 @@ class SecureClusterIT
     void shouldReplicateInSecureCluster() throws Exception
     {
         // given
-        SslPolicyConfig policyConfig = PemSslPolicyConfig.forScope( CLUSTER );
+        SslPolicyConfig policyConfig = SslPolicyConfig.forScope( CLUSTER );
 
         Map<String,String> coreParams = MapUtil.stringMap(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
                 SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
+                policyConfig.enabled.name(), Boolean.TRUE.toString(),
                 policyConfig.base_directory.name(), "certificates/cluster"
         );
         Map<String,String> readReplicaParams = MapUtil.stringMap(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
+                policyConfig.enabled.name(), Boolean.TRUE.toString(),
                 policyConfig.base_directory.name(), "certificates/cluster"
         );
 

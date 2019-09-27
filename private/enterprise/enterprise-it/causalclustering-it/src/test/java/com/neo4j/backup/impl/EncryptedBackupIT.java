@@ -44,7 +44,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -466,7 +465,8 @@ class EncryptedBackupIT
             File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
             backupPolicyLocation.mkdirs();
             Properties properties = new Properties();
-            SslPolicyConfig backupSslConfigGroup = PemSslPolicyConfig.forScope( BACKUP );
+            SslPolicyConfig backupSslConfigGroup = SslPolicyConfig.forScope( BACKUP );
+            properties.setProperty( backupSslConfigGroup.enabled.name(), Boolean.TRUE.toString() );
             properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
             config.getParentFile().mkdirs();
 
@@ -545,12 +545,14 @@ class EncryptedBackupIT
 
         private static void configureClusterConfigEncryptedCluster( Map<Setting<?>,String> settings )
         {
-            settings.put( PemSslPolicyConfig.forScope( CLUSTER ).base_directory, Path.of( "certificates/" + clusterPolicyName ).toString() );
+            settings.put( SslPolicyConfig.forScope( CLUSTER ).enabled, Boolean.TRUE.toString() );
+            settings.put( SslPolicyConfig.forScope( CLUSTER ).base_directory, Path.of( "certificates/" + clusterPolicyName ).toString() );
         }
 
         private static void configureClusterConfigEncryptedBackup( Map<Setting<?>,String> settings )
         {
-            settings.put( PemSslPolicyConfig.forScope( BACKUP ).base_directory, Path.of( "certificates/" + backupPolicyName ).toString() );
+            settings.put( SslPolicyConfig.forScope( BACKUP ).enabled, Boolean.TRUE.toString() );
+            settings.put( SslPolicyConfig.forScope( BACKUP ).base_directory, Path.of( "certificates/" + backupPolicyName ).toString() );
         }
 
         private static Collection<ClusterMember> allMembers( Cluster cluster )

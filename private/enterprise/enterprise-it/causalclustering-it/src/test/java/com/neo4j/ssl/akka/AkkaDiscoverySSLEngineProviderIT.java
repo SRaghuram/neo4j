@@ -45,7 +45,7 @@ import javax.net.ssl.SSLEngine;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ssl.ClientAuth;
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
@@ -227,7 +227,7 @@ public class AkkaDiscoverySSLEngineProviderIT
     @Test
     public void shouldConnectWithHostnameVerificationAndClientAuth() throws Throwable
     {
-        PemSslPolicyConfig policy = PemSslPolicyConfig.forScope( CLUSTER );
+        SslPolicyConfig policy = SslPolicyConfig.forScope( CLUSTER );
 
         Config serverConfig = aConfig( "localhost", testDir, CLUSTER );
         serverConfig.set( policy.client_auth, ClientAuth.REQUIRE );

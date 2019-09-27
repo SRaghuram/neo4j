@@ -26,7 +26,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.configuration.ssl.ClientAuth;
-import org.neo4j.configuration.ssl.PemSslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
@@ -51,7 +51,7 @@ public class BoltTlsIT
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
-    private PemSslPolicyConfig sslPolicy = PemSslPolicyConfig.forScope( BOLT );
+    private SslPolicyConfig sslPolicy = SslPolicyConfig.forScope( BOLT );
 
     private GraphDatabaseAPI db;
     private SslResource sslResource;
@@ -120,6 +120,7 @@ public class BoltTlsIT
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) )
                 .setConfig( BoltConnector.encryption_level, EncryptionLevel.OPTIONAL )
+                .setConfig( sslPolicy.enabled, true )
                 .setConfig( sslPolicy.base_directory, Path.of( "certificates" ) )
                 .setConfig( sslPolicy.tls_versions, Arrays.asList( setup.boltTlsVersions.split( "," ) ) )
                 .setConfig( sslPolicy.client_auth, ClientAuth.NONE )
