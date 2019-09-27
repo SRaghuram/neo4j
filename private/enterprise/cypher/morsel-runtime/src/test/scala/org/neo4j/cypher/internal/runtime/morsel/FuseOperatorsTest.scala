@@ -183,8 +183,9 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
   def produceResult(out: String*): LogicalPlan => LogicalPlan = ProduceResult(_, out.toSeq)
 
+  private val fusionPolicy = OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false)
+
   class PipelineBuilder(head: LogicalPlan) {
-    private val policy = OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false)
     private val slots = mutable.Map.empty[String, Slot]
     private var longCount = 0
     private var refCount = 0
@@ -193,13 +194,12 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     private val applyPlansOffsets = mutable.Map[Id, Int](Id(0) -> 0)
     val applyPlans = new ApplyPlans()
     val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
-    if (policy.canFuse(head)) {
+    if (fusionPolicy.canFuse(head)) {
       pipeline.fusedPlans += head
     }
 
     private def canFuse(plan: LogicalPlan): Boolean =
-      pipeline.fusedPlans.nonEmpty && (pipeline.fusedPlans.last eq plan.lhs.get) && policy.canFuse(plan)
-
+      pipeline.fusedPlans.nonEmpty && (pipeline.fusedPlans.last eq plan.lhs.get) && fusionPolicy.canFuse(plan)
 
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
       current = f(current)
@@ -315,7 +315,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                             readOnly = true,
                             indexRegistrator = mock[QueryIndexRegistrator],
                             semanticTable = mock[SemanticTable],
-                            INTERPRETED_PIPES_FALLBACK_DISABLED,
+                            MorselPipelineBreakingPolicy(fusionPolicy, INTERPRETED_PIPES_FALLBACK_DISABLED),
                             slottedPipeBuilder = None) {
 
     override def create(plan: LogicalPlan,

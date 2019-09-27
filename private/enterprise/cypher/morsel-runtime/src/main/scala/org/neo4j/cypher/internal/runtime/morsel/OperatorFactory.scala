@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, Expand, ExpandAll, LogicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
@@ -38,8 +38,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val readOnly: Boolean,
                       val indexRegistrator: QueryIndexRegistrator,
                       semanticTable: SemanticTable,
-                      val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
-                      val slottedPipeBuilder: Option[SlottedPipeMapper]) {
+                      val breakingPolicy: MorselPipelineBreakingPolicy,
+                      val slottedPipeBuilder: Option[PipeMapper]) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -336,7 +336,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
-        interpretedPipesFallbackPolicy.breakOn(plan)
+        breakingPolicy.interpretedPipesPolicy.breakOn(plan)
         createSlottedPipeHeadOperator(plan)
 
       case _ =>
@@ -393,7 +393,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
         case _ if slottedPipeBuilder.isDefined =>
           // Validate that we support fallback for this plan (throws CantCompileQueryException)
-          if (interpretedPipesFallbackPolicy.breakOn(plan)) {
+          breakingPolicy.interpretedPipesPolicy.breakOn(plan)
+          if (breakingPolicy.breakOn(plan)) {
             // Plan is supported, but only as a head plan
             throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a fallback middle plan, use another runtime.")
           }

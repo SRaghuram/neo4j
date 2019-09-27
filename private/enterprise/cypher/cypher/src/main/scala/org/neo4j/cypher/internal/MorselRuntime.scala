@@ -146,7 +146,7 @@ class MorselRuntime(parallelExecution: Boolean,
                                               readOnly = readOnly,
                                               queryIndexRegistrator,
                                               query.semanticTable,
-                                              interpretedPipesFallbackPolicy,
+                                              breakingPolicy,
                                               slottedPipeBuilder)
 
     DebugLog.logDiff("PipelineBuilder")

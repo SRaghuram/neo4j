@@ -134,7 +134,9 @@ class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
                          resources: QueryResources): Unit = {
 
       // Set the output row in the state, so that the feed pipe can access it to iterate over
-      feedPipeQueryState.morsel = outputRow
+      // To be safe for all types of non-breaking plans we need to a fresh morsel cursor, since the pipe may be wrapping the iterator
+      val feedRow = outputRow.shallowCopy()
+      feedPipeQueryState.morsel = feedRow
 
       if (resultIterator == null) {
         resultIterator = pipe.createResults(feedPipeQueryState)
@@ -142,8 +144,8 @@ class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
 
       // NOTE: resultIterator.hasNext will check the validity of outputRow so we do not need to also do that explicitly in this loop condition
       while (resultIterator.hasNext) {
-        val resultRow = resultIterator.next()
-        if (!(resultRow eq outputRow)) {
+        val resultRow = resultIterator.next() // This may advance feedRow
+        if (!(resultRow eq feedRow)) {
           outputRow.copyFrom(resultRow, outputRow.getLongsPerRow, outputRow.getRefsPerRow)
         }
         outputRow.moveToNextRow()

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.internal.ir.SimplePatternLength
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
@@ -145,7 +146,20 @@ object InterpretedPipesFallbackPolicy {
 
     val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
       //------------------------------------------------------------------------------------
+      // Whitelisted non-breaking plans
+      case _: DropResult |
+           _: ErrorPlan =>
+        false
+
+      case ProjectEndpoints(_, _, _, _, _, _, _, true, SimplePatternLength) =>  // Directed length 1 is not cardinality increasing
+        false
+
+      //------------------------------------------------------------------------------------
       // Whitelisted breaking plans - All cardinality increasing plans need to break
+
+      case _: ProjectEndpoints => // All other types of ProjectEndpoints are cardinality increasing
+        true
+
       case e: Expand if e.mode == ExpandInto =>
         true
 
@@ -154,22 +168,10 @@ object InterpretedPipesFallbackPolicy {
            _: FindShortestPaths =>
         true
 
-      case p: ProjectEndpoints if !p.directed => // Undirected is cardinality increasing
-        true
-
       //------------------------------------------------------------------------------------
       // Whitelisted breaking plans not supported with parallel execution
       case _: ProcedureCall if !parallelExecution =>
         true
-
-      //------------------------------------------------------------------------------------
-      // Whitelisted non-breaking plans
-      case p: ProjectEndpoints if p.directed =>  // Directed is not cardinality increasing
-        false
-
-      case _: DropResult |
-           _: ErrorPlan =>
-        false
     }
 
     override def breakOn(lp: LogicalPlan): Boolean = {
