@@ -146,20 +146,7 @@ object InterpretedPipesFallbackPolicy {
 
     val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
       //------------------------------------------------------------------------------------
-      // Whitelisted non-breaking plans
-      case _: DropResult |
-           _: ErrorPlan =>
-        false
-
-      case ProjectEndpoints(_, _, _, _, _, _, _, true, SimplePatternLength) =>  // Directed length 1 is not cardinality increasing
-        false
-
-      //------------------------------------------------------------------------------------
       // Whitelisted breaking plans - All cardinality increasing plans need to break
-
-      case _: ProjectEndpoints => // All other types of ProjectEndpoints are cardinality increasing
-        true
-
       case e: Expand if e.mode == ExpandInto =>
         true
 
@@ -169,9 +156,18 @@ object InterpretedPipesFallbackPolicy {
         true
 
       //------------------------------------------------------------------------------------
-      // Whitelisted breaking plans not supported with parallel execution
-      case _: ProcedureCall if !parallelExecution =>
-        true
+      // Whitelisted plans that can be breaking or non-breaking
+      case ProcedureCall(_, call) if !parallelExecution =>
+        !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
+
+      case p: ProjectEndpoints =>
+        !p.directed // Undirected is cardinality increasing, directed is not
+
+      //------------------------------------------------------------------------------------
+      // Whitelisted non-breaking plans
+      case _: DropResult |
+           _: ErrorPlan =>
+        false
     }
 
     override def breakOn(lp: LogicalPlan): Boolean = {
