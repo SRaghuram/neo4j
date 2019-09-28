@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.aggregators.{Aggregator, AggregatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
-import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityMutableDescription, WorkIdentityMutableDescriptionImpl}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -501,20 +501,28 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  private def workIdentityFromSlottedPipePlan(opName: String, plan: LogicalPlan, pipe: Pipe): WorkIdentity = {
+  private def workIdentityDescriptionForPipe(pipe: Pipe): String = {
     @tailrec
     def collectPipeNames(pipe: Pipe, acc: List[String]): List[String] = {
       val pipeName = pipe.getClass.getSimpleName
       pipe match {
         case p: PipeWithSource =>
           collectPipeNames(p.getSource, pipeName :: acc)
+        case p: DropResultPipe => // Special case that does not implement PipeWithSource
+          collectPipeNames(p.source, pipeName :: acc)
         case _ =>
           acc
       }
     }
 
     val pipeNames = collectPipeNames(pipe, Nil)
-    WorkIdentityImpl(plan.id, s"$opName[${plan.getClass.getSimpleName}](${pipeNames.mkString("->")})")
+    pipeNames.mkString("(", "->", ")")
+  }
+
+  private def workIdentityFromSlottedPipePlan(opName: String, plan: LogicalPlan, pipe: Pipe): WorkIdentityMutableDescription = {
+    val prefix = s"$opName[${plan.getClass.getSimpleName}]"
+    val pipeDescription = workIdentityDescriptionForPipe(pipe)
+    WorkIdentityMutableDescriptionImpl(plan.id, prefix, pipeDescription)
   }
 
   protected def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
@@ -530,6 +538,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         // We chain the new pipe to the existing pipe in the previous operator
         val chainedPipe = slottedPipeBuilder.get.onOneChildPlan(plan, slottedPipeOperator.pipe)
         slottedPipeOperator.setPipe(chainedPipe)
+        // Recompute work identity description
+        slottedPipeOperator.workIdentity.updateDescription(workIdentityDescriptionForPipe(chainedPipe))
         None
 
       case None =>

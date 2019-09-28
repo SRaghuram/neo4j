@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.operators.SlottedPipeOperator.{createFeedPipeQueryState, updateProfileEvent}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityMutableDescription}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -31,14 +31,14 @@ import org.neo4j.values.AnyValue
 //    In this case we have to pass outputRow to the input side to get the correct slot configuration.
 //    We may or may not need to copy on the output side of the operator, depending on if the pipe creates a copy of the row.
 
-abstract class SlottedPipeOperator(initialPipe: Pipe) {
+abstract class SlottedPipeOperator(val workIdentity: WorkIdentityMutableDescription, initialPipe: Pipe) {
   private var _pipe: Pipe = initialPipe
   def pipe: Pipe = _pipe
   def setPipe(newPipe: Pipe): Unit = _pipe = newPipe
 }
 
-class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
-                              initialPipe: Pipe) extends SlottedPipeOperator(initialPipe) with Operator {
+class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
+                              initialPipe: Pipe) extends SlottedPipeOperator(workIdentity, initialPipe) with Operator {
 
   override def toString: String = workIdentity.toString
 
@@ -105,8 +105,8 @@ class SlottedPipeHeadOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class SlottedPipeMiddleOperator(val workIdentity: WorkIdentity,
-                                val initialPipe: Pipe) extends SlottedPipeOperator(initialPipe) with MiddleOperator {
+class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
+                                val initialPipe: Pipe) extends SlottedPipeOperator(workIdentity, initialPipe) with MiddleOperator {
 
   override def toString: String = workIdentity.toString
 
