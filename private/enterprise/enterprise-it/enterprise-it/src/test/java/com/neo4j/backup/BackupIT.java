@@ -1287,12 +1287,12 @@ class BackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( Label.label( labelName ) ).on( propertyName ).create();
+            tx.schema().indexFor( Label.label( labelName ) ).on( propertyName ).create();
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
             tx.commit();
         }
     }

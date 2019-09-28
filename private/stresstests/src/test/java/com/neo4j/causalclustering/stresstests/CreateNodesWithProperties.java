@@ -99,7 +99,7 @@ class CreateNodesWithProperties extends Workload
             {
                 for ( int i = 1; i <= 8; i++ )
                 {
-                    db.schema().indexFor( label ).on( prop( i ) ).create();
+                    tx.schema().indexFor( label ).on( prop( i ) ).create();
                 }
                 tx.commit();
             } );

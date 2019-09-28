@@ -1386,23 +1386,26 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
-        }
-        catch ( Exception e )
-        {
-            throw indexWaitException( db, e );
+            try
+            {
+                tx.schema().awaitIndexesOnline( 1, TimeUnit.DAYS );
+            }
+            catch ( Exception e )
+            {
+                throw indexWaitException( tx, e );
+            }
         }
     }
 
-    private static RuntimeException indexWaitException( GraphDatabaseService db, Exception e )
+    private static RuntimeException indexWaitException( Transaction tx, Exception e )
     {
         RuntimeException exception = new RuntimeException( "Error while waiting for indexes to come online", e );
-        for ( IndexDefinition index : db.schema().getIndexes() )
+        for ( IndexDefinition index : tx.schema().getIndexes() )
         {
-            Schema.IndexState indexState = db.schema().getIndexState( index );
+            Schema.IndexState indexState = tx.schema().getIndexState( index );
             if ( indexState == Schema.IndexState.FAILED )
             {
-                exception.addSuppressed( new RuntimeException( "Index " + index + " failed: " + db.schema().getIndexFailure( index ) ) );
+                exception.addSuppressed( new RuntimeException( "Index " + index + " failed: " + tx.schema().getIndexFailure( index ) ) );
             }
             else if ( indexState == Schema.IndexState.POPULATING )
             {
@@ -1416,14 +1419,18 @@ public class DataGenerator
     {
         try ( Transaction tx = db.beginTx() )
         {
-            for ( IndexDefinition index : db.schema().getIndexes( label ) )
+            try
             {
-                db.schema().awaitIndexOnline( index, 1, TimeUnit.DAYS );
+                var schema = tx.schema();
+                for ( IndexDefinition index : schema.getIndexes( label ) )
+                {
+                    schema.awaitIndexOnline( index, 1, TimeUnit.DAYS );
+                }
             }
-        }
-        catch ( Exception e )
-        {
-            throw indexWaitException( db, e );
+            catch ( Exception e )
+            {
+                throw indexWaitException( tx, e );
+            }
         }
     }
 

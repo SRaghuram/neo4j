@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.containsOnly;
 import static org.neo4j.test.mockito.matcher.Neo4jMatchers.getConstraints;
-import static org.neo4j.test.mockito.matcher.Neo4jMatchers.inTx;
 
 @EnterpriseDbmsExtension
 class SchemaWithPECAcceptanceTest
@@ -59,7 +58,10 @@ class SchemaWithPECAcceptanceTest
         ConstraintDefinition constraint = createNodePropertyExistenceConstraint( helper, label, propertyKey );
 
         // Then
-        assertThat( getConstraints( db ), inTx( db, containsOnly( constraint ) ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            assertThat( getConstraints( transaction ), containsOnly( constraint ) );
+        }
     }
 
     @ParameterizedTest
@@ -70,7 +72,10 @@ class SchemaWithPECAcceptanceTest
         ConstraintDefinition constraint = createRelationshipPropertyExistenceConstraint( helper, Types.MY_TYPE, propertyKey );
 
         // Then
-        assertThat( getConstraints( db ), inTx( db, containsOnly( constraint ) ) );
+        try ( Transaction transaction = db.beginTx() )
+        {
+            assertThat( getConstraints( transaction ), containsOnly( constraint ) );
+        }
     }
 
     @ParameterizedTest
@@ -87,7 +92,7 @@ class SchemaWithPECAcceptanceTest
         // WHEN THEN
         try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( getConstraints( db, label ), containsOnly( constraint1, constraint2, constraint3 ) );
+            assertThat( getConstraints( transaction, label ), containsOnly( constraint1, constraint2, constraint3 ) );
         }
     }
 
@@ -102,7 +107,7 @@ class SchemaWithPECAcceptanceTest
         // WHEN THEN
         try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( getConstraints( db, Types.MY_TYPE ), containsOnly( constraint1 ) );
+            assertThat( getConstraints( transaction, Types.MY_TYPE ), containsOnly( constraint1 ) );
         }
     }
 
@@ -119,7 +124,7 @@ class SchemaWithPECAcceptanceTest
         // WHEN THEN
         try ( Transaction transaction = db.beginTx() )
         {
-            assertThat( getConstraints( db ), containsOnly( constraint1, constraint2, constraint3, constraint4 ) );
+            assertThat( getConstraints( transaction ), containsOnly( constraint1, constraint2, constraint3, constraint4 ) );
         }
     }
 
@@ -130,7 +135,7 @@ class SchemaWithPECAcceptanceTest
         createNodeKeyConstraint( helper, "MySchema", label, propertyKey );
         try ( Transaction tx = db.beginTx() )
         {
-            IndexDefinition index = db.schema().getIndexByName( "MySchema" );
+            IndexDefinition index = tx.schema().getIndexByName( "MySchema" );
             assertTrue( index.isConstraintIndex() );
             assertTrue( index.isNodeIndex() );
             assertEquals( "MySchema", index.getName() );
@@ -143,20 +148,20 @@ class SchemaWithPECAcceptanceTest
         Collection<ConstraintDefinition> before;
         try ( Transaction transaction = db.beginTx() )
         {
-            before = getConstraints( db ).collection();
+            before = getConstraints( transaction ).collection();
             helper.createUniquenessConstraint( db, transaction, label, propertyKey );
             transaction.commit();
         }
         helper.awaitIndexes( db );
         try ( Transaction transaction = db.beginTx() )
         {
-            return getCreatedConstraint( before );
+            return getCreatedConstraint( transaction, before );
         }
     }
 
-    private ConstraintDefinition getCreatedConstraint( Collection<ConstraintDefinition> before )
+    private ConstraintDefinition getCreatedConstraint( Transaction transaction, Collection<ConstraintDefinition> before )
     {
-        Collection<ConstraintDefinition> after = getConstraints( db ).collection();
+        Collection<ConstraintDefinition> after = getConstraints( transaction ).collection();
         after.removeAll( before );
         if ( after.size() == 1 )
         {
@@ -170,7 +175,7 @@ class SchemaWithPECAcceptanceTest
         Collection<ConstraintDefinition> before;
         try ( Transaction transaction = db.beginTx() )
         {
-            before = getConstraints( db ).collection();
+            before = getConstraints( transaction ).collection();
             helper.createNodeKeyConstraint( db, transaction, label, propertyKey );
             transaction.commit();
         }
@@ -179,7 +184,7 @@ class SchemaWithPECAcceptanceTest
 
         try ( Transaction transaction = db.beginTx() )
         {
-            return getCreatedConstraint( before );
+            return getCreatedConstraint( transaction, before );
         }
     }
 
@@ -189,8 +194,8 @@ class SchemaWithPECAcceptanceTest
         ConstraintDefinition constraint;
         try ( Transaction transaction = db.beginTx() )
         {
-            before = getConstraints( db ).collection();
-            constraint = helper.createNodeKeyConstraint( db, name, label, propertyKey );
+            before = getConstraints( transaction ).collection();
+            constraint = helper.createNodeKeyConstraint( transaction, name, label, propertyKey );
             transaction.commit();
         }
 
@@ -198,7 +203,7 @@ class SchemaWithPECAcceptanceTest
 
         try ( Transaction transaction = db.beginTx() )
         {
-            ConstraintDefinition foundConstraint = getCreatedConstraint( before );
+            ConstraintDefinition foundConstraint = getCreatedConstraint( transaction, before );
             assertEquals( constraint, foundConstraint );
         }
     }
@@ -207,9 +212,9 @@ class SchemaWithPECAcceptanceTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+            Collection<ConstraintDefinition> before = getConstraints( transaction ).collection();
             helper.createNodePropertyExistenceConstraint( db, transaction, label, propertyKey );
-            var constraint = getCreatedConstraint( before );
+            var constraint = getCreatedConstraint( transaction, before );
             transaction.commit();
             return constraint;
         }
@@ -219,9 +224,9 @@ class SchemaWithPECAcceptanceTest
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Collection<ConstraintDefinition> before = getConstraints( db ).collection();
+            Collection<ConstraintDefinition> before = getConstraints( transaction ).collection();
             helper.createRelPropertyExistenceConstraint( db, transaction, type, propertyKey );
-            var constraint = getCreatedConstraint( before );
+            var constraint = getCreatedConstraint( transaction, before );
             transaction.commit();
             return constraint;
         }

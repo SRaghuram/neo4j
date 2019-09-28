@@ -489,13 +489,13 @@ public class StoreUpgradeIT
         // All constraints that have indexes, must have their indexes named after them.
         try ( Transaction tx = db.beginTx() )
         {
-            for ( ConstraintDefinition constraint : db.schema().getConstraints() )
+            for ( ConstraintDefinition constraint : tx.schema().getConstraints() )
             {
                 if ( constraint.isConstraintType( ConstraintType.UNIQUENESS ) || constraint.isConstraintType( ConstraintType.NODE_KEY ) )
                 {
                     // These constraints have indexes, so we must be able to find their indexes by the constraint name.
                     // The 'getIndexByName' method will throw if there is no such index.
-                    db.schema().getIndexByName( constraint.getName() );
+                    tx.schema().getIndexByName( constraint.getName() );
                 }
             }
             tx.commit();
@@ -564,7 +564,7 @@ public class StoreUpgradeIT
             assertThat( nodeCount, is( store.expectedNodeCount ) );
 
             // count indexes
-            long indexCount = count( db.schema().getIndexes() );
+            long indexCount = count( tx.schema().getIndexes() );
             assertThat( indexCount, is( store.indexes() ) );
 
             // check last committed tx

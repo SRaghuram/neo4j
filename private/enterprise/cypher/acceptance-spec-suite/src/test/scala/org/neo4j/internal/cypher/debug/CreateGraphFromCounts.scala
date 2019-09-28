@@ -55,7 +55,7 @@ trait CreateGraphFromCounts {
 
       for (index <- row.data.indexes) {
         val label = Label.label(index.labels.head)
-        var creator = graph.schema().indexFor(label)
+        var creator = tx.schema().indexFor(label)
         for (prop <- index.properties)
           creator = creator.on(prop)
         try {

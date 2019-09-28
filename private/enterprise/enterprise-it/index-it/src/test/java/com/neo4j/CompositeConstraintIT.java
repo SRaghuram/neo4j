@@ -91,7 +91,7 @@ class CompositeConstraintIT
     {
         try ( Transaction tx = database.beginTx() )
         {
-            database.schema().awaitIndexesOnline( 2, TimeUnit.MINUTES );
+            tx.schema().awaitIndexesOnline( 2, TimeUnit.MINUTES );
             tx.commit();
         }
     }

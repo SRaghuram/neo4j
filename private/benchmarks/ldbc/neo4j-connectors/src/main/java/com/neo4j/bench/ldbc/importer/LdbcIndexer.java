@@ -77,8 +77,8 @@ public class LdbcIndexer
         LOGGER.info( "Dropping indexes and constraints..." );
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().getConstraints().forEach( ConstraintDefinition::drop );
-            db.schema().getIndexes().forEach( IndexDefinition::drop );
+            tx.schema().getConstraints().forEach( ConstraintDefinition::drop );
+            tx.schema().getIndexes().forEach( IndexDefinition::drop );
             tx.commit();
         }
     }
@@ -209,27 +209,28 @@ public class LdbcIndexer
     {
         try ( Transaction tx = db.beginTx() )
         {
-            if ( db.schema().getIndexes().iterator().hasNext() )
+            var schema = tx.schema();
+            if ( schema.getIndexes().iterator().hasNext() )
             {
                 LOGGER.info( "Waiting For Indexes To Build" );
             }
-            for ( IndexDefinition def : db.schema().getIndexes() )
+            for ( IndexDefinition def : schema.getIndexes() )
             {
                 LOGGER.info( format( "\t(%s , %s) - %s",
-                        def.getLabels(), def.getPropertyKeys(), db.schema().getIndexState( def ) ) );
+                        def.getLabels(), def.getPropertyKeys(), schema.getIndexState( def ) ) );
 
-                assertIndexNotFailed( db, def );
+                assertIndexNotFailed( tx, def );
 
-                if ( db.schema().getIndexState( def ) != Schema.IndexState.ONLINE )
+                if ( schema.getIndexState( def ) != Schema.IndexState.ONLINE )
                 {
-                    while ( db.schema().getIndexState( def ) == Schema.IndexState.POPULATING )
+                    while ( schema.getIndexState( def ) == Schema.IndexState.POPULATING )
                     {
                         Thread.sleep( 500 );
                     }
                     LOGGER.info( format( "\t(%s , %s) - %s",
-                            def.getLabels(), def.getPropertyKeys(), db.schema().getIndexState( def ) ) );
+                            def.getLabels(), def.getPropertyKeys(), schema.getIndexState( def ) ) );
 
-                    assertIndexNotFailed( db, def );
+                    assertIndexNotFailed( tx, def );
                 }
             }
             tx.commit();
@@ -240,14 +241,14 @@ public class LdbcIndexer
         }
     }
 
-    private static void assertIndexNotFailed( GraphDatabaseService db, IndexDefinition def )
+    private static void assertIndexNotFailed( Transaction tx, IndexDefinition def )
     {
-        if ( db.schema().getIndexState( def ) == Schema.IndexState.FAILED )
+        if ( tx.schema().getIndexState( def ) == Schema.IndexState.FAILED )
         {
             throw new RuntimeException( format( "Index (%s,%s) failed to build:\n%s",
                     def.getLabels(),
                     def.getPropertyKeys(),
-                    db.schema().getIndexFailure( def ) ) );
+                    tx.schema().getIndexFailure( def ) ) );
         }
     }
 }

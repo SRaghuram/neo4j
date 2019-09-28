@@ -120,9 +120,9 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     executeSingle("CREATE INDEX ON :L1(p1)")
     executeSingle("CREATE INDEX ON :L2(p2,p3)")
 
-    graph.inTx {
-      graph.schema.awaitIndexesOnline(10, TimeUnit.SECONDS)
-    }
+    graph.withTx( tx => {
+      tx.schema.awaitIndexesOnline(10, TimeUnit.SECONDS)
+    } )
 
     // The query was run through IdAnonymizer
     val query =

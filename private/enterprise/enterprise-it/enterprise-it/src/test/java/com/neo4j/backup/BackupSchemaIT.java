@@ -172,7 +172,7 @@ class BackupSchemaIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, MINUTES );
+            tx.schema().awaitIndexesOnline( 1, MINUTES );
         }
     }
 
@@ -186,25 +186,25 @@ class BackupSchemaIT
         return (GraphDatabaseAPI) managementService.database( DB_NAME );
     }
 
-    private static long countNodeIndexes( GraphDatabaseService db, String label, String... propertyKeys )
+    private static long countNodeIndexes( Transaction tx, String label, String... propertyKeys )
     {
-        return Iterables.stream( db.schema().getIndexes( label( label ) ) )
+        return Iterables.stream( tx.schema().getIndexes( label( label ) ) )
                 .filter( IndexDefinition::isNodeIndex )
                 .filter( def -> hasPropertyKeys( def, propertyKeys ) )
                 .count();
     }
 
-    private static long countNodeConstraints( GraphDatabaseService db, String label, ConstraintType type, String... propertyKeys )
+    private static long countNodeConstraints( Transaction tx, String label, ConstraintType type, String... propertyKeys )
     {
-        return Iterables.stream( db.schema().getConstraints( label( label ) ) )
+        return Iterables.stream( tx.schema().getConstraints( label( label ) ) )
                 .filter( def -> def.isConstraintType( type ) )
                 .filter( def -> hasPropertyKeys( def, propertyKeys ) )
                 .count();
     }
 
-    private static long countRelationshipConstraints( GraphDatabaseService db, String typeName, ConstraintType type, String... propertyKeys )
+    private static long countRelationshipConstraints( Transaction tx, String typeName, ConstraintType type, String... propertyKeys )
     {
-        return Iterables.stream( db.schema().getConstraints( withName( typeName ) ) )
+        return Iterables.stream( tx.schema().getConstraints( withName( typeName ) ) )
                 .filter( def -> def.isConstraintType( type ) )
                 .filter( def -> hasPropertyKeys( def, propertyKeys ) )
                 .count();
@@ -256,7 +256,7 @@ class BackupSchemaIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                assertEquals( 1, countNodeIndexes( db, "Person", "name" ) );
+                assertEquals( 1, countNodeIndexes( tx, "Person", "name" ) );
                 assertEquals( 42L, single( tx.execute( "MATCH (n:Person {name: '42'}) RETURN count(n) AS count" ) ).get( "count" ) );
             }
         }
@@ -289,7 +289,7 @@ class BackupSchemaIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                assertEquals( 1, countNodeIndexes( db, "Person", "name", "age" ) );
+                assertEquals( 1, countNodeIndexes( tx, "Person", "name", "age" ) );
                 assertEquals( 42L, single( tx.execute( "MATCH (n:Person {name: '42', age: 42}) RETURN count(n) AS count" ) ).get( "count" ) );
             }
         }
@@ -390,7 +390,7 @@ class BackupSchemaIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                assertEquals( 1, countNodeConstraints( db, "Person", UNIQUENESS, "name" ) );
+                assertEquals( 1, countNodeConstraints( tx, "Person", UNIQUENESS, "name" ) );
                 for ( int i = 1; i <= 42; i++ )
                 {
                     assertNotNull( tx.findNode( label( "Person" ), "name", String.valueOf( i ) ) );
@@ -432,7 +432,7 @@ class BackupSchemaIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                assertEquals( 1, countNodeConstraints( db, "Person", NODE_KEY, "name", "age" ) );
+                assertEquals( 1, countNodeConstraints( tx, "Person", NODE_KEY, "name", "age" ) );
                 for ( int i = 1; i <= 42; i++ )
                 {
                     Result result = tx.execute( "MATCH (p:Person {name: $name, age: $age}) RETURN count(p) AS count",
@@ -471,7 +471,7 @@ class BackupSchemaIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                assertEquals( 1, countNodeConstraints( db, "Person", NODE_PROPERTY_EXISTENCE, "name" ) );
+                assertEquals( 1, countNodeConstraints( tx, "Person", NODE_PROPERTY_EXISTENCE, "name" ) );
                 ConstraintViolationException error = assertThrows( ConstraintViolationException.class, () -> {
                     tx.execute( "CREATE (:Person)" ).close();
                     tx.commit();
@@ -503,7 +503,7 @@ class BackupSchemaIT
         {
             try ( Transaction tx = db.beginTx() )
             {
-                assertEquals( 1, countRelationshipConstraints( db, "LIKES", RELATIONSHIP_PROPERTY_EXISTENCE, "name" ) );
+                assertEquals( 1, countRelationshipConstraints( tx, "LIKES", RELATIONSHIP_PROPERTY_EXISTENCE, "name" ) );
                 ConstraintViolationException error = assertThrows( ConstraintViolationException.class, () -> {
                     tx.execute( "CREATE ()-[:LIKES]->()" ).close();
                     tx.commit();

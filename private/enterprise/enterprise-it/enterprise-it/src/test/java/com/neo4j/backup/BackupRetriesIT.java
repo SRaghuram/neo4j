@@ -182,15 +182,15 @@ class BackupRetriesIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( label( "Person" ) ).on( "id" ).create();
-            db.schema().indexFor( label( "Employee" ) ).on( "name" ).create();
-            db.schema().indexFor( label( "Employee" ) ).on( "surname" ).create();
+            tx.schema().indexFor( label( "Person" ) ).on( "id" ).create();
+            tx.schema().indexFor( label( "Employee" ) ).on( "name" ).create();
+            tx.schema().indexFor( label( "Employee" ) ).on( "surname" ).create();
             tx.commit();
         }
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, MINUTES );
+            tx.schema().awaitIndexesOnline( 1, MINUTES );
             tx.commit();
         }
     }

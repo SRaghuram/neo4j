@@ -249,7 +249,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
             // Make sure all schema changes are stable, to avoid any synchronous schema state invalidation
-            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
         }
         SchemaStateCheck schemaState = new SchemaStateCheck().setUp();
         {
@@ -363,8 +363,8 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
         // then
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            assertEquals( Collections.<ConstraintDefinition>emptyList(), asList( db.schema().getConstraints() ) );
-            assertEquals( Collections.<IndexDefinition, Schema.IndexState>emptyMap(), indexesWithState( db.schema() ) );
+            assertEquals( Collections.<ConstraintDefinition>emptyList(), asList( tx.schema().getConstraints() ) );
+            assertEquals( Collections.<IndexDefinition, Schema.IndexState>emptyMap(), indexesWithState( tx.schema() ) );
             tx.commit();
         }
     }

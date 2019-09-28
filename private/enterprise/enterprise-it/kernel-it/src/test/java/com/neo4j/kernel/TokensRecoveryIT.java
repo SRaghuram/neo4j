@@ -58,8 +58,8 @@ class TokensRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             // Now we should see our index still being there and healthy.
-            assertThat( count( db.schema().getIndexes() ), is( 1L ) );
-            assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
+            assertThat( count( tx.schema().getIndexes() ), is( 1L ) );
+            assertThat( count( tx.schema().getIndexes( LABEL ) ), is( 1L ) );
             tx.commit();
         }
         managementService.shutdown();
@@ -74,7 +74,7 @@ class TokensRecoveryIT
 
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().constraintFor( LABEL ).assertPropertyIsUnique( "prop" ).create();
+            tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( "prop" ).create();
             tx.commit();
         }
         // Crash the database - the store files are all empty and everything will be recovered from the logs.
@@ -87,8 +87,8 @@ class TokensRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             // Now we should see our index still being there and healthy.
-            assertThat( count( db.schema().getIndexes() ), is( 1L ) );
-            assertThat( count( db.schema().getIndexes( LABEL ) ), is( 1L ) );
+            assertThat( count( tx.schema().getIndexes() ), is( 1L ) );
+            assertThat( count( tx.schema().getIndexes( LABEL ) ), is( 1L ) );
             tx.commit();
         }
         managementService.shutdown();

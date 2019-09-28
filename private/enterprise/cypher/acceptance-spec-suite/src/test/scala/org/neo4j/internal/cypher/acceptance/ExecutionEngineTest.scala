@@ -667,13 +667,13 @@ order by a.COL1""".format(a, b))
     executeWith(testConfiguration, s"""CREATE INDEX ON :$labelName(${propertyKeys.reduce(_ ++ "," ++ _)})""")
 
     // THEN
-    graph.inTx {
-      val indexDefinitions = graph.schema().getIndexes(Label.label(labelName)).asScala.toSet
+    graph.withTx( tx => {
+      val indexDefinitions = tx.schema().getIndexes(Label.label(labelName)).asScala.toSet
       indexDefinitions should have size 1
 
       val actual = indexDefinitions.head.getPropertyKeys.asScala.toIndexedSeq
       propertyKeys should equal(actual)
-    }
+    } )
   }
 
   test("union ftw") {

@@ -358,7 +358,7 @@ class CatchupServerIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( LABEL ).on( PROP_NAME ).create();
+            tx.schema().indexFor( LABEL ).on( PROP_NAME ).create();
             tx.commit();
         }
     }

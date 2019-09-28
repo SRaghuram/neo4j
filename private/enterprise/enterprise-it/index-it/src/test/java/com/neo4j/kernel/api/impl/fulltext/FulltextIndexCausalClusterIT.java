@@ -249,7 +249,7 @@ class FulltextIndexCausalClusterIT
             GraphDatabaseAPI db = member.defaultDatabase();
             try ( Transaction tx = db.beginTx() )
             {
-                db.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
+                tx.schema().awaitIndexesOnline( 20, TimeUnit.SECONDS );
                 tx.execute( AWAIT_REFRESH ).close();
                 DependencyResolver dependencyResolver = db.getDependencyResolver();
                 TransactionIdStore transactionIdStore = dependencyResolver.resolveDependency( TransactionIdStore.class );
@@ -267,7 +267,7 @@ class FulltextIndexCausalClusterIT
             }
             catch ( NotFoundException nfe )
             {
-                // This can happen due to a race inside `db.schema().awaitIndexesOnline`, where the list of indexes are provided by the SchemaCache, which is
+                // This can happen due to a race inside `tx.schema().awaitIndexesOnline`, where the list of indexes are provided by the SchemaCache, which is
                 // updated during command application in commit, but the index status is then fetched from the IndexMap, which is updated when the applier is
                 // closed during commit (which comes later in the commit process than command application). So we are told by the SchemaCache that an index
                 // exists, but we are then also told by the IndexMap that the index does not exist, hence this NotFoundException. Normally, these two are

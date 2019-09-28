@@ -71,7 +71,7 @@ class IndexConfigCausalClusterIT
         // Create index and make sure it propagates to all cores.
         cluster.coreTx( ( db, tx ) ->
         {
-            db.schema().indexFor( label ).on( prop ).create();
+            tx.schema().indexFor( label ).on( prop ).create();
             tx.commit();
         } );
 

@@ -221,12 +221,13 @@ public class EmbeddedDatabase implements Database
     {
         try ( Transaction tx = db.beginTx() )
         {
+            var schema = tx.schema();
             List<Schema.SchemaEntry> entries = new ArrayList<>();
 
-            db.schema()
+            schema
               .getConstraints()
               .forEach( constraint -> entries.add( constraintEntryFor( constraint ) ) );
-            db.schema()
+            schema
               .getIndexes()
               .forEach( index ->
                         {
@@ -264,8 +265,9 @@ public class EmbeddedDatabase implements Database
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().getConstraints().forEach( ConstraintDefinition::drop );
-            db.schema().getIndexes().forEach( IndexDefinition::drop );
+            var schema = tx.schema();
+            schema.getConstraints().forEach( ConstraintDefinition::drop );
+            schema.getIndexes().forEach( IndexDefinition::drop );
             tx.commit();
         }
     }
@@ -291,16 +293,17 @@ public class EmbeddedDatabase implements Database
     {
         try ( Transaction tx = db.beginTx() )
         {
-            for ( IndexDefinition index : db.schema().getIndexes() )
+            var schema = tx.schema();
+            for ( IndexDefinition index : schema.getIndexes() )
             {
-                assertIndexNotFailed( db, index );
-                if ( db.schema().getIndexState( index ) != org.neo4j.graphdb.schema.Schema.IndexState.ONLINE )
+                assertIndexNotFailed( tx, index );
+                if ( schema.getIndexState( index ) != org.neo4j.graphdb.schema.Schema.IndexState.ONLINE )
                 {
-                    while ( db.schema().getIndexState( index ) == org.neo4j.graphdb.schema.Schema.IndexState.POPULATING )
+                    while ( schema.getIndexState( index ) == org.neo4j.graphdb.schema.Schema.IndexState.POPULATING )
                     {
                         Thread.sleep( 500 );
                     }
-                    assertIndexNotFailed( db, index );
+                    assertIndexNotFailed( tx, index );
                 }
             }
         }
@@ -310,15 +313,15 @@ public class EmbeddedDatabase implements Database
         }
     }
 
-    private static void assertIndexNotFailed( GraphDatabaseService db, IndexDefinition index )
+    private static void assertIndexNotFailed( Transaction transaction, IndexDefinition index )
     {
-        if ( db.schema().getIndexState( index ) == org.neo4j.graphdb.schema.Schema.IndexState.FAILED )
+        if ( transaction.schema().getIndexState( index ) == org.neo4j.graphdb.schema.Schema.IndexState.FAILED )
         {
             throw new RuntimeException(
                     format( "Index (%s,%s) failed to build:\n%s",
                             index.getLabels(),
                             index.getPropertyKeys(),
-                            db.schema().getIndexFailure( index )
+                            transaction.schema().getIndexFailure( index )
                     )
             );
         }

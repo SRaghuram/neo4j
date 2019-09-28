@@ -190,7 +190,7 @@ class FulltextIndexBackupIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
             tx.commit();
         }
     }

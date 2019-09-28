@@ -161,7 +161,7 @@ class CoreReplicationIT
         try ( Transaction tx = follower.beginTx() )
         {
             WriteOperationsNotAllowedException ex = assertThrows( WriteOperationsNotAllowedException.class,
-                    () -> follower.schema().constraintFor( Label.label( "Foo" ) ).assertPropertyIsUnique( "name" ).create() );
+                    () -> tx.schema().constraintFor( Label.label( "Foo" ) ).assertPropertyIsUnique( "name" ).create() );
             assertThat( ex.getMessage(), containsString( "No write operations are allowed" ) );
         }
     }
@@ -294,7 +294,7 @@ class CoreReplicationIT
 
         CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
-            db.schema().indexFor( label( "boo" ) ).on( "foobar" ).create();
+            tx.schema().indexFor( label( "boo" ) ).on( "foobar" ).create();
             tx.commit();
         } );
 

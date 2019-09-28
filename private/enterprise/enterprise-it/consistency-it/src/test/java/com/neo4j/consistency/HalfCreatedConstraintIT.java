@@ -81,7 +81,7 @@ class HalfCreatedConstraintIT
         {
             try ( Transaction tx = database.beginTx() )
             {
-                database.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
+                tx.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
             }
         } );
         assertThat( exception.getMessage(), containsString(

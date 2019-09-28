@@ -175,7 +175,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         String propertyKey = "primaryPower";
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( Label.label( label ) ).on( propertyKey ).create();
+            tx.schema().indexFor( Label.label( label ) ).on( propertyKey ).create();
             tx.commit();
         }
         awaitIndexOnline();
@@ -244,7 +244,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     {
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
             tx.commit();
         }
     }

@@ -344,7 +344,7 @@ public class ListQueriesProcedureTest
         String property = "indexedProperty";
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( label( label ) ).on( property ).create();
+            tx.schema().indexFor( label( label ) ).on( property ).create();
             tx.commit();
         }
         ensureIndexesAreOnline();
@@ -355,7 +355,7 @@ public class ListQueriesProcedureTest
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( SECONDS_TIMEOUT, SECONDS );
+            tx.schema().awaitIndexesOnline( SECONDS_TIMEOUT, SECONDS );
             tx.commit();
         }
     }
@@ -368,7 +368,7 @@ public class ListQueriesProcedureTest
         String property = "uniqueProperty";
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().constraintFor( label( label ) ).assertPropertyIsUnique( property ).create();
+            tx.schema().constraintFor( label( label ) ).assertPropertyIsUnique( property ).create();
             tx.commit();
         }
         ensureIndexesAreOnline();
@@ -382,7 +382,7 @@ public class ListQueriesProcedureTest
         final String QUERY = "MATCH (n:Node) USING INDEX n:Node(value) WHERE 1 < n.value < 10 SET n.value = 2";
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().indexFor( label( "Node" ) ).on( "value" ).create();
+            tx.schema().indexFor( label( "Node" ) ).on( "value" ).create();
             tx.commit();
         }
         ensureIndexesAreOnline();

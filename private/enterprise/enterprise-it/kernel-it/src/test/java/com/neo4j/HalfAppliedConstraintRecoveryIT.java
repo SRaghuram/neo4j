@@ -76,7 +76,7 @@ public class HalfAppliedConstraintRecoveryIT
     private static final String KEY = "key";
     private static final String KEY2 = "key2";
     private static final BiConsumer<GraphDatabaseAPI,Transaction> UNIQUE_CONSTRAINT_CREATOR =
-            ( db, tx ) -> db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
+            ( db, tx ) -> tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
 
     private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR =
             ( db, tx ) -> tx.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ") IS NODE KEY" );
@@ -163,7 +163,7 @@ public class HalfAppliedConstraintRecoveryIT
             // THEN
             try ( Transaction tx = db.beginTx() )
             {
-                ConstraintDefinition constraint = single( db.schema().getConstraints( LABEL ) );
+                ConstraintDefinition constraint = single( tx.schema().getConstraints( LABEL ) );
                 assertEquals( LABEL.name(), constraint.getLabel().name() );
                 if ( composite )
                 {
@@ -173,7 +173,7 @@ public class HalfAppliedConstraintRecoveryIT
                 {
                     assertEquals( KEY, single( constraint.getPropertyKeys() ) );
                 }
-                IndexDefinition index = single( db.schema().getIndexes( LABEL ) );
+                IndexDefinition index = single( tx.schema().getIndexes( LABEL ) );
                 assertEquals( LABEL.name(), single( index.getLabels() ).name() );
                 if ( composite )
                 {
@@ -404,7 +404,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
             tx.commit();
         }
     }

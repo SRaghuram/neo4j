@@ -49,7 +49,7 @@ class StartOnExistingDbWithIndexIT
         GraphDatabaseService db = getDatabase( logProvider );
         try ( Transaction transaction = db.beginTx() )
         {
-            db.schema().constraintFor( label ).assertPropertyIsUnique( propertyName ).create();
+            transaction.schema().constraintFor( label ).assertPropertyIsUnique( propertyName ).create();
             transaction.commit();
         }
         waitIndexes( db );
@@ -68,7 +68,7 @@ class StartOnExistingDbWithIndexIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
+            transaction.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
             transaction.commit();
         }
     }

@@ -161,7 +161,7 @@ class ClusterIndexProcedureIT
         GraphDatabaseAPI db = member.defaultDatabase();
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
             tx.commit();
         }
     }
@@ -171,7 +171,7 @@ class ClusterIndexProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // only one index
-            Iterator<IndexDefinition> indexes = db.schema().getIndexes().iterator();
+            Iterator<IndexDefinition> indexes = tx.schema().getIndexes().iterator();
             assertTrue( indexes.hasNext(), "has one index" );
             IndexDefinition indexDefinition = indexes.next();
             assertFalse( indexes.hasNext(), "not more than one index" );
@@ -193,7 +193,7 @@ class ClusterIndexProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             // only one index
-            Iterator<ConstraintDefinition> constraints = db.schema().getConstraints().iterator();
+            Iterator<ConstraintDefinition> constraints = tx.schema().getConstraints().iterator();
             assertTrue( constraints.hasNext(), "has one index" );
             ConstraintDefinition constraint = constraints.next();
             assertFalse( constraints.hasNext(), "not more than one index" );

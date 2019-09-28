@@ -107,7 +107,7 @@ public class DataCreator
     {
         cluster.coreTx( ( db, tx ) ->
         {
-            db.schema().constraintFor( LABEL ).assertPropertyIsUnique( NODE_PROPERTY_1 ).create();
+            tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( NODE_PROPERTY_1 ).create();
             tx.commit();
         } );
     }

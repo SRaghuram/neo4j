@@ -148,7 +148,7 @@ class ProcedureResourcesIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 5, TimeUnit.SECONDS );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )

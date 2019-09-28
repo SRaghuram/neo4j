@@ -498,8 +498,8 @@ class OnlineBackupCommandCcIT
     {
         cluster.coreTx( ( db, tx ) ->
         {
-            db.schema().indexFor( label( "Person" ) ).on( "id" ).create();
-            db.schema().indexFor( label( "Person" ) ).on( "first_name" ).on( "last_name" ).create();
+            tx.schema().indexFor( label( "Person" ) ).on( "id" ).create();
+            tx.schema().indexFor( label( "Person" ) ).on( "first_name" ).on( "last_name" ).create();
             tx.commit();
         } );
     }

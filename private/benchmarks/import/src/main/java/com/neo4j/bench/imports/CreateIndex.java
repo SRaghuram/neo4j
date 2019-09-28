@@ -46,11 +46,12 @@ public class CreateIndex
             Map<IndexDefinition,Integer> indexes = new HashMap<>();
             try ( Transaction tx = db.beginTx() )
             {
+                var schema = tx.schema();
                 for ( String indexPattern : indexPatterns )
                 {
                     String[] labelAndProperties = splitLabel( indexPattern );
                     String[] properties = splitProperties( labelAndProperties[1] );
-                    IndexCreator indexCreator = db.schema().indexFor( Label.label( labelAndProperties[0] ) );
+                    IndexCreator indexCreator = schema.indexFor( Label.label( labelAndProperties[0] ) );
                     for ( String property : properties )
                     {
                         indexCreator = indexCreator.on( property );
@@ -69,9 +70,10 @@ public class CreateIndex
             {
                 do
                 {
+                    var schema = tx.schema();
                     try
                     {
-                        db.schema().awaitIndexesOnline( 100, TimeUnit.MILLISECONDS );
+                        schema.awaitIndexesOnline( 100, TimeUnit.MILLISECONDS );
                         break;
                     }
                     catch ( IllegalStateException e )
@@ -86,7 +88,7 @@ public class CreateIndex
                     for ( IndexDefinition index : indexes.keySet() )
                     {
                         Integer prevComplete = indexes.get( index );
-                        IndexPopulationProgress indexPopulationProgress = db.schema().getIndexPopulationProgress( index );
+                        IndexPopulationProgress indexPopulationProgress = schema.getIndexPopulationProgress( index );
                         int currentComplete = (int) indexPopulationProgress.getCompletedPercentage() / 10;
                         if ( currentComplete > prevComplete )
                         {
@@ -111,9 +113,10 @@ public class CreateIndex
     {
         try ( Transaction tx = db.beginTx() )
         {
+            var schema = tx.schema();
             for ( IndexDefinition index : indexes.keySet() )
             {
-                Schema.IndexState state = db.schema().getIndexState( index );
+                Schema.IndexState state = schema.getIndexState( index );
                 System.out.println( format( "%s%s %s", indent, index.toString(), state ) );
             }
             tx.commit();

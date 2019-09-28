@@ -137,16 +137,16 @@ class TransactionalWorkload extends Workload
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().constraintFor( LABEL ).assertPropertyIsUnique( ID_PROPERTY ).create();
+            tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( ID_PROPERTY ).create();
             for ( String property : PROPERTIES )
             {
-                db.schema().indexFor( LABEL ).on( property ).create();
+                tx.schema().indexFor( LABEL ).on( property ).create();
             }
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
             tx.commit();
         }
     }

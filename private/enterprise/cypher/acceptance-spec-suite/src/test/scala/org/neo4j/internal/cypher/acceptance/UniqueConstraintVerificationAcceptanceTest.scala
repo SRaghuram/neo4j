@@ -23,11 +23,11 @@ class UniqueConstraintVerificationAcceptanceTest
     execute("create constraint on (node:Label) assert node.propertyKey is unique")
 
     //THEN
-    graph.inTx {
-      val constraints = graph.schema().getConstraints(Label.label("Label")).asScala
+    graph.withTx( tx => {
+      val constraints = tx.schema().getConstraints(Label.label("Label")).asScala
       constraints should have size 1
       constraints.head.getPropertyKeys.asScala.toList should equal(List("propertyKey"))
-    }
+    } )
   }
 
   test("should add constraint when existing data is unique") {
@@ -38,11 +38,11 @@ class UniqueConstraintVerificationAcceptanceTest
     execute("create constraint on (n:Person) assert n.name is unique")
 
     // THEN
-    graph.inTx {
-      val constraints = graph.schema().getConstraints(Label.label("Person")).asScala
+    graph.withTx( tx => {
+      val constraints = tx.schema().getConstraints(Label.label("Person")).asScala
       constraints should have size 1
       constraints.head.getPropertyKeys.asScala.toList should equal(List("name"))
-    }
+    } )
   }
 
   test("should add constraint using recreated unique data") {
@@ -55,11 +55,11 @@ class UniqueConstraintVerificationAcceptanceTest
     execute("create constraint on (n:Person) assert n.name is unique")
 
     // THEN
-    graph.inTx {
-      val constraints = graph.schema().getConstraints(Label.label("Person")).asScala
+    graph.withTx( tx => {
+      val constraints = tx.schema().getConstraints(Label.label("Person")).asScala
       constraints should have size 1
       constraints.head.getPropertyKeys.asScala.toList should equal(List("name"))
-    }
+    } )
   }
 
   test("should drop constraint") {
@@ -70,10 +70,10 @@ class UniqueConstraintVerificationAcceptanceTest
     execute("drop constraint on (node:Label) assert node.propertyKey is unique")
 
     //THEN
-    graph.inTx {
-      val constraints = graph.schema().getConstraints(Label.label("Label")).asScala
+    graph.withTx( tx => {
+      val constraints = tx.schema().getConstraints(Label.label("Label")).asScala
       constraints shouldBe empty
-    }
+    } )
   }
 
   test("should fail to add constraint when existing data conflicts") {
@@ -94,10 +94,10 @@ class UniqueConstraintVerificationAcceptanceTest
           assert(ex.getCause.isInstanceOf[CreateConstraintFailureException])
       }
 
-    graph.inTx {
-      val constraints = graph.schema().getConstraints(Label.label("Person")).asScala
+    graph.withTx( tx => {
+      val constraints = tx.schema().getConstraints(Label.label("Person")).asScala
       constraints shouldBe empty
-    }
+    } )
   }
 
   test("Should handle temporal with unique constraint") {

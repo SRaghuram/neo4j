@@ -58,7 +58,7 @@ public enum SchemaHelper
                 }
 
                 @Override
-                public ConstraintDefinition createNodeKeyConstraint( GraphDatabaseService db, String name, Label label, String... propertyKey )
+                public ConstraintDefinition createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey )
                 {
                     throw new TestAbortedException( "Cypher cannot yet create NAMED node key constraints." );
                 }
@@ -68,19 +68,19 @@ public enum SchemaHelper
                 @Override
                 public void createIndex( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    db.schema().indexFor( Label.label( label ) ).on( property ).create();
+                    tx.schema().indexFor( Label.label( label ) ).on( property ).create();
                 }
 
                 @Override
                 public void createUniquenessConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    db.schema().constraintFor( Label.label( label ) ).assertPropertyIsUnique( property ).create();
+                    tx.schema().constraintFor( Label.label( label ) ).assertPropertyIsUnique( property ).create();
                 }
 
                 @Override
                 public void createNodeKeyConstraint( GraphDatabaseService db, Transaction tx, Label label, String... properties )
                 {
-                    ConstraintCreator creator = db.schema().constraintFor( label );
+                    ConstraintCreator creator = tx.schema().constraintFor( label );
                     for ( String property : properties )
                     {
                         creator = creator.assertPropertyIsNodeKey( property );
@@ -91,19 +91,19 @@ public enum SchemaHelper
                 @Override
                 public void createNodePropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String label, String property )
                 {
-                    db.schema().constraintFor( Label.label( label ) ).assertPropertyExists( property ).create();
+                    tx.schema().constraintFor( Label.label( label ) ).assertPropertyExists( property ).create();
                 }
 
                 @Override
                 public void createRelPropertyExistenceConstraint( GraphDatabaseService db, Transaction tx, String type, String property )
                 {
-                    db.schema().constraintFor( RelationshipType.withName( type ) ).assertPropertyExists( property ).create();
+                    tx.schema().constraintFor( RelationshipType.withName( type ) ).assertPropertyExists( property ).create();
                 }
 
                 @Override
-                public ConstraintDefinition createNodeKeyConstraint( GraphDatabaseService db, String name, Label label, String... keys )
+                public ConstraintDefinition createNodeKeyConstraint( Transaction tx, String name, Label label, String... keys )
                 {
-                    ConstraintCreator creator = db.schema().constraintFor( label ).withName( name );
+                    ConstraintCreator creator = tx.schema().constraintFor( label ).withName( name );
                     for ( String key : keys )
                     {
                         creator = creator.assertPropertyIsNodeKey( key );
@@ -146,10 +146,10 @@ public enum SchemaHelper
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+            tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
             tx.commit();
         }
     }
 
-    public abstract ConstraintDefinition createNodeKeyConstraint( GraphDatabaseService db, String name, Label label, String... propertyKey );
+    public abstract ConstraintDefinition createNodeKeyConstraint( Transaction tx, String name, Label label, String... propertyKey );
 }

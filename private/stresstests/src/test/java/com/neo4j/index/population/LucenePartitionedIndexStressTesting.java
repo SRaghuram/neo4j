@@ -105,7 +105,7 @@ public class LucenePartitionedIndexStressTesting
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Schema schema = db.schema();
+            Schema schema = transaction.schema();
             schema.getConstraints().forEach( ConstraintDefinition::drop );
             schema.getIndexes().forEach( IndexDefinition::drop );
             transaction.commit();
@@ -202,11 +202,11 @@ public class LucenePartitionedIndexStressTesting
             {
                 if ( unique )
                 {
-                    createUniqueConstraint( i );
+                    createUniqueConstraint( transaction, i );
                 }
                 else
                 {
-                    createIndex( i );
+                    createIndex( transaction, i );
                 }
             }
             transaction.commit();
@@ -214,22 +214,22 @@ public class LucenePartitionedIndexStressTesting
         awaitIndexesOnline( db );
     }
 
-    private void createUniqueConstraint( int index )
+    private void createUniqueConstraint( Transaction tx, int index )
     {
-        db.schema().constraintFor( Label.label( LABEL ) ).assertPropertyIsUnique( UNIQUE_PROPERTY_PREFIX + index )
+        tx.schema().constraintFor( Label.label( LABEL ) ).assertPropertyIsUnique( UNIQUE_PROPERTY_PREFIX + index )
                 .create();
     }
 
-    private void createIndex( int index )
+    private void createIndex( Transaction tx, int index )
     {
-        db.schema().indexFor( Label.label( LABEL ) ).on( PROPERTY_PREFIX + index ).create();
+        tx.schema().indexFor( Label.label( LABEL ) ).on( PROPERTY_PREFIX + index ).create();
     }
 
     private void awaitIndexesOnline( GraphDatabaseService db )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Schema schema = db.schema();
+            Schema schema = tx.schema();
             schema.awaitIndexesOnline( WAIT_DURATION_MINUTES, TimeUnit.MINUTES );
         }
     }

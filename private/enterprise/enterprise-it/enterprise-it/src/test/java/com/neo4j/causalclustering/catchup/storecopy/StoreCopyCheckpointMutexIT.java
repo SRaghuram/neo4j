@@ -175,12 +175,12 @@ class StoreCopyCheckpointMutexIT
     {
         try ( var tx = db.beginTx() )
         {
-            db.schema().indexFor( LABEL ).on( PROP_KEY ).create();
+            tx.schema().indexFor( LABEL ).on( PROP_KEY ).create();
             tx.commit();
         }
         try ( var tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.MINUTES );
             tx.commit();
         }
     }

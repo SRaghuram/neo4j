@@ -855,7 +855,7 @@ public class ProcedureIT
         // Then
         try ( Transaction tx = db.beginTx() )
         {
-            assertTrue( db.schema().getConstraints().iterator().hasNext() );
+            assertTrue( tx.schema().getConstraints().iterator().hasNext() );
             tx.commit();
         }
     }

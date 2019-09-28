@@ -312,7 +312,7 @@ class GraphDbStructureGuideTest
     {
         commitAndReOpen();
 
-        db.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
+        tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
         commit();
 
         if ( bridge.hasTransaction() )
