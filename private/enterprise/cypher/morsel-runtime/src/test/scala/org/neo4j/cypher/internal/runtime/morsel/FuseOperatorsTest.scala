@@ -16,23 +16,26 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, FlatMapAndAppendToRow, NonFilteringOptionalExpandAllPipe, OptionalExpandAllPipe, Pipe, PipeMapper, ProcedureCallPipe, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.morsel.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
 import org.neo4j.cypher.internal.runtime.morsel.execution.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
-import org.neo4j.cypher.internal.runtime.{ParameterMapping, QueryContext, QueryIndexRegistrator}
+import org.neo4j.cypher.internal.runtime.{ParameterMapping, ProcedureCallMode, QueryContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.Expression
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, SemanticDirection}
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, SameId}
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.NullLog
 import org.scalatest.matchers.{BeMatcher, MatchResult}
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  {
   private val theId = new Id(3)
@@ -168,6 +171,139 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.outputOperator should not be NoOutputOperator
   }
 
+  test("should fully chain fallback pipes") {
+    // given
+    val pipeline = optionalExpand("x", "r", "y") ~> dropResult ~> dropResult
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start should not be fused
+    compiled.middleOperators should have size 0
+    compiled.outputOperator shouldBe NoOutputOperator
+
+    compiled.start.isInstanceOf[SlottedPipeHeadOperator] shouldBe true
+    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
+      .source.isInstanceOf[NonFilteringOptionalExpandAllPipe] shouldBe true
+    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
+      .source.asInstanceOf[NonFilteringOptionalExpandAllPipe].source.isInstanceOf[MorselFeedPipe] shouldBe true
+  }
+
+  test("should fully chain fallback pipes, ending in produce results") {
+    // given
+    val pipeline = optionalExpand("x", "r", "y") ~> dropResult ~> dropResult ~> dropResult ~> produceResult("x", "r", "y")
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start should not be fused
+    compiled.middleOperators should have size 0
+    compiled.outputOperator should not be NoOutputOperator
+    compiled.start.isInstanceOf[SlottedPipeHeadOperator] shouldBe true
+  }
+
+  test("should chain fallback pipes with interruption, ending in produce results") {
+    // given
+    val pipeline = optionalExpand("x", "r", "y") ~> dropResult ~> dummy ~> dropResult ~> dropResult ~> produceResult("x", "r", "y")
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start should not be fused
+    compiled.middleOperators should have size 2
+    compiled.outputOperator should not be NoOutputOperator
+    compiled.start.isInstanceOf[SlottedPipeHeadOperator] shouldBe true
+  }
+
+  test("should fuse partial pipelines, chain fallback pipes, ending in produce results") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dropResult ~> dropResult ~> dropResult ~> produceResult("x")
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 1
+    compiled.outputOperator should not be NoOutputOperator
+    compiled.middleOperators(0).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(0).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+  }
+
+  test("should fuse partial pipelines, chain fallback pipes with interruption, ending in produce results") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dropResult ~> dropResult ~> dummy ~> dropResult ~> dropResult ~> produceResult("x")
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 3
+    compiled.outputOperator should not be NoOutputOperator
+    compiled.middleOperators(0).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(0).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(1).isInstanceOf[DummyMiddleOperator] shouldBe true
+    compiled.middleOperators(2).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(2).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+  }
+
+  test("should fuse partial pipelines, add middle, chain fallback pipes with interruption, ending in produce results") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> dropResult ~> dropResult ~> dummy ~> dropResult ~> dropResult ~> produceResult("x")
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 4
+    compiled.outputOperator should not be NoOutputOperator
+
+    compiled.middleOperators(0).isInstanceOf[DummyMiddleOperator] shouldBe true
+    compiled.middleOperators(1).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
+      .source.isInstanceOf[MorselFeedPipe] shouldBe true
+    compiled.middleOperators(2).isInstanceOf[DummyMiddleOperator] shouldBe true
+    compiled.middleOperators(3).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
+      .source.isInstanceOf[MorselFeedPipe] shouldBe true
+  }
+
+  test("should fuse partial pipelines, add middle, chain fallback pipes with interruption, no output") {
+    // given
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> dummy ~> dropResult ~> dropResult ~> dummy ~> dropResult ~> dropResult
+
+    // when
+    val compiled = fuse(pipeline)
+
+    // then
+    compiled.start shouldBe fused
+    compiled.middleOperators should have size 4
+    compiled.outputOperator shouldBe NoOutputOperator
+    compiled.middleOperators(0).isInstanceOf[DummyMiddleOperator] shouldBe true
+    compiled.middleOperators(1).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
+      .source.isInstanceOf[MorselFeedPipe] shouldBe true
+    compiled.middleOperators(2).isInstanceOf[DummyMiddleOperator] shouldBe true
+    compiled.middleOperators(3).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
+      .source.isInstanceOf[MorselFeedPipe] shouldBe true
+  }
+
   def notSupported = new PipelineBuilder(dummyLeaf)
 
   def allNodes(node: String): PipelineBuilder = {
@@ -177,6 +313,17 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   }
 
   def filter(predicates: Expression*): LogicalPlan => LogicalPlan = Selection(predicates.toSeq, _)
+
+  def dropResult: LogicalPlan => LogicalPlan = DropResult(_)
+
+  def optionalExpand(from: String, relName: String, to: String): PipelineBuilder = {
+    val plan = OptionalExpand(Argument(), from, SemanticDirection.OUTGOING, types = Seq.empty, to, relName, ExpandAll)
+    val builder = new PipelineBuilder(plan)
+    builder.addNode(from)
+    builder.addNode(to)
+    builder.addRelationship(relName)
+    builder
+  }
 
   def groupAggregation(groupings: Map[String, Expression],
                        aggregations: Map[String, Expression]): LogicalPlan => LogicalPlan = Aggregation(_, groupings, aggregations)
@@ -316,14 +463,34 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                             indexRegistrator = mock[QueryIndexRegistrator],
                             semanticTable = mock[SemanticTable],
                             MorselPipelineBreakingPolicy(fusionPolicy, INTERPRETED_PIPES_FALLBACK_DISABLED),
-                            slottedPipeBuilder = None) {
+                            slottedPipeBuilder = Some(new DummySlottedPipeBuilder)) {
 
     override def create(plan: LogicalPlan,
                         inputBuffer: BufferDefinition): Operator =
-      mock[Operator](RETURNS_DEEP_STUBS)
+      plan match {
+        // Example of fallback plans
+        case _: DropResult |
+             _: OptionalExpand if slottedPipeBuilder.isDefined =>
+          createSlottedPipeHeadOperator(plan)
 
-    override def createMiddleOperators(middlePlans: Seq[LogicalPlan], headOperator: Operator): Array[MiddleOperator] =
-      middlePlans.map(_ => new DummyMiddleOperator).toArray
+        case _ =>
+          mock[Operator](RETURNS_DEEP_STUBS)
+      }
+
+    override protected def createMiddleOrUpdateSlottedPipeChain(plan: LogicalPlan, maybeSlottedPipeOperatorToChainOnTo: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
+      plan match {
+        // Example of fallback middle plan
+        case _: DropResult if slottedPipeBuilder.isDefined =>
+          createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperatorToChainOnTo)
+
+        // Example of fallback plan that needs to be head
+        case _: OptionalExpand if slottedPipeBuilder.isDefined =>
+          throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a fallback middle plan, use another runtime.")
+
+        case _ =>
+          Some(new DummyMiddleOperator)
+      }
+    }
 
     override def createProduceResults(plan: ProduceResult): ProduceResultOperator =
       mock[ProduceResultOperator](RETURNS_DEEP_STUBS)
@@ -332,5 +499,30 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   class DummyMiddleOperator extends MiddleOperator {
     override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = null
     override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "middle")
+  }
+
+  class DummySlottedPipeBuilder() extends PipeMapper {
+    override def onLeaf(plan: LogicalPlan): Pipe = ???
+
+    override def onOneChildPlan(plan: LogicalPlan, source: Pipe): Pipe = plan match {
+      case _: DropResult =>
+        DropResultPipe(source)(Id.INVALID_ID)
+
+      case _: ProcedureCall =>
+        ProcedureCallPipe(source,
+          mock[ProcedureSignature](RETURNS_DEEP_STUBS),
+          mock[ProcedureCallMode](RETURNS_DEEP_STUBS),
+          Seq.empty,
+          FlatMapAndAppendToRow,
+          Seq.empty,
+          Seq.empty
+        )(Id.INVALID_ID)
+
+      case OptionalExpand(_, from, dir, types, to, relName, mode, _) =>
+        OptionalExpandAllPipe(source, from, relName, to, dir, RelationshipTypes.empty, None)(Id.INVALID_ID)
+
+    }
+
+    override def onTwoChildPlan(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = ???
   }
 }
