@@ -17,7 +17,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
     val plan = given(_.expand("(x)-->(y)").allNodeScan("x"))
 
     // when
-    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false),
+    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
                                               InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
@@ -29,7 +29,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
     val plan = given(_.expand("(x)-->(y)").allNodeScan("x"))
 
     // when
-    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = true),
+    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false),
                                               InterpretedPipesFallbackPolicy(disabled, parallelExecution = true))
 
     //then
@@ -46,7 +46,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
                        .allNodeScan("a"))
 
     // when
-    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false),
+    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
                                               InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
@@ -64,7 +64,7 @@ class MorselPipelineBreakingPolicyTest  extends CypherFunSuite {
                        .allNodeScan("a"))
 
     // when
-    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false),
+    val policy = MorselPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
                                               InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then

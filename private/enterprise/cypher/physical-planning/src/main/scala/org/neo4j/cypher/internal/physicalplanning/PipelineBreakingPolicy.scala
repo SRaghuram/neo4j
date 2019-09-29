@@ -41,6 +41,15 @@ trait PipelineBreakingPolicy {
   * Policy that determines if a plan can be fused or not.
   */
 sealed trait OperatorFusionPolicy {
+  /**
+   * @return `true` if any fusion at all is enabled with this policy, otherwise `false`
+   */
+  def fusionEnabled: Boolean
+
+  /**
+   * @return `true` if fusion over pipelines is enabled with this policy, otherwise `false`
+   */
+  def fusionOverPipelineEnabled: Boolean
 
   /**
     * `true` if plan is fusable otherwise `false`
@@ -60,20 +69,28 @@ sealed trait OperatorFusionPolicy {
 
 object OperatorFusionPolicy {
 
-  def apply(fusingEnabled: Boolean, parallelExecution: Boolean): OperatorFusionPolicy =
-    if (!fusingEnabled) OPERATOR_FUSION_DISABLED
+  def apply(fusionEnabled: Boolean, fusionOverPipelinesEnabled: Boolean): OperatorFusionPolicy =
+    if (!fusionEnabled) OPERATOR_FUSION_DISABLED
     else {
-      if (parallelExecution) OPERATOR_FUSION_WITHIN_PIPELINE else OPERATOR_FUSION_OVER_PIPELINES
+      if (fusionOverPipelinesEnabled) OPERATOR_FUSION_OVER_PIPELINES else OPERATOR_FUSION_WITHIN_PIPELINE
     }
 
-  private case object OPERATOR_FUSION_DISABLED extends OperatorFusionPolicy {
+  case object OPERATOR_FUSION_DISABLED extends OperatorFusionPolicy {
 
     override def canFuse(lp: LogicalPlan): Boolean = false
 
     override def canFuseOverPipeline(lp: LogicalPlan): Boolean = false
+
+    override def fusionEnabled: Boolean = false
+
+    override def fusionOverPipelineEnabled: Boolean = false
   }
 
-  private case object OPERATOR_FUSION_OVER_PIPELINES extends OperatorFusionPolicy {
+  case object OPERATOR_FUSION_OVER_PIPELINES extends OperatorFusionPolicy {
+
+    override def fusionEnabled: Boolean = true
+
+    override def fusionOverPipelineEnabled: Boolean = true
 
     override def canFuse(lp: LogicalPlan): Boolean = {
       lp match {
@@ -116,6 +133,10 @@ object OperatorFusionPolicy {
   }
 
   case object OPERATOR_FUSION_WITHIN_PIPELINE extends OperatorFusionPolicy {
+
+    override def fusionEnabled: Boolean = true
+
+    override def fusionOverPipelineEnabled: Boolean = false
 
     override def canFuse(lp: LogicalPlan): Boolean = OPERATOR_FUSION_OVER_PIPELINES.canFuse(lp)
 

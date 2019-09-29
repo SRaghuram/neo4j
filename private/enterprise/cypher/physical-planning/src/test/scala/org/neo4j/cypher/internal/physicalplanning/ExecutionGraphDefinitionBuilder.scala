@@ -37,7 +37,7 @@ class ExecutionGraphDefinitionBuilder()
   def build(readOnly: Boolean = true): ExecutionGraphDefinition = {
     val logicalPlan = buildLogicalPlan()
     val breakingPolicy = PipelineBreakingPolicy.breakForIds(plansToBreakOn: _*)
-    val operatorFusionPolicy = OperatorFusionPolicy(fusingEnabled = false, parallelExecution = false) // TODO: Add test with a fusion policy
+    val operatorFusionPolicy = OperatorFusionPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false) // TODO: Add test with a fusion policy
     val physicalPlan = PhysicalPlanner.plan(tokenContext,
       logicalPlan,
       semanticTable,

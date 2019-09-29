@@ -68,7 +68,10 @@ class MorselRuntime(parallelExecution: Boolean,
       if (query.periodicCommitInfo.isDefined)
         throw new CantCompileQueryException("Periodic commit is not supported by Morsel runtime")
 
-      compilePlan(shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled,
+      val shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled
+      val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, fusionOverPipelinesEnabled = !parallelExecution)
+
+      compilePlan(operatorFusionPolicy,
                   query,
                   context,
                   new QueryIndexRegistrator(context.schemaRead))
@@ -93,13 +96,13 @@ class MorselRuntime(parallelExecution: Boolean,
     * If `shouldFuseOperators` is `true` it first attempts to fuse operators but in the case of failure
     * it steps back and redo the physical planning without any attempts to fuse operators.
     */
-  private def compilePlan(shouldFuseOperators: Boolean,
+  private def compilePlan(operatorFusionPolicy: OperatorFusionPolicy,
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
-    val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, parallelExecution)
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.config.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
+
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
@@ -146,7 +149,7 @@ class MorselRuntime(parallelExecution: Boolean,
                                               readOnly = readOnly,
                                               queryIndexRegistrator,
                                               query.semanticTable,
-                                              breakingPolicy,
+                                              interpretedPipesFallbackPolicy,
                                               slottedPipeBuilder)
 
     DebugLog.logDiff("PipelineBuilder")
@@ -190,11 +193,20 @@ class MorselRuntime(parallelExecution: Boolean,
                               maybeThreadSafeCursors,
                               metadata)
     } catch {
-      case e: CantCompileQueryException if shouldFuseOperators =>
+      case e: CantCompileQueryException if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
         context.log.debug("Retrying physical planning", e)
         DebugLog.log("Could not compile pipeline because of %s", e)
-        compilePlan(shouldFuseOperators = false, query, context, queryIndexRegistrator)
+
+        val nextOperatorFusionPolicy =
+          if (operatorFusionPolicy.fusionOverPipelineEnabled)
+            // Try again with fusion within pipeline enabled
+            OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false)
+          else
+            // Try again with fusion disabled
+            OperatorFusionPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false)
+
+        compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator)
     }
   }
 

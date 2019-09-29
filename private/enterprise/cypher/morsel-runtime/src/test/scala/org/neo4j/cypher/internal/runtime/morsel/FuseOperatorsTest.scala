@@ -330,7 +330,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
   def produceResult(out: String*): LogicalPlan => LogicalPlan = ProduceResult(_, out.toSeq)
 
-  private val fusionPolicy = OperatorFusionPolicy(fusingEnabled = true, parallelExecution = false)
+  private val fusionPolicy = OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true)
 
   class PipelineBuilder(head: LogicalPlan) {
     private val slots = mutable.Map.empty[String, Slot]
@@ -462,7 +462,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                             readOnly = true,
                             indexRegistrator = mock[QueryIndexRegistrator],
                             semanticTable = mock[SemanticTable],
-                            MorselPipelineBreakingPolicy(fusionPolicy, INTERPRETED_PIPES_FALLBACK_DISABLED),
+                            INTERPRETED_PIPES_FALLBACK_DISABLED,
                             slottedPipeBuilder = Some(new DummySlottedPipeBuilder)) {
 
     override def create(plan: LogicalPlan,
