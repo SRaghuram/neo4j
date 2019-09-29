@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
-import org.neo4j.cypher.internal.ir.SimplePatternLength
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
@@ -206,6 +205,28 @@ object InterpretedPipesFallbackPolicy {
 
       // No two-children plans
       case lp if lp.lhs.isDefined && lp.rhs.isDefined =>
+        throw unsupported(lp.getClass.getSimpleName)
+
+      // Updating plans are not supported in parallel execution
+      case lp @ (_: Create |
+                 _: MergeCreateNode |
+                 _: MergeCreateRelationship |
+                 _: DeleteNode |
+                 _: DeleteRelationship |
+                 _: DeleteExpression |
+                 _: DeletePath |
+                 _: DetachDeleteNode |
+                 _: DetachDeleteExpression |
+                 _: DetachDeletePath |
+                 _: RemoveLabels |
+                 _: SetLabels |
+                 _: SetProperty |
+                 _: SetPropertiesFromMap |
+                 _: SetNodeProperty |
+                 _: SetNodePropertiesFromMap |
+                 _: SetRelationshipProperty |
+                 _: SetRelationshipPropertiesFromMap |
+                 _: LockNodes) if parallelExecution =>
         throw unsupported(lp.getClass.getSimpleName)
     }
 
