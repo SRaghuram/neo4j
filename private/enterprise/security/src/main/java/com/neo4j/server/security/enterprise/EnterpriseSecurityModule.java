@@ -64,7 +64,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
@@ -81,10 +80,10 @@ import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
+import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 import org.neo4j.values.virtual.MapValue;
@@ -113,7 +112,6 @@ public class EnterpriseSecurityModule extends SecurityModule
     private SystemGraphInitializer systemGraphInitializer;
     private EnterpriseAuthAndUserManager authManager;
     private SecurityConfig securityConfig;
-    private ThreadToStatementContextBridge threadToStatementContextBridge;
 
     @Override
     public String getName()
@@ -126,7 +124,6 @@ public class EnterpriseSecurityModule extends SecurityModule
     {
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
-        this.threadToStatementContextBridge = platformDependencies.resolveDependency( ThreadToStatementContextBridge.class );
         this.systemGraphInitializer = platformDependencies.resolveDependency( SystemGraphInitializer.class );
 
         this.config = dependencies.config();
@@ -295,8 +292,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
     {
-        ContextSwitchingSystemGraphQueryExecutor queryExecutor =
-                new ContextSwitchingSystemGraphQueryExecutor( databaseManager, threadToStatementContextBridge );
+        SystemGraphQueryExecutor queryExecutor = new SystemGraphQueryExecutor( databaseManager );
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
@@ -636,10 +632,9 @@ public class EnterpriseSecurityModule extends SecurityModule
             this.api = (GraphDatabaseAPI) database;
             var resolver = api.getDependencyResolver();
             this.engine = resolver.resolveDependency( QueryExecutionEngine.class );
-            var bridge = resolver.resolveDependency( ThreadToStatementContextBridge.class );
             var transactionFactory = resolver.resolveDependency( KernelTransactionFactory.class );
             this.contextFactory = Neo4jTransactionalContextFactory.create(
-                    () -> resolver.resolveDependency( GraphDatabaseQueryService.class ), transactionFactory, bridge );
+                    () -> resolver.resolveDependency( GraphDatabaseQueryService.class ), transactionFactory );
         }
 
         @Override

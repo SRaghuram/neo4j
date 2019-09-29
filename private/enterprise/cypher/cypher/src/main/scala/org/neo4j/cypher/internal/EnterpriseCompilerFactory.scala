@@ -7,17 +7,16 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
-import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption, CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
+import org.neo4j.cypher._
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
 import org.neo4j.logging.Log
 
@@ -33,9 +32,8 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
    */
   private val runtimeEnvironment: RuntimeEnvironment = {
     val resolver = graph.getDependencyResolver
-    val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
     val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
-    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), txBridge, spi.lifeSupport, workerManager)
+    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, workerManager)
   }
 
   private val log: Log = spi.logProvider().getLog(getClass)

@@ -5,9 +5,9 @@
  */
 package com.neo4j.fabric.transaction;
 
-import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.stream.StatementResult;
 
@@ -181,18 +181,6 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
 
         rollback( true );
-    }
-
-    @Override
-    public void bindToCurrentThread()
-    {
-        localTransaction.bindToCurrentThread();
-    }
-
-    @Override
-    public void unbindFromCurrentThread()
-    {
-        localTransaction.unbindFromCurrentThread();
     }
 
     @Override

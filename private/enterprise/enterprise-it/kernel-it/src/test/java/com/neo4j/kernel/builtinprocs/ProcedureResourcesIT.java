@@ -30,8 +30,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
@@ -153,19 +152,13 @@ class ProcedureResourcesIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            final KernelTransaction ktx = getKernelTransaction( db.databaseId() );
+            final KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
             final int labelId = ktx.tokenRead().nodeLabel( "Label" );
             final int propId = ktx.tokenRead().propertyKey( "prop" );
             final IndexDescriptor index = ktx.schemaRead().index( labelId, propId );
             indexName = index.getName();
             tx.commit();
         }
-    }
-
-    private KernelTransaction getKernelTransaction( DatabaseId databaseId )
-    {
-        return db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class )
-                        .getKernelTransactionBoundToThisThread( false, databaseId );
     }
 
     private void createFulltextIndexes()

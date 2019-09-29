@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbstructure;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +19,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor;
 import org.neo4j.kernel.impl.util.dbstructure.GraphDbStructureGuide;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -49,7 +48,7 @@ class GraphDbStructureGuideTest
         int partyLabelId;
         int animalLabelId;
 
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
         TokenRead tokenRead = ktx.tokenRead();
         personLabelId = tokenRead.nodeLabel( "Person" );
         partyLabelId = tokenRead.nodeLabel( "Party" );
@@ -95,7 +94,7 @@ class GraphDbStructureGuideTest
         int knowsId;
         int lovesId;
         int fawnsAtId;
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         TokenRead tokenRead = ktx.tokenRead();
         knowsId = tokenRead.relationshipType( "KNOWS" );
@@ -215,14 +214,14 @@ class GraphDbStructureGuideTest
 
     private void createRel( long startId, int relTypeId, long endId ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         ktx.dataWrite().relationshipCreate( startId, relTypeId, endId );
 }
 
     private IndexDescriptor createSchemaIndex( int labelId, int pkId ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         return ktx.schemaWrite().indexCreate( SchemaDescriptor.forLabel( labelId, pkId ) );
 
@@ -230,7 +229,7 @@ class GraphDbStructureGuideTest
 
     private ConstraintDescriptor createUniqueConstraint( int labelId, int pkId ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         return ktx.schemaWrite()
                 .uniquePropertyConstraintCreate( SchemaDescriptor.forLabel( labelId, pkId ), null );
@@ -248,7 +247,7 @@ class GraphDbStructureGuideTest
 
     private long createLabeledNode( int labelId ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         long nodeId = ktx.dataWrite().nodeCreate();
         ktx.dataWrite().nodeAddLabel( nodeId, labelId );
@@ -257,48 +256,32 @@ class GraphDbStructureGuideTest
 
     private int createLabel( String name ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
         return ktx.tokenWrite().labelGetOrCreateForName( name );
     }
 
     private int createPropertyKey( String name ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
         return ktx.tokenWrite().propertyKeyGetOrCreateForName( name );
     }
 
     private int createRelTypeId( String name ) throws Exception
     {
-        KernelTransaction ktx = ktx();
+        KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         return ktx.tokenWrite().relationshipTypeGetOrCreateForName( name );
     }
 
     @Inject
     private GraphDatabaseAPI db;
-    private ThreadToStatementContextBridge bridge;
     private Transaction tx;
 
     @BeforeEach
     void setUp()
     {
         DependencyResolver dependencyResolver = db.getDependencyResolver();
-        this.bridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
         this.tx = db.beginTx();
-    }
-
-    @AfterEach
-    void tearDown()
-    {
-        if ( bridge.hasTransaction() )
-        {
-            tx.rollback();
-        }
-    }
-
-    KernelTransaction ktx()
-    {
-        return bridge.getKernelTransactionBoundToThisThread( true, db.databaseId() );
     }
 
     void commitAndReOpen()
@@ -314,11 +297,6 @@ class GraphDbStructureGuideTest
 
         tx.schema().awaitIndexesOnline( 10, TimeUnit.SECONDS );
         commit();
-
-        if ( bridge.hasTransaction() )
-        {
-            throw new IllegalStateException( "Dangling transaction before running visitable" );
-        }
 
         GraphDbStructureGuide analyzer = new GraphDbStructureGuide( db );
         analyzer.accept( visitor );

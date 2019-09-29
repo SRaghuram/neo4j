@@ -10,12 +10,12 @@ import java.time.Clock
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito.{verify, _}
 import org.neo4j.cypher.GraphDatabaseTestSupport
-import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.compiler._
 import org.neo4j.cypher.internal.compiler.phases.{PlannerContext, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.planner.logical.idp._
 import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory, simpleExpressionEvaluator}
 import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext}
+import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
@@ -25,8 +25,6 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{CartesianProductNotification, InputPosition}
 import org.neo4j.kernel.api.{KernelTransaction, Statement}
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.values.virtual.MapValue
 
 class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with GraphDatabaseTestSupport {
@@ -83,11 +81,11 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
   }
 
   private def runQuery(query: String) = {
-    graph.inTx {
+    graph.withTx( tx => {
       val tracer = CompilationPhaseTracer.NO_TRACING
       val innerVariableNamer = new GeneratingNamer
       val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = false)
-      val kernelTransaction = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).getKernelTransactionBoundToThisThread(true, graphOps.asInstanceOf[GraphDatabaseAPI].databaseId())
+      val kernelTransaction = tx.kernelTransaction()
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,
                                                  None, monitors, metricsFactory, createQueryGraphSolver(), configuration, defaultUpdateStrategy, Clock.systemUTC(), new SequentialIdGen(),
@@ -100,7 +98,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
       finally {
         statement.close()
       }
-    }
+    } )
   }
 
   private val configuration = CypherPlannerConfiguration(

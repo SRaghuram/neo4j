@@ -43,7 +43,6 @@ import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.scheduler.JobHandle;
@@ -55,7 +54,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -171,10 +169,6 @@ class TransactionTest
 
         when( graphDatabaseQueryService.getDependencyResolver() ).thenReturn( dr );
 
-        ThreadToStatementContextBridge txBridge = mock( ThreadToStatementContextBridge.class );
-        when( txBridge.getKernelTransactionBoundToThisThread( anyBoolean(), any() ) ).thenReturn( kernelTransaction );
-
-        when( dr.resolveDependency( ThreadToStatementContextBridge.class ) ).thenReturn( txBridge );
     }
 
     private void mockKernelTransaction()

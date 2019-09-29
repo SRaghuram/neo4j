@@ -36,7 +36,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.TokenAccess;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
@@ -306,7 +306,7 @@ class TokenReplicationStressIT
         GraphDatabaseFacade db = member.defaultDatabase();
         try ( Transaction tx = db.beginTx() )
         {
-            KernelTransaction kernelTx = currentKernelTx( member );
+            KernelTransaction kernelTx = ((InternalTransaction) tx).kernelTransaction();
             return Iterators.asList( tokenAccess.all( kernelTx ) );
         }
     }
@@ -324,12 +324,5 @@ class TokenReplicationStressIT
     private static LongSupplier tokenIdsSupplier( long initialValue )
     {
         return LongStream.iterate( initialValue, i -> i + 2 ).iterator()::nextLong;
-    }
-
-    private static KernelTransaction currentKernelTx( CoreClusterMember member )
-    {
-        GraphDatabaseFacade graphDatabaseFacade = member.defaultDatabase();
-        ThreadToStatementContextBridge bridge = graphDatabaseFacade.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-        return bridge.getKernelTransactionBoundToThisThread( true, graphDatabaseFacade.databaseId() );
     }
 }

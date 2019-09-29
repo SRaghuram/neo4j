@@ -22,11 +22,10 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
+import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -59,8 +58,7 @@ class SystemGraphCachingTest
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
         DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
-        ThreadToStatementContextBridge bridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
-        systemGraphExecutor = new TestQueryExecutor( databaseManager, bridge );
+        systemGraphExecutor = new TestQueryExecutor( databaseManager );
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
         realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(),
@@ -118,13 +116,13 @@ class SystemGraphCachingTest
         assertFalse( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
     }
 
-    private static class TestQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
+    private static class TestQueryExecutor extends SystemGraphQueryExecutor
     {
         private boolean systemAccess;
 
-        TestQueryExecutor( DatabaseManager<?> databaseManager, ThreadToStatementContextBridge threadToStatementContextBridge )
+        TestQueryExecutor( DatabaseManager<?> databaseManager )
         {
-            super( databaseManager, threadToStatementContextBridge );
+            super( databaseManager );
         }
 
         boolean takeAccessFlag()

@@ -21,10 +21,9 @@ import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentExc
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
-import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor
+import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 import scala.collection.Map
@@ -1323,7 +1322,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   private def initSystemGraph(config: Config): Unit = {
     val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-    val queryExecutor: ContextSwitchingSystemGraphQueryExecutor = new ContextSwitchingSystemGraphQueryExecutor(databaseManager, threadToStatementContextBridge())
+    val queryExecutor: SystemGraphQueryExecutor = new SystemGraphQueryExecutor(databaseManager)
     val secureHasher: SecureHasher = new SecureHasher
     val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
@@ -1331,10 +1330,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(systemGraphInitializer, queryExecutor, mock[Log], systemGraphOperations, importOptions, secureHasher)
     securityGraphInitializer.initializeSecurityGraph()
     selectDatabase(SYSTEM_DATABASE_NAME)
-  }
-
-  private def threadToStatementContextBridge(): ThreadToStatementContextBridge = {
-    graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
   }
 
   // Use the default value instead of the new value in DDLAcceptanceTestBase

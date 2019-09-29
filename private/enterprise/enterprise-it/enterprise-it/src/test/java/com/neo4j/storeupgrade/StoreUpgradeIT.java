@@ -51,7 +51,7 @@ import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -528,9 +528,7 @@ public class StoreUpgradeIT
                 }
             }
 
-            ThreadToStatementContextBridge bridge = db.getDependencyResolver()
-                    .resolveDependency( ThreadToStatementContextBridge.class );
-            KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( true, db.databaseId() );
+            KernelTransaction kernelTransaction = ((InternalTransaction) transaction).kernelTransaction();
 
             for ( Map.Entry<Label,Long> entry : counts.entrySet() )
             {
@@ -547,9 +545,7 @@ public class StoreUpgradeIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            ThreadToStatementContextBridge bridge = db.getDependencyResolver()
-                    .resolveDependency( ThreadToStatementContextBridge.class );
-            KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( true, db.databaseId() );
+            KernelTransaction kernelTransaction = ((InternalTransaction) tx).kernelTransaction();
 
             assertThat( kernelTransaction.dataRead().countsForNode( -1 ), is( store.expectedNodeCount ) );
         }
@@ -571,9 +567,7 @@ public class StoreUpgradeIT
             TransactionIdStore txIdStore = db.getDependencyResolver().resolveDependency( TransactionIdStore.class );
             long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
-            try ( Statement ignored1 = db.getDependencyResolver()
-                                         .resolveDependency( ThreadToStatementContextBridge.class )
-                                         .getKernelTransactionBoundToThisThread( true, db.databaseId() ).acquireStatement() )
+            try ( Statement ignored1 = ((InternalTransaction) tx).kernelTransaction().acquireStatement() )
             {
                 GBPTreeCountsStore countsStore = db.getDependencyResolver().resolveDependency( GBPTreeCountsStore.class );
                 long countsTxId = countsStore.txId();

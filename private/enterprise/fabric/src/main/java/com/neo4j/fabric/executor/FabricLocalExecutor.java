@@ -30,7 +30,6 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
@@ -65,15 +64,14 @@ public class FabricLocalExecutor
 
         var dependencyResolver = databaseFacade.getDependencyResolver();
         var executionEngine = dependencyResolver.resolveDependency( ExecutionEngine.class );
-        var txBridge = dependencyResolver.resolveDependency( ThreadToStatementContextBridge.class );
 
         var internalTransaction = beginInternalTransaction( databaseFacade, transactionInfo );
-        var kernelTransaction = txBridge.getKernelTransactionBoundToThisThread( false, databaseFacade.databaseId() );
+        var kernelTransaction = internalTransaction.kernelTransaction();
 
         var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
         var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
 
-        return new FabricLocalTransaction( txBridge, executionEngine, transactionalContextFactory, kernelTransaction, internalTransaction );
+        return new FabricLocalTransaction( executionEngine, transactionalContextFactory, kernelTransaction, internalTransaction );
     }
 
     private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
@@ -115,13 +113,11 @@ public class FabricLocalExecutor
         private final TransactionalContextFactory transactionalContextFactory;
         private final KernelTransaction kernelTransaction;
         private final InternalTransaction internalTransaction;
-        private final ThreadToStatementContextBridge txBridge;
 
-        FabricLocalTransaction( ThreadToStatementContextBridge txBridge, ExecutionEngine queryExecutionEngine,
+        FabricLocalTransaction( ExecutionEngine queryExecutionEngine,
                 TransactionalContextFactory transactionalContextFactory, KernelTransaction kernelTransaction,
                 InternalTransaction internalTransaction )
         {
-            this.txBridge = txBridge;
             this.queryExecutionEngine = queryExecutionEngine;
             this.transactionalContextFactory = transactionalContextFactory;
             this.kernelTransaction = kernelTransaction;
@@ -172,16 +168,6 @@ public class FabricLocalExecutor
             {
                 kernelTransaction.rollback();
             }
-        }
-
-        public void bindToCurrentThread()
-        {
-            txBridge.bindTransactionToCurrentThread( kernelTransaction );
-        }
-
-        public void unbindFromCurrentThread()
-        {
-            txBridge.unbindTransactionFromCurrentThread();
         }
 
         public void markForTermination( Status reason )

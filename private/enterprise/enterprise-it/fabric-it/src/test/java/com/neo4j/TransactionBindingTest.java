@@ -110,8 +110,6 @@ class TransactionBindingTest
 
     private void executeQuery( BoltTransaction tx )
     {
-        tx.bindToCurrentThread();
-
         CompletableFuture<Void> future = new CompletableFuture<>();
 
         try
@@ -162,10 +160,6 @@ class TransactionBindingTest
         catch ( Exception e )
         {
             throw new RuntimeException( e );
-        }
-        finally
-        {
-            tx.unbindFromCurrentThread();
         }
     }
 }

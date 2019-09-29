@@ -17,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
@@ -45,7 +44,6 @@ object ContextHelper extends MockitoSugar {
              jobScheduler: JobScheduler,
              schemaRead: SchemaRead,
              cursors: CursorFactory,
-             txBridge: ThreadToStatementContextBridge,
              lifeSupport: LifeSupport,
              workerManager: WorkerManagement,
              materializedEntitiesMode: Boolean = false): EnterpriseRuntimeContext = {
@@ -57,7 +55,7 @@ object ContextHelper extends MockitoSugar {
       clock,
       debugOptions,
       runtimeConfig,
-      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport, workerManager),
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, workerManager),
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,

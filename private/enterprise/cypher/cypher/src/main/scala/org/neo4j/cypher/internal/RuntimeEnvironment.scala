@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing._
 import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerResourceProvider}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.scheduler.{Group, JobScheduler}
 
@@ -22,13 +21,12 @@ object RuntimeEnvironment {
   def of(config: CypherRuntimeConfiguration,
          jobScheduler: JobScheduler,
          cursors: CursorFactory,
-         txBridge: ThreadToStatementContextBridge,
          lifeSupport: LifeSupport,
          workerManager: WorkerManagement): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
       createMorselQueryExecutor(cursors),
-      createParallelQueryExecutor(cursors, txBridge, lifeSupport, workerManager),
+      createParallelQueryExecutor(cursors, lifeSupport, workerManager),
       createTracer(config, jobScheduler, lifeSupport),
       cursors)
   }
@@ -38,14 +36,12 @@ object RuntimeEnvironment {
   }
 
   private def createParallelQueryExecutor(cursors: CursorFactory,
-                                  txBridge: ThreadToStatementContextBridge,
                                   lifeSupport: LifeSupport,
                                   workerManager: WorkerManagement): QueryExecutor = {
-    val txBinder = new TxBridgeTransactionBinder(txBridge)
     val resourceFactory = () => new QueryResources(cursors)
     val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
     lifeSupport.add(workerResourceProvider)
-    val queryExecutor = new FixedWorkersQueryExecutor(txBinder, workerResourceProvider, workerManager)
+    val queryExecutor = new FixedWorkersQueryExecutor( workerResourceProvider, workerManager)
     queryExecutor
   }
 

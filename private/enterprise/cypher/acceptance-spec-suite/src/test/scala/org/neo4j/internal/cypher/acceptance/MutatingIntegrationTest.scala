@@ -10,8 +10,6 @@ import org.neo4j.graphdb._
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.internal.GraphDatabaseAPI
 
 import scala.collection.JavaConverters._
 
@@ -287,13 +285,6 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
     assertStats(executeWith(Configs.InterpretedAndSlotted, q, params = Map("param"->map)), nodesCreated = 1, propertiesWritten = 1)
     result.toList should equal(List("foo","bar"))
-  }
-
-  test("failed query should not leave dangling transactions") {
-    failWithError(Configs.All, "RETURN 1 / 0", List("/ by zero", "divide by zero"))
-
-    val contextBridge : ThreadToStatementContextBridge = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-    contextBridge.getKernelTransactionBoundToThisThread( false, graphOps.asInstanceOf[GraphDatabaseAPI].databaseId() ) should be(null)
   }
 
   test("full path in one create") {

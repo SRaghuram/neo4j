@@ -11,7 +11,6 @@ import java.util.Map;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -25,15 +24,13 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 class SystemGraphDbmsOperator extends DbmsOperator
 {
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
-    private final ThreadToStatementContextBridge txBridge;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
-    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, ThreadToStatementContextBridge txBridge,
+    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel,
                              ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
-        this.txBridge = txBridge;
         this.reconciledTxTracker = reconciledTxTracker;
         this.desired.put( SYSTEM_DATABASE_ID.name(), new DatabaseState( SYSTEM_DATABASE_ID, STARTED ) );
         this.log = logProvider.getLog( getClass() );
@@ -41,14 +38,6 @@ class SystemGraphDbmsOperator extends DbmsOperator
 
     void transactionCommitted( long txId, TransactionData transactionData )
     {
-        if ( txBridge.hasTransaction() )
-        {
-            // Still in a transaction. This method was most likely invoked after a nested transaction was committed.
-            // For example, such transaction could be a token-introducing internal transaction. No need to reconcile.
-            updateLastReconciledTransactionId( txId, false );
-            return;
-        }
-
         reconcile( txId, transactionData, false );
     }
 

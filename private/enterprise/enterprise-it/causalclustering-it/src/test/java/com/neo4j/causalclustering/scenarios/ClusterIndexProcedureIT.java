@@ -27,7 +27,7 @@ import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
@@ -182,7 +182,7 @@ class ClusterIndexProcedureIT
             // with correct pattern and provider
             assertEquals( "Person", label.name(), "correct label" );
             assertEquals( "name", property, "correct property" );
-            assertCorrectProvider( db, label, property );
+            assertCorrectProvider( tx, label, property );
 
             tx.commit();
         }
@@ -211,10 +211,9 @@ class ClusterIndexProcedureIT
         }
     }
 
-    private static void assertCorrectProvider( GraphDatabaseAPI db, Label label, String property )
+    private static void assertCorrectProvider( Transaction tx, Label label, String property )
     {
-        ThreadToStatementContextBridge bridge = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-        KernelTransaction kernelTransaction = bridge.getKernelTransactionBoundToThisThread( false, db.databaseId() );
+        KernelTransaction kernelTransaction = ((InternalTransaction) tx).kernelTransaction();
         TokenRead tokenRead = kernelTransaction.tokenRead();
         int labelId = tokenRead.nodeLabel( label.name() );
         int propId = tokenRead.propertyKey( property );

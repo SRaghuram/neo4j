@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.kernel.api.Kernel
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.scheduler.JobScheduler
 
 //noinspection TypeAnnotation
@@ -23,10 +22,9 @@ object ENTERPRISE {
     (runtimeConfig, resolver, lifeSupport, logProvider) => {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
-      val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
       val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
 
-      val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), txBridge, lifeSupport, workerManager)
+      val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager)
 
       TracingRuntimeContextManager(
         GeneratedQueryStructure,

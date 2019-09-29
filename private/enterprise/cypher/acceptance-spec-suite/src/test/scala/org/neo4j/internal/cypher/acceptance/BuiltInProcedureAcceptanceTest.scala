@@ -452,8 +452,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
 
-    val index = inTx(_ => kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")),
-                                                       tokenReader(t => t.propertyKey("name"))))
+    val index = graph.withTx(tx => tx.kernelTransaction().schemaRead().index(tokenReader( tx, t => t.nodeLabel("Person")),
+                                                       tokenReader( tx, t => t.propertyKey("name"))))
     // when
     val listResult = executeWith(Configs.ProcedureCall, "CALL db.indexes()")
 
@@ -485,7 +485,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
-    val index = inTx(_ => kernelTransaction().schemaRead().index(tokenReader(t => t.nodeLabel("Person")), tokenReader(t => t.propertyKey("name"))))
+    val index = inTx(tx => tx.kernelTransaction().schemaRead().index(tokenReader( tx, t => t.nodeLabel("Person")),
+      tokenReader(tx, t => t.propertyKey("name"))))
 
     // when
     val listResult = executeWith(Configs.ProcedureCall, "CALL db.indexes()")

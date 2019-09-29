@@ -36,7 +36,6 @@ import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.query.ExecutingQuery
 import org.neo4j.kernel.api.{Kernel, Statement}
 import org.neo4j.kernel.database.Database
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
@@ -113,10 +112,9 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val planContext: PlanContext = getPlanContext(transactionalContext)
       val schemaRead = transactionalContext.kernelTransaction().schemaRead()
       val cursors = dependencyResolver.resolveDependency(classOf[Kernel]).cursors()
-      val txBridge = dependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge])
       val lifeSupport = dependencyResolver.resolveDependency( classOf[Database] ).getLife
       val workerManager = dependencyResolver.resolveDependency( classOf[WorkerManagement] )
-      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, txBridge, lifeSupport, workerManager)
+      val runtimeContext = getContext(cypherRuntime, planContext, useCompiledExpressions, schemaRead, cursors, lifeSupport, workerManager)
       val (logicalPlan, semanticTable, resultColumns) = getLogicalPlanAndSemanticTable(planContext)
       solve(logicalPlan)
       val compilationStateBefore = getLogicalQuery(logicalPlan, semanticTable, resultColumns)
@@ -135,7 +133,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          useCompiledExpressions  : Boolean = true,
                          schemaRead              : SchemaRead,
                          cursors                 : CursorFactory,
-                         txBridge                : ThreadToStatementContextBridge,
                          lifeSupport             : LifeSupport,
                          workerManager           : WorkerManagement,
                          materializedEntitiesMode: Boolean = false): EnterpriseRuntimeContext =
@@ -147,7 +144,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       jobScheduler = jobScheduler,
       schemaRead = schemaRead,
       cursors = cursors,
-      txBridge = txBridge,
       lifeSupport = lifeSupport,
       workerManager = workerManager,
       materializedEntitiesMode = materializedEntitiesMode)
@@ -187,18 +183,15 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val queryId = 1
     val queryParameters = VirtualValues.EMPTY_MAP
     val metaData = new util.HashMap[String, AnyRef]()
-    val threadToStatementContextBridge =
-      dependencyResolver.provideDependency(classOf[ThreadToStatementContextBridge]).get
     val transactionFactory = dependencyResolver.provideDependency(classOf[KernelTransactionFactory]).get
     val databaseId = db.asInstanceOf[GraphDatabaseAPI].databaseId()
-    val initialStatement: Statement = threadToStatementContextBridge.get(databaseId)
+    val initialStatement: Statement = tx.kernelTransaction().acquireStatement()
     val threadExecutingTheQuery = Thread.currentThread()
     val activeLockCount: LongSupplier = new LongSupplier {
       override def getAsLong = 0
     }
     new Neo4jTransactionalContext(
       new GraphDatabaseCypherService(db),
-      threadToStatementContextBridge,
       tx,
       initialStatement,
       new ExecutingQuery(queryId,

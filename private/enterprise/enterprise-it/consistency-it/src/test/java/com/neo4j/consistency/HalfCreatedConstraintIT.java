@@ -28,7 +28,7 @@ import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -95,8 +95,7 @@ class HalfCreatedConstraintIT
         try ( Transaction transaction = database.beginTx() )
         {
             DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
-            ThreadToStatementContextBridge statementBridge = resolver.provideDependency( ThreadToStatementContextBridge.class ).get();
-            KernelTransaction kernelTransaction = statementBridge.getKernelTransactionBoundToThisThread( true, ((GraphDatabaseAPI) database).databaseId() );
+            KernelTransaction kernelTransaction = ((InternalTransaction) transaction).kernelTransaction();
             LabelSchemaDescriptor schema = SchemaDescriptor.forLabel( 0, 0 );
             UniquenessConstraintDescriptor constraint = ConstraintDescriptorFactory.uniqueForSchema( schema );
             constraint = constraint.withName( SchemaRule.generateName( constraint, new String[]{"Label"}, new String[]{"prop"} ) );

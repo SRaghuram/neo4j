@@ -25,10 +25,6 @@ public interface FabricTransaction
 
     StatementResult execute( Function<FabricExecutionContext,StatementResult> runLogic );
 
-    void bindToCurrentThread();
-
-    void unbindFromCurrentThread();
-
     void markForTermination( Status reason );
 
     Optional<Status> getReasonIfTerminated();

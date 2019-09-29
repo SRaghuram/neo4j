@@ -230,11 +230,6 @@ class StubKernelTransaction implements KernelTransaction
     }
 
     @Override
-    public void registerCloseListener( CloseListener listener )
-    {
-    }
-
-    @Override
     public Type transactionType()
     {
         return null;

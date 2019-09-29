@@ -125,18 +125,6 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         }
 
         @Override
-        public void bindToCurrentThread()
-        {
-            fabricTransaction.bindToCurrentThread();
-        }
-
-        @Override
-        public void unbindFromCurrentThread()
-        {
-            fabricTransaction.unbindFromCurrentThread();
-        }
-
-        @Override
         public void commit() throws TransactionFailureException
         {
             fabricTransaction.commit();

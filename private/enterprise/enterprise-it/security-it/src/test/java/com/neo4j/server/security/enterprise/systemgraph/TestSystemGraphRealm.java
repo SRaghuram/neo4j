@@ -17,14 +17,13 @@ import org.neo4j.cypher.security.TestBasicSystemGraphRealm;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
 import org.neo4j.server.security.systemgraph.QueryExecutor;
+import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.mockito.Mockito.mock;
@@ -58,8 +57,7 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
-        var threadToStatementContextBridge = dbManager.testSystemDb.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-        var executor = new ContextSwitchingSystemGraphQueryExecutor( dbManager, threadToStatementContextBridge );
+        var executor = new SystemGraphQueryExecutor( dbManager );
         return testRealm( importOptions, securityLog, dbManager, executor, config );
     }
 

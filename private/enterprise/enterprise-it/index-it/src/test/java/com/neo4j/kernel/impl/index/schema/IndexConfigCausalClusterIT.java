@@ -24,7 +24,7 @@ import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelExcept
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.Inject;
@@ -98,7 +98,7 @@ class IndexConfigCausalClusterIT
         Map<String,Value> indexConfig;
         try ( Transaction tx = db.beginTx() )
         {
-            TokenRead tokenRead = tokenRead( db );
+            TokenRead tokenRead = tokenRead( tx );
             IndexingService indexingService = getIndexingService( db );
             int labelId = tokenRead.nodeLabel( label.name() );
             int propKeyId = tokenRead.propertyKey( prop );
@@ -121,9 +121,8 @@ class IndexConfigCausalClusterIT
         return db.getDependencyResolver().resolveDependency( IndexingService.class );
     }
 
-    private static TokenRead tokenRead( GraphDatabaseFacade db )
+    private static TokenRead tokenRead( Transaction tx )
     {
-        ThreadToStatementContextBridge bridge = db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
-        return bridge.getKernelTransactionBoundToThisThread( false, db.databaseId() ).tokenRead();
+        return ((InternalTransaction) tx).kernelTransaction().tokenRead();
     }
 }

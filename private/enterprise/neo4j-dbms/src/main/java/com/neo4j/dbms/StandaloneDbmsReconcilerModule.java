@@ -10,7 +10,6 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
@@ -44,14 +43,13 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
             ReconciledTransactionTracker reconciledTxTracker, DbmsReconciler reconciler, EnterpriseSystemGraphDbmsModel dbmsModel )
     {
         var internalLogProvider = globalModule.getLogService().getInternalLogProvider();
-        var txBridge = globalModule.getThreadToTransactionBridge();
 
         this.globalModule = globalModule;
         this.databaseManager = databaseManager;
         this.databaseIdRepository = databaseManager.databaseIdRepository();
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
-        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, txBridge, reconciledTxTracker, internalLogProvider );
+        this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager );
         this.reconciler = reconciler;
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
