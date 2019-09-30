@@ -15,7 +15,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.queries.SubmitTestRun;
+import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkConfig;

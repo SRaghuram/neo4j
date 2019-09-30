@@ -3,8 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.client.queries;
+package com.neo4j.bench.client.queries.submit;
 
+import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.common.model.BenchmarkMetrics;
 import com.neo4j.bench.common.model.Project;
 import com.neo4j.bench.common.model.TestRun;

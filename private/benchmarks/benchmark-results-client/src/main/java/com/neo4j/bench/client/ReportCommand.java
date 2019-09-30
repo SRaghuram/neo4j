@@ -10,7 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.neo4j.bench.client.queries.SubmitTestRun;
+import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.model.TestRunError;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.util.JsonUtil;

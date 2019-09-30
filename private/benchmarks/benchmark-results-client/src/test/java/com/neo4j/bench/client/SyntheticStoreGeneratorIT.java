@@ -7,9 +7,9 @@ package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
-import com.neo4j.bench.client.queries.CreateSchema;
-import com.neo4j.bench.client.queries.DropSchema;
-import com.neo4j.bench.client.queries.VerifyStoreSchema;
+import com.neo4j.bench.client.queries.schema.CreateSchema;
+import com.neo4j.bench.client.queries.schema.DropSchema;
+import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
