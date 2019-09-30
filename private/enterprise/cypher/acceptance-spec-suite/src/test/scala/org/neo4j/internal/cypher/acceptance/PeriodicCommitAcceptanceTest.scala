@@ -15,7 +15,6 @@ import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.exceptions
 import org.neo4j.exceptions.{Neo4jException, PeriodicCommitInOpenTransactionException, SyntaxException}
 import org.neo4j.graphdb.{Node, QueryExecutionException}
-import org.neo4j.internal.helpers.Exceptions
 import org.neo4j.storageengine.api.TransactionIdStore
 
 class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
@@ -34,7 +33,7 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
       f
     }
     catch {
-      case t: Throwable => throw Exceptions.rootCause(t)
+      case t: Throwable => throw ExceptionUtils.getRootCause(t)
     }
   }
 

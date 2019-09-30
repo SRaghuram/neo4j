@@ -41,6 +41,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
@@ -54,7 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
-import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -348,7 +348,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         var e = assertThrows( ProcedureException.class, () -> createConstraint( label, properties ) );
-        assertThat( rootCause( e ), instanceOf( IndexEntryConflictException.class ) );
+        assertThat( getRootCause( e ), instanceOf( IndexEntryConflictException.class ) );
     }
 
     @SuppressWarnings( "SameParameterValue" )

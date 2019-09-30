@@ -10,7 +10,6 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -23,6 +22,7 @@ import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
@@ -78,15 +78,11 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         }
         catch ( Exception e )
         {
-            Throwable peeled = Exceptions.peel( e, t -> !(t instanceof UpgradeNotAllowedException) );
-            if ( peeled != null )
+            if ( indexOfThrowable( e, UpgradeNotAllowedException.class ) != -1 )
             {
                 throw new RuntimeException( failedToStartMessage( config ), e );
             }
-            else
-            {
-                throw e;
-            }
+            throw e;
         }
     }
 

@@ -17,7 +17,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.helpers.ArrayUtil;
-import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -47,6 +46,7 @@ import org.neo4j.values.storable.Values;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.stringContainsInOrder;
@@ -277,7 +277,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         } );
 
         // then
-        Throwable rootCause = Exceptions.rootCause( e );
+        Throwable rootCause = getRootCause( e );
         assertThat( rootCause, instanceOf( IndexEntryConflictException.class ) );
         assertThat( rootCause.getMessage(), stringContainsInOrder( asList( "Both node", "share the property value", "smurf" ) ) );
         assertableLogProvider.rawMessageMatcher().assertContains( stringContainsInOrder( asList( "Failed to populate index:", KEY, PROP ) ) );

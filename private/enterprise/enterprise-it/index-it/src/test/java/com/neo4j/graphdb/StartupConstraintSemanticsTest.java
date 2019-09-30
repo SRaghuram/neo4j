@@ -12,7 +12,6 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -20,6 +19,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -116,7 +116,7 @@ class StartupConstraintSemanticsTest
             graphDb = getCommunityDatabase();
             DatabaseStateService dbStateService = graphDb.getDependencyResolver().resolveDependency( DatabaseStateService.class );
             assertTrue( dbStateService.causeOfFailure( graphDb.databaseId() ).isPresent() );
-            Throwable error = Exceptions.rootCause( dbStateService.causeOfFailure( graphDb.databaseId() ).get() );
+            Throwable error = getRootCause( dbStateService.causeOfFailure( graphDb.databaseId() ).get() );
             assertThat( error, instanceOf( IllegalStateException.class ) );
             assertEquals( errorMessage, error.getMessage() );
         }

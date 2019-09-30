@@ -104,6 +104,7 @@ import org.neo4j.test.scheduler.DaemonThreadFactory;
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.util.Collections.singletonList;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.arrayWithSize;
@@ -132,7 +133,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
@@ -492,7 +492,7 @@ class BackupIT
             executor.shutdown();
 
             BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( "localhost", port ) );
-            assertThat( rootCause( error ), either( instanceOf( ConnectException.class ) ).or( instanceOf( ClosedChannelException.class ) ) );
+            assertThat( getRootCause( error ), either( instanceOf( ConnectException.class ) ).or( instanceOf( ClosedChannelException.class ) ) );
 
             assertNull( serverAcceptFuture.get( 1, TimeUnit.MINUTES ) );
             assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );

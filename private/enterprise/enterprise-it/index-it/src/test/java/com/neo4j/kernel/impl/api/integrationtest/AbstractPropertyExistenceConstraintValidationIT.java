@@ -6,7 +6,6 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -21,6 +20,7 @@ import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,7 +64,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         // when
         createEntity( transaction, "Type1" );
         var e = assertThrows( ConstraintViolationException.class, this::commit );
-        var rootCause = (Status.HasStatus) ExceptionUtils.getRootCause( e );
+        var rootCause = (Status.HasStatus) getRootCause( e );
         assertThat( rootCause.status(), is( Status.Schema.ConstraintValidationFailed ) );
     }
 
@@ -80,7 +80,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         removeProperty( transaction.dataWrite(), entity, key );
 
         var e = assertThrows( ConstraintViolationException.class, this::commit );
-        var rootCause = (Status.HasStatus) ExceptionUtils.getRootCause( e );
+        var rootCause = (Status.HasStatus) getRootCause( e );
         assertThat( rootCause.status(), is( Status.Schema.ConstraintValidationFailed ) );
     }
 

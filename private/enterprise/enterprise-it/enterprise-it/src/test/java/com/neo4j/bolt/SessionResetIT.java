@@ -48,6 +48,7 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
@@ -56,7 +57,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.function.Predicates.await;
-import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -303,7 +303,7 @@ public class SessionResetIT
 
     private static boolean isAcceptable( Throwable error )
     {
-        Throwable cause = rootCause( error );
+        Throwable cause = getRootCause( error );
 
         return isTransactionTerminatedException( cause ) ||
                cause instanceof ServiceUnavailableException ||

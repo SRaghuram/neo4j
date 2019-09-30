@@ -25,6 +25,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.maxNumberOfDatabases;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
@@ -37,7 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
-import static org.neo4j.internal.helpers.Exceptions.rootCause;
 
 @TestDirectoryExtension
 class MultiDatabaseManagerIT
@@ -75,7 +75,7 @@ class MultiDatabaseManagerIT
         }
         DatabaseLimitReachedException exception = assertThrows( DatabaseLimitReachedException.class,
                 () -> managementService.createDatabase( "any" ) );
-        assertThat( rootCause( exception ).getMessage(),
+        assertThat( getRootCause( exception ).getMessage(),
                 containsString( "The total limit of databases is already reached. To create more you need to either drop databases or change the" +
                         " limit via the config setting 'dbms.max_databases'" ) );
     }

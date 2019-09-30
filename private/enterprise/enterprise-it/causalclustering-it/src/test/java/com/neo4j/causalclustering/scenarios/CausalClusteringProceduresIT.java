@@ -42,6 +42,7 @@ import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.internal.helpers.Exceptions.rootCause;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -252,7 +252,7 @@ class CausalClusteringProceduresIT
         for ( var member : cluster.allMembers() )
         {
             var error = assertThrows( QueryExecutionException.class, () -> invokeClusterRoleProcedure( member, databaseName ) );
-            var rootCause = rootCause( error );
+            var rootCause = getRootCause( error );
             assertThat( rootCause, instanceOf( ProcedureException.class ) );
             assertEquals( expectedStatus, ((ProcedureException) rootCause).status() );
         }

@@ -14,10 +14,10 @@ import java.util.EnumSet;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
-import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,7 +61,7 @@ class SetConfigValueProcedureTest
     @Test
     void failIfUnknownSetting()
     {
-        Throwable rootCause = Exceptions.rootCause(
+        Throwable rootCause = getRootCause(
                 assertThrows( RuntimeException.class, () -> db.executeTransactionally( "CALL dbms.setConfigValue('unknown.setting.indeed', 'foo')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "Setting `unknown.setting.indeed` not found", rootCause.getMessage() );
@@ -71,7 +71,7 @@ class SetConfigValueProcedureTest
     void failIfStaticSetting()
     {
         // Static setting, at least for now
-        Throwable rootCause = Exceptions.rootCause( assertThrows( RuntimeException.class,
+        Throwable rootCause = getRootCause( assertThrows( RuntimeException.class,
                 () -> db.executeTransactionally( "CALL dbms.setConfigValue('" + plugin_dir.name() + "', 'path/to/dir')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "Setting 'dbms.directories.plugins' is not dynamic and can not be changed at runtime", rootCause.getMessage() );
@@ -80,7 +80,7 @@ class SetConfigValueProcedureTest
     @Test
     void failIfInvalidValue()
     {
-        Throwable rootCause = Exceptions.rootCause( assertThrows( RuntimeException.class,
+        Throwable rootCause = getRootCause( assertThrows( RuntimeException.class,
                 () -> db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'invalid')" ) ) );
         assertTrue( rootCause instanceof IllegalArgumentException );
         assertEquals( "'invalid' not one of " + EnumSet.allOf( GraphDatabaseSettings.LogQueryLevel.class ), rootCause.getMessage() );
