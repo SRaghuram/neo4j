@@ -207,25 +207,8 @@ object InterpretedPipesFallbackPolicy {
       case lp if lp.lhs.isDefined && lp.rhs.isDefined =>
         throw unsupported(lp.getClass.getSimpleName)
 
-      // Updating plans are not supported in parallel execution
-      case lp @ (_: Create |
-                 _: MergeCreateNode |
-                 _: MergeCreateRelationship |
-                 _: DeleteNode |
-                 _: DeleteRelationship |
-                 _: DeleteExpression |
-                 _: DeletePath |
-                 _: DetachDeleteNode |
-                 _: DetachDeleteExpression |
-                 _: DetachDeletePath |
-                 _: RemoveLabels |
-                 _: SetLabels |
-                 _: SetProperty |
-                 _: SetPropertiesFromMap |
-                 _: SetNodeProperty |
-                 _: SetNodePropertiesFromMap |
-                 _: SetRelationshipProperty |
-                 _: SetRelationshipPropertiesFromMap |
+      // Updating plans and exclusive locking plans are not supported in parallel execution
+      case lp @ (_: UpdatingPlan |
                  _: LockNodes) if parallelExecution =>
         throw unsupported(lp.getClass.getSimpleName)
     }
