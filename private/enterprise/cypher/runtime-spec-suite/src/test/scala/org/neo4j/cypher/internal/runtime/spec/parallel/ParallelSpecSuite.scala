@@ -108,6 +108,8 @@ class ParallelRuntimeExpandAllTest extends ExpandAllTestBase(ENTERPRISE.FUSING, 
                                    with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class ParallelRuntimeExpandAllTestNoFusing extends ExpandAllTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
                                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+class ParallelRuntimeExpandIntoTest extends ExpandIntoTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeExpandIntoTestNoFusing extends ExpandIntoTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 class ParallelRuntimeExpandStressTest extends ExpandStressTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeExpandNoFusingStressTest extends ExpandStressTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
 

@@ -95,6 +95,10 @@ class MorselExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, MORSEL,
 class MorselVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, MORSEL, SIZE_HINT)
 class MorselNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
+// PROJECT ENDPOINTS
+class MorselProjectEndpointsTest extends ProjectEndpointsTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselProjectEndpointsTestNoFusing extends ProjectEndpointsTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+
 // PROJECTION
 class MorselProjectionTest extends ProjectionTestBase(FUSING, MORSEL, SIZE_HINT)
 class MorselProjectionNoFusingTest extends ProjectionTestBase(NO_FUSING, MORSEL, SIZE_HINT)

@@ -53,9 +53,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     generateSlotAccessorFunctions(slots)
 
     plan match {
-      case plans.Input(nodes, variables, _) =>
+      case plans.Input(nodes, relationships, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan),
                           nodes.map(v => slots.getLongOffsetFor(v)).toArray,
+                          relationships.map(v => slots.getLongOffsetFor(v)).toArray,
                           variables.map(v => slots.getReferenceOffsetFor(v)).toArray)
 
       case plans.AllNodesScan(column, _) =>

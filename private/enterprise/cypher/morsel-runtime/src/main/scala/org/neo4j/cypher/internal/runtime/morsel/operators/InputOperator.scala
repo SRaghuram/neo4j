@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.nodeOrNoValue
+import org.neo4j.cypher.internal.runtime.morsel.operators.InputOperator.{nodeOrNoValue, relationshipOrNoValue}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -19,11 +19,12 @@ import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryCon
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue}
 
 
 class InputOperator(val workIdentity: WorkIdentity,
                     nodeOffsets: Array[Int],
+                    relationshipOffsets: Array[Int],
                     refOffsets: Array[Int]) extends StreamingOperator {
 
   override protected def nextTasks(queryContext: QueryContext,
@@ -58,6 +59,11 @@ class InputOperator(val workIdentity: WorkIdentity,
           i += 1
         }
         i = 0
+        while (i < relationshipOffsets.length) {
+          outputRow.setLongAt(relationshipOffsets(i), relationshipOrNoValue(input.value(i)))
+          i += 1
+        }
+        i = 0
         while (i < refOffsets.length) {
           outputRow.setRefAt(refOffsets(i), input.value(i))
           i += 1
@@ -80,6 +86,10 @@ object InputOperator {
   def nodeOrNoValue(value: AnyValue): Long =
     if (value eq Values.NO_VALUE) NullChecker.NULL_ENTITY
     else value.asInstanceOf[VirtualNodeValue].id()
+
+  def relationshipOrNoValue(value: AnyValue): Long =
+    if (value eq Values.NO_VALUE) NullChecker.NULL_ENTITY
+    else value.asInstanceOf[VirtualRelationshipValue].id()
 }
 
 class MutatingInputCursor(input: InputDataStream) {
@@ -120,6 +130,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
                             override val id: Id,
                             innermost: DelegateOperatorTaskTemplate,
                             nodeOffsets: Array[Int],
+                            relationshipOffsets: Array[Int],
                             refOffsets: Array[Int],
                             nullable: Boolean)(codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import IntermediateRepresentation._
@@ -165,11 +176,16 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
         codeGen.setLongAt(nodeOffset, invokeStatic(method[InputOperator, Long, AnyValue]("nodeOrNoValue"),
                                                    invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(i))))
     }
+    val setRelationships = relationshipOffsets.zipWithIndex.map {
+      case (relationshipOffset, i) =>
+        codeGen.setLongAt(relationshipOffset, invokeStatic(method[InputOperator, Long, AnyValue]("relationshipOrNoValue"),
+                                                   invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(i))))
+    }
     val setRefs = refOffsets.zipWithIndex.map {
       case (refOffset, i) =>
         codeGen.setRefAt(refOffset, invoke(loadField(inputCursorField), method[MutatingInputCursor, AnyValue, Int]("value"), constant(i)))
     }
-    val setters = block(setNodes ++ setRefs:_*)
+    val setters = block(setNodes ++ setRelationships ++ setRefs:_*)
     block(
       condition(isNull(loadField(inputCursorField)))(
         setField(inputCursorField, newInstance(constructor[MutatingInputCursor, InputDataStream],

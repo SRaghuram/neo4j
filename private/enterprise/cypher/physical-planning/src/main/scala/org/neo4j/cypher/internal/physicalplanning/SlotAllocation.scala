@@ -320,9 +320,11 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case leaf: RelationshipCountFromCountStore =>
         slots.newReference(leaf.idName, false, CTInteger)
 
-      case Input(nodes, variables, nullableInput) =>
+      case Input(nodes, relationships, variables, nullableInput) =>
         for (v <- nodes)
           slots.newLong(v, nullableInput, CTNode)
+        for (v <- relationships)
+          slots.newLong(v, nullableInput, CTRelationship)
         for (v <- variables)
           slots.newReference(v, nullableInput, CTAny)
 

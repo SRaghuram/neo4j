@@ -123,6 +123,7 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
 
     private var resultIterator: Iterator[ExecutionContext] = _
     private var profileEvent: OperatorProfileEvent = _
+    private var _canContinue: Boolean = false
 
     override def workIdentity: WorkIdentity = SlottedPipeMiddleOperator.this.workIdentity
 
@@ -143,15 +144,20 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
       }
 
       // NOTE: resultIterator.hasNext will check the validity of outputRow so we do not need to also do that explicitly in this loop condition
-      while (resultIterator.hasNext) {
+      _canContinue = resultIterator.hasNext
+      while (_canContinue) {
         val resultRow = resultIterator.next() // This may advance feedRow
         if (!(resultRow eq feedRow)) {
           outputRow.copyFrom(resultRow, outputRow.getLongsPerRow, outputRow.getRefsPerRow)
         }
         outputRow.moveToNextRow()
+        _canContinue = resultIterator.hasNext
       }
       if (profileEvent != null && feedPipeQueryState.profileInformation != null) {
         updateProfileEvent(profileEvent, feedPipeQueryState.profileInformation)
+      }
+      if (!_canContinue) {
+        resultIterator = null
       }
       outputRow.finishedWriting()
     }

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.compiled
 
 import org.neo4j.cypher.internal.runtime.spec.compiled.CompiledSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AllNodeScanTestBase, ExpandAllTestBase, LabelScanTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AllNodeScanTestBase, ExpandAllTestBase, ExpandIntoTestBase, LabelScanTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder, RuntimeTestSuite}
 import org.neo4j.cypher.internal.{CompiledRuntime, EnterpriseRuntimeContext}
 
@@ -37,6 +37,7 @@ class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE.DEFAULT, Compi
   }
 }
 class CompiledExpandAllTest extends ExpandAllTestBase(ENTERPRISE.DEFAULT, CompiledRuntime, SIZE_HINT)
+class CompiledExpandIntoTest extends ExpandIntoTestBase(ENTERPRISE.DEFAULT, CompiledRuntime, SIZE_HINT)
 class CompiledLabelScanTest extends LabelScanTestBase(ENTERPRISE.DEFAULT, CompiledRuntime, SIZE_HINT)
 class CompiledNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE.DEFAULT, CompiledRuntime, SIZE_HINT)
                                 with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
