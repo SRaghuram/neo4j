@@ -5,7 +5,7 @@
  */
 package com.neo4j.io.pagecache.stresstests;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -23,11 +23,11 @@ import static org.neo4j.io.pagecache.stress.Conditions.timePeriod;
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
-public class PageCacheStressTesting
+class PageCacheStressTesting
 {
 
     @Test
-    public void shouldBehaveCorrectlyUnderStress() throws Exception
+    void shouldBehaveCorrectlyUnderStress() throws Exception
     {
         int durationInMinutes = parseInt( fromEnv( "PAGE_CACHE_STRESS_DURATION", "1" ) );
         int numberOfPages = parseInt( fromEnv( "PAGE_CACHE_STRESS_NUMBER_OF_PAGES", "10000" ) );

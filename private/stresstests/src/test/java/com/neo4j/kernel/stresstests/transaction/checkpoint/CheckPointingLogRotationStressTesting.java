@@ -7,7 +7,7 @@ package com.neo4j.kernel.stresstests.transaction.checkpoint;
 
 import com.neo4j.kernel.stresstests.transaction.checkpoint.tracers.TimerTransactionTracer;
 import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.time.Duration;
@@ -48,7 +48,7 @@ import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
-public class CheckPointingLogRotationStressTesting
+class CheckPointingLogRotationStressTesting
 {
     private static final String DEFAULT_DURATION_IN_MINUTES = "5";
     private static final String DEFAULT_STORE_DIR = new File( getProperty( "java.io.tmpdir" ), "store" ).getPath();
@@ -59,7 +59,7 @@ public class CheckPointingLogRotationStressTesting
     private static final int CHECK_POINT_INTERVAL_MINUTES = 1;
 
     @Test
-    public void shouldBehaveCorrectlyUnderStress() throws Throwable
+    void shouldBehaveCorrectlyUnderStress() throws Throwable
     {
         long durationInMinutes =
                 parseLong( fromEnv( "CHECK_POINT_LOG_ROTATION_STRESS_DURATION", DEFAULT_DURATION_IN_MINUTES ) );

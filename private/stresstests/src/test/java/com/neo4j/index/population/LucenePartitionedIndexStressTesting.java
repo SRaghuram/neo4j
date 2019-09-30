@@ -5,9 +5,9 @@
  */
 package com.neo4j.index.population;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,11 +38,11 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static com.neo4j.helper.StressTestingHelper.fromEnv;
 import static org.apache.commons.lang3.SystemUtils.JAVA_IO_TMPDIR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class LucenePartitionedIndexStressTesting
+class LucenePartitionedIndexStressTesting
 {
     private static final String LABEL = "label";
     private static final String PROPERTY_PREFIX = "property";
@@ -51,16 +51,16 @@ public class LucenePartitionedIndexStressTesting
     private static final int NUMBER_OF_PROPERTIES = 2;
 
     private static final int NUMBER_OF_POPULATORS =
-            Integer.valueOf( fromEnv( "LUCENE_INDEX_NUMBER_OF_POPULATORS",
+            Integer.parseInt( fromEnv( "LUCENE_INDEX_NUMBER_OF_POPULATORS",
                     String.valueOf( Runtime.getRuntime().availableProcessors() - 1 ) ) );
-    private static final int BATCH_SIZE = Integer.valueOf( fromEnv( "LUCENE_INDEX_POPULATION_BATCH_SIZE",
+    private static final int BATCH_SIZE = Integer.parseInt( fromEnv( "LUCENE_INDEX_POPULATION_BATCH_SIZE",
             String.valueOf( 10000 ) ) );
 
-    private static final long NUMBER_OF_NODES = Long.valueOf( fromEnv(
+    private static final long NUMBER_OF_NODES = Long.parseLong( fromEnv(
             "LUCENE_PARTITIONED_INDEX_NUMBER_OF_NODES", String.valueOf( 100000 ) ) );
     private static final String WORK_DIRECTORY =
             fromEnv( "LUCENE_PARTITIONED_INDEX_WORKING_DIRECTORY", JAVA_IO_TMPDIR );
-    private static final int WAIT_DURATION_MINUTES = Integer.valueOf( fromEnv(
+    private static final int WAIT_DURATION_MINUTES = Integer.parseInt( fromEnv(
             "LUCENE_PARTITIONED_INDEX_WAIT_TILL_ONLINE", String.valueOf( 30 ) ) );
 
     private ExecutorService populators;
@@ -68,8 +68,8 @@ public class LucenePartitionedIndexStressTesting
     private File storeDir;
     private DatabaseManagementService managementService;
 
-    @Before
-    public void setUp() throws IOException
+    @BeforeEach
+    void setUp() throws IOException
     {
         storeDir = prepareStoreDir();
         System.out.println( String.format( "Starting database at: %s", storeDir ) );
@@ -79,8 +79,8 @@ public class LucenePartitionedIndexStressTesting
         db = managementService.database( DEFAULT_DATABASE_NAME );
     }
 
-    @After
-    public void tearDown() throws IOException
+    @AfterEach
+    void tearDown() throws IOException
     {
         managementService.shutdown();
         populators.shutdown();
@@ -88,7 +88,7 @@ public class LucenePartitionedIndexStressTesting
     }
 
     @Test
-    public void indexCreationStressTest() throws Exception
+    void indexCreationStressTest() throws Exception
     {
         createIndexes();
         createUniqueIndexes();
@@ -152,17 +152,17 @@ public class LucenePartitionedIndexStressTesting
                     populationResult.maxPropertyId + "" );
             Node nodeByStringProperty = tx.findNode( Label.label( LABEL ), getStringProperty(),
                     populationResult.maxPropertyId + "" );
-            assertNotNull( "Should find last inserted node", nodeByStringProperty );
-            assertEquals( "Both nodes should be the same last inserted node", nodeByStringProperty,
-                    nodeByUniqueStringProperty );
+            assertNotNull( nodeByStringProperty, "Should find last inserted node" );
+            assertEquals( nodeByStringProperty,
+                    nodeByUniqueStringProperty, "Both nodes should be the same last inserted node" );
 
             Node nodeByUniqueLongProperty = tx.findNode( Label.label( LABEL ), getUniqueLongProperty(),
                     populationResult.maxPropertyId );
             Node nodeByLongProperty = tx.findNode( Label.label( LABEL ), getLongProperty(),
                     populationResult.maxPropertyId );
-            assertNotNull( "Should find last inserted node", nodeByLongProperty );
-            assertEquals( "Both nodes should be the same last inserted node", nodeByLongProperty,
-                    nodeByUniqueLongProperty );
+            assertNotNull( nodeByLongProperty, "Should find last inserted node" );
+            assertEquals( nodeByLongProperty,
+                    nodeByUniqueLongProperty, "Both nodes should be the same last inserted node" );
 
         }
     }
@@ -276,7 +276,7 @@ public class LucenePartitionedIndexStressTesting
     private static class SequentialLongSupplier implements LongSupplier
     {
         long value;
-        private int step;
+        private final int step;
 
         SequentialLongSupplier( int populatorNumber, int step )
         {
@@ -296,8 +296,8 @@ public class LucenePartitionedIndexStressTesting
     {
         private final int populatorNumber;
         private final int step;
-        private GraphDatabaseService db;
-        private AtomicLong nodesCounter;
+        private final GraphDatabaseService db;
+        private final AtomicLong nodesCounter;
 
         Populator( int populatorNumber, int step, GraphDatabaseService db, AtomicLong nodesCounter )
         {
@@ -348,10 +348,10 @@ public class LucenePartitionedIndexStressTesting
         }
     }
 
-    private class PopulationResult
+    private static class PopulationResult
     {
-        private long maxPropertyId;
-        private long numberOfNodes;
+        private final long maxPropertyId;
+        private final long numberOfNodes;
 
         PopulationResult( long maxPropertyId, long numberOfNodes )
         {

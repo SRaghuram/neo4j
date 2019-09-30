@@ -6,8 +6,7 @@
 package com.neo4j.server.security.enterprise.log;
 
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,10 +17,12 @@ import java.util.TimeZone;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -29,23 +30,22 @@ import static org.hamcrest.Matchers.array;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
-public class SecurityLogTest
+@EphemeralTestDirectoryExtension
+class SecurityLogTest
 {
-    @Rule
-    public EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    @Inject
+    private EphemeralFileSystemAbstraction fs;
 
-    private Config config = Config.newBuilder()
+    private final Config config = Config.newBuilder()
             .set( SecuritySettings.store_security_log_rotation_threshold, 5L )
             .set( SecuritySettings.store_security_log_rotation_delay, Duration.ofMillis( 1 ) ).build();
 
     @Test
-    public void shouldRotateLog() throws IOException
+    void shouldRotateLog() throws IOException
     {
-        SecurityLog securityLog = new SecurityLog( config, fileSystemRule.get(), Runnable::run );
+        SecurityLog securityLog = new SecurityLog( config, fs, Runnable::run );
         securityLog.info( "line 1" );
         securityLog.info( "line 2" );
-
-        FileSystemAbstraction fs = fileSystemRule.get();
 
         File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
         assertThat( fs.fileExists( activeLogFile ), equalTo( true ) );
@@ -60,7 +60,7 @@ public class SecurityLogTest
     }
 
     @Test
-    public void logUseSystemTimeZoneIfConfigured() throws Exception
+    void logUseSystemTimeZoneIfConfigured() throws Exception
     {
         TimeZone defaultTimeZone = TimeZone.getDefault();
         try
@@ -78,25 +78,23 @@ public class SecurityLogTest
     {
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( hoursShift ) ) );
         Config timeZoneConfig = Config.defaults( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM );
-        SecurityLog securityLog = new SecurityLog( timeZoneConfig, fileSystemRule.get(), Runnable::run );
+        SecurityLog securityLog = new SecurityLog( timeZoneConfig, fs, Runnable::run );
         securityLog.info( "line 1" );
 
-        FileSystemAbstraction fs = fileSystemRule.get();
         File activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename ).toFile();
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines, array( containsString( timeZoneSuffix ) ) );
-        fileSystemRule.clear();
+        fs.clear();
     }
 
     @Test
-    public void shouldHonorLogLevel() throws Throwable
+    void shouldHonorLogLevel() throws Throwable
     {
         writeAllLevelsAndShutdown( withLogLevel( Level.DEBUG ), "debug" );
         writeAllLevelsAndShutdown( withLogLevel( Level.INFO ), "info" );
         writeAllLevelsAndShutdown( withLogLevel( Level.WARN ), "warn" );
         writeAllLevelsAndShutdown( withLogLevel( Level.ERROR ), "error" );
 
-        FileSystemAbstraction fs = fileSystemRule.get();
         File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
         String[] activeLines = readLogFile( fs, activeLogFile );
         assertThat( activeLines, array(
@@ -129,7 +127,7 @@ public class SecurityLogTest
     {
         return new SecurityLog(
                 Config.defaults( SecuritySettings.security_log_level, debug ),
-                fileSystemRule.get(),
+                fs,
                 Runnable::run
             );
     }
