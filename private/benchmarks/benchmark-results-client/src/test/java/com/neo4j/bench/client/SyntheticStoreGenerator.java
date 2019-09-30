@@ -7,9 +7,9 @@ package com.neo4j.bench.client;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.queries.AttachMetricsAnnotation;
-import com.neo4j.bench.client.queries.AttachTestRunAnnotation;
-import com.neo4j.bench.client.queries.SubmitTestRun;
+import com.neo4j.bench.client.queries.annotation.AttachMetricsAnnotation;
+import com.neo4j.bench.client.queries.annotation.AttachTestRunAnnotation;
+import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.model.Annotation;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.Benchmark.Mode;
