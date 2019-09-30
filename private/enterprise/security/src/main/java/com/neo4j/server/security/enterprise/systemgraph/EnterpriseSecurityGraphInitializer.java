@@ -6,28 +6,31 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
-import com.neo4j.server.security.enterprise.auth.DatabaseSegment;
-import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
-import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
-import com.neo4j.server.security.enterprise.auth.Resource.AllPropertiesResource;
-import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
-import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.apache.shiro.authz.SimpleRole;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
+import org.neo4j.graphdb.ConstraintViolationException;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -36,25 +39,43 @@ import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphInitializer;
 
-import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assertValidUsername;
 
 public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitializer
 {
-    private final SystemGraphOperations systemGraphOperations;
     private final SystemGraphImportOptions importOptions;
+    private Label ROLE_LABEL = Label.label( "Role" );
+    private Label PRIVILEGE_LABEL = Label.label( "Privilege" );
 
-    public EnterpriseSecurityGraphInitializer( SystemGraphInitializer systemGraphInitializer, QueryExecutor queryExecutor, Log log,
-            SystemGraphOperations systemGraphOperations, SystemGraphImportOptions importOptions, SecureHasher secureHasher )
+    private List<Node> roleNodes = new ArrayList<>();
+
+    private RelationshipType GRANTED = RelationshipType.withName( "GRANTED" );
+    private RelationshipType USER_TO_ROLE = RelationshipType.withName( "HAS_ROLE" );
+    private RelationshipType SCOPE = RelationshipType.withName( "SCOPE" );
+    private RelationshipType APPLIES_TO = RelationshipType.withName( "APPLIES_TO" );
+    private RelationshipType QUALIFIED = RelationshipType.withName( "QUALIFIED" );
+    private RelationshipType FOR = RelationshipType.withName( "FOR" );
+
+    private Node traverseNodePriv;
+    private Node traverserRelPriv;
+    private Node readNodePriv;
+    private Node readRelPriv;
+    private Node writeNodePriv;
+    private Node writeRelPriv;
+    private Node accessPriv;
+    private Node tokenPriv;
+    private Node schemaPriv;
+    private Node adminPriv;
+
+    public EnterpriseSecurityGraphInitializer( DatabaseManager<?> databaseManager, SystemGraphInitializer systemGraphInitializer, Log log,
+            SystemGraphImportOptions importOptions, SecureHasher secureHasher )
     {
-        super( systemGraphInitializer, queryExecutor, log, systemGraphOperations, importOptions.migrationUserRepositorySupplier,
-                importOptions.initialUserRepositorySupplier, secureHasher );
+        super( databaseManager, systemGraphInitializer, log, importOptions.migrationUserRepositorySupplier, importOptions.initialUserRepositorySupplier,
+                secureHasher );
 
-        this.systemGraphOperations = systemGraphOperations;
         this.importOptions = importOptions;
     }
 
@@ -74,62 +95,132 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     private void doInitializeSecurityGraph() throws Exception
     {
-        // If the system graph has not been initialized (typically the first time you start neo4j) we set it up with auth data in the following order:
-        // 1) Do we have import files from running the `neo4j-admin import-auth` command?
-        // 2) Otherwise, are there existing users and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
-        // 3) If no users or roles were imported or migrated, create the predefined roles and one default admin user
         if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
         {
             deleteAllSystemGraphAuthData();
         }
-        if ( nbrOfUsers() == 0 )
-        {
-            setupConstraints();
 
-            if ( importOptions.shouldPerformImport )
-            {
-                importUsersAndRoles();
-            }
-            else if ( importOptions.mayPerformMigration )
-            {
-                migrateFromFlatFileRealm();
-            }
-        }
-        else if ( importOptions.shouldPerformImport )
+        // Must be done outside main transaction since it changes the schema
+        setupConstraints();
+
+        // If the system graph has not been initialized (typically the first time you start neo4j) we set it up with auth data in the following order:
+        // 1) Do we have import files from running the `neo4j-admin import-auth` command?
+        // 2) Otherwise, are there existing userNodes and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
+        // 3) If no userNodes or roles were imported or migrated, create the predefined roles and one default admin user
+
+        try ( Transaction tx = getSystemDb().beginTx() )
         {
-            importUsersAndRoles();
+            userNodes = findInitialNodes( tx, USER_LABEL );
+            userNodes.forEach( node -> usernames.add( (String) node.getProperty( "name" ) ) );
+            roleNodes = findInitialNodes( tx, ROLE_LABEL );
+
+            if ( userNodes.isEmpty() )
+            {
+                if ( importOptions.shouldPerformImport )
+                {
+                    importUsersAndRoles( tx );
+                }
+                else if ( importOptions.mayPerformMigration )
+                {
+                    migrateFromFlatFileRealm( tx );
+                }
+            }
+            else if ( importOptions.shouldPerformImport )
+            {
+                importUsersAndRoles( tx );
+            }
+            tx.commit();
         }
 
         // If no users or roles were imported we setup the
         // default predefined roles and user and make sure we have an admin user
-        ensureDefaultUserAndRoles();
+        // TODO why can this not share transaction with above without test failure?
+        try ( Transaction tx = getSystemDb().beginTx() )
+        {
+            ensureDefaultUserAndRoles( tx );
+            tx.commit();
+        }
+    }
+
+    /**
+     * This method should delete all existing auth data from the system graph.
+     * It is used in preparation for an import where the admin has requested
+     * a reset of the auth graph.
+     */
+    private void deleteAllSystemGraphAuthData()
+    {
+        // TODO:this does not clean up all security data anymore
+        // This is not an efficient implementation, since it executes many queries
+        // If performance becomes an issue we could do this with a single query instead
+
+        Set<String> usernames;
+        Set<String> roleNames;
+
+        try ( Transaction tx = getSystemDb().beginTx() )
+        {
+            usernames = getAllNames( tx, USER_LABEL );
+            for ( String username : usernames )
+            {
+                deleteNodeWithRelationships( tx, USER_LABEL, "name", username );
+            }
+
+            roleNames = getAllNames( tx, ROLE_LABEL );
+            for ( String roleName : roleNames )
+            {
+                deleteNodeWithRelationships( tx, ROLE_LABEL, "name", roleName );
+            }
+            tx.commit();
+        }
+
+        String userString = usernames.size() == 1 ? "user" : "users";
+        String roleString = roleNames.size() == 1 ? "role" : "roles";
+
+        log.info( "Deleted %s %s and %s %s into system graph.", Integer.toString( usernames.size() ), userString, Integer.toString( roleNames.size() ),
+                roleString );
+
+        userNodes.clear();
+        this.usernames.clear();
+        roleNodes.clear();
     }
 
     private void setupConstraints()
     {
         // Ensure that multiple roles cannot have the same name and are indexed
-        ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber();
-        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (u:User) ASSERT u.name IS UNIQUE", Collections.emptyMap(), subscriber );
-        queryExecutor.executeQuery( "CREATE CONSTRAINT ON (r:Role) ASSERT r.name IS UNIQUE", Collections.emptyMap(), subscriber );
+        try ( Transaction tx = getSystemDb().beginTx() )
+        {
+            try
+            {
+                tx.schema().constraintFor( USER_LABEL ).assertPropertyIsUnique( "name" ).create();
+                tx.schema().constraintFor( ROLE_LABEL ).assertPropertyIsUnique( "name" ).create();
+            }
+            catch ( ConstraintViolationException e )
+            {
+                // Makes the creation of constraints for security idempotent
+                if ( !e.getMessage().startsWith( "Constraint already exists" ) )
+                {
+                    throw e;
+                }
+            }
+            tx.commit();
+        }
     }
 
-    private void ensureDefaultUserAndRoles() throws Exception
+    private void ensureDefaultUserAndRoles( Transaction tx ) throws Exception
     {
-        if ( nbrOfUsers() == 0 )
+        if ( userNodes.isEmpty() )
         {
-            ensureDefaultUser();
-            ensureDefaultRoles( INITIAL_USER_NAME );
+            addDefaultUser( tx );
+            ensureDefaultRolesAndPrivileges( tx, INITIAL_USER_NAME );
         }
-        else if ( noRoles() )
+        else if ( roleNodes.isEmpty() )
         {
             // This will be the case when upgrading from community to enterprise system-graph
             String newAdmin = ensureAdmin();
-            ensureDefaultRoles( newAdmin );
+            ensureDefaultRolesAndPrivileges( tx, newAdmin );
         }
-        else
-        {
-            ensureCorrectInitialPassword();
-        }
+
+        // If applicable, give the default user the password set by set-initial-password command
+        setInitialPassword();
     }
 
     /* Tries to find an admin candidate among the existing users */
@@ -144,8 +235,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
             if ( numberOfDefaultAdmins > 1 )
             {
-                throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " +
-                        "Please use " +
+                throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
                         "`neo4j-admin set-default-admin` to select a valid admin." );
             }
             else if ( numberOfDefaultAdmins == 1 )
@@ -156,15 +246,12 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             stopUserRepository( defaultAdminRepository );
         }
 
-        Set<String> usernames = systemGraphOperations.getAllUsernames();
-
         if ( newAdmin != null )
         {
             // We currently support only one default admin
-            if ( systemGraphOperations.getUser( newAdmin, true ) == null )
+            if ( !usernames.contains( newAdmin ) )
             {
-                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " +
-                        "Please use " +
+                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " + "Please use " +
                         "`neo4j-admin set-default-admin` to select a valid admin." );
             }
             return newAdmin;
@@ -172,7 +259,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         else if ( usernames.size() == 1 )
         {
             // If only a single user exists, make her an admin
-            return usernames.iterator().next();
+            return usernames.get( 0 );
         }
         else if ( usernames.contains( INITIAL_USER_NAME ) )
         {
@@ -182,101 +269,173 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         else
         {
             throw new InvalidArgumentsException(
-                    "No roles defined, and cannot determine which user should be admin. " +
-                            "Please use `neo4j-admin set-default-admin` to select an admin. " );
+                    "No roles defined, and cannot determine which user should be admin. " + "Please use `neo4j-admin set-default-admin` to select an admin. " );
         }
     }
 
     /* Builds all predefined roles if no roles exist. Adds newAdmin to admin role */
-    private void ensureDefaultRoles( String newAdmin ) throws Exception
+    private void ensureDefaultRolesAndPrivileges( Transaction tx, String newAdmin ) throws Exception
     {
-        if ( noRoles() )
+        if ( roleNodes.isEmpty() )
         {
+            setUpDefaultPrivileges( tx );
+
             // Create the predefined roles
-            for ( String role : PredefinedRolesBuilder.roles.keySet() )
+            PredefinedRolesBuilder.roles.forEach( ( roleName, simpleRole ) ->
             {
-                systemGraphOperations.newRole( role );
-                assignDefaultPrivileges( role );
-            }
+                Node role = newRole( tx, roleName );
+                assignDefaultPrivileges( role, simpleRole );
+            } );
         }
 
         // Actually assign the admin role
-        systemGraphOperations.addRoleToUser( PredefinedRoles.ADMIN, newAdmin );
+        Node admin = tx.findNode( ROLE_LABEL, "name", PredefinedRoles.ADMIN );
+
+        addRoleToUser( tx, admin, newAdmin );
         log.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, newAdmin );
     }
 
-    private void assignDefaultPrivileges( String roleName ) throws InvalidArgumentsException
+    private void setUpDefaultPrivileges( Transaction tx )
     {
-        if ( PredefinedRolesBuilder.roles.containsKey( roleName ) )
+        // Create a DatabaseAll node
+        Node allDb = tx.createNode( Label.label( "DatabaseAll" ) );
+        allDb.setProperty( "name", "*" );
+
+        // Create initial qualifier nodes
+        Node labelQualifier = tx.createNode( Label.label( "LabelQualifierAll" ) );
+        labelQualifier.setProperty( "type", "node" );
+        labelQualifier.setProperty( "label", "*" );
+
+        Node relQualifier = tx.createNode( Label.label( "RelationshipQualifierAll" ) );
+        relQualifier.setProperty( "type", "relationship" );
+        relQualifier.setProperty( "label", "*" );
+
+        Node dbQualifier = tx.createNode( Label.label( "DatabaseQualifier" ) );
+        dbQualifier.setProperty( "type", "database" );
+        dbQualifier.setProperty( "label", "" );
+
+        // Create initial segments nodes and connect them with DatabaseAll and qualifiers
+        Label segmentLabel = Label.label( "Segment" );
+
+        Node labelSegement = tx.createNode( segmentLabel );
+        labelSegement.createRelationshipTo( labelQualifier, QUALIFIED );
+        labelSegement.createRelationshipTo( allDb, FOR );
+
+        Node relSegement = tx.createNode( segmentLabel );
+        relSegement.createRelationshipTo( relQualifier, QUALIFIED );
+        relSegement.createRelationshipTo( allDb, FOR );
+
+        Node dbSegement = tx.createNode( segmentLabel );
+        dbSegement.createRelationshipTo( dbQualifier, QUALIFIED );
+        dbSegement.createRelationshipTo( allDb, FOR );
+
+        // Create initial resource nodes
+        Label resourceLabel = Label.label( "Resource" );
+
+        Node graphResource = tx.createNode( resourceLabel );
+        graphResource.setProperty( "type", Resource.Type.GRAPH.toString() );
+        graphResource.setProperty( "arg1", "" );
+        graphResource.setProperty( "arg2", "" );
+
+        Node allPropResource = tx.createNode( resourceLabel );
+        allPropResource.setProperty( "type", Resource.Type.ALL_PROPERTIES.toString() );
+        allPropResource.setProperty( "arg1", "" );
+        allPropResource.setProperty( "arg2", "" );
+
+        Node dbResource = tx.createNode( resourceLabel );
+        dbResource.setProperty( "type", Resource.Type.DATABASE.toString() );
+        dbResource.setProperty( "arg1", "" );
+        dbResource.setProperty( "arg2", "" );
+
+        // Create initial privilege nodes and connect them with resources and segments
+        traverseNodePriv = tx.createNode( PRIVILEGE_LABEL );
+        traverserRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        readNodePriv = tx.createNode( PRIVILEGE_LABEL );
+        readRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        writeNodePriv = tx.createNode( PRIVILEGE_LABEL );
+        writeRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        accessPriv = tx.createNode( PRIVILEGE_LABEL );
+        tokenPriv = tx.createNode( PRIVILEGE_LABEL );
+        schemaPriv = tx.createNode( PRIVILEGE_LABEL );
+        adminPriv = tx.createNode( PRIVILEGE_LABEL );
+
+        setupPrivilegeNode( traverseNodePriv, PrivilegeAction.TRAVERSE, labelSegement, graphResource );
+        setupPrivilegeNode( traverserRelPriv, PrivilegeAction.TRAVERSE, relSegement, graphResource );
+        setupPrivilegeNode( readNodePriv, PrivilegeAction.READ, labelSegement, allPropResource );
+        setupPrivilegeNode( readRelPriv, PrivilegeAction.READ, relSegement, allPropResource );
+        setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE, labelSegement, allPropResource );
+        setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE, relSegement, allPropResource );
+        setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS, dbSegement, dbResource );
+        setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN, dbSegement, dbResource );
+        setupPrivilegeNode( schemaPriv, PrivilegeAction.SCHEMA, dbSegement, dbResource );
+        setupPrivilegeNode( adminPriv, PrivilegeAction.ADMIN, dbSegement, dbResource );
+    }
+
+    private void setupPrivilegeNode( Node privNode, PrivilegeAction action, Node segmentNode, Node resourceNode )
+    {
+        privNode.setProperty( "action", action.toString() );
+        privNode.createRelationshipTo( segmentNode, SCOPE );
+        privNode.createRelationshipTo( resourceNode, APPLIES_TO );
+    }
+
+    private void assignDefaultPrivileges( Node role, SimpleRole simpleRole )
+    {
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
         {
-            SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
-            if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.ADMIN, new DatabaseResource(), DatabaseSegment.ALL ) );
-            }
-            if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.SCHEMA, new DatabaseResource(), DatabaseSegment.ALL ) );
-            }
-            if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.TOKEN, new DatabaseResource(), DatabaseSegment.ALL ) );
-            }
-            if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
-            {
-                // The segment part is ignored for this action
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.WRITE, new AllPropertiesResource(), LabelSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.WRITE, new AllPropertiesResource(), RelTypeSegment.ALL ) );
-            }
-            if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.TRAVERSE, new GraphResource(), LabelSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.TRAVERSE, new GraphResource(), RelTypeSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.READ, new AllPropertiesResource(), LabelSegment.ALL ) );
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.READ, new AllPropertiesResource(), RelTypeSegment.ALL ) );
-            }
-            if ( simpleRole.isPermitted( PredefinedRolesBuilder.ACCESS ) )
-            {
-                systemGraphOperations.grantPrivilegeToRole( roleName,
-                        new ResourcePrivilege( GRANT, PrivilegeAction.ACCESS, new DatabaseResource(), DatabaseSegment.ALL ) );
-            }
+            role.createRelationshipTo( adminPriv, GRANTED );
+        }
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
+        {
+            role.createRelationshipTo( schemaPriv, GRANTED );
+        }
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
+        {
+            role.createRelationshipTo( tokenPriv, GRANTED );
+        }
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
+        {
+            // The segment part is ignored for this action
+            role.createRelationshipTo( writeNodePriv, GRANTED );
+            role.createRelationshipTo( writeRelPriv, GRANTED );
+        }
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
+        {
+            role.createRelationshipTo( traverseNodePriv, GRANTED );
+            role.createRelationshipTo( traverserRelPriv, GRANTED );
+            role.createRelationshipTo( readNodePriv, GRANTED );
+            role.createRelationshipTo( readRelPriv, GRANTED );
+        }
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.ACCESS ) )
+        {
+            role.createRelationshipTo( accessPriv, GRANTED );
         }
     }
 
-    private void migrateFromFlatFileRealm() throws Exception
+    private void migrateFromFlatFileRealm( Transaction tx ) throws Exception
     {
         UserRepository userRepository = startUserRepository( importOptions.migrationUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.migrationRoleRepositorySupplier );
-
-        doImportUsers( userRepository );
-        boolean importOk = doImportRoles( userRepository, roleRepository );
+        doImportUsers( tx, userRepository );
+        boolean importOk = doImportRoles( tx, userRepository, roleRepository );
         if ( !importOk )
         {
             throw new InvalidArgumentsException(
-                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " +
-                    "Please use `neo4j-admin " + EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
+                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " + "Please use `neo4j-admin " +
+                            EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
         }
 
         stopUserRepository( userRepository );
         stopRoleRepository( roleRepository );
     }
 
-    private void importUsersAndRoles() throws Exception
+    private void importUsersAndRoles( Transaction tx ) throws Exception
     {
         UserRepository userRepository = startUserRepository( importOptions.importUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.importRoleRepositorySupplier );
 
-        doImportUsers( userRepository );
-        boolean importOK = doImportRoles( userRepository, roleRepository );
+        doImportUsers( tx, userRepository );
+
+        boolean importOK = doImportRoles( tx, userRepository, roleRepository );
         // If transaction succeeded, we purge the repositories so that we will not try to import them again the next time we restart
         if ( importOK && importOptions.shouldPurgeImportRepositoriesAfterSuccesfulImport )
         {
@@ -288,18 +447,12 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         if ( !importOK )
         {
             throw new InvalidArgumentsException(
-                    "Import of users and roles into system graph failed because the import files are inconsistent. " +
-                    "Please use `neo4j-admin " + EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
+                    "Import of users and roles into system graph failed because the import files are inconsistent. " + "Please use `neo4j-admin " +
+                            EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
         }
 
         stopUserRepository( userRepository );
         stopRoleRepository( roleRepository );
-    }
-
-    private boolean noRoles()
-    {
-        String query = "MATCH (r:Role) RETURN count(r)";
-        return queryExecutor.executeQueryLong( query ) == 0;
     }
 
     private RoleRepository startRoleRepository( Supplier<RoleRepository> supplier ) throws Exception
@@ -316,7 +469,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         roleRepository.shutdown();
     }
 
-    private boolean doImportRoles( UserRepository userRepository, RoleRepository roleRepository ) throws Exception
+    private boolean doImportRoles( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
@@ -331,24 +484,26 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         if ( !isEmpty )
         {
-            try ( Transaction transaction = queryExecutor.beginTx() )
+            setUpDefaultPrivileges( tx );
+            // This is not an efficient implementation, since it executes many queries
+            // If performance ever becomes an issue we could do this with a single query instead
+            for ( RoleRecord roleRecord : roles.values() )
             {
-                // This is not an efficient implementation, since it executes many queries
-                // If performance ever becomes an issue we could do this with a single query instead
-                for ( RoleRecord role : roles.values() )
+                String roleName = roleRecord.name();
+                Node role = newRole( tx, roleName );
+
+                if ( PredefinedRolesBuilder.roles.containsKey( roleName ) )
                 {
-                    systemGraphOperations.newRole( role.name() );
-                    assignDefaultPrivileges( role.name() );
-
-                    for ( String username : role.users() )
-                    {
-                        systemGraphOperations.addRoleToUser( role.name(), username );
-                    }
+                    SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
+                    assignDefaultPrivileges( role, simpleRole );
                 }
-                transaction.commit();
-            }
 
-            assert validateImportSucceeded( userRepository, roleRepository );
+                for ( String username : roleRecord.users() )
+                {
+                    addRoleToUser( tx, role, username );
+                }
+            }
+            assert validateImportSucceeded( tx, userRepository, roleRepository );
 
             // Log what happened to the security log
             String roleString = roles.values().size() == 1 ? "role" : "roles";
@@ -357,69 +512,90 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         return true;
     }
 
-    /**
-     * This method should delete all existing auth data from the system graph.
-     * It is used in preparation for an import where the admin has requested
-     * a reset of the auth graph.
-     */
-    private void deleteAllSystemGraphAuthData() throws InvalidArgumentsException
-    {
-        // This is not an efficient implementation, since it executes many queries
-        // If performance becomes an issue we could do this with a single query instead
-
-        Set<String> usernames = systemGraphOperations.getAllUsernames();
-        for ( String username : usernames )
-        {
-            systemGraphOperations.deleteUser( username );
-        }
-
-        Set<String> roleNames = systemGraphOperations.getAllRoleNames();
-        for ( String roleName : roleNames )
-        {
-            systemGraphOperations.deleteRole( roleName );
-        }
-
-        String userString = usernames.size() == 1 ? "user" : "users";
-        String roleString = roleNames.size() == 1 ? "role" : "roles";
-
-        log.info( "Deleted %s %s and %s %s into system graph.",
-                Integer.toString( usernames.size() ), userString,
-                Integer.toString( roleNames.size() ), roleString );
-    }
-
-    private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Exception
+    private boolean validateImportSucceeded( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
         // Take a new snapshot of the import repositories
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
 
-        try ( Transaction transaction = queryExecutor.beginTx() )
+        Set<String> systemGraphUsers = getAllNames( tx, USER_LABEL );
+        List<String> repoUsernames = users.values().stream().map( User::name ).collect( Collectors.toList() );
+        if ( !systemGraphUsers.containsAll( repoUsernames ) )
         {
-            Set<String> systemGraphUsers = systemGraphOperations.getAllUsernames();
-            List<String> repoUsernames = users.values().stream().map( User::name ).collect( Collectors.toList() );
-            if ( !systemGraphUsers.containsAll( repoUsernames ) )
-            {
-                throw new IOException( "Users were not imported correctly" );
-            }
-
-            List<String> repoRoleNames = roles.values().stream().map( RoleRecord::name ).collect( Collectors.toList() );
-            Set<String> systemGraphRoles = systemGraphOperations.getAllRoleNames();
-            if ( !systemGraphRoles.containsAll( repoRoleNames ) )
-            {
-                throw new IOException( "Roles were not imported correctly" );
-            }
-
-            for ( RoleRecord role : roles.values() )
-            {
-                Set<String> usernamesForRole = systemGraphOperations.getUsernamesForRole( role.name() );
-                if ( !usernamesForRole.containsAll( role.users() ) )
-                {
-                    throw new IOException( "Role assignments were not imported correctly" );
-                }
-            }
-
-            transaction.commit();
+            throw new IOException( "Users were not imported correctly" );
         }
+
+        List<String> repoRoleNames = roles.values().stream().map( RoleRecord::name ).collect( Collectors.toList() );
+        Set<String> systemGraphRoles = getAllNames( tx, ROLE_LABEL );
+        if ( !systemGraphRoles.containsAll( repoRoleNames ) )
+        {
+            throw new IOException( "Roles were not imported correctly" );
+        }
+
+        for ( RoleRecord role : roles.values() )
+        {
+            Set<String> usernamesForRole = getUsernamesForRole( tx, role.name() );
+            if ( !usernamesForRole.containsAll( role.users() ) )
+            {
+                throw new IOException( "Role assignments were not imported correctly" );
+            }
+        }
+
         return true;
+    }
+
+    private Node newRole( Transaction tx, String roleName )
+    {
+        Node node = tx.createNode( ROLE_LABEL );
+        node.setProperty( "name", roleName );
+        roleNodes.add( node );
+        return node;
+    }
+
+    private void deleteNodeWithRelationships( Transaction tx, Label label, String propertyKey, String propertyValue )
+    {
+        Node node = tx.findNode( label, propertyKey, propertyValue );
+        final Iterable<Relationship> relationships = node.getRelationships();
+        relationships.forEach( Relationship::delete );
+        node.delete();
+    }
+
+    private void addRoleToUser( Transaction tx, Node role, String username ) throws InvalidArgumentsException
+    {
+        assertValidUsername( username );
+
+        Node user = tx.findNode( USER_LABEL, "name", username );
+
+        if ( user == null )
+        {
+            throw new InvalidArgumentsException( String.format( "User %s did not exist", username ) );
+        }
+
+        user.createRelationshipTo( role, USER_TO_ROLE );
+    }
+
+    private Set<String> getUsernamesForRole( Transaction tx, String roleName ) throws InvalidArgumentsException
+    {
+        Set<String> usernames = new HashSet<>();
+        Node role = tx.findNode( ROLE_LABEL, "name", roleName );
+
+        if ( role == null )
+        {
+            throw new InvalidArgumentsException( "Role did not eixst" );
+        }
+
+        final Iterable<Relationship> relationships = role.getRelationships( Direction.INCOMING );
+
+        relationships.forEach( relationship -> usernames.add( (String) relationship.getStartNode().getProperty( "name" ) ) );
+
+        return usernames;
+    }
+
+    private Set<String> getAllNames( Transaction tx, Label label )
+    {
+        ResourceIterator<Node> nodes = tx.findNodes( label );
+        Set<String> usernames = nodes.stream().map( node -> (String) node.getProperty( "name" ) ).collect( Collectors.toSet() );
+        nodes.close();
+        return usernames;
     }
 }

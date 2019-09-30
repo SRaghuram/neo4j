@@ -28,7 +28,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.mockito.Mockito.mock;
 
-public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
+class TestSystemGraphRealm extends TestBasicSystemGraphRealm
 {
     static SystemGraphRealm testRealm( TestDatabaseManager dbManager, TestDirectory testDirectory, SecurityLog securityLog ) throws Throwable
     {
@@ -61,14 +61,14 @@ public class TestSystemGraphRealm extends TestBasicSystemGraphRealm
         return testRealm( importOptions, securityLog, dbManager, executor, config );
     }
 
-    public static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager dbManager,
-            QueryExecutor executor, Config config ) throws Throwable
+    static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager dbManager, QueryExecutor executor,
+            Config config ) throws Throwable
     {
 
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
         EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( dbManager, config );
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
-                new EnterpriseSecurityGraphInitializer( systemGraphInitializer, executor, securityLog, systemGraphOperations, importOptions, secureHasher );
+                new EnterpriseSecurityGraphInitializer( dbManager, systemGraphInitializer, securityLog, importOptions, secureHasher );
 
         SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations, securityGraphInitializer, secureHasher, new BasicPasswordPolicy(),
                 newRateLimitedAuthStrategy(), true, true );

@@ -23,7 +23,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.SecureHasher
-import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 import scala.collection.Map
@@ -1322,12 +1321,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   private def initSystemGraph(config: Config): Unit = {
     val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-    val queryExecutor: SystemGraphQueryExecutor = new SystemGraphQueryExecutor(databaseManager)
-    val secureHasher: SecureHasher = new SecureHasher
-    val systemGraphOperations: SystemGraphOperations = new SystemGraphOperations(queryExecutor, secureHasher)
     val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
     val systemGraphInitializer = new EnterpriseSystemGraphInitializer(databaseManager, config)
-    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(systemGraphInitializer, queryExecutor, mock[Log], systemGraphOperations, importOptions, secureHasher)
+    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager, systemGraphInitializer, mock[Log], importOptions, new SecureHasher)
     securityGraphInitializer.initializeSecurityGraph()
     selectDatabase(SYSTEM_DATABASE_NAME)
   }

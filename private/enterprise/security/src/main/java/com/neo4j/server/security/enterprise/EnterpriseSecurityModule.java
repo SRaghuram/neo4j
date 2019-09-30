@@ -53,13 +53,9 @@ import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.GraphDatabaseQueryService;
-import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
@@ -86,14 +82,11 @@ import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
-import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.ENTERPRISE_SECURITY_MODULE_ID;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
-import static org.neo4j.kernel.impl.util.ValueUtils.asParameterMapValue;
 
 @ServiceProvider
 public class EnterpriseSecurityModule extends SecurityModule
@@ -203,14 +196,11 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         return Optional.of( database ->
         {
-
-            QueryExecutor queryExecutor = new SecurityQueryExecutor( database );
             SecureHasher secureHasher = new SecureHasher();
-            SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
             SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem );
             Log log = logProvider.getLog( getClass() );
             EnterpriseSecurityGraphInitializer initializer =
-                    new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor, log, systemGraphOperations, importOptions,
+                    new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, log, importOptions,
                             secureHasher );
             try
             {
@@ -298,8 +288,8 @@ public class EnterpriseSecurityModule extends SecurityModule
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
 
         SecurityGraphInitializer securityGraphInitializer =
-                isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( systemGraphInitializer, queryExecutor,
-                        securityLog, systemGraphOperations, configureImportOptions( config, logProvider, fileSystem ), secureHasher );
+                isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog,
+                        configureImportOptions( config, logProvider, fileSystem ), secureHasher );
 
         return new SystemGraphRealm(
                 systemGraphOperations,
@@ -619,50 +609,5 @@ public class EnterpriseSecurityModule extends SecurityModule
         authProviders.addAll( authorizationDeque );
 
         return authProviders;
-    }
-
-    private static class SecurityQueryExecutor implements QueryExecutor
-    {
-        private final TransactionalContextFactory contextFactory;
-        private final GraphDatabaseAPI api;
-        private final QueryExecutionEngine engine;
-
-        private SecurityQueryExecutor( GraphDatabaseService database )
-        {
-            this.api = (GraphDatabaseAPI) database;
-            var resolver = api.getDependencyResolver();
-            this.engine = resolver.resolveDependency( QueryExecutionEngine.class );
-            var transactionFactory = resolver.resolveDependency( KernelTransactionFactory.class );
-            this.contextFactory = Neo4jTransactionalContextFactory.create(
-                    () -> resolver.resolveDependency( GraphDatabaseQueryService.class ), transactionFactory );
-        }
-
-        @Override
-        public void executeQuery( String query, Map<String,Object> params, ErrorPreservingQuerySubscriber subscriber )
-        {
-            try ( InternalTransaction tx = api.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED ) )
-            {
-                MapValue parameters = asParameterMapValue( params );
-                TransactionalContext context = contextFactory.newContext( tx, query, parameters );
-                QueryExecution execution =
-                        engine.executeQuery( query,
-                                parameters,
-                                context,
-                                false,
-                                subscriber );
-                execution.consumeAll();
-                tx.commit();
-            }
-            catch ( Exception e )
-            {
-                throw new IllegalStateException( "Failed to request data", e );
-            }
-        }
-
-        @Override
-        public Transaction beginTx()
-        {
-            return api.beginTx();
-        }
     }
 }
