@@ -183,13 +183,13 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.middleOperators should have size 0
     compiled.outputOperator shouldBe NoOutputOperator
 
-    compiled.start.isInstanceOf[SlottedPipeHeadOperator] shouldBe true
-    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
-    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.start shouldBe a[SlottedPipeHeadOperator]
+    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe shouldBe a[DropResultPipe]
+    compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.isInstanceOf[NonFilteringOptionalExpandAllPipe] shouldBe true
+      .source shouldBe a[NonFilteringOptionalExpandAllPipe]
     compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.asInstanceOf[NonFilteringOptionalExpandAllPipe].source.isInstanceOf[MorselFeedPipe] shouldBe true
+      .source.asInstanceOf[NonFilteringOptionalExpandAllPipe].source shouldBe a[MorselFeedPipe]
   }
 
   test("should fully chain fallback pipes, ending in produce results") {
@@ -203,7 +203,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.start should not be fused
     compiled.middleOperators should have size 0
     compiled.outputOperator should not be NoOutputOperator
-    compiled.start.isInstanceOf[SlottedPipeHeadOperator] shouldBe true
+    compiled.start shouldBe a[SlottedPipeHeadOperator]
   }
 
   test("should chain fallback pipes with interruption, ending in produce results") {
@@ -217,7 +217,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.start should not be fused
     compiled.middleOperators should have size 2
     compiled.outputOperator should not be NoOutputOperator
-    compiled.start.isInstanceOf[SlottedPipeHeadOperator] shouldBe true
+    compiled.start shouldBe a[SlottedPipeHeadOperator]
   }
 
   test("should fuse partial pipelines, chain fallback pipes, ending in produce results") {
@@ -231,8 +231,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.start shouldBe fused
     compiled.middleOperators should have size 1
     compiled.outputOperator should not be NoOutputOperator
-    compiled.middleOperators(0).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(0).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(0) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(0).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
   }
 
   test("should fuse partial pipelines, chain fallback pipes with interruption, ending in produce results") {
@@ -246,11 +246,11 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.start shouldBe fused
     compiled.middleOperators should have size 3
     compiled.outputOperator should not be NoOutputOperator
-    compiled.middleOperators(0).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(0).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
-    compiled.middleOperators(1).isInstanceOf[DummyMiddleOperator] shouldBe true
-    compiled.middleOperators(2).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(2).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(0) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(0).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
+    compiled.middleOperators(1) shouldBe a[DummyMiddleOperator]
+    compiled.middleOperators(2) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(2).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
   }
 
   test("should fuse partial pipelines, add middle, chain fallback pipes with interruption, ending in produce results") {
@@ -265,18 +265,18 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.middleOperators should have size 4
     compiled.outputOperator should not be NoOutputOperator
 
-    compiled.middleOperators(0).isInstanceOf[DummyMiddleOperator] shouldBe true
-    compiled.middleOperators(1).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
-    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(0) shouldBe a[DummyMiddleOperator]
+    compiled.middleOperators(1) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.isInstanceOf[MorselFeedPipe] shouldBe true
-    compiled.middleOperators(2).isInstanceOf[DummyMiddleOperator] shouldBe true
-    compiled.middleOperators(3).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
-    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+      .source shouldBe a[MorselFeedPipe]
+    compiled.middleOperators(2) shouldBe a[DummyMiddleOperator]
+    compiled.middleOperators(3) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.isInstanceOf[MorselFeedPipe] shouldBe true
+      .source shouldBe a[MorselFeedPipe]
   }
 
   test("should fuse partial pipelines, add middle, chain fallback pipes with interruption, no output") {
@@ -290,18 +290,18 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.start shouldBe fused
     compiled.middleOperators should have size 4
     compiled.outputOperator shouldBe NoOutputOperator
-    compiled.middleOperators(0).isInstanceOf[DummyMiddleOperator] shouldBe true
-    compiled.middleOperators(1).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
-    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+    compiled.middleOperators(0) shouldBe a[DummyMiddleOperator]
+    compiled.middleOperators(1) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
+    compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.isInstanceOf[MorselFeedPipe] shouldBe true
-    compiled.middleOperators(2).isInstanceOf[DummyMiddleOperator] shouldBe true
-    compiled.middleOperators(3).isInstanceOf[SlottedPipeMiddleOperator] shouldBe true
-    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.isInstanceOf[DropResultPipe] shouldBe true
-    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.isInstanceOf[DropResultPipe] shouldBe true
+      .source shouldBe a[MorselFeedPipe]
+    compiled.middleOperators(2) shouldBe a[DummyMiddleOperator]
+    compiled.middleOperators(3) shouldBe a[SlottedPipeMiddleOperator]
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
+    compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.isInstanceOf[MorselFeedPipe] shouldBe true
+      .source shouldBe a[MorselFeedPipe]
   }
 
   def notSupported = new PipelineBuilder(dummyLeaf)

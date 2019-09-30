@@ -27,8 +27,6 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id.INVALID_ID
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.schema.IndexOrder
 
-import scala.collection.mutable.ArrayBuffer
-
 class FuseOperators(operatorFactory: OperatorFactory,
                     tokenContext: TokenContext,
                     parallelExecution: Boolean,
