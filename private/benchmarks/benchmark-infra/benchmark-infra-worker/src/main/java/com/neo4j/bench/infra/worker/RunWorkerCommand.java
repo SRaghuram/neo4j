@@ -8,7 +8,6 @@ package com.neo4j.bench.infra.worker;
 import com.amazonaws.SdkClientException;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;

@@ -84,10 +84,23 @@ public class ScheduleMacroCommand extends BaseInfraCommand
 
             List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> jobScheduler.jobsStatuses( Collections.singletonList( jobId ) ) );
             LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
+
+            // if any of the jobs failed, fail whole run
+            if ( jobsStatuses.stream()
+                    .filter( JobStatus::isFailed )
+                    .count() != 0 )
+            {
+                throw new RuntimeException( "there are failed jobs:\n" +
+                                            jobsStatuses.stream()
+                                                .filter( JobStatus::isFailed )
+                                                .map( Object::toString )
+                                                .collect( joining( "\n" ) ) );
+            }
+
         }
         catch ( SdkClientException | ArtifactStoreException e )
         {
-            LOG.error( "failed to schedule benchmarking job", e );
+            throw new RuntimeException( "failed to schedule benchmarking job", e );
         }
     }
 }
