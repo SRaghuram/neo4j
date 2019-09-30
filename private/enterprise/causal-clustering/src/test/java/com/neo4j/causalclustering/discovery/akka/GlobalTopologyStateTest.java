@@ -329,14 +329,13 @@ class GlobalTopologyStateTest
         // seconds core topology is not stored because it does not contain any members
         var emptyTopology1 = state.coreTopologyForDatabase( databaseId1 );
         var emptyTopology2 = state.coreTopologyForDatabase( databaseId1 );
+
         assertEquals( emptyTopology1, emptyTopology2 );
         assertNotSame( emptyTopology1, emptyTopology2 );
         assertEquals( DatabaseCoreTopology.empty( databaseId1 ), emptyTopology1 );
         assertEquals( DatabaseCoreTopology.empty( databaseId1 ), emptyTopology2 );
-        assertNotEquals( coreTopology1, emptyTopology1 );
-        assertNotEquals( coreTopology1, emptyTopology2 );
-        assertNotEquals( coreTopology2, emptyTopology1 );
-        assertNotEquals( coreTopology2, emptyTopology2 );
+        assertNotEquals( emptyTopology1, coreTopology1 );
+        assertNotEquals( emptyTopology1, coreTopology2 );
     }
 
     @Test
@@ -351,12 +350,12 @@ class GlobalTopologyStateTest
         // seconds read replica topology is not stored because it does not contain any members
         var emptyTopology1 = state.readReplicaTopologyForDatabase( databaseId1 );
         var emptyTopology2 = state.readReplicaTopologyForDatabase( databaseId1 );
+
         assertEquals( emptyTopology1, emptyTopology2 );
         assertNotSame( emptyTopology1, emptyTopology2 );
-        assertNotEquals( readReplicaTopology1, emptyTopology1 );
-        assertNotEquals( readReplicaTopology1, emptyTopology2 );
-        assertEquals( readReplicaTopology2, emptyTopology1 );
-        assertEquals( readReplicaTopology2, emptyTopology2 );
+        assertNotEquals( emptyTopology1, readReplicaTopology1 );
+        assertNotEquals( emptyTopology2, readReplicaTopology1 );
+        assertEquals( emptyTopology1, readReplicaTopology2 );
     }
 
     private static CoreServerInfo newCoreInfo( MemberId memberId, Set<DatabaseId> databaseIds )
