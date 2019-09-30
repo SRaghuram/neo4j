@@ -2391,6 +2391,7 @@ abstract class ExpressionCompiler(slots: SlotConfiguration,
     }
 
     block(oneTime(block(
+      assign(returnVariable, constant(null)), // Since the expression may be executed in a loop of an operator, returnVariable needs to be reset to null in every iteration
       loop(checks.zip(loads).toList),
       condition(equal(load(returnVariable), constant(null)))(assign(returnVariable, default))
     )), load(returnVariable))

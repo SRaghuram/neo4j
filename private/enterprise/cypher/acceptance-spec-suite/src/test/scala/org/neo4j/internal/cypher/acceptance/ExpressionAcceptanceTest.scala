@@ -170,4 +170,43 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     result.toList should equal(List(Map("modulo" -> 0.5)))
   }
+
+  test("simple CASE with expression in head") {
+    createNode(Map("eyes" -> "blue"))
+    createNode(Map("eyes" -> "brown"))
+    createNode(Map("eyes" -> "green"))
+
+    val query = """MATCH (n)
+                  |RETURN
+                  |  CASE n.eyes
+                  |    WHEN 'blue'  THEN 1
+                  |    WHEN 'brown' THEN 2
+                  |    ELSE 3
+                  |  END AS result
+                  |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+
+    result.toList should contain theSameElementsAs List(Map("result" -> 1), Map("result" -> 2), Map("result" -> 3))
+  }
+
+  test("simple CASE with no expression in head") {
+    createNode(Map("eyes" -> "blue"))
+    createNode(Map("eyes" -> "brown"))
+    createNode(Map("eyes" -> "green"))
+
+    val query = """MATCH (n)
+                  |RETURN
+                  |  CASE
+                  |    WHEN n.eyes = 'blue'  THEN 1
+                  |    WHEN n.eyes = 'brown' THEN 2
+                  |    ELSE 3
+                  |  END AS result
+                  |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+
+    result.toList should contain theSameElementsAs List(Map("result" -> 1), Map("result" -> 2), Map("result" -> 3))
+  }
+
 }
