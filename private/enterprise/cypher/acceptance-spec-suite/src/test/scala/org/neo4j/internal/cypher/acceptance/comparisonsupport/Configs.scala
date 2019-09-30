@@ -26,6 +26,8 @@ object Configs {
 
   def InterpretedAndSlottedAndMorsel: TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
 
+  def MorselSingleThreadedFull: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.MorselFull))
+
   /**
     * These are all configurations that will be executed even if not explicitly expected to succeed or fail.
     * Even if not explicitly requested, they are executed to check if they unexpectedly succeed to make sure that
@@ -44,7 +46,7 @@ object Configs {
     * These experimental configurations will only be executed if you explicitly specify them in the test expectation.
     * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
     */
-  def Experimental: TestConfiguration = TestConfiguration.empty
+  def Experimental: TestConfiguration = MorselSingleThreadedFull
 
   def Empty: TestConfiguration = TestConfiguration.empty
 

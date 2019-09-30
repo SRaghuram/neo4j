@@ -44,7 +44,7 @@ case class ComparePlansWithAssertion(assertion: InternalPlanDescription => Unit,
       withClue(s"plan for ${scenario.name}\n") {
         assertion(result.executionPlanDescription())
       }
-    } else {
+    } else if (!Configs.Experimental.containsScenario(scenario)) {
       val tryResult = Try(assertion(result.executionPlanDescription()))
       tryResult match {
         case Success(_) =>

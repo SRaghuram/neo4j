@@ -31,6 +31,7 @@ object Runtimes {
 
   object Morsel extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel")
 
+  object MorselFull extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel interpretedPipesFallback=all")
 }
 
 case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {

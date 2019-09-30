@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
-import cypher.features.Phase
+import cypher.features.{Phase, ScenarioTestHelper}
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
@@ -134,10 +134,10 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                               errorType: Seq[String] = Seq.empty,
                               params: Map[String, Any] = Map.empty): Unit = {
     val explicitlyRequestedExperimentalScenarios = expectedSpecificFailureFrom.scenarios intersect Configs.Experimental.scenarios
-    val scenariosToExecute = Configs.All.scenarios ++ explicitlyRequestedExperimentalScenarios
+    val scenariosToExecute = Configs.All.scenarios ++ Configs.Experimental.scenarios
     for (thisScenario <- scenariosToExecute) {
       val expectedToFailWithSpecificMessage = expectedSpecificFailureFrom.containsScenario(thisScenario)
-
+      val silentUnexpectedSuccess = shouldSilenceUnexpectedSuccess(thisScenario, explicitlyRequestedExperimentalScenarios)
       val tryResult: Try[RewindableExecutionResult] = Try(innerExecuteTransactionally(s"CYPHER ${thisScenario.preparserOptions} $query", params))
       tryResult match {
         case Success(_) =>
@@ -156,7 +156,11 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
             }
           } else {
             if (correctError(e.getMessage, message) && correctError(actualErrorType, errorType)) {
-              fail("Unexpectedly (but correctly!) failed in " + thisScenario.name + " with the correct error. Did you forget to add this config?", e)
+              if (!silentUnexpectedSuccess) {
+                fail("Unexpectedly (but correctly!) failed in " + thisScenario.name + " with the correct error. Did you forget to add this config?", e)
+              } else {
+                ScenarioTestHelper.unexpectedSuccessCount.getAndAdd(1)
+              }
             }
           }
       }
@@ -210,7 +214,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)
       val explicitlyRequestedExperimentalScenarios = expectSucceed.scenarios intersect Configs.Experimental.scenarios
 
-      val positiveResults = ((Configs.All.scenarios ++ explicitlyRequestedExperimentalScenarios) - baseScenario).flatMap {
+      val positiveResults = ((Configs.All.scenarios ++ Configs.Experimental.scenarios) - baseScenario).flatMap {
         thisScenario =>
           executeScenario(thisScenario,
                           query,
@@ -218,7 +222,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                           executeBefore,
                           params,
                           resultAssertionInTx,
-                          executeExpectedFailures)
+                          executeExpectedFailures,
+                          silentUnexpectedSuccess = shouldSilenceUnexpectedSuccess(thisScenario, explicitlyRequestedExperimentalScenarios))
       }
 
       //Must be run last and have no rollback to be able to do certain result assertions
@@ -279,6 +284,10 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     possibleErrors == Seq.empty || (actualError != null && possibleErrors.exists(s => actualError.replaceAll("\\r", "").contains(s.replaceAll("\\r", ""))))
   }
 
+  private def shouldSilenceUnexpectedSuccess(scenario: TestScenario, explicitlyRequestedExperimentalScenarios: Set[TestScenario]): Boolean = {
+    Configs.Experimental.containsScenario(scenario) && !explicitlyRequestedExperimentalScenarios.contains(scenario)
+  }
+
   private def extractBaseScenario(expectSucceed: TestConfiguration, compareResults: TestConfiguration): TestScenario = {
     val scenariosToChooseFrom = if (compareResults.scenarios.isEmpty) expectSucceed else compareResults
 
@@ -300,6 +309,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                               params: Map[String, Any],
                               resultAssertionInTx: Option[RewindableExecutionResult => Unit],
                               executeExpectedFailures: Boolean,
+                              silentUnexpectedSuccess: Boolean = false,
                               shouldRollback: Boolean = true): Option[(TestScenario, RewindableExecutionResult)] = {
 
     def execute(tx: InternalTransaction) = {
@@ -324,7 +334,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       if (expectedToSucceed) {
         tryRes match {
           case Success(thisResult) =>
-            scenario.checkResultForSuccess(query, thisResult)
+            scenario.checkResultForSuccess(query, thisResult, silentUnexpectedSuccess)
             Some(scenario -> thisResult)
           case Failure(e) =>
             fail(s"Expected to succeed in ${scenario.name} but got exception\nRoot cause: ${ExceptionUtils.getRootCauseMessage(e)}\n", e)
@@ -340,7 +350,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
               case Success(_) => Phase.runtime
             })
         }
-        scenario.checkResultForFailure(query, tryRes, maybePhase)
+        scenario.checkResultForFailure(query, tryRes, maybePhase, silentUnexpectedSuccess)
         None
       }
     }
