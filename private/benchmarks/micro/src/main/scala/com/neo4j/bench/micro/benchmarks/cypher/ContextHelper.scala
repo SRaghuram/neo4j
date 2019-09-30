@@ -31,7 +31,6 @@ object ContextHelper extends MockitoSugar {
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
-    interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_morsel_use_interpreted_pipes.defaultValue().toString),
     memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults())
   )
 
@@ -61,6 +60,8 @@ object ContextHelper extends MockitoSugar {
       runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge, lifeSupport, workerManager),
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
-      operatorEngine = CypherOperatorEngineOption.compiled)
+      operatorEngine = CypherOperatorEngineOption.compiled,
+      interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_morsel_interpreted_pipes_fallback.defaultValue().toString),
+    )
   }
 }

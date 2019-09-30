@@ -272,6 +272,18 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     intercept[Exception](executeSingle("CYPHER runtime=interpreted operatorEngine=compiled RETURN 1")).getMessage should be("Cannot combine OPERATOR ENGINE 'compiled' with RUNTIME 'interpreted'")
   }
 
+  test("should provide sensible error message for using interpreted pipes fallback with compiled runtime") {
+    intercept[Exception](executeSingle("CYPHER runtime=compiled interpretedPipesFallback=all RETURN 1")).getMessage should be("Cannot combine INTERPRETED PIPES FALLBACK 'all' with RUNTIME 'compiled'")
+  }
+
+  test("should provide sensible error message for using interpreted pipes fallback with slotted runtime") {
+    intercept[Exception](executeSingle("CYPHER runtime=slotted interpretedPipesFallback=all RETURN 1")).getMessage should be("Cannot combine INTERPRETED PIPES FALLBACK 'all' with RUNTIME 'slotted'")
+  }
+
+  test("should provide sensible error message for using interpreted pipes fallback with interpreted runtime") {
+    intercept[Exception](executeSingle("CYPHER runtime=interpreted interpretedPipesFallback=all RETURN 1")).getMessage should be("Cannot combine INTERPRETED PIPES FALLBACK 'all' with RUNTIME 'interpreted'")
+  }
+
   test("should be able to use compiled expression engine with slotted") {
     inTx( tx =>
       tx.execute("CYPHER runtime=slotted expressionEngine=compiled RETURN 1").resultAsString() should not be null

@@ -100,7 +100,7 @@ class MorselRuntime(parallelExecution: Boolean,
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
-    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.config.interpretedPipesFallback, parallelExecution)
+    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
@@ -130,7 +130,7 @@ class MorselRuntime(parallelExecution: Boolean,
 
     //=======================================================
     val slottedPipeBuilder =
-      if (context.config.interpretedPipesFallback != CypherInterpretedPipesFallbackOption.disabled) {
+      if (context.interpretedPipesFallback != CypherInterpretedPipesFallbackOption.disabled) {
         val slottedPipeBuilderFallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
         Some(new SlottedPipeMapper(slottedPipeBuilderFallback, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable))
       }
