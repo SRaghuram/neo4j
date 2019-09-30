@@ -53,7 +53,7 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     {
         builder.match( LeaderInfoSettingMessage.class, message ->
                 {
-                    log.info( "Telling Replicator to set Leader info to %s", message );
+                    log().info( "Telling Replicator to set Leader info to {}", message );
                     modifyReplicatedData( key, map -> map.put( cluster, message.database(), new ReplicatedLeaderInfo( message.leaderInfo() ) ) );
                 } );
     }

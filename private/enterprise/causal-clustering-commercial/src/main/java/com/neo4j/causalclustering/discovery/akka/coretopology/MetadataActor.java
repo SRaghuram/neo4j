@@ -50,7 +50,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     {
         CoreServerInfoForMemberId metadata = new CoreServerInfoForMemberId( myself, CoreServerInfo.from( config ) );
 
-        log.info( "Telling Replicator to set CoreServerInfo for this address to %s", metadata );
+        log().info( "Telling Replicator to set CoreServerInfo for this address to {}", metadata );
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }
 
