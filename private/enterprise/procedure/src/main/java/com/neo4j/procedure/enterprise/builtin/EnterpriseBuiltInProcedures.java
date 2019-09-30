@@ -29,9 +29,9 @@ public class EnterpriseBuiltInProcedures
     @Context
     public DependencyResolver resolver;
 
-    @Description( "Create a node key constraint with index backed by specified index provider " +
-            "(for example: CALL db.createNodeKey(\":Person(name)\", \"lucene+native-2.0\")) - " +
-            "YIELD index, providerName, status" )
+    @Description( "Create a named node key constraint with index backed by specified index provider " +
+            "(for example: CALL db.createNodeKey(\"MyConstraint\", \":Person(name)\", \"native-btree-1.0\")) - " +
+            "YIELD name, index, providerName, status" )
     @Procedure( name = "db.createNodeKey", mode = SCHEMA )
     public Stream<BuiltInProcedures.SchemaIndexInfo> createNodeKey(
             @Name( "constraintName" ) String constraintName,
