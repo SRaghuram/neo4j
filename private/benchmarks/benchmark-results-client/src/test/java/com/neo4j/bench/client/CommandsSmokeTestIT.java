@@ -7,7 +7,7 @@ package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
-import com.neo4j.bench.client.queries.CreateSchema;
+import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.options.Planner;

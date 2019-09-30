@@ -6,8 +6,8 @@
 package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.client.queries.SetStoreVersion;
-import com.neo4j.bench.client.queries.VerifyStoreSchema;
+import com.neo4j.bench.client.queries.schema.SetStoreVersion;
+import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 
 import java.net.URI;
 import java.util.function.Supplier;
