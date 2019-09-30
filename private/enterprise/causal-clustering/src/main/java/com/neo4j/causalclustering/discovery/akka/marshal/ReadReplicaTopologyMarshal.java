@@ -38,6 +38,7 @@ public class ReadReplicaTopologyMarshal extends SafeChannelMarshal<DatabaseReadR
             ReadReplicaInfo readReplicaInfo = readReplicaInfoMarshal.unmarshal( channel );
             replicas.put( memberId, readReplicaInfo );
         }
+
         return new DatabaseReadReplicaTopology( databaseId, replicas );
     }
 

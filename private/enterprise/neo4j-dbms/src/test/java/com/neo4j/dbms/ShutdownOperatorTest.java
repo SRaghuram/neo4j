@@ -14,9 +14,8 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,11 +54,11 @@ class ShutdownOperatorTest
         var initialDesired = triggerCalls.get( 0 ).first();
         var expected = databases.stream()
                 .filter( id -> !SYSTEM_DATABASE_ID.equals( id ) )
-                .collect( Collectors.toMap( DatabaseId::name, id -> new DatabaseState( id, STOPPED ) ) );
+                .collect( Collectors.toMap( DatabaseId::name, id -> new EnterpriseDatabaseState( id, STOPPED ) ) );
         assertEquals( expected, initialDesired );
 
         var subsequentDesired = triggerCalls.get( 1 ).first();
-        expected.put( SYSTEM_DATABASE_ID.name(), new DatabaseState( SYSTEM_DATABASE_ID, STOPPED ) );
+        expected.put( SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( SYSTEM_DATABASE_ID, STOPPED ) );
         assertEquals( expected, subsequentDesired );
     }
 
@@ -69,7 +68,7 @@ class ShutdownOperatorTest
         operator.stopAll();
         var triggerCalls = connector.triggerCalls();
         var finalTrigger = triggerCalls.get( triggerCalls.size() - 1 );
-        var expected = databases.stream().collect( Collectors.toMap( DatabaseId::name, id -> new DatabaseState( id, STOPPED ) ) );
+        var expected = databases.stream().collect( Collectors.toMap( DatabaseId::name, id -> new EnterpriseDatabaseState( id, STOPPED ) ) );
         assertEquals( expected, finalTrigger.first() );
     }
 }

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +42,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -48,6 +50,8 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.
@@ -237,6 +241,9 @@ class AkkaCoreTopologyDowningIT
         ForkJoinPool pool = new ForkJoinPool( parallelism, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true );
         ActorSystemFactory actorSystemFactory = new ActorSystemFactory( Optional.empty(), pool, config, logProvider  );
         TestActorSystemLifecycle actorSystemLifecycle = new TestActorSystemLifecycle( actorSystemFactory, resolverFactory, config, logProvider );
+
+        var dbStateService = new StubDatabaseStateService( Collections.emptyMap() );
+
         AkkaCoreTopologyService service = new AkkaCoreTopologyService(
                 config,
                 new MemberId( UUID.randomUUID() ),
@@ -248,8 +255,7 @@ class AkkaCoreTopologyDowningIT
                 TestDiscoveryMember::new,
                 pool,
                 Clocks.systemClock(),
-                new Monitors()
-        );
+                new Monitors() );
 
         service.init();
         service.start();

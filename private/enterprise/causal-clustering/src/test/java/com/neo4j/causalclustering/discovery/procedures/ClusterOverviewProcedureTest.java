@@ -106,15 +106,15 @@ class ClusterOverviewProcedureTest
         when( topologyService.allReadReplicas() ).thenReturn( replicaMembers );
         for ( DatabaseId databaseId : leaderDatabases )
         {
-            when( topologyService.coreRole( databaseId, theLeader ) ).thenReturn( LEADER );
+            when( topologyService.role( databaseId, theLeader ) ).thenReturn( LEADER );
         }
         for ( DatabaseId databaseId : follower1Databases )
         {
-            when( topologyService.coreRole( databaseId, follower1 ) ).thenReturn( FOLLOWER );
+            when( topologyService.role( databaseId, follower1 ) ).thenReturn( FOLLOWER );
         }
         for ( DatabaseId databaseId : follower2Databases )
         {
-            when( topologyService.coreRole( databaseId, follower2 ) ).thenReturn( FOLLOWER );
+            when( topologyService.role( databaseId, follower2 ) ).thenReturn( FOLLOWER );
         }
 
         ClusterOverviewProcedure procedure = new ClusterOverviewProcedure( topologyService );

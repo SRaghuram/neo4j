@@ -10,7 +10,6 @@ import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
-import com.neo4j.causalclustering.discovery.akka.Tick;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -49,7 +48,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     public void preStart()
     {
         receptionist.registerSubscriber( READ_REPLICA_TOPIC, getSelf() );
-        getTimers().startPeriodicTimer( TICK_KEY, Tick.getInstance(), refresh );
+        getTimers().startPeriodicTimer( TICK_KEY, PruneReplicaViewMessage.getInstance(), refresh );
     }
 
     @Override
@@ -65,7 +64,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
                 .create()
                 .match( ReadReplicaRefreshMessage.class, this::handleRefreshMessage )
                 .match( ReadReplicaRemovalMessage.class, this::handleRemovalMessage )
-                .match( Tick.class,                      this::handleTick )
+                .match( PruneReplicaViewMessage.class,   this::handleTick )
                 .build();
     }
 
@@ -83,7 +82,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
         sendClusterView();
     }
 
-    private void handleTick( Tick tick )
+    private void handleTick( PruneReplicaViewMessage tick )
     {
         Instant nTicksAgo = Instant.now( clock ).minus( refresh.multipliedBy( TICKS_BEFORE_REMOVE_READ_REPLICA ) );
 
@@ -106,5 +105,19 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     private void sendClusterView()
     {
         parent.tell( new ReadReplicaViewMessage( clusterClientReadReplicas ), getSelf() );
+    }
+
+    static class PruneReplicaViewMessage
+    {
+        private static PruneReplicaViewMessage instance = new PruneReplicaViewMessage();
+
+        private PruneReplicaViewMessage()
+        {
+        }
+
+        public static PruneReplicaViewMessage getInstance()
+        {
+            return instance;
+        }
     }
 }

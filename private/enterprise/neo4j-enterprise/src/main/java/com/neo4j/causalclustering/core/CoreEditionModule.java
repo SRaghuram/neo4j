@@ -54,6 +54,7 @@ import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
+import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
@@ -134,6 +135,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
     private DatabaseStartAborter startupController;
+    private ClusteredDbmsReconcilerModule reconcilerModule;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -234,6 +236,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
         globalProcedures.register( new CoreRoleProcedure( identityModule, topologyService, databaseManager ) );
+        globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
+                reconcilerModule.reconciler() ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
@@ -279,7 +283,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var fileSystem = globalModule.getFileSystem();
         var myIdentity = identityModule.myself();
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
+        reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
                 reconciledTxTracker, panicService, databaseManager.dbmsModel() );
 
         var dependencies = globalModule.getGlobalDependencies();
@@ -287,6 +291,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependency( reconciledTxTracker );
 
         topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.reconciler() );
+        reconcilerModule.reconciler().registerListener( topologyService );
 
         final RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
@@ -315,7 +320,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalModule.getGlobalLife().add( reconcilerModule );
     }
 
-    // TODO extract common
     @Override
     public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
     {
@@ -417,7 +421,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
             DatabaseStateService databaseStateService )
     {
         DiscoveryMemberFactory discoveryMemberFactory = new DefaultDiscoveryMemberFactory( databaseManager, databaseStateService );
-        DiscoveryModule discoveryModule = new DiscoveryModule( myIdentity, discoveryServiceFactory, discoveryMemberFactory, globalModule, sslPolicyLoader );
+        DiscoveryModule discoveryModule = new DiscoveryModule( myIdentity, discoveryServiceFactory, discoveryMemberFactory, globalModule,
+                sslPolicyLoader );
         return discoveryModule.topologyService();
     }
 }

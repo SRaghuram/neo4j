@@ -27,9 +27,9 @@ import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -70,7 +70,7 @@ class EnterpriseSystemGraphDbmsModelTest
     void shouldDetectUpdatedDatabases()
     {
         // when
-        HashMap<DatabaseId,DatabaseState> expectedCreated = new HashMap<>();
+        HashMap<DatabaseId,EnterpriseDatabaseState> expectedCreated = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
             makeDatabaseNode( tx, "A", true, expectedCreated );
@@ -86,7 +86,7 @@ class EnterpriseSystemGraphDbmsModelTest
         updatedDatabases.clear();
 
         // when
-        HashMap<DatabaseId,DatabaseState> expectedDeleted = new HashMap<>();
+        HashMap<DatabaseId,EnterpriseDatabaseState> expectedDeleted = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
             makeDeletedDatabaseNode( tx, "D", expectedDeleted );
@@ -103,7 +103,7 @@ class EnterpriseSystemGraphDbmsModelTest
     void shouldReturnDatabaseStates()
     {
         // when
-        HashMap<DatabaseId,DatabaseState> expectedIds = new HashMap<>();
+        HashMap<DatabaseId,EnterpriseDatabaseState> expectedIds = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
             makeDatabaseNode( tx, "A", true, expectedIds );
@@ -126,7 +126,7 @@ class EnterpriseSystemGraphDbmsModelTest
         assertEquals( expectedNames, dbmsModel.getDatabaseStates() );
     }
 
-    private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<DatabaseId,DatabaseState> expected )
+    private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<DatabaseId,EnterpriseDatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DATABASE_LABEL );
@@ -134,16 +134,16 @@ class EnterpriseSystemGraphDbmsModelTest
         node.setProperty( DATABASE_STATUS_PROPERTY, online ? "online" : "offline" );
         node.setProperty( DATABASE_UUID_PROPERTY, uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
-        expected.put( id, online ? new DatabaseState( id, STARTED ) : new DatabaseState( id, STOPPED ) );
+        expected.put( id, online ? new EnterpriseDatabaseState( id, STARTED ) : new EnterpriseDatabaseState( id, STOPPED ) );
     }
 
-    private void makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<DatabaseId,DatabaseState> expected )
+    private void makeDeletedDatabaseNode( Transaction tx, String databaseName, HashMap<DatabaseId,EnterpriseDatabaseState> expected )
     {
         UUID uuid = UUID.randomUUID();
         Node node = tx.createNode( DELETED_DATABASE_LABEL );
         node.setProperty( DATABASE_NAME_PROPERTY, new NormalizedDatabaseName( databaseName ).name() );
         node.setProperty( DATABASE_UUID_PROPERTY, uuid.toString() );
         var id = DatabaseIdFactory.from( databaseName, uuid );
-        expected.put( id, new DatabaseState( id, DROPPED ) );
+        expected.put( id, new EnterpriseDatabaseState( id, DROPPED ) );
     }
 }

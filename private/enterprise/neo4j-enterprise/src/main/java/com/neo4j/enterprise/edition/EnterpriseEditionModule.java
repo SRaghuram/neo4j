@@ -56,6 +56,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
+import org.neo4j.dbms.procedures.StandaloneDatabaseStateProcedure;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -93,7 +94,6 @@ import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
 
 public class EnterpriseEditionModule extends CommunityEditionModule implements AbstractEnterpriseEditionModule
 {
-    private final GlobalModule globalModule;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final FabricDatabaseManager fabricDatabaseManager;
     private final FabricServicesBootstrap fabricServicesBootstrap;
@@ -104,11 +104,10 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         this( globalModule, globalModule.getGlobalDependencies() );
     }
 
-    public EnterpriseEditionModule( GlobalModule globalModule, Dependencies dependencies  )
+    protected EnterpriseEditionModule( GlobalModule globalModule, Dependencies dependencies  )
     {
         super( globalModule );
-        this.globalModule = globalModule;
-        satisfyEnterpriseOnlyDependencies( this.globalModule );
+        satisfyEnterpriseOnlyDependencies( globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
         fabricServicesBootstrap = new FabricServicesBootstrap( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
@@ -190,9 +189,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
-        this.databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
+        databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );
-        var reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
+        StandaloneDbmsReconcilerModule reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 

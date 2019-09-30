@@ -14,6 +14,7 @@ import akka.cluster.ddata.LWWMapKey;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseDroppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
@@ -39,6 +40,7 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     private final Config config;
 
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
+    private final Set<DatabaseId> stoppedDatabases = new HashSet<>();
 
     private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
     {
@@ -51,15 +53,17 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     @Override
     protected void handleCustomEvents( ReceiveBuilder builder )
     {
-        builder .match( CleanupMessage.class,           this::removeDataFromReplicator )
+        builder.match( CleanupMessage.class,            this::removeDataFromReplicator )
                 .match( DatabaseStartedMessage.class,   this::handleDatabaseStartedMessage )
-                .match( DatabaseStoppedMessage.class,   this::handleDatabaseStoppedMessage );
+                .match( DatabaseStoppedMessage.class,   this::handleDatabaseStoppedMessage )
+                .match( DatabaseDroppedMessage.class,   this::handleDatabaseDroppedMessage );
     }
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
     {
         if ( startedDatabases.add( message.databaseId() ) )
         {
+            stoppedDatabases.remove( message.databaseId() );
             sendCoreServerInfo();
         }
     }
@@ -67,6 +71,15 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     private void handleDatabaseStoppedMessage( DatabaseStoppedMessage message )
     {
         if ( startedDatabases.remove( message.databaseId() ) )
+        {
+            stoppedDatabases.add( message.databaseId() );
+            sendCoreServerInfo();
+        }
+    }
+
+    private void handleDatabaseDroppedMessage( DatabaseDroppedMessage message )
+    {
+        if ( stoppedDatabases.remove( message.databaseId() ) || startedDatabases.remove( message.databaseId() ) )
         {
             sendCoreServerInfo();
         }
@@ -105,8 +118,8 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
 
     private void sendCoreServerInfo()
     {
-        var databaseIds = Set.copyOf( startedDatabases );
-        var info = CoreServerInfo.from( config, databaseIds );
+        var startedDatabases = Set.copyOf( this.startedDatabases );
+        var info = CoreServerInfo.from( config, startedDatabases );
         var metadata = new CoreServerInfoForMemberId( myself.id(), info );
         modifyReplicatedData( key, map -> map.put( cluster, cluster.selfUniqueAddress(), metadata ) );
     }

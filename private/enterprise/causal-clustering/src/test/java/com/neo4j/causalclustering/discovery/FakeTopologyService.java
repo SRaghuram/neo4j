@@ -6,23 +6,29 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.internal.helpers.collection.Pair;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
@@ -37,6 +43,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     private final Map<MemberId,ReadReplicaInfo> replicaMembers;
     //For this test class all members have the same role across all databases
     private final Map<MemberId,RoleInfo> coreRoles;
+    private final Map<DatabaseToMember,EnterpriseDatabaseState> databaseStates;
     private final MemberId myself;
 
     public FakeTopologyService( Set<MemberId> cores, Set<MemberId> replicas, MemberId myself, Set<DatabaseId> databaseIds )
@@ -69,6 +76,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
             replicaMembers.put( replica, TestTopology.addressesForReadReplica( offset, databaseIds ) );
             offset++;
         }
+        databaseStates = new HashMap<>();
     }
 
     public void setRole( MemberId memberId, RoleInfo nextRole )
@@ -104,12 +112,31 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
-                        serverInfo.connectors(), groups, serverInfo.getDatabaseIds(), serverInfo.refusesToBeLeader() );
+                        serverInfo.connectors(), groups, serverInfo.databaseIds(), serverInfo.refusesToBeLeader() );
 
         Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform = serverInfo ->
                 new ReadReplicaInfo( serverInfo.connectors(),
-                        serverInfo.catchupServer(), groups, serverInfo.getDatabaseIds() );
+                        serverInfo.catchupServer(), groups, serverInfo.databaseIds() );
 
+        updateMembers( members, coreInfoTransform, replicaInfoTransform );
+    }
+
+    public void setDatabases( Set<MemberId> members, final Set<DatabaseId> databases )
+    {
+        Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
+                new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
+                        serverInfo.connectors(), serverInfo.groups(), databases, serverInfo.refusesToBeLeader() );
+
+        Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform = serverInfo ->
+                new ReadReplicaInfo( serverInfo.connectors(),
+                        serverInfo.catchupServer(), serverInfo.groups(), databases );
+
+        updateMembers( members, coreInfoTransform, replicaInfoTransform );
+    }
+
+    private void updateMembers( Set<MemberId> members, Function<CoreServerInfo,CoreServerInfo> coreInfoTransform,
+            Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform )
+    {
         var updatedCores = coreMembers.entrySet().stream()
                 .filter( e -> members.contains( e.getKey() ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> coreInfoTransform.apply( e.getValue() ) ) );
@@ -120,6 +147,13 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
 
         coreMembers.putAll( updatedCores );
         replicaMembers.putAll( updatedRRs );
+    }
+
+    public void setState( Set<MemberId> memberIds, EnterpriseDatabaseState state )
+    {
+        var newStates = memberIds.stream()
+                .collect( Collectors.toMap( m -> new DatabaseToMember( state.databaseId(), m ), ignored -> state ) );
+        databaseStates.putAll( newStates );
     }
 
     @Override
@@ -133,6 +167,11 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
+    public void stateChange( DatabaseState newState )
+    {
+    }
+
+    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return coreMembers;
@@ -141,7 +180,10 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     @Override
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coreMembers );
+        var coresWithDatabase = coreMembers.entrySet().stream()
+                .filter( e -> e.getValue().databaseIds().contains( databaseId ) )
+                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+        return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coresWithDatabase );
     }
 
     @Override
@@ -153,7 +195,10 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     @Override
     public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
-        return new DatabaseReadReplicaTopology( databaseId, replicaMembers );
+        var replicasWithDatabase = replicaMembers.entrySet().stream()
+                .filter( e -> e.getValue().databaseIds().contains( databaseId ) )
+                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+        return new DatabaseReadReplicaTopology( databaseId, replicasWithDatabase );
     }
 
     @Override
@@ -166,7 +211,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public RoleInfo coreRole( DatabaseId ignored, MemberId memberId )
+    public RoleInfo role( DatabaseId ignored, MemberId memberId )
     {
         var role = coreRoles.get( memberId );
         if ( role == null )
@@ -180,6 +225,36 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     public MemberId memberId()
     {
         return myself;
+    }
+
+    @Override
+    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    {
+        return databaseStates.get( new DatabaseToMember( databaseId, memberId ) );
+    }
+
+    @Override
+    public ReplicatedDatabaseState coreStatesForDatabase( final DatabaseId databaseId )
+    {
+        var memberStates = getMemberStatesForRole( databaseId, allCoreServers().keySet() );
+        return ReplicatedDatabaseState.ofCores( databaseId, memberStates );
+    }
+
+    @Override
+    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    {
+        var memberStates = getMemberStatesForRole( databaseId, allReadReplicas().keySet() );
+        return ReplicatedDatabaseState.ofCores( databaseId, memberStates );
+    }
+
+    private Map<MemberId,DatabaseState> getMemberStatesForRole( final DatabaseId databaseId, Set<MemberId> membersOfRole )
+    {
+        final var members = Set.copyOf( membersOfRole );
+        Predicate<DatabaseToMember> memberIsRoleForDb = key -> Objects.equals( key.databaseId(), databaseId ) && members.contains( key.memberId() );
+
+        return databaseStates.entrySet().stream()
+                .filter( e -> memberIsRoleForDb.test( e.getKey() ) )
+                .collect( Collectors.toMap( e -> e.getKey().memberId(), Map.Entry::getValue ) );
     }
 
     public static MemberId memberId( int seed )

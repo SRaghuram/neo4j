@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class DbmsOperator
 {
     private OperatorConnector connector;
-    final Map<String,DatabaseState> desired = new ConcurrentHashMap<>();
+    final Map<String,EnterpriseDatabaseState> desired = new ConcurrentHashMap<>();
 
     /**
      * Connects the operator to the reconciler via a connector
@@ -24,7 +24,7 @@ public abstract class DbmsOperator
         connector.register( this );
     }
 
-    protected Map<String,DatabaseState> desired0()
+    protected Map<String,EnterpriseDatabaseState> desired0()
     {
         return desired;
     }
@@ -32,7 +32,7 @@ public abstract class DbmsOperator
     /**
      * @return the states that the operator desires for each database it cares about
      */
-    final Map<String,DatabaseState> desired()
+    final Map<String,EnterpriseDatabaseState> desired()
     {
         return Map.copyOf( desired0() );
     }

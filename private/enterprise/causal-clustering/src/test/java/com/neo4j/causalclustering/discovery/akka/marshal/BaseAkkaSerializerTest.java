@@ -14,12 +14,16 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRemovalMessage;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.dbms.EnterpriseDatabaseState;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -28,7 +32,15 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.neo4j.dbms.DatabaseState;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -77,7 +89,8 @@ public class BaseAkkaSerializerTest
                         TestTopology.addressesForReadReplica( 432 ),
                         new MemberId( UUID.randomUUID() ),
                         system.provider().resolveActorRef( actorPath + 1 ),
-                        system.provider().resolveActorRef( actorPath + 2 ) ),
+                        system.provider().resolveActorRef( actorPath + 2 ),
+                        Collections.emptyMap() ),
                         new ReadReplicaRefreshMessageSerializer( (ExtendedActorSystem) system )},
                 new Object[]{new MemberId( UUID.randomUUID() ),
                         new MemberIdSerializer()},
@@ -90,7 +103,10 @@ public class BaseAkkaSerializerTest
                 new Object[]{ReadReplicaTopologyMarshalTest.generate(), new ReadReplicaTopologySerializer()},
                 new Object[]{LeaderInfoDirectoryMessageMarshalTest.generate(), new DatabaseLeaderInfoMessageSerializer()},
                 new Object[]{new ReplicatedLeaderInfo( new LeaderInfo( new MemberId( UUID.randomUUID() ), 14L ) ), new ReplicatedLeaderInfoSerializer()},
-                new Object[]{randomDatabaseId(), new DatabaseIdSerializer()}
+                new Object[]{randomDatabaseId(), new DatabaseIdSerializer()},
+                new Object[]{randomDatabaseToMember(), new DatabaseToMemberSerializer()},
+                new Object[]{randomDatabaseState( randomDatabaseId() ), new DatabaseStateSerializer()},
+                new Object[]{randomReplicatedState(), new ReplicatedDatabaseStateSerializer()}
         );
     }
 
@@ -114,5 +130,32 @@ public class BaseAkkaSerializerTest
 
         // then
         assertThat( binary.length, Matchers.lessThanOrEqualTo( serializer.sizeHint() ) );
+    }
+
+    private static DatabaseToMember randomDatabaseToMember()
+    {
+        return new DatabaseToMember( randomDatabaseId(), new MemberId( UUID.randomUUID() ) );
+    }
+
+    private static DatabaseState randomDatabaseState( DatabaseId databaseId )
+    {
+        int lim = EnterpriseOperatorState.values().length;
+        int randomIdx = ThreadLocalRandom.current().nextInt( lim );
+        var randomState = EnterpriseOperatorState.values()[randomIdx];
+        return new EnterpriseDatabaseState( databaseId, randomState );
+    }
+
+    private static ReplicatedDatabaseState randomReplicatedState()
+    {
+        var isCore = ThreadLocalRandom.current().nextBoolean();
+        var id = randomDatabaseId();
+        var randomMemberStates = Stream.generate( () -> Map.entry( new MemberId( UUID.randomUUID() ), randomDatabaseState( id ) ) )
+                .limit( 5 )
+                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+        if ( isCore )
+        {
+            return ReplicatedDatabaseState.ofCores( id, randomMemberStates );
+        }
+        return ReplicatedDatabaseState.ofReadReplicas( id, randomMemberStates );
     }
 }

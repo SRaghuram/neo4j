@@ -8,20 +8,24 @@ package com.neo4j.dbms;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
+import org.neo4j.dbms.OperatorState;
+
 import static java.util.Comparator.comparingInt;
 import static java.util.Comparator.nullsLast;
 
 /**
- * Instances of this type represent the possible desired states of enterprise Databases.
+ * Instances of this type represent the possible states a neo4j operator may "desire" enterprise databases to be in.
  *
  * Instances should posses a total, deterministic ordering relative to *all*
  * other possible OperatorStates.
+ *
+ * Note that the order of members in this enum are depended upon for Serialization, and therefore should not be changed!
  */
-public enum OperatorState
+public enum EnterpriseOperatorState implements OperatorState
 {
-    STOPPED( "stopped", 100 ),
-    STORE_COPYING( "store_copying", 200 ),
-    STARTED( "started", 300 ),
+    STOPPED( "offline", 100 ),
+    STORE_COPYING( "store copying", 200 ),
+    STARTED( "online", 300 ),
     DROPPED( "dropped", 0 ),
     UNKNOWN( "unknown", 400 ),
     INITIAL( "initial", 500 );
@@ -29,7 +33,7 @@ public enum OperatorState
     private final String description;
     private final int precedence;
 
-    OperatorState( String description, int precedence )
+    EnterpriseOperatorState( String description, int precedence )
     {
         this.description = description;
         this.precedence = precedence;
@@ -44,7 +48,7 @@ public enum OperatorState
     }
 
     /**
-     * @return the precedence of this OperatorState as compared to others. Lower equals higher priority.
+     * @return the precedence of this EnterpriseOperatorState as compared to others. Lower equals higher priority.
      */
     int precedence()
     {
@@ -54,24 +58,24 @@ public enum OperatorState
     /**
      * Returns whichever of the left or right OperatorStates should take precedence over the other.
      *
-     * Note that if the OperatorState parameters are equal, this method defaults to returning the left.
+     * Note that if the EnterpriseOperatorState parameters are equal, this method defaults to returning the left.
      * Also, null parameters always lose the precedence comparison
      *
      * @param left the left operator state
      * @param right the right operator state
      * @return the state with lower precedence, or left, if the precedence is equal
      */
-    static OperatorState minByPrecedence( OperatorState left, OperatorState right )
+    static EnterpriseOperatorState minByPrecedence( EnterpriseOperatorState left, EnterpriseOperatorState right )
     {
-        var precedenceCompare = nullsLast( comparingInt( OperatorState::precedence ) );
+        var precedenceCompare = nullsLast( comparingInt( EnterpriseOperatorState::precedence ) );
         return precedenceCompare.compare( left, right ) <= 0 ? left : right;
     }
 
     /**
-     * Returns a binary operator for comparing objects by their OperatorState using {@code minByPrecedence}
-     * @see DatabaseState
+     * Returns a binary operator for comparing objects by their EnterpriseOperatorState using {@code minByPrecedence}
+     * @see EnterpriseDatabaseState
      */
-    static <T> BinaryOperator<T> minByOperatorState( Function<T,OperatorState> toOperatorState )
+    static <T> BinaryOperator<T> minByOperatorState( Function<T,EnterpriseOperatorState> toOperatorState )
     {
         return ( left, right ) ->
         {

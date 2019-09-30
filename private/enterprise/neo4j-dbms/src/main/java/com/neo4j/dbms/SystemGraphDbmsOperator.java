@@ -14,7 +14,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.dbms.OperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.emptySet;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
@@ -32,7 +32,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
     {
         this.dbmsModel = dbmsModel;
         this.reconciledTxTracker = reconciledTxTracker;
-        this.desired.put( SYSTEM_DATABASE_ID.name(), new DatabaseState( SYSTEM_DATABASE_ID, STARTED ) );
+        this.desired.put( SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( SYSTEM_DATABASE_ID, STARTED ) );
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -66,7 +66,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
      */
     synchronized void updateDesiredStates()
     {
-        Map<String,DatabaseState> systemStates = dbmsModel.getDatabaseStates();
+        Map<String,EnterpriseDatabaseState> systemStates = dbmsModel.getDatabaseStates();
         systemStates.forEach( desired::put );
     }
 

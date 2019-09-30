@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.STORE_COPYING;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -166,10 +166,10 @@ class ClusterInternalDbmsOperatorTest
         assertNull( operator.desired().get( someDb.name() ) );
     }
 
-    private OperatorState operatorState( DatabaseId databaseId )
+    private EnterpriseOperatorState operatorState( DatabaseId databaseId )
     {
         return Optional.ofNullable( operator.desired().get( databaseId.name() ) )
-                .map( DatabaseState::operationalState )
+                .map( EnterpriseDatabaseState::operatorState )
                 .orElse( null );
     }
 
@@ -178,7 +178,7 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = randomDatabaseId();
-        var desiredStateOnTrigger = new AtomicReference<OperatorState>();
+        var desiredStateOnTrigger = new AtomicReference<EnterpriseOperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
         var e = new IllegalStateException();
 
@@ -195,7 +195,7 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = randomDatabaseId();
-        var desiredStateOnTrigger = new AtomicReference<OperatorState>();
+        var desiredStateOnTrigger = new AtomicReference<EnterpriseOperatorState>();
         captureDesiredStateWhenOperatorTriggered( someDb, desiredStateOnTrigger );
 
         // when
@@ -222,12 +222,12 @@ class ClusterInternalDbmsOperatorTest
         verify( connector ).trigger( ReconcilerRequest.forPanickedDatabase( someDb, e ) );
     }
 
-    private void captureDesiredStateWhenOperatorTriggered( DatabaseId databaseId, AtomicReference<OperatorState> stateRef )
+    private void captureDesiredStateWhenOperatorTriggered( DatabaseId databaseId, AtomicReference<EnterpriseOperatorState> stateRef )
     {
         when( connector.trigger( any( ReconcilerRequest.class ) ) ).thenAnswer( invocation ->
         {
             var desiredState = operator.desired().get( databaseId.name() );
-            stateRef.set( desiredState.operationalState() );
+            stateRef.set( desiredState.operatorState() );
             return ReconcilerResult.EMPTY;
         } );
     }

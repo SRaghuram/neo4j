@@ -55,8 +55,10 @@ public class CoreTopologyMarshal extends SafeChannelMarshal<DatabaseCoreTopology
         channel.putInt( coreTopology.members().size() );
         for ( Map.Entry<MemberId,CoreServerInfo> entry : coreTopology.members().entrySet() )
         {
-            memberIdMarshal.marshal( entry.getKey(), channel );
-            coreServerInfoChannelMarshal.marshal( entry.getValue(), channel );
+            MemberId memberId = entry.getKey();
+            CoreServerInfo coreServerInfo = entry.getValue();
+            memberIdMarshal.marshal( memberId, channel );
+            coreServerInfoChannelMarshal.marshal( coreServerInfo, channel );
         }
     }
 }

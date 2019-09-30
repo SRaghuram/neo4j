@@ -13,11 +13,16 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadReplicaRefreshMessage>
 {
@@ -33,12 +38,21 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
     @Override
     protected ReadReplicaRefreshMessage unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        ReadReplicaInfo rrInfo = readReplicaInfoMarshal.unmarshal( channel );
-        MemberId memberId = memberIdMarshal.unmarshal( channel );
-        ActorRef clusterClient = actorRefMarshal.unmarshal( channel );
-        ActorRef topologyClient = actorRefMarshal.unmarshal( channel );
+        var rrInfo = readReplicaInfoMarshal.unmarshal( channel );
+        var memberId = memberIdMarshal.unmarshal( channel );
+        var clusterClient = actorRefMarshal.unmarshal( channel );
+        var topologyClient = actorRefMarshal.unmarshal( channel );
 
-        return new ReadReplicaRefreshMessage( rrInfo, memberId, clusterClient, topologyClient );
+        var databaseStates = new HashMap<DatabaseId,DatabaseState>();
+        int size = channel.getInt();
+        for ( int i = 0; i < size; i++ )
+        {
+            var id = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
+            var state = DatabaseStateMarshal.INSTANCE.unmarshal( channel );
+            databaseStates.put( id, state );
+        }
+
+        return new ReadReplicaRefreshMessage( rrInfo, memberId, clusterClient, topologyClient, databaseStates );
     }
 
     @Override
@@ -48,5 +62,13 @@ public class ReadReplicaRefreshMessageMarshal extends SafeChannelMarshal<ReadRep
         memberIdMarshal.marshal( readReplicaRefreshMessage.memberId(), channel );
         actorRefMarshal.marshal( readReplicaRefreshMessage.clusterClient(), channel );
         actorRefMarshal.marshal( readReplicaRefreshMessage.topologyClientActorRef(), channel );
+
+        var databaseStates = readReplicaRefreshMessage.databaseStates();
+        channel.putInt( databaseStates.size() );
+        for ( Map.Entry<DatabaseId,DatabaseState> entry : databaseStates.entrySet() )
+        {
+            DatabaseIdMarshal.INSTANCE.marshal( entry.getKey(), channel );
+            DatabaseStateMarshal.INSTANCE.marshal( entry.getValue(), channel );
+        }
     }
 }

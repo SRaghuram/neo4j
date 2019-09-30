@@ -42,7 +42,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         final List<String> myServerGroup = List.of( "my_server_group" );
 
         Set<MemberId> myGroupMemberIds = FakeTopologyService.memberIds( 0, 10 );
-        TopologyService topologyService = getTopologyService( myServerGroup, myGroupMemberIds, List.of( "your_server_group" ) );
+        TopologyService topologyService = getTopologyService( myServerGroup, myGroupMemberIds, List.of( "your_server_group" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, memberId( 0 ) );
 
@@ -60,7 +60,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         final List<String> myServerGroups = List.of( "a", "b", "c" );
 
         Set<MemberId> myGroupMemberIds = FakeTopologyService.memberIds( 0, 10 );
-        TopologyService topologyService = getTopologyService( myServerGroups, myGroupMemberIds, List.of( "x", "y", "z" ) );
+        TopologyService topologyService = getTopologyService( myServerGroups, myGroupMemberIds, List.of( "x", "y", "z" ), Set.of( DATABASE_ID ));
 
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroups, topologyService, memberId( 0 ) );
 
@@ -77,7 +77,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         // given
         Set<MemberId> myGroupMemberIds = FakeTopologyService.memberIds( 0, 10 );
         TopologyService topologyService =
-                getTopologyService( singletonList( "my_server_group" ), myGroupMemberIds, List.of( "x", "y", "z" ) );
+                getTopologyService( singletonList( "my_server_group" ), myGroupMemberIds, List.of( "x", "y", "z" ), Set.of( DATABASE_ID ) );
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( Collections.emptyList(), topologyService, null );
 
         // when
@@ -94,7 +94,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         final List<String> myServerGroup = List.of( "group" );
 
         var myGroupMemberIds = singleton( memberId( 0 ) );
-        TopologyService topologyService = getTopologyService( myServerGroup, myGroupMemberIds, List.of( "x", "y", "z" ) );
+        TopologyService topologyService = getTopologyService( myServerGroup, myGroupMemberIds, List.of( "x", "y", "z" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyToServerGroupImpl strategy = new ConnectRandomlyToServerGroupImpl( myServerGroup, topologyService, memberId( 0 ) );
 
@@ -105,7 +105,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         assertThat( memberId, empty() );
     }
 
-    static TopologyService getTopologyService( List<String> myServerGroups, Set<MemberId> myGroupMemberIds, List<String> unwanted )
+    static TopologyService getTopologyService( List<String> myServerGroups, Set<MemberId> myGroupMemberIds, List<String> unwanted, Set<DatabaseId> databaseIds )
     {
         var thisCore =  memberId( -1 );
 
@@ -117,8 +117,7 @@ class ConnectRandomlyToServerGroupStrategyImplTest
         var allReplicas = new HashSet<>( myGroupMemberIds );
         allReplicas.addAll( otherReplicas );
 
-        var topologyService =  new FakeTopologyService( singleton( thisCore ), allReplicas, thisCore,
-                singleton( TestDatabaseIdRepository.randomDatabaseId() ) );
+        var topologyService =  new FakeTopologyService( singleton( thisCore ), allReplicas, thisCore, databaseIds );
 
         topologyService.setGroups( myGroupMemberIds, Set.copyOf( myServerGroups ) );
         topologyService.setGroups( otherReplicas, Set.copyOf( unwanted ) );

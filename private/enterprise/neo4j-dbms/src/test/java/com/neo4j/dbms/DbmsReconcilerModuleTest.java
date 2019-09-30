@@ -7,9 +7,7 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.database.StubMultiDatabaseManager;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -33,7 +31,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
-import static com.neo4j.dbms.OperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -73,7 +71,7 @@ class DbmsReconcilerModuleTest
     {
         // given
         when( dbmsModel.getDatabaseStates() ).thenReturn(
-                singletonMap( idRepository.defaultDatabase().name(), new DatabaseState( idRepository.defaultDatabase(), STARTED ) ) );
+                singletonMap( idRepository.defaultDatabase().name(), new EnterpriseDatabaseState( idRepository.defaultDatabase(), STARTED ) ) );
         var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
                 mock( ReconciledTransactionTracker.class ), dbmsModel );
 
@@ -97,8 +95,8 @@ class DbmsReconcilerModuleTest
         var barId = idRepository.getRaw( "bar" );
         var bazId = idRepository.getRaw( "baz" );
 
-        Map<String, DatabaseState> desiredDbStates = Stream.of( fooId, barId, bazId )
-                .collect( Collectors.toMap( DatabaseId::name, id -> new DatabaseState( id, STARTED ) ) );
+        Map<String,EnterpriseDatabaseState> desiredDbStates = Stream.of( fooId, barId, bazId )
+                .collect( Collectors.toMap( DatabaseId::name, id -> new EnterpriseDatabaseState( id, STARTED ) ) );
 
         when( dbmsModel.getDatabaseStates() ).thenReturn( desiredDbStates );
         var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,

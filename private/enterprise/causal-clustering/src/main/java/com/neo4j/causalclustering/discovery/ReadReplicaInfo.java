@@ -39,7 +39,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public Set<DatabaseId> getDatabaseIds()
+    public Set<DatabaseId> databaseIds()
     {
         return databaseIds;
     }

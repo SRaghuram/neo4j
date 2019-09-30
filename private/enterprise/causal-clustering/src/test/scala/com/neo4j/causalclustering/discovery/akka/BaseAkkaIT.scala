@@ -13,6 +13,7 @@ import akka.cluster.ddata._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.neo4j.causalclustering.core.CausalClusteringSettings
+import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor.MetricsRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.monitoring.{ReplicatedDataIdentifier, ReplicatedDataMonitor}
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
@@ -122,7 +123,7 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     "update metrics on tick" in {
       val fixture = newFixture
       import fixture._
-      replicatedDataActorRef ! Tick.getInstance()
+      replicatedDataActorRef ! MetricsRefresh.getInstance()
       assertEventually(monitor.visSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
       assertEventually(monitor.invisSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }

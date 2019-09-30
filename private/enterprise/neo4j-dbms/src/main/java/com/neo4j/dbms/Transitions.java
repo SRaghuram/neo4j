@@ -15,8 +15,8 @@ import java.util.stream.Stream;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static java.lang.String.format;
 
 /**
@@ -26,9 +26,9 @@ import static java.lang.String.format;
  */
 final class Transitions
 {
-    private final Map<Pair<OperatorState,OperatorState>,TransitionFunction[]> transitionsTable;
+    private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable;
 
-    private Transitions( Map<Pair<OperatorState,OperatorState>,TransitionFunction[]> transitionsTable )
+    private Transitions( Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable )
     {
         this.transitionsTable = transitionsTable;
     }
@@ -38,7 +38,7 @@ final class Transitions
         return new TransitionsBuilder();
     }
 
-    TransitionLookup fromCurrent( DatabaseState current )
+    TransitionLookup fromCurrent( EnterpriseDatabaseState current )
     {
         return new TransitionLookup( current );
     }
@@ -57,15 +57,15 @@ final class Transitions
             // If the current and desired databases states have different ids
             //    then the database must have been dropped and needs recreating with it's new id.
             //    This is essentially two lookups for two sets of transition steps, which are then stitched together and returned.
-            var dropCurrent = prepareTransitionFunctions( lookup.current.operationalState(), DROPPED, lookup.current.databaseId() );
-            var createNext = prepareTransitionFunctions( INITIAL, lookup.desired.operationalState(), lookup.desired.databaseId() );
+            var dropCurrent = prepareTransitionFunctions( lookup.current.operatorState(), DROPPED, lookup.current.databaseId() );
+            var createNext = prepareTransitionFunctions( INITIAL, lookup.desired.operatorState(), lookup.desired.databaseId() );
             return Stream.concat( dropCurrent, createNext );
         }
 
-        return prepareTransitionFunctions( lookup.current.operationalState(), lookup.desired.operationalState(), lookup.current.databaseId() );
+        return prepareTransitionFunctions( lookup.current.operatorState(), lookup.desired.operatorState(), lookup.current.databaseId() );
     }
 
-    private Stream<Transition> prepareTransitionFunctions( OperatorState current, OperatorState desired, DatabaseId databaseId )
+    private Stream<Transition> prepareTransitionFunctions( EnterpriseOperatorState current, EnterpriseOperatorState desired, DatabaseId databaseId )
     {
         if ( current == desired )
         {
@@ -94,17 +94,17 @@ final class Transitions
      */
     class TransitionLookup implements NeedsDesired
     {
-        private final DatabaseState current;
-        private DatabaseState desired;
+        private final EnterpriseDatabaseState current;
+        private EnterpriseDatabaseState desired;
 
-        private TransitionLookup( DatabaseState current )
+        private TransitionLookup( EnterpriseDatabaseState current )
         {
             Objects.requireNonNull( current, "You must specify a current state for a transition!" );
             this.current = current;
         }
 
         @Override
-        public Stream<Transition> toDesired( DatabaseState desired )
+        public Stream<Transition> toDesired( EnterpriseDatabaseState desired )
         {
             Objects.requireNonNull( desired, "You must specify a desired state for a transition!" );
             this.desired = desired;
@@ -114,7 +114,7 @@ final class Transitions
 
     public interface NeedsDesired
     {
-        Stream<Transition> toDesired( DatabaseState desired );
+        Stream<Transition> toDesired( EnterpriseDatabaseState desired );
     }
 
     /**
@@ -124,10 +124,10 @@ final class Transitions
      */
     public static class TransitionsBuilder implements NeedsFrom, NeedsTo, NeedsDo, BuildOrContinue
     {
-        private OperatorState from;
-        private OperatorState to;
+        private EnterpriseOperatorState from;
+        private EnterpriseOperatorState to;
         private TransitionFunction[] transitions;
-        private final Map<Pair<OperatorState,OperatorState>,TransitionFunction[]> transitionsTable;
+        private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable;
 
         private TransitionsBuilder()
         {
@@ -135,7 +135,7 @@ final class Transitions
         }
 
         @Override
-        public NeedsTo from( OperatorState from )
+        public NeedsTo from( EnterpriseOperatorState from )
         {
             storePreviousEntry();
             this.from = from;
@@ -143,7 +143,7 @@ final class Transitions
         }
 
         @Override
-        public NeedsDo to( OperatorState to )
+        public NeedsDo to( EnterpriseOperatorState to )
         {
             this.to = to;
             return this;
@@ -160,7 +160,7 @@ final class Transitions
         public BuildOrContinue doNothing()
         {
             // A function to transfer to the desired state with no side effects.
-            this.transitions = new TransitionFunction[] { id -> new DatabaseState( id, to ) };
+            this.transitions = new TransitionFunction[] { id -> new EnterpriseDatabaseState( id, to ) };
             return this;
         }
 
@@ -187,12 +187,12 @@ final class Transitions
     /* TransitionsBuilder steps */
     public interface NeedsFrom
     {
-        NeedsTo from( OperatorState state );
+        NeedsTo from( EnterpriseOperatorState state );
     }
 
     public interface NeedsTo
     {
-        NeedsDo to( OperatorState state );
+        NeedsDo to( EnterpriseOperatorState state );
     }
 
     public interface NeedsDo
@@ -203,7 +203,7 @@ final class Transitions
 
     public interface BuildOrContinue
     {
-        NeedsTo from( OperatorState state );
+        NeedsTo from( EnterpriseOperatorState state );
         Transitions build();
     }
 
@@ -211,7 +211,7 @@ final class Transitions
     @FunctionalInterface
     public interface TransitionFunction
     {
-        DatabaseState forTransition( DatabaseId databaseId );
+        EnterpriseDatabaseState forTransition( DatabaseId databaseId );
 
         default Transition prepare( DatabaseId databaseId )
         {
@@ -220,12 +220,12 @@ final class Transitions
     }
 
     @FunctionalInterface
-    public interface Transition extends Supplier<DatabaseState>
+    public interface Transition extends Supplier<EnterpriseDatabaseState>
     {
-        DatabaseState doTransition();
+        EnterpriseDatabaseState doTransition();
 
         @Override
-        default DatabaseState get()
+        default EnterpriseDatabaseState get()
         {
             return doTransition();
         }

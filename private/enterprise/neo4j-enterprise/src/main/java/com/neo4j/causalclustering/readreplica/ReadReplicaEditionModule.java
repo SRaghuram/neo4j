@@ -24,10 +24,12 @@ import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
@@ -37,6 +39,7 @@ import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -47,6 +50,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
@@ -57,12 +61,13 @@ import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
-import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
+
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -83,6 +88,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
+    private ClusteredDbmsReconcilerModule reconcilerModule;
     private DatabaseStartAborter startupController;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
@@ -110,8 +116,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         panicService = new PanicService( jobScheduler, logService );
         // used in tests
         globalDependencies.satisfyDependencies( panicService );
-
-        LifeSupport globalLife = globalModule.getGlobalLife();
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
@@ -146,6 +150,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure( databaseManager ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService ) );
+        globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
+                reconcilerModule.reconciler() ) );
     }
 
     @Override
@@ -187,10 +193,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         dependencies.satisfyDependency( reconciledTxTracker );
         dependencies.satisfyDependencies( databaseEventService );
 
-        var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
-                databaseEventService, storageFactory, reconciledTxTracker, panicService, databaseManager.dbmsModel() );
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
+                .orElseThrow()
+                .databaseFacade();
+        var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
+        reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
+                databaseEventService, storageFactory, reconciledTxTracker, panicService, dbmsModel );
 
         topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
+        reconcilerModule.reconciler().registerListener( topologyService );
         globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );
@@ -203,8 +214,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         var catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
         var catchupClientFactory = catchupComponentsProvider.catchupClientFactory();
 
-        globalLife.add( catchupServer ); // must start last and stop first, since it handles external requests
+        globalLife.add( catchupServer );
         backupServerOptional.ifPresent( globalLife::add );
+        //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
         globalLife.add( reconcilerModule );
 
         startupController = databaseManager.getDatabaseStartAborter();

@@ -9,7 +9,8 @@ public enum ReplicatedDataIdentifier
 {
     METADATA( "member-data" ),
     RAFT_ID( "raft-id-published-by-member" ),
-    DIRECTORY( "per-db-leader-name" );
+    DIRECTORY( "per-db-leader-name" ),
+    DATABASE_STATE( "member-db-state" );
 
     private final String keyName;
 

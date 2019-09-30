@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.identity.RaftId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseId;
 

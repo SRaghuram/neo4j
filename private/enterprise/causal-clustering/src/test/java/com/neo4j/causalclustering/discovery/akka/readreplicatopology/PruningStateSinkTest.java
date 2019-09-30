@@ -8,20 +8,24 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.Topology;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Map;
 
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
-import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.TopologiesUpdater.forCoreTopologies;
-import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.TopologiesUpdater.forReadReplicaTopologies;
+import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.PruningStateSink.forCoreTopologies;
+import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.PruningStateSink.forCoreDatabaseStates;
+import static com.neo4j.causalclustering.discovery.akka.readreplicatopology.PruningStateSink.forReadReplicaTopologies;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.UUID.randomUUID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.mockito.Mockito.mock;
@@ -30,25 +34,31 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
-class TopologiesUpdaterTest
+class PruningStateSinkTest
 {
-    private final SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink = newTopologySinkMock();
-    private final SourceQueueWithComplete<DatabaseReadReplicaTopology> readReplicaTopologySink = newTopologySinkMock();
-    private final Duration maxTopologyLifetime = Duration.ofSeconds( 5 );
+    private final SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink = newSinkMock();
+    private final SourceQueueWithComplete<DatabaseReadReplicaTopology> readReplicaTopologySink = newSinkMock();
+    private final SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink = newSinkMock();
+    private final Duration maxStateLifetime = Duration.ofSeconds( 5 );
     private final FakeClock clock = new FakeClock();
 
-    private final TopologiesUpdater<DatabaseCoreTopology> coreTopologiesUpdater =
-            forCoreTopologies( coreTopologySink, maxTopologyLifetime, clock, nullLogProvider() );
+    private final PruningStateSink<DatabaseCoreTopology> pruningCoreTopologySink =
+            forCoreTopologies( coreTopologySink, maxStateLifetime, clock, nullLogProvider() );
 
-    private final TopologiesUpdater<DatabaseReadReplicaTopology> readReplicaTopologiesUpdater =
-            forReadReplicaTopologies( readReplicaTopologySink, maxTopologyLifetime, clock, nullLogProvider() );
+    private final PruningStateSink<DatabaseReadReplicaTopology> pruningReadReplicaTopologySink =
+            forReadReplicaTopologies( readReplicaTopologySink, maxStateLifetime, clock, nullLogProvider() );
+
+    private final PruningStateSink<ReplicatedDatabaseState> pruningStateSink =
+            forCoreDatabaseStates( databaseStateSink, maxStateLifetime, clock, nullLogProvider() );
+
+    //TODO: Compress to a parameterised test
 
     @Test
     void shouldOfferCoreTopologyToSink()
     {
         var coreTopology = randomCoreTopology();
 
-        coreTopologiesUpdater.offer( coreTopology );
+        pruningCoreTopologySink.offer( coreTopology );
 
         verify( coreTopologySink ).offer( coreTopology );
     }
@@ -58,9 +68,19 @@ class TopologiesUpdaterTest
     {
         var readReplicaTopology = randomReadReplicaTopology();
 
-        readReplicaTopologiesUpdater.offer( readReplicaTopology );
+        pruningReadReplicaTopologySink.offer( readReplicaTopology );
 
         verify( readReplicaTopologySink ).offer( readReplicaTopology );
+    }
+
+    @Test
+    void shouldOfferDatabaseStateToSink()
+    {
+        var replicatedDatabaseState = randomDatabaseState();
+
+        pruningStateSink.offer( replicatedDatabaseState );
+
+        verify( databaseStateSink ).offer( replicatedDatabaseState );
     }
 
     @Test
@@ -70,14 +90,14 @@ class TopologiesUpdaterTest
         var coreTopology2 = randomCoreTopology();
         var coreTopology3 = randomCoreTopology();
 
-        coreTopologiesUpdater.offer( coreTopology1 );
+        pruningCoreTopologySink.offer( coreTopology1 );
         clock.forward( 5, SECONDS );
-        coreTopologiesUpdater.offer( coreTopology2 );
+        pruningCoreTopologySink.offer( coreTopology2 );
         clock.forward( 10, SECONDS );
-        coreTopologiesUpdater.offer( coreTopology3 );
+        pruningCoreTopologySink.offer( coreTopology3 );
         clock.forward( 3, SECONDS );
 
-        coreTopologiesUpdater.pruneStaleTopologies();
+        pruningCoreTopologySink.pruneStaleState();
 
         verify( coreTopologySink ).offer( DatabaseCoreTopology.empty( coreTopology1.databaseId() ) );
         verify( coreTopologySink ).offer( DatabaseCoreTopology.empty( coreTopology2.databaseId() ) );
@@ -92,16 +112,16 @@ class TopologiesUpdaterTest
         var readReplicaTopology3 = randomReadReplicaTopology();
         var readReplicaTopology4 = randomReadReplicaTopology();
 
-        readReplicaTopologiesUpdater.offer( readReplicaTopology1 );
+        pruningReadReplicaTopologySink.offer( readReplicaTopology1 );
         clock.forward( 2, SECONDS );
-        readReplicaTopologiesUpdater.offer( readReplicaTopology2 );
+        pruningReadReplicaTopologySink.offer( readReplicaTopology2 );
         clock.forward( 15, SECONDS );
-        readReplicaTopologiesUpdater.offer( readReplicaTopology3 );
+        pruningReadReplicaTopologySink.offer( readReplicaTopology3 );
         clock.forward( 1, SECONDS );
-        readReplicaTopologiesUpdater.offer( readReplicaTopology4 );
+        pruningReadReplicaTopologySink.offer( readReplicaTopology4 );
         clock.forward( 3, SECONDS );
 
-        readReplicaTopologiesUpdater.pruneStaleTopologies();
+        pruningReadReplicaTopologySink.pruneStaleState();
 
         verify( readReplicaTopologySink ).offer( DatabaseReadReplicaTopology.empty( readReplicaTopology1.databaseId() ) );
         verify( readReplicaTopologySink ).offer( DatabaseReadReplicaTopology.empty( readReplicaTopology2.databaseId() ) );
@@ -131,8 +151,18 @@ class TopologiesUpdaterTest
         return new DatabaseReadReplicaTopology( databaseId, readReplicas );
     }
 
+    private static ReplicatedDatabaseState randomDatabaseState()
+    {
+        var databaseId = randomDatabaseId();
+        var states = Map.<MemberId,DatabaseState>of(
+                new MemberId( randomUUID() ), new EnterpriseDatabaseState( databaseId, STARTED ),
+                new MemberId( randomUUID() ), new EnterpriseDatabaseState( databaseId, STARTED ),
+                new MemberId( randomUUID() ), new EnterpriseDatabaseState( databaseId, STARTED ) );
+        return ReplicatedDatabaseState.ofCores( databaseId, states );
+    }
+
     @SuppressWarnings( "unchecked" )
-    private static <T extends Topology<?>> SourceQueueWithComplete<T> newTopologySinkMock()
+    private static <T> SourceQueueWithComplete<T> newSinkMock()
     {
         return mock( SourceQueueWithComplete.class );
     }

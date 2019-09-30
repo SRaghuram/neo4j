@@ -70,7 +70,7 @@ public class ReconcilerRequest
     }
 
     /**
-     * Whether or not the given database panicked and should be marked as failed in {@link DatabaseState} after the reconciliation attempt.
+     * Whether or not the given database panicked and should be marked as failed in {@link EnterpriseDatabaseState} after the reconciliation attempt.
      * Returns an Optional cause, where the *lack* of a cause marks that the give database has not panicked.
      *
      * @return {@code Optional.of( cause )} if the state should be failed, {@code Optional.empty()} otherwise.

@@ -36,6 +36,9 @@ public abstract class BaseAkkaSerializer<T> extends JSerializer
     static final int DB_LEADER_INFO = 1010;
     static final int REPLICATED_LEADER_INFO = 1011;
     static final int DATABASE_ID = 1012;
+    static final int REPLICATED_DATABASE_STATE = 1013;
+    static final int DATABASE_TO_MEMBER = 1014;
+    static final int DATABASE_STATE = 1015;
 
     private final ChannelMarshal<T> marshal;
     private final int id;

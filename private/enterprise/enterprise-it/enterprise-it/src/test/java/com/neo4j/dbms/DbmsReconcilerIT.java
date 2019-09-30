@@ -21,8 +21,8 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.UNKNOWN;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -58,7 +58,7 @@ class DbmsReconcilerIT
     {
         // given
         // a fake operator that desires a state invalid for a standalone database
-        var invalidDesiredState = new DatabaseState( db.databaseId(), UNKNOWN );
+        var invalidDesiredState = new EnterpriseDatabaseState( db.databaseId(), UNKNOWN );
         var fixedOperator = new FixedDbmsOperator( Map.of( db.databaseName(), invalidDesiredState ) );
 
         // when
@@ -77,7 +77,7 @@ class DbmsReconcilerIT
     {
         // given
         // a fake operator that desires a state invalid for a standalone database
-        var invalidDesiredState = new DatabaseState( db.databaseId(), UNKNOWN );
+        var invalidDesiredState = new EnterpriseDatabaseState( db.databaseId(), UNKNOWN );
         var fixedOperator = new FixedDbmsOperator( Map.of( db.databaseName(), invalidDesiredState ) );
 
         // a failed database

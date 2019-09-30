@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.util.Collections.emptyMap;
@@ -23,7 +24,7 @@ public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
     public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
         this.databaseId = requireNonNull( databaseId );
-        this.readReplicaMembers = readReplicaMembers;
+        this.readReplicaMembers = Map.copyOf( readReplicaMembers );
     }
 
     public static DatabaseReadReplicaTopology empty( DatabaseId databaseId )

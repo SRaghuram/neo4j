@@ -17,23 +17,23 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.STORE_COPYING;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 
 /**
  * Database operator for Clustered databases exposing state transitions needed by internal components.
  *
- * Specifically, this operator allows components to mark databases as {@link OperatorState#STORE_COPYING}
+ * Specifically, this operator allows components to mark databases as {@link EnterpriseOperatorState#STORE_COPYING}
  * or bootstrapping.
  *
- * {@link OperatorState#STORE_COPYING} refers to the state in which an underlying kernel database is
+ * {@link EnterpriseOperatorState#STORE_COPYING} refers to the state in which an underlying kernel database is
  * unavailable whilst the * cluster machinery downloads a more recent copy of store files and
  * transactions from another * cluster member.
  *
  * Normally, a {@link PersistentSnapshotDownloader} uses this internal operator to transition a database
- * from {@link OperatorState#STARTED}, to {@link OperatorState#STORE_COPYING}. However, during the
- * transition of a database from null to {@link OperatorState#STARTED}, such an attempt will lead to a
- * deadlock. As a result, bootstrapping is not a concrete {@link OperatorState}, provided by this operator
+ * from {@link EnterpriseOperatorState#STARTED}, to {@link EnterpriseOperatorState#STORE_COPYING}. However, during the
+ * transition of a database from null to {@link EnterpriseOperatorState#STARTED}, such an attempt will lead to a
+ * deadlock. As a result, bootstrapping is not a concrete {@link EnterpriseOperatorState}, provided by this operator
  * to the {@link DbmsReconciler}. Instead, the bootstrapping {@code Set<DatabaseId>} field contains
  * transient flags, rendering an attempt to stop a database for store copy a no-op, if it is currently
  * bootstrapping.
@@ -51,22 +51,22 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     private final Set<DatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
     private final Set<DatabaseId> panicked = ConcurrentHashMap.newKeySet();
 
-    protected Map<String,DatabaseState> desired0()
+    protected Map<String,EnterpriseDatabaseState> desired0()
     {
-        var result = new HashMap<String,DatabaseState>();
+        var result = new HashMap<String,EnterpriseDatabaseState>();
 
         for ( var storeCopyHandle : storeCopying )
         {
             var id = storeCopyHandle.databaseId;
             if ( !bootstrapping.contains( id ) )
             {
-                result.put( id.name(), new DatabaseState( id, STORE_COPYING ) );
+                result.put( id.name(), new EnterpriseDatabaseState( id, STORE_COPYING ) );
             }
         }
 
         for ( var id : panicked )
         {
-            result.put( id.name(), new DatabaseState( id, STOPPED ) );
+            result.put( id.name(), new EnterpriseDatabaseState( id, STOPPED ) );
         }
 
         return result;
@@ -74,7 +74,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
 
     /**
      * Unlike {@link ClusterInternalDbmsOperator#bootstrap(DatabaseId)}, this method will explicitly trigger the reconciler,
-     * and block until the database in question has explicitly transitioned to {@link OperatorState#STORE_COPYING}.
+     * and block until the database in question has explicitly transitioned to {@link EnterpriseOperatorState#STORE_COPYING}.
      *
      * The one exception to this blocking behaviour is if the operator currently also desires a database to be in a
      * bootstrapping state. To block in this circumstance would cause a deadlock, as a bootstrapping database *also*

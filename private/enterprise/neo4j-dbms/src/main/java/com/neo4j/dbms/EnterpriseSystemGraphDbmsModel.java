@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.OperatorState;
 import org.neo4j.dbms.database.SystemGraphDbmsModel;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -23,9 +24,9 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 
 /**
  * Utility class for accessing the DBMS model in the system database.
@@ -64,20 +65,21 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         return updatedDatabases;
     }
 
-    Map<String,DatabaseState> getDatabaseStates()
+    Map<String,EnterpriseDatabaseState> getDatabaseStates()
     {
-        Map<String,DatabaseState> databases = new HashMap<>();
+        Map<String,EnterpriseDatabaseState> databases = new HashMap<>();
 
         try ( var tx = systemDatabase.get().beginTx() )
         {
             var deletedDatabases = tx.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
-            deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), DROPPED ) ) );
+            deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ), new EnterpriseDatabaseState( getDatabaseId( node ), DROPPED ) ) );
 
             // existing databases supersede dropped databases of the same name, because they represent a later state
             // there can only ever be exactly 0 or 1 existing database for a particular name and
             // database nodes can only ever go from the existing to the dropped state
             var existingDatabases = tx.findNodes( DATABASE_LABEL ).stream().collect( Collectors.toList() );
-            existingDatabases.forEach( node -> databases.put( getDatabaseName( node ), new DatabaseState( getDatabaseId( node ), getOnlineStatus( node ) ) ) );
+            existingDatabases.forEach( node ->
+                    databases.put( getDatabaseName( node ), new EnterpriseDatabaseState( getDatabaseId( node ), getOnlineStatus( node ) ) ) );
 
             tx.commit();
         }
@@ -114,7 +116,7 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         return result;
     }
 
-    private OperatorState getOnlineStatus( Node node )
+    private EnterpriseOperatorState getOnlineStatus( Node node )
     {
         String onlineStatus = (String) node.getProperty( DATABASE_STATUS_PROPERTY );
 

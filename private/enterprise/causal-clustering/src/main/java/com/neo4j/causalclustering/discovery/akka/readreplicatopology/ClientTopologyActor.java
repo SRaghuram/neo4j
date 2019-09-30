@@ -18,19 +18,24 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 
 public class ClientTopologyActor extends AbstractActorWithTimers
 {
@@ -39,19 +44,24 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     public static Props props( DiscoveryMember myself, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
             SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
-            ActorRef clusterClient, Config config, LogProvider logProvider, Clock clock )
+            SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, ActorRef clusterClient,
+            Config config, LogProvider logProvider, Clock clock )
     {
         return Props.create( ClientTopologyActor.class,
-                () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config, logProvider, clock ) );
+                () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, stateSink,
+                        config, logProvider, clock, clusterClient  ) );
     }
 
     public static final String NAME = "cc-client-topology-actor";
 
     private final Duration refresh;
     private final DiscoveryMember myself;
-    private final TopologiesUpdater<DatabaseCoreTopology> coreTopologiesUpdater;
-    private final TopologiesUpdater<DatabaseReadReplicaTopology> rrTopologiesUpdater;
+    private final PruningStateSink<DatabaseCoreTopology> coreTopologySink;
+    private final PruningStateSink<DatabaseReadReplicaTopology> readreplicaTopologySink;
+    private final PruningStateSink<ReplicatedDatabaseState> coresDbStateSink;
+    private final PruningStateSink<ReplicatedDatabaseState> readReplicasDbStateSink;
     private final SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink;
+    private final Map<DatabaseId,DatabaseState> localDatabaseStates;
     private final ActorRef clusterClient;
     private final Config config;
     private final Log log;
@@ -59,16 +69,19 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
     private ClientTopologyActor( DiscoveryMember myself, SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink,
-            SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> discoverySink,
-            ActorRef clusterClient, Config config, LogProvider logProvider, Clock clock )
+            SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> leaderInfoSink,
+            SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, Config config, LogProvider logProvider, Clock clock, ActorRef clusterClient )
     {
         this.myself = myself;
         this.refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
         var maxTopologyLifetime = refresh.multipliedBy( REFRESHES_BEFORE_REMOVE_TOPOLOGY );
-        this.coreTopologiesUpdater = TopologiesUpdater.forCoreTopologies( coreTopologySink, maxTopologyLifetime, clock, logProvider );
-        this.rrTopologiesUpdater = TopologiesUpdater.forReadReplicaTopologies( rrTopologySink, maxTopologyLifetime, clock, logProvider );
-        this.discoverySink = discoverySink;
+        this.coreTopologySink = PruningStateSink.forCoreTopologies( coreTopologySink, maxTopologyLifetime, clock, logProvider );
+        this.readreplicaTopologySink = PruningStateSink.forReadReplicaTopologies( rrTopologySink, maxTopologyLifetime, clock, logProvider );
+        this.coresDbStateSink = PruningStateSink.forCoreDatabaseStates( stateSink, maxTopologyLifetime, clock, logProvider );
+        this.readReplicasDbStateSink = PruningStateSink.forReadReplicaDatabaseStates( stateSink, maxTopologyLifetime, clock, logProvider );
+        this.discoverySink = leaderInfoSink;
         this.clusterClient = clusterClient;
+        this.localDatabaseStates = new HashMap<>();
         this.config = config;
         this.log = logProvider.getLog( getClass() );
     }
@@ -77,19 +90,21 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public Receive createReceive()
     {
         return ReceiveBuilder.create()
-                .match( DatabaseCoreTopology.class, coreTopologiesUpdater::offer )
-                .match( DatabaseReadReplicaTopology.class, rrTopologiesUpdater::offer )
+                .match( DatabaseCoreTopology.class, coreTopologySink::offer )
+                .match( DatabaseReadReplicaTopology.class, readreplicaTopologySink::offer )
                 .match( LeaderInfoDirectoryMessage.class, msg -> discoverySink.offer( msg.leaders() ) )
-                .match( Refresh.class, ignored -> handleRefresh() )
+                .match( ReplicatedDatabaseState.class, this::handleRemoteDatabaseStateUpdate )
+                .match( TopologiesRefresh.class, ignored -> handleRefresh() )
                 .match( DatabaseStartedMessage.class, this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class, this::handleDatabaseStoppedMessage )
+                .match( DatabaseState.class, this::handleLocalDatabaseStateUpdate )
                 .build();
     }
 
     @Override
     public void preStart()
     {
-        getTimers().startPeriodicTimer( REFRESH, Refresh.instance, refresh );
+        getTimers().startPeriodicTimer( REFRESH, TopologiesRefresh.getInstance(), refresh );
         startedDatabases.addAll( myself.startedDatabases() );
         sendReadReplicaInfo();
     }
@@ -110,10 +125,34 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         }
     }
 
+    private void handleRemoteDatabaseStateUpdate( ReplicatedDatabaseState update )
+    {
+        if ( update.containsCoreStates() )
+        {
+            coresDbStateSink.offer( update );
+        }
+        else
+        {
+            readReplicasDbStateSink.offer( update );
+        }
+    }
+
+    private void handleLocalDatabaseStateUpdate( DatabaseState update )
+    {
+        if ( update.operatorState() == DROPPED )
+        {
+            localDatabaseStates.remove( update.databaseId() );
+        }
+        else
+        {
+            localDatabaseStates.put( update.databaseId(), update );
+        }
+    }
+
     private void handleRefresh()
     {
-        coreTopologiesUpdater.pruneStaleTopologies();
-        rrTopologiesUpdater.pruneStaleTopologies();
+        coreTopologySink.pruneStaleState();
+        readreplicaTopologySink.pruneStaleState();
 
         sendReadReplicaInfo();
     }
@@ -122,7 +161,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     {
         var databaseIds = Set.copyOf( startedDatabases );
         var readReplicaInfo = ReadReplicaInfo.from( config, databaseIds );
-        var refreshMsg = new ReadReplicaRefreshMessage( readReplicaInfo, myself.id(), clusterClient, getSelf() );
+        var refreshMsg = new ReadReplicaRefreshMessage( readReplicaInfo, myself.id(), clusterClient, getSelf(), localDatabaseStates );
         sendToCore( refreshMsg );
     }
 
@@ -139,14 +178,15 @@ public class ClientTopologyActor extends AbstractActorWithTimers
         clusterClient.tell( new ClusterClient.Publish( ReadReplicaViewActor.READ_REPLICA_TOPIC, msg ), getSelf() );
     }
 
-    private static final class Refresh
+    private static class TopologiesRefresh
     {
-        private static final Refresh instance = new Refresh();
-        private Refresh()
+        private static TopologiesRefresh instance = new TopologiesRefresh();
+
+        private TopologiesRefresh()
         {
         }
 
-        public static Refresh getInstance()
+        public static TopologiesRefresh getInstance()
         {
             return instance;
         }

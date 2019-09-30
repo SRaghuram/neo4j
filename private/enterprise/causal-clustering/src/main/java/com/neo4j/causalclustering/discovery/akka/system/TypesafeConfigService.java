@@ -12,6 +12,8 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreServerInfoForMemberId;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 import com.neo4j.causalclustering.discovery.akka.directory.ReplicatedLeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.marshal.BaseAkkaSerializer;
@@ -19,6 +21,8 @@ import com.neo4j.causalclustering.discovery.akka.marshal.CoreServerInfoForMember
 import com.neo4j.causalclustering.discovery.akka.marshal.CoreTopologySerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseLeaderInfoMessageSerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseStateSerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.DatabaseToMemberSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.LeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.MemberIdSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.RaftIdSerializer;
@@ -26,6 +30,7 @@ import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaInfoSerializ
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRefreshMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaRemovalMessageSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReadReplicaTopologySerializer;
+import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedDatabaseStateSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.ReplicatedLeaderInfoSerializer;
 import com.neo4j.causalclustering.discovery.akka.marshal.UniqueAddressSerializer;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaRefreshMessage;
@@ -42,6 +47,7 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 public final class TypesafeConfigService
@@ -201,6 +207,9 @@ public final class TypesafeConfigService
         addSerializer( LeaderInfoDirectoryMessage.class, DatabaseLeaderInfoMessageSerializer.class, configMap );
         addSerializer( ReplicatedLeaderInfo.class, ReplicatedLeaderInfoSerializer.class, configMap );
         addSerializer( DatabaseId.class, DatabaseIdSerializer.class, configMap );
+        addSerializer( ReplicatedDatabaseState.class, ReplicatedDatabaseStateSerializer.class, configMap );
+        addSerializer( DatabaseToMember.class, DatabaseToMemberSerializer.class, configMap );
+        addSerializer( DatabaseState.class, DatabaseStateSerializer.class, configMap );
 
         return ConfigFactory.parseMap( configMap );
     }

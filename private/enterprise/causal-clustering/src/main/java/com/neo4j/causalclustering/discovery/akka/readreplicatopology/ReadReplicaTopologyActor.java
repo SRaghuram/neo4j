@@ -14,8 +14,10 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.akka.Tick;
+import com.neo4j.causalclustering.discovery.akka.database.state.AllReplicatedDatabaseStates;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.PruneReplicaViewMessage;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -33,27 +35,31 @@ import static java.util.stream.Collectors.toSet;
 public class ReadReplicaTopologyActor extends AbstractLoggingActor
 {
     private final SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink;
+    private final SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink;
 
     private final Map<DatabaseId,DatabaseCoreTopology> coreTopologies = new HashMap<>();
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologies = new HashMap<>();
+    private Map<DatabaseId,ReplicatedDatabaseState> coreMemberDbStates = new HashMap<>();
+    private Map<DatabaseId,ReplicatedDatabaseState> rrMemberDbStates = new HashMap<>();
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
 
     private Set<ActorRef> myClusterClients = new HashSet<>();
     private ReadReplicaViewMessage readReplicaViewMessage = ReadReplicaViewMessage.EMPTY;
 
-    public static Props props( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist,
-            Config config, Clock clock )
+    public static Props props( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink,
+            SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink, ClusterClientReceptionist receptionist, Config config, Clock clock )
     {
         return Props.create( ReadReplicaTopologyActor.class,
-                () -> new ReadReplicaTopologyActor( topologySink, receptionist, config, clock ) );
+                () -> new ReadReplicaTopologyActor( topologySink, databaseStateSink, receptionist, config, clock ) );
     }
 
     public static final String NAME = "cc-rr-topology-actor";
 
-    ReadReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist,
-            Config config, Clock clock )
+    ReadReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink,
+            SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink, ClusterClientReceptionist receptionist, Config config, Clock clock )
     {
         this.topologySink = topologySink;
+        this.databaseStateSink = databaseStateSink;
 
         Duration refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
         Props readReplicaViewProps = ReadReplicaViewActor.props( getSelf(), receptionist, clock, refresh );
@@ -67,17 +73,25 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
     public Receive createReceive()
     {
         return ReceiveBuilder.create()
+                .match( AllReplicatedDatabaseStates.class,  this::updateCoreDatabaseStates )
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
-                .match( Tick.class,                         this::sendTopologiesToClients )
+                .match( PruneReplicaViewMessage.class,      this::sendTopologiesToClients )
                 .match( DatabaseCoreTopology.class,         this::addCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
                 .build();
     }
 
+    private void updateCoreDatabaseStates( AllReplicatedDatabaseStates msg )
+    {
+        coreMemberDbStates = msg.databaseStates();
+    }
+
     private void handleReadReplicaView( ReadReplicaViewMessage msg )
     {
         readReplicaViewMessage = msg;
+        rrMemberDbStates = msg.allReplicatedDatabaseStates();
+        rrMemberDbStates.forEach( ( id, state ) -> databaseStateSink.offer( state ) );
         buildTopologies();
     }
 
@@ -94,13 +108,14 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
                 .flatMap( readReplicaViewMessage::topologyClient );
     }
 
-    private void sendTopologiesToClients( Tick ignored )
+    private void sendTopologiesToClients( PruneReplicaViewMessage ignored )
     {
         log().debug( "Sending to clients: {}, {}, {}", readReplicaTopologies, coreTopologies, databaseLeaderInfo );
         myTopologyClients().forEach( client -> {
             sendReadReplicaTopologiesTo( client );
             sendCoreTopologiesTo( client );
             client.tell( databaseLeaderInfo, getSelf() );
+            sendDatabaseStatesTo( client );
         } );
     }
 
@@ -117,6 +132,19 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         for ( DatabaseCoreTopology coreTopology : coreTopologies.values() )
         {
             client.tell( coreTopology, getSelf() );
+        }
+    }
+
+    private void sendDatabaseStatesTo( ActorRef client )
+    {
+        for ( ReplicatedDatabaseState coreState : coreMemberDbStates.values() )
+        {
+            client.tell( coreState, getSelf() );
+        }
+
+        for ( ReplicatedDatabaseState replicaState : rrMemberDbStates.values() )
+        {
+            client.tell( replicaState, getSelf() );
         }
     }
 

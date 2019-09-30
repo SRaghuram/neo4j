@@ -14,9 +14,13 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.{DatabaseReadReplicaTopology, ReadReplicaInfo, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.dbms.EnterpriseOperatorState.STARTED
+import com.neo4j.dbms.EnterpriseDatabaseState
 import org.neo4j.configuration.Config
+import org.neo4j.dbms.DatabaseState
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.time.Clocks
@@ -56,7 +60,7 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
         readReplicaTopologyActor ! message
 
         Then("empty topology is built for the previous database")
-        val expectedEmptyTopology = new DatabaseReadReplicaTopology(initialDatabaseId, Map.empty[MemberId, ReadReplicaInfo].asJava)
+        val expectedEmptyTopology = new DatabaseReadReplicaTopology(initialDatabaseId, Map.empty[MemberId, ReadReplicaInfo].asJava )
         awaitAssert(topologyReceiver.expectMsg(expectedEmptyTopology), defaultWaitTime)
 
         And("non-empty topology is built for the new database")
@@ -69,18 +73,20 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
   trait Fixture {
 
     val topologyReceiver = TestProbe("ReadReplicaTopologyReceiver")
+    val stateReceiver = TestProbe("ReplicatedDatabaseStateReceiver")
     val materializer = ActorMaterializer()
 
     val readReplicaTopologySink = Source.queue[DatabaseReadReplicaTopology](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(topology => topologyReceiver.ref ! topology))
       .run(materializer)
 
+    val databaseStateSink = Source.queue[ReplicatedDatabaseState](1, OverflowStrategy.dropHead)
+      .to(Sink.foreach(state=> stateReceiver.ref ! state))
+      .run(materializer)
+
     val receptionist = ClusterClientReceptionist.get(system)
 
-    val props = ReadReplicaTopologyActor.props(readReplicaTopologySink,
-      receptionist,
-      Config.defaults(),
-      Clocks.systemClock())
+    val props = ReadReplicaTopologyActor.props(readReplicaTopologySink, databaseStateSink, receptionist, Config.defaults(), Clocks.systemClock())
 
     val readReplicaTopologyActor = system.actorOf(props)
 
@@ -95,7 +101,8 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
     def newReadReplicaViewRecord(id: Int, databaseIds: Set[DatabaseId]): ReadReplicaViewRecord = {
       val topologyClient = TestProbe("TopologyClient-" + id).ref
       val readReplicaInfo = TestTopology.addressesForReadReplica(id, databaseIds.asJava)
-      new ReadReplicaViewRecord(readReplicaInfo, topologyClient, new MemberId(UUID.randomUUID()), Instant.now())
+      val states: Map[DatabaseId, DatabaseState] = databaseIds.map(id => (id, new EnterpriseDatabaseState(id, STARTED)) ).toMap
+      new ReadReplicaViewRecord(readReplicaInfo, topologyClient, new MemberId(UUID.randomUUID()), Instant.now(), states.asJava )
     }
   }
 

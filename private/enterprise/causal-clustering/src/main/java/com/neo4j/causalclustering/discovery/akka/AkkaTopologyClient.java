@@ -20,6 +20,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
@@ -31,6 +32,7 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
@@ -77,6 +79,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         SourceQueueWithComplete<DatabaseCoreTopology> coreTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
         SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
         SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
 
         DiscoveryMember discoveryMember = discoveryMemberFactory.create( myself );
 
@@ -85,6 +88,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
                 coreTopologySink,
                 rrTopologySink,
                 directorySink,
+                databaseStateSink,
                 clusterClient,
                 config,
                 logProvider,
@@ -117,6 +121,16 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         if ( clientTopologyActor != null )
         {
             clientTopologyActor.tell( new DatabaseStoppedMessage( databaseId ), noSender() );
+        }
+    }
+
+    @Override
+    public void stateChange( DatabaseState newState )
+    {
+        var clientTopologyActor = clientTopologyActorRef;
+        if ( clientTopologyActor != null )
+        {
+            clientTopologyActor.tell( newState, noSender() );
         }
     }
 
@@ -156,15 +170,33 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
     {
-        return globalTopologyState.coreRole( databaseId, memberId );
+        return globalTopologyState.role( databaseId, memberId );
     }
 
     @Override
     public MemberId memberId()
     {
         return myself;
+    }
+
+    @Override
+    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    {
+        return globalTopologyState.stateFor( memberId, databaseId );
+    }
+
+    @Override
+    public ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    {
+        return globalTopologyState.coreStatesForDatabase( databaseId );
+    }
+
+    @Override
+    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    {
+        return globalTopologyState.readReplicaStatesForDatabase( databaseId );
     }
 
     @VisibleForTesting

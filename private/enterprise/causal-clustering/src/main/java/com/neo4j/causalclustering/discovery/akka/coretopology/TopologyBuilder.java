@@ -23,7 +23,7 @@ public class TopologyBuilder
     {
         Map<MemberId,CoreServerInfo> coreMembers = cluster.availableMembers()
                 .flatMap( memberData::getStream )
-                .filter( member -> member.coreServerInfo().getDatabaseIds().contains( databaseId ) )
+                .filter( member -> member.coreServerInfo().databaseIds().contains( databaseId ) )
                 .collect( toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
 
         return new DatabaseCoreTopology( databaseId, raftId, coreMembers );

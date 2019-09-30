@@ -9,15 +9,15 @@ import java.util.Map;
 
 public class FixedDbmsOperator extends DbmsOperator
 {
-    private final Map<String,DatabaseState> desiredStates;
+    private final Map<String,EnterpriseDatabaseState> desiredStates;
 
-    public FixedDbmsOperator( Map<String,DatabaseState> desiredStates )
+    public FixedDbmsOperator( Map<String,EnterpriseDatabaseState> desiredStates )
     {
         this.desiredStates = desiredStates;
     }
 
     @Override
-    protected Map<String,DatabaseState> desired0()
+    protected Map<String,EnterpriseDatabaseState> desired0()
     {
         return desiredStates;
     }

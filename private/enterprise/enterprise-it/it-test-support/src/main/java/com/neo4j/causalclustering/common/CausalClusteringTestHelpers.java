@@ -16,6 +16,8 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import com.neo4j.dbms.ShowDatabasesHelpers;
+import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,6 +25,7 @@ import java.io.Reader;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +66,7 @@ import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -139,7 +143,7 @@ public final class CausalClusteringTestHelpers
                 .getDependencyResolver()
                 .resolveDependency( Config.class )
                 .get( CausalClusteringSettings.transaction_advertised_address );
-        return String.format( "%s:%s", hostnamePort.getHostname(), hostnamePort.getPort() );
+        return format( "%s:%s", hostnamePort.getHostname(), hostnamePort.getPort() );
     }
 
     public static String backupAddress( GraphDatabaseAPI db )
@@ -236,6 +240,12 @@ public final class CausalClusteringTestHelpers
             tx.execute( "DROP DATABASE " + databaseName );
             tx.commit();
         } );
+    }
+
+    public static List<ShowDatabasesResultRow> showDatabases( Cluster cluster ) throws Exception
+    {
+        var systemLeader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
+        return ShowDatabasesHelpers.showDatabases( systemLeader.managementService() );
     }
 
     public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster ) throws InterruptedException

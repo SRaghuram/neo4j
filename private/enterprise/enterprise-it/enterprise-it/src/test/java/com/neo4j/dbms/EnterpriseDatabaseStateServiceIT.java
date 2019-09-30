@@ -19,7 +19,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @EnterpriseDbmsExtension
-class CommercialDatabaseStateServiceIT
+class EnterpriseDatabaseStateServiceIT
 {
     @Inject
     private FileSystemAbstraction fileSystem;
@@ -59,6 +59,6 @@ class CommercialDatabaseStateServiceIT
         Optional<Throwable> throwable = dbStateService.causeOfFailure( testId );
         assertTrue( throwable.isPresent(), "The state service should have recorded an error when starting a db without key files" );
         assertThat( throwable.get().getMessage(), containsString( "Unable to start") );
-        assertEquals( STOPPED.description(), dbStateService.stateOfDatabase( testId ), "The state service should report the db in its stopped state" );
+        assertEquals( STOPPED, dbStateService.stateOfDatabase( testId ), "The state service should report the db in its stopped state" );
     }
 }

@@ -16,8 +16,11 @@ import akka.cluster.pubsub.DistributedPubSubMediator.{CurrentTopics, GetTopics, 
 import akka.pattern._
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, Tick}
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.PruneReplicaViewMessage
 import com.neo4j.causalclustering.identity.MemberId
+import org.neo4j.dbms.DatabaseState
+import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters._
@@ -96,7 +99,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
       }
       "send periodic tick to parent" in new Fixture {
         Then("receive tick")
-        parent.expectMsg(waitWithRefresh, Tick.getInstance())
+        parent.expectMsg(waitWithRefresh, PruneReplicaViewMessage.getInstance())
       }
     }
   }
@@ -115,9 +118,9 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
     val memberId1,memberId2 = new MemberId(UUID.randomUUID())
     
     val clusterClient1, clusterClient2, topologyClient1, topologyClient2 = TestProbe().ref
-    
-    val rrMessage1 = new ReadReplicaRefreshMessage(rrInfo1, memberId1, clusterClient1, topologyClient1)
-    val rrMessage2 = new ReadReplicaRefreshMessage(rrInfo2, memberId2, clusterClient2, topologyClient2)
+
+    val rrMessage1 = new ReadReplicaRefreshMessage(rrInfo1, memberId1, clusterClient1, topologyClient1, Map.empty[DatabaseId,DatabaseState].asJava )
+    val rrMessage2 = new ReadReplicaRefreshMessage(rrInfo2, memberId2, clusterClient2, topologyClient2, Map.empty[DatabaseId,DatabaseState].asJava )
 
     val props = ReadReplicaViewActor.props(parent.ref, receptionist, clock, refresh)
     val actorRef = system.actorOf(props)
@@ -145,7 +148,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
     def fishForParentMessage(expected: Any, wait: FiniteDuration = defaultWaitTime) = {
       parent.fishForMessage(wait) {
         case msg if expected == msg => true
-        case _: Tick => false
+        case _: PruneReplicaViewMessage => false
       }
     }
   }

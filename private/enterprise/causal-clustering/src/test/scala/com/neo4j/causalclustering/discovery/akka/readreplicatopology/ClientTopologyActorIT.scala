@@ -16,11 +16,13 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
+import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink, DirectoryUpdateSink, TopologyUpdateSink}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.neo4j.configuration.Config
+import org.neo4j.dbms.DatabaseState
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.logging.NullLogProvider
@@ -33,7 +35,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
   "ClientTopologyActor" when {
     "starting" should {
       "send read replica info to cluster client" in new Fixture {
-        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Map.empty[DatabaseId,DatabaseState].asJava)
 
         expectMsg(msg)
       }
@@ -53,14 +55,10 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
         Given("new topology")
         val dbId = randomDatabaseId()
         val raftId = RaftId.from(dbId)
-        val newCoreTopology = new DatabaseCoreTopology(
-          dbId,
-          raftId,
-          Map(
-            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
-            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)
-          ).asJava
-        )
+        val newCoreTopology = new DatabaseCoreTopology(dbId, raftId, Map(
+                                            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(0, false),
+                                            new MemberId(UUID.randomUUID()) -> TestTopology.addressesForCore(1, false)
+                                          ).asJava)
 
         When("incoming topology")
         topologyActorRef ! newCoreTopology
@@ -75,9 +73,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       "forward incoming read replica topologies" in new Fixture {
         Given("new topology")
         val newRRTopology = new DatabaseReadReplicaTopology(randomDatabaseId(), Map(
-                  new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
-                  new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
-                ).asJava)
+                          new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(0),
+                          new MemberId(UUID.randomUUID()) -> TestTopology.addressesForReadReplica(1)
+                        ).asJava )
 
         When("incoming topology")
         topologyActorRef ! newRRTopology
@@ -108,7 +106,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       }
       "periodically send read replica info" in new Fixture {
         Given("Info to send")
-        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef)
+        val msg = new ReadReplicaRefreshMessage(readReplicaInfo, memberId, clusterClientProbe.ref, topologyActorRef, Map.empty[DatabaseId,DatabaseState].asJava)
         val send = ClusterClient.Publish(ReadReplicaViewActor.READ_REPLICA_TOPIC, msg)
 
         And("all databases are stated")
@@ -161,13 +159,16 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     var actualCoreTopology: DatabaseCoreTopology = _
     var actualReadReplicaTopology: DatabaseReadReplicaTopology = _
     var actualLeaderPerDb = Collections.emptyMap[DatabaseId, LeaderInfo]
+    var actualDatabaseStates: ReplicatedDatabaseState = _
 
-    val updateSink = new TopologyUpdateSink with DirectoryUpdateSink {
+    val updateSink = new TopologyUpdateSink with DirectoryUpdateSink with DatabaseStateUpdateSink {
       override def onTopologyUpdate(topology: DatabaseCoreTopology) = actualCoreTopology = topology
 
       override def onTopologyUpdate(topology: DatabaseReadReplicaTopology) = actualReadReplicaTopology = topology
 
       override def onDbLeaderUpdate(leaderPerDb: java.util.Map[DatabaseId, LeaderInfo]) = actualLeaderPerDb = leaderPerDb
+
+      override def onDbStateUpdate(databaseState: ReplicatedDatabaseState) = actualDatabaseStates = databaseState
     }
 
     val materializer = ActorMaterializer()
@@ -179,6 +180,9 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
       .run(materializer)
     val readReplicaTopologySink = Source.queue[DatabaseReadReplicaTopology](1, OverflowStrategy.dropHead)
       .to(Sink.foreach(updateSink.onTopologyUpdate))
+      .run(materializer)
+    val databaseStateSink = Source.queue[ReplicatedDatabaseState](1, OverflowStrategy.dropHead)
+      .to(Sink.foreach(updateSink.onDbStateUpdate))
       .run(materializer)
 
     val memberId = new MemberId(UUID.randomUUID())
@@ -199,16 +203,8 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
     }
 
     val clusterClientProbe = TestProbe()
-    val props = ClientTopologyActor.props(
-      new TestDiscoveryMember(memberId, databaseIds.asJava),
-      coreTopologySink,
-      readReplicaTopologySink,
-      discoverySink,
-      clusterClientProbe.ref,
-      config,
-      NullLogProvider.getInstance(),
-      Clocks.systemClock()
-    )
+    val props = ClientTopologyActor.props(new TestDiscoveryMember(memberId, databaseIds.asJava), coreTopologySink, readReplicaTopologySink, discoverySink,
+      databaseStateSink, clusterClientProbe.ref, config, NullLogProvider.getInstance(), Clocks.systemClock() )
 
     val topologyActorRef = system.actorOf(props)
 
@@ -225,7 +221,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     def isRefreshMsgWithDatabases(msg: Any, databaseIds: Set[DatabaseId]): Boolean = {
       msg match {
-        case refreshMsg: ReadReplicaRefreshMessage => refreshMsg.readReplicaInfo().getDatabaseIds.asScala == databaseIds
+        case refreshMsg: ReadReplicaRefreshMessage => refreshMsg.readReplicaInfo().databaseIds.asScala == databaseIds
         case _ => false
       }
     }

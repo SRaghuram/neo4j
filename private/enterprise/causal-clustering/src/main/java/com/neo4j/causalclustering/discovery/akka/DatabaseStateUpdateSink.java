@@ -5,16 +5,9 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-public class Tick
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+
+public interface DatabaseStateUpdateSink
 {
-    private static Tick instance = new Tick();
-
-    private Tick()
-    {
-    }
-
-    public static Tick getInstance()
-    {
-        return instance;
-    }
+    void onDbStateUpdate( ReplicatedDatabaseState databaseState );
 }

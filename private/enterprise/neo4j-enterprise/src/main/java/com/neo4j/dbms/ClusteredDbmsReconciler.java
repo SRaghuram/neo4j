@@ -23,11 +23,11 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.STORE_COPYING;
-import static com.neo4j.dbms.OperatorState.UNKNOWN;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
+import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
 
 public class ClusteredDbmsReconciler extends DbmsReconciler
@@ -48,12 +48,12 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     }
 
     @Override
-    protected DatabaseState getReconcilerEntryFor( DatabaseId databaseId )
+    protected EnterpriseDatabaseState getReconcilerEntryFor( DatabaseId databaseId )
     {
         return currentStates.getOrDefault( databaseId.name(), initial( databaseId ) );
     }
 
-    private DatabaseState initial( DatabaseId databaseId )
+    private EnterpriseDatabaseState initial( DatabaseId databaseId )
     {
         var raftIdOpt = readRaftIdForDatabase( databaseId, databaseLogProvider( databaseId ) );
         if ( raftIdOpt.isPresent() )
@@ -62,10 +62,10 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
             var previousDatabaseId = DatabaseIdFactory.from( databaseId.name(), raftId.uuid() );
             if ( !Objects.equals( databaseId, previousDatabaseId ) )
             {
-                return DatabaseState.unknown( previousDatabaseId );
+                return EnterpriseDatabaseState.unknown( previousDatabaseId );
             }
         }
-        return DatabaseState.initial( databaseId );
+        return EnterpriseDatabaseState.initial( databaseId );
     }
 
     private Optional<RaftId> readRaftIdForDatabase( DatabaseId databaseId, DatabaseLogProvider logProvider )
@@ -116,26 +116,26 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     }
 
     /* Operator Steps */
-    private DatabaseState startAfterStoreCopy( DatabaseId databaseId )
+    private EnterpriseDatabaseState startAfterStoreCopy( DatabaseId databaseId )
     {
         databaseManager.startDatabaseAfterStoreCopy( databaseId );
-        return new DatabaseState( databaseId, STARTED );
+        return new EnterpriseDatabaseState( databaseId, STARTED );
     }
 
-    private DatabaseState stopBeforeStoreCopy( DatabaseId databaseId )
+    private EnterpriseDatabaseState stopBeforeStoreCopy( DatabaseId databaseId )
     {
         databaseManager.stopDatabaseBeforeStoreCopy( databaseId );
-        return new DatabaseState( databaseId, STORE_COPYING );
+        return new EnterpriseDatabaseState( databaseId, STORE_COPYING );
     }
 
-    private DatabaseState logCleanupAndDrop( DatabaseId databaseId )
+    private EnterpriseDatabaseState logCleanupAndDrop( DatabaseId databaseId )
     {
         var log = logProvider.getLog( getClass() );
         log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
                 "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. You may need to re-seed",
                 databaseId.uuid(), databaseId.name() ) );
         databaseManager.dropDatabase( databaseId );
-        return new DatabaseState( databaseId, DROPPED );
+        return new EnterpriseDatabaseState( databaseId, DROPPED );
     }
 
     private DatabaseLogProvider databaseLogProvider( DatabaseId databaseId )

@@ -14,10 +14,10 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.UNKNOWN;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -67,10 +67,10 @@ class LocalDbmsOperatorTest
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
-    private OperatorState operatorState( Optional<DatabaseId> databaseId )
+    private EnterpriseOperatorState operatorState( Optional<DatabaseId> databaseId )
     {
         return databaseId.flatMap( id -> Optional.ofNullable( operator.desired().get( id.name() ) ) )
-                .map( DatabaseState::operationalState )
+                .map( EnterpriseDatabaseState::operatorState )
                 .orElse( UNKNOWN );
     }
 }

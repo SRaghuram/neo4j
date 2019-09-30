@@ -22,11 +22,11 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
-import static com.neo4j.dbms.OperatorState.STORE_COPYING;
-import static com.neo4j.dbms.OperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -76,8 +76,8 @@ class TransitionsTest
     {
         // given
         var id = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id, STARTED );
-        var desired = new DatabaseState( id, DROPPED );
+        var current = new EnterpriseDatabaseState( id, STARTED );
+        var desired = new EnterpriseDatabaseState( id, DROPPED );
 
         // when
         var lookup = this.transitions
@@ -103,10 +103,10 @@ class TransitionsTest
         var extendedTransitions = this.transitions.extendWith( extraTransitions );
 
         var id = databaseIdRepository.getRaw( "foo" );
-        var currentBase = new DatabaseState( id, STARTED );
-        var desiredBase = new DatabaseState( id, DROPPED );
-        var currentExtended = new DatabaseState( id, STORE_COPYING );
-        var desiredExtended = new DatabaseState( id, STARTED );
+        var currentBase = new EnterpriseDatabaseState( id, STARTED );
+        var desiredBase = new EnterpriseDatabaseState( id, DROPPED );
+        var currentExtended = new EnterpriseDatabaseState( id, STORE_COPYING );
+        var desiredExtended = new EnterpriseDatabaseState( id, STARTED );
 
         // when
         var lookupBase = extendedTransitions
@@ -142,8 +142,8 @@ class TransitionsTest
         var extendedTransitions = this.transitions.extendWith( extraTransitions );
 
         var id = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id, STARTED );
-        var desired = new DatabaseState( id, DROPPED );
+        var current = new EnterpriseDatabaseState( id, STARTED );
+        var desired = new EnterpriseDatabaseState( id, DROPPED );
 
         // when
         var lookup = extendedTransitions
@@ -164,8 +164,8 @@ class TransitionsTest
     {
         // given
         var id = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id, DROPPED );
-        var desired = new DatabaseState( id, STARTED );
+        var current = new EnterpriseDatabaseState( id, DROPPED );
+        var desired = new EnterpriseDatabaseState( id, STARTED );
 
         // when then throw
         try
@@ -186,8 +186,8 @@ class TransitionsTest
         var id1 = databaseIdRepository.getRaw( "foo" );
         databaseIdRepository.invalidate( id1 );
         var id2 = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id1, DROPPED );
-        var desired = new DatabaseState( id2, STARTED );
+        var current = new EnterpriseDatabaseState( id1, DROPPED );
+        var desired = new EnterpriseDatabaseState( id2, STARTED );
 
         // when
         var lookup = transitions
@@ -214,8 +214,8 @@ class TransitionsTest
         var id1 = databaseIdRepository.getRaw( "foo" );
         databaseIdRepository.invalidate( id1 );
         var id2 = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id1, STARTED );
-        var desired = new DatabaseState( id2, STARTED );
+        var current = new EnterpriseDatabaseState( id1, STARTED );
+        var desired = new EnterpriseDatabaseState( id2, STARTED );
 
         // when
         var lookup = transitions
@@ -245,8 +245,8 @@ class TransitionsTest
 
         // given
         var id = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id, STARTED );
-        var desired = new DatabaseState( id, STORE_COPYING );
+        var current = new EnterpriseDatabaseState( id, STARTED );
+        var desired = new EnterpriseDatabaseState( id, STORE_COPYING );
 
         // when then throw
         try
@@ -265,8 +265,8 @@ class TransitionsTest
     {
         // given
         var id = databaseIdRepository.getRaw( "foo" );
-        var current = new DatabaseState( id, STARTED );
-        var desired = new DatabaseState( id, STARTED );
+        var current = new EnterpriseDatabaseState( id, STARTED );
+        var desired = new EnterpriseDatabaseState( id, STARTED );
 
         // when
         var lookup = transitions
@@ -290,7 +290,7 @@ class TransitionsTest
         }
 
         @Override
-        public DatabaseState forTransition( DatabaseId databaseId )
+        public EnterpriseDatabaseState forTransition( DatabaseId databaseId )
         {
             forTransitionCalls.add( databaseId );
             return null;
@@ -324,7 +324,7 @@ class TransitionsTest
         }
 
         @Override
-        public DatabaseState doTransition()
+        public EnterpriseDatabaseState doTransition()
         {
             return function.forTransition( databaseId );
         }

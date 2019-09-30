@@ -12,8 +12,10 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
+import com.neo4j.dbms.EnterpriseDatabaseState;
 
 import java.util.Collections;
 import java.util.Map;
@@ -21,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -48,6 +51,11 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
 
     @Override
     public void onDatabaseStop( DatabaseId databaseId )
+    {
+    }
+
+    @Override
+    public void stateChange( DatabaseState newState )
     {
     }
 
@@ -84,7 +92,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
     {
         return RoleInfo.UNKNOWN;
     }
@@ -93,6 +101,24 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     public MemberId memberId()
     {
         return memberId;
+    }
+
+    @Override
+    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    {
+        return EnterpriseDatabaseState.unknown( databaseId );
+    }
+
+    @Override
+    public ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    {
+        return ReplicatedDatabaseState.ofCores( databaseId, Map.of() );
+    }
+
+    @Override
+    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    {
+        return ReplicatedDatabaseState.ofReadReplicas( databaseId, Map.of() );
     }
 
     private static CoreServerInfo coreServerInfo( String... groupNames )

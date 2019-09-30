@@ -10,18 +10,18 @@ import org.neo4j.internal.helpers.Exceptions;
 
 class ReconcilerStepResult
 {
-    private final DatabaseState stepState;
+    private final EnterpriseDatabaseState stepState;
     private final DatabaseManagementException stepError;
-    private final DatabaseState desiredState;
+    private final EnterpriseDatabaseState desiredState;
 
-    ReconcilerStepResult( DatabaseState stepState, DatabaseManagementException stepError, DatabaseState desiredState )
+    ReconcilerStepResult( EnterpriseDatabaseState stepState, DatabaseManagementException stepError, EnterpriseDatabaseState desiredState )
     {
         this.stepState = stepState;
         this.stepError = stepError;
         this.desiredState = desiredState;
     }
 
-    ReconcilerStepResult withState( DatabaseState state )
+    ReconcilerStepResult withState( EnterpriseDatabaseState state )
     {
         return new ReconcilerStepResult( state, this.stepError, this.desiredState );
     }
@@ -31,7 +31,7 @@ class ReconcilerStepResult
         return new ReconcilerStepResult( this.stepState, Exceptions.chain( this.stepError, stepError ), this.desiredState );
     }
 
-    public DatabaseState state()
+    public EnterpriseDatabaseState state()
     {
         return stepState;
     }
@@ -41,7 +41,7 @@ class ReconcilerStepResult
         return stepError;
     }
 
-    DatabaseState desiredState()
+    EnterpriseDatabaseState desiredState()
     {
         return desiredState;
     }

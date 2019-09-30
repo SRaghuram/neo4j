@@ -201,14 +201,10 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
     val raftIdKey = LWWMapKey[String, RaftId](ReplicatedDataIdentifier.RAFT_ID.keyName())
 
     val topologyBuilder = mock[TopologyBuilder]
-    val expectedCoreTopology = new DatabaseCoreTopology(
-      databaseId,
-      raftId,
-      Map(
-        new MemberId(UUID.randomUUID()) -> coreServerInfo(0),
-        new MemberId(UUID.randomUUID()) -> coreServerInfo(1)
-      ).asJava
-    )
+    val expectedCoreTopology = new DatabaseCoreTopology(databaseId, raftId, Map(
+                        new MemberId(UUID.randomUUID()) -> coreServerInfo(0),
+                        new MemberId(UUID.randomUUID()) -> coreServerInfo(1)
+                      ).asJava)
     Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
       .thenReturn(expectedCoreTopology)
 

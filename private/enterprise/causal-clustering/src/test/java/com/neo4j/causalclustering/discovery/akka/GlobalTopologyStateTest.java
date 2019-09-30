@@ -68,8 +68,8 @@ class GlobalTopologyStateTest
         assertEquals( DatabaseCoreTopology.empty( databaseId1 ), state.coreTopologyForDatabase( databaseId1 ) );
         assertEquals( DatabaseReadReplicaTopology.empty( databaseId1 ), state.readReplicaTopologyForDatabase( databaseId1 ) );
         assertNull( state.retrieveCatchupServerAddress( coreId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId2 ) );
     }
 
     @Test
@@ -147,18 +147,18 @@ class GlobalTopologyStateTest
 
         state.onDbLeaderUpdate( leaderInfos );
 
-        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId1, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId1, coreId2 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId1, coreId3 ) );
+        assertEquals( RoleInfo.LEADER, state.role( databaseId1, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId1, coreId2 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId1, coreId3 ) );
 
-        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId2, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId2, coreId2 ) );
-        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId2, coreId3 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId2, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.LEADER, state.role( databaseId2, coreId3 ) );
 
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, readReplicaId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, readReplicaId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, readReplicaId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, readReplicaId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, readReplicaId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, readReplicaId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, readReplicaId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, readReplicaId2 ) );
     }
 
     @Test
@@ -168,9 +168,9 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId1 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId3 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId3 ) );
     }
 
     @Test
@@ -180,8 +180,8 @@ class GlobalTopologyStateTest
         var coreTopology = new DatabaseCoreTopology( databaseId1, RaftId.from( databaseId1 ), coreMembers );
         state.onTopologyUpdate( coreTopology );
 
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId3 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId3 ) );
     }
 
     @Test
@@ -198,13 +198,13 @@ class GlobalTopologyStateTest
 
         state.onDbLeaderUpdate( Map.of( databaseId1, new LeaderInfo( coreId1, 42 ), databaseId2, new LeaderInfo( coreId3, 42 ) ) );
 
-        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId1, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId1, coreId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId1, coreId3 ) );
+        assertEquals( RoleInfo.LEADER, state.role( databaseId1, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId1, coreId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId1, coreId3 ) );
 
-        assertEquals( RoleInfo.UNKNOWN, state.coreRole( databaseId2, coreId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, state.coreRole( databaseId2, coreId2 ) );
-        assertEquals( RoleInfo.LEADER, state.coreRole( databaseId2, coreId3 ) );
+        assertEquals( RoleInfo.UNKNOWN, state.role( databaseId2, coreId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, state.role( databaseId2, coreId2 ) );
+        assertEquals( RoleInfo.LEADER, state.role( databaseId2, coreId3 ) );
     }
 
     @Test

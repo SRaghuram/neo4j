@@ -42,7 +42,7 @@ class ConnectRandomlyWithinServerGroupStrategyTest
         Config configWithMyServerGroup = Config.defaults( CausalClusteringSettings.server_groups, myServerGroup );
         Set<MemberId> myGroupMemberIds = memberIds( 0, 10 );
         TopologyService topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( myServerGroup, myGroupMemberIds,
-                        Collections.singletonList( "your_server_group" ) );
+                        Collections.singletonList( "your_server_group" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyWithinServerGroupStrategy strategy = new ConnectRandomlyWithinServerGroupStrategy();
         strategy.inject( topologyService, configWithMyServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );

@@ -20,17 +20,17 @@ public class CoreServerInfo implements DiscoveryServerInfo
     private final SocketAddress catchupServer;
     private final ClientConnectorAddresses clientConnectorAddresses;
     private final Set<String> groups;
-    private final Set<DatabaseId> databaseIds;
+    private final Set<DatabaseId> startedDatabaseIds;
     private final boolean refuseToBeLeader;
 
     public CoreServerInfo( SocketAddress raftServer, SocketAddress catchupServer,
-            ClientConnectorAddresses clientConnectorAddresses, Set<String> groups, Set<DatabaseId> databaseIds, boolean refuseToBeLeader )
+            ClientConnectorAddresses clientConnectorAddresses, Set<String> groups, Set<DatabaseId> startedDatabaseIds, boolean refuseToBeLeader )
     {
         this.raftServer = raftServer;
         this.catchupServer = catchupServer;
         this.clientConnectorAddresses = clientConnectorAddresses;
         this.groups = groups;
-        this.databaseIds = databaseIds;
+        this.startedDatabaseIds = startedDatabaseIds;
         this.refuseToBeLeader = refuseToBeLeader;
     }
 
@@ -45,9 +45,9 @@ public class CoreServerInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public Set<DatabaseId> getDatabaseIds()
+    public Set<DatabaseId> databaseIds()
     {
-        return databaseIds;
+        return startedDatabaseIds;
     }
 
     public SocketAddress getRaftServer()
@@ -95,13 +95,13 @@ public class CoreServerInfo implements DiscoveryServerInfo
                Objects.equals( catchupServer, that.catchupServer ) &&
                Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
                Objects.equals( groups, that.groups ) &&
-               Objects.equals( databaseIds, that.databaseIds );
+               Objects.equals( startedDatabaseIds, that.startedDatabaseIds );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( raftServer, catchupServer, clientConnectorAddresses, groups, databaseIds, refuseToBeLeader );
+        return Objects.hash( raftServer, catchupServer, clientConnectorAddresses, groups, startedDatabaseIds, refuseToBeLeader );
     }
 
     @Override
@@ -112,7 +112,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
                ", catchupServer=" + catchupServer +
                ", clientConnectorAddresses=" + clientConnectorAddresses +
                ", groups=" + groups +
-               ", databaseIds=" + databaseIds +
+               ", startedDatabaseIds=" + startedDatabaseIds +
                ", refuseToBeLeader=" + refuseToBeLeader +
                '}';
     }

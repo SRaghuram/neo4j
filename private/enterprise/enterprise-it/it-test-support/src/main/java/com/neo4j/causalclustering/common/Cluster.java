@@ -307,7 +307,7 @@ public class Cluster
         }
     }
 
-    private void removeReadReplica( ReadReplica memberToRemove )
+    public void removeReadReplica( ReadReplica memberToRemove )
     {
         memberToRemove.shutdown();
         readReplicas.values().remove( memberToRemove );

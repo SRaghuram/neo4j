@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 import akka.actor.ActorRef;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collections;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 
@@ -44,18 +46,33 @@ class ReadReplicaViewMessage
         Map<MemberId,ReadReplicaInfo> knownReadReplicas = clusterClientReadReplicas
                 .values()
                 .stream()
-                .filter( info -> info.readReplicaInfo().getDatabaseIds().contains( databaseId ) )
+                .filter( info -> info.readReplicaInfo().databaseIds().contains( databaseId ) )
                 .map( info -> Pair.of( info.memberId(), info.readReplicaInfo() ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new DatabaseReadReplicaTopology( databaseId, knownReadReplicas );
     }
 
+    Map<DatabaseId,ReplicatedDatabaseState> allReplicatedDatabaseStates()
+    {
+        var allMemberStatesPerDbMultiMap = clusterClientReadReplicas.values().stream()
+                .flatMap( this::getAllStatesFromMember )
+                .collect( Collectors.groupingBy( p -> p.other().databaseId(), Collectors.toMap( Pair::first, Pair::other ) ) );
+
+        return allMemberStatesPerDbMultiMap.entrySet().stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, e -> ReplicatedDatabaseState.ofReadReplicas( e.getKey(), e.getValue() ) ) );
+    }
+
+    private Stream<Pair<MemberId,DatabaseState>> getAllStatesFromMember( ReadReplicaViewRecord record )
+    {
+         return record.databaseStates().values().stream().map( state -> Pair.of( record.memberId(), state ) );
+    }
+
     Set<DatabaseId> databaseIds()
     {
         return clusterClientReadReplicas.values().stream()
                 .map( ReadReplicaViewRecord::readReplicaInfo )
-                .flatMap( info -> info.getDatabaseIds().stream() )
+                .flatMap( info -> info.databaseIds().stream() )
                 .collect( toSet() );
     }
 
@@ -83,7 +100,6 @@ class ReadReplicaViewMessage
     @Override
     public int hashCode()
     {
-
         return Objects.hash( clusterClientReadReplicas );
     }
 }

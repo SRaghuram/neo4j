@@ -51,7 +51,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     {
         sendInitialDataToReplicator();
         subscribeToReplicatorEvents( new Replicator.Subscribe<>( key, getSelf() ) );
-        getTimers().startPeriodicTimer( METRIC_TIMER_KEY, Tick.getInstance(), Duration.ofMinutes( 1 ) );
+        getTimers().startPeriodicTimer( METRIC_TIMER_KEY, MetricsRefresh.getInstance(), Duration.ofMinutes( 1 ) );
     }
 
     protected abstract void sendInitialDataToReplicator();
@@ -80,7 +80,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
                 handleIncomingData( newData );
                 logDataMetric();
             } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) )
-               .match( Tick.class, ignored -> logDataMetric() );
+               .match( MetricsRefresh.class, ignored -> logDataMetric() );
     }
 
     protected abstract void handleCustomEvents( ReceiveBuilder builder );
@@ -112,5 +112,19 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
         Replicator.Update<T> update = new Replicator.Update<>( key, emptyData.get(), WRITE_CONSISTENCY, Optional.ofNullable( message ), modify );
 
         replicator.tell( update, self() );
+    }
+
+    static class MetricsRefresh
+    {
+        private static MetricsRefresh instance = new MetricsRefresh();
+
+        private MetricsRefresh()
+        {
+        }
+
+        public static MetricsRefresh getInstance()
+        {
+            return instance;
+        }
     }
 }

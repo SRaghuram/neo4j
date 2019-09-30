@@ -21,6 +21,7 @@ package org.neo4j.dbms;
 
 import java.util.Optional;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DefaultDatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.database.DatabaseId;
@@ -30,7 +31,7 @@ import org.neo4j.kernel.database.DatabaseId;
  */
 public final class DefaultDatabaseStateService implements DatabaseStateService
 {
-    private final DefaultDatabaseManager databaseManager;
+    private final DatabaseManager<StandaloneDatabaseContext> databaseManager;
 
     public DefaultDatabaseStateService( DefaultDatabaseManager databaseManager )
     {
@@ -38,19 +39,16 @@ public final class DefaultDatabaseStateService implements DatabaseStateService
     }
 
     @Override
-    public String stateOfDatabase( DatabaseId databaseId )
+    public OperatorState stateOfDatabase( DatabaseId databaseId )
     {
-        return databaseManager.getDatabaseContext( databaseId ).map( this::started ).orElse( "unknown" );
+        return databaseManager.getDatabaseContext( databaseId )
+                .map( ctx -> new DefaultDatabaseState( ctx ).operatorState() )
+                .orElse( DefaultOperatorState.UNKNOWN );
     }
 
     @Override
     public Optional<Throwable> causeOfFailure( DatabaseId databaseId )
     {
         return databaseManager.getDatabaseContext( databaseId ).map( StandaloneDatabaseContext::failureCause );
-    }
-
-    private String started( StandaloneDatabaseContext databaseContext )
-    {
-        return databaseContext.database().isStarted() ? "started" : "stopped";
     }
 }

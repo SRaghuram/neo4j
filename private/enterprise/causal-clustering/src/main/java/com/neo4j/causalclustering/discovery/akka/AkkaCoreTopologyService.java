@@ -25,6 +25,7 @@ import com.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseDroppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
@@ -34,11 +35,13 @@ import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
+import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
+import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseStateActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMemberFactory;
@@ -55,6 +58,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
@@ -86,6 +90,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     private volatile ActorRef coreTopologyActorRef;
     private volatile ActorRef directoryActorRef;
+    private volatile ActorRef databaseStateActorRef;
     private volatile GlobalTopologyState globalTopologyState;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
@@ -112,16 +117,23 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     public void start0()
     {
         actorSystemLifecycle.createClusterActorSystem();
-        SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink = actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
-        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
-        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
-        SourceQueueWithComplete<BootstrapState> bootstrapStateSink = actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
+        SourceQueueWithComplete<CoreTopologyMessage> coreTopologySink =
+                actorSystemLifecycle.queueMostRecent( this::onCoreTopologyMessage );
+        SourceQueueWithComplete<DatabaseReadReplicaTopology> rrTopologySink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onTopologyUpdate );
+        SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbLeaderUpdate );
+        SourceQueueWithComplete<BootstrapState> bootstrapStateSink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onBootstrapStateUpdate );
+        SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink =
+                actorSystemLifecycle.queueMostRecent( globalTopologyState::onDbStateUpdate );
 
         Cluster cluster = actorSystemLifecycle.cluster();
         ActorRef replicator = actorSystemLifecycle.replicator();
-        ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink );
+        ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink, databaseStateSink );
         coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, rrTopologyActor );
         directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
+        databaseStateActorRef = stateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
         startRestartNeededListeningActor( cluster );
     }
 
@@ -151,10 +163,18 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
-    private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink )
+    private ActorRef stateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
+            ActorRef rrTopologyActor )
+    {
+        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, monitor, myself );
+        return actorSystemLifecycle.applicationActorOf( stateProps, DatabaseStateActor.NAME );
+    }
+
+    private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink,
+            SourceQueueWithComplete<ReplicatedDatabaseState> databaseStateSink )
     {
         ClusterClientReceptionist receptionist = actorSystemLifecycle.clusterClientReceptionist();
-        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, config, clock );
+        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, databaseStateSink, receptionist, config, clock );
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
@@ -298,6 +318,16 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
+    public void stateChange( DatabaseState newState )
+    {
+        var stateActor = databaseStateActorRef;
+        if ( stateActor != null )
+        {
+            stateActor.tell( newState, noSender() );
+        }
+    }
+
+    @Override
     public void setLeader( LeaderInfo newLeaderInfo, DatabaseId databaseId )
     {
         var currentLeaderInfo = getLocalLeader( databaseId );
@@ -331,14 +361,14 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public RoleInfo coreRole( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
     {
         var leaderInfo = localLeadersByDatabaseId.get( databaseId );
         if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
         {
             return RoleInfo.LEADER;
         }
-        return globalTopologyState.coreRole( databaseId, memberId );
+        return globalTopologyState.role( databaseId, memberId );
     }
 
     @Override
@@ -382,6 +412,25 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     public MemberId memberId()
     {
         return myself;
+    }
+
+    @Override
+    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    {
+        var state = globalTopologyState.stateFor( memberId, databaseId );
+        return state;
+    }
+
+    @Override
+    public ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    {
+        return globalTopologyState.coreStatesForDatabase( databaseId );
+    }
+
+    @Override
+    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    {
+        return globalTopologyState.readReplicaStatesForDatabase( databaseId );
     }
 
     @VisibleForTesting

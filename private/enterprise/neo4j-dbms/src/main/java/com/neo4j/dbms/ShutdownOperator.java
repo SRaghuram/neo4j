@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.DatabaseId;
 
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
@@ -39,9 +39,9 @@ class ShutdownOperator extends DbmsOperator
         trigger( ReconcilerRequest.force() ).await( SYSTEM_DATABASE_ID );
     }
 
-    private DatabaseState stoppedState( DatabaseId id )
+    private EnterpriseDatabaseState stoppedState( DatabaseId id )
     {
-        return new DatabaseState( id, STOPPED );
+        return new EnterpriseDatabaseState( id, STOPPED );
     }
 
 }

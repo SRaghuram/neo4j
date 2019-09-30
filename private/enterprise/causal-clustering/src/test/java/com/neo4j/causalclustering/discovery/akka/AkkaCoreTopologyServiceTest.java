@@ -157,11 +157,11 @@ class AkkaCoreTopologyServiceTest
         service.setLeader( leaderInfo1, databaseId1 );
         service.setLeader( leaderInfo2, databaseId2 );
 
-        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId1, memberId1 ) );
-        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId2, memberId2 ) );
+        assertEquals( RoleInfo.LEADER, service.role( databaseId1, memberId1 ) );
+        assertEquals( RoleInfo.LEADER, service.role( databaseId2, memberId2 ) );
 
-        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId1, memberId2 ) );
-        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId2, memberId1 ) );
+        assertEquals( RoleInfo.UNKNOWN, service.role( databaseId1, memberId2 ) );
+        assertEquals( RoleInfo.UNKNOWN, service.role( databaseId2, memberId1 ) );
     }
 
     @Test
@@ -172,7 +172,7 @@ class AkkaCoreTopologyServiceTest
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId );
 
-        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
+        assertEquals( RoleInfo.LEADER, service.role( databaseId, leaderId ) );
     }
 
     @Test
@@ -185,9 +185,9 @@ class AkkaCoreTopologyServiceTest
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId1, followerId2 );
 
-        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
-        assertEquals( RoleInfo.FOLLOWER, service.coreRole( databaseId, followerId1 ) );
-        assertEquals( RoleInfo.FOLLOWER, service.coreRole( databaseId, followerId2 ) );
+        assertEquals( RoleInfo.LEADER, service.role( databaseId, leaderId ) );
+        assertEquals( RoleInfo.FOLLOWER, service.role( databaseId, followerId1 ) );
+        assertEquals( RoleInfo.FOLLOWER, service.role( databaseId, followerId2 ) );
     }
 
     @Test
@@ -201,8 +201,8 @@ class AkkaCoreTopologyServiceTest
 
         setupCoreTopologyState( service.topologyState(), knownDatabaseId, leaderId, followerId );
 
-        assertEquals( RoleInfo.UNKNOWN, service.coreRole( unknownDatabaseId, leaderId ) );
-        assertEquals( RoleInfo.UNKNOWN, service.coreRole( unknownDatabaseId, followerId ) );
+        assertEquals( RoleInfo.UNKNOWN, service.role( unknownDatabaseId, leaderId ) );
+        assertEquals( RoleInfo.UNKNOWN, service.role( unknownDatabaseId, followerId ) );
     }
 
     @Test
@@ -215,7 +215,7 @@ class AkkaCoreTopologyServiceTest
 
         setupCoreTopologyState( service.topologyState(), databaseId, leaderId, followerId );
 
-        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId, unknownId ) );
+        assertEquals( RoleInfo.UNKNOWN, service.role( databaseId, unknownId ) );
     }
 
     @Test
@@ -226,10 +226,10 @@ class AkkaCoreTopologyServiceTest
         var leaderInfo = new LeaderInfo( leaderId, 1 );
 
         service.setLeader( leaderInfo, databaseId );
-        assertEquals( RoleInfo.LEADER, service.coreRole( databaseId, leaderId ) );
+        assertEquals( RoleInfo.LEADER, service.role( databaseId, leaderId ) );
 
         service.onDatabaseStop( databaseId );
-        assertEquals( RoleInfo.UNKNOWN, service.coreRole( databaseId, leaderId ) );
+        assertEquals( RoleInfo.UNKNOWN, service.role( databaseId, leaderId ) );
     }
 
     @Test

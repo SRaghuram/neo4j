@@ -59,9 +59,8 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     }
 
     @Override
-    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
-            MemberId myself, RemoteMembersResolver remoteMembersResolver,
-            SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
+    public final AkkaTopologyClient readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
+            RemoteMembersResolver remoteMembersResolver, SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Clock clock )
     {
         return new AkkaTopologyClient(
                 config,

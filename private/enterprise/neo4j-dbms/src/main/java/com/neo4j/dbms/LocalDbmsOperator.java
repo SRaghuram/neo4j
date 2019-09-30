@@ -9,9 +9,9 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 
 /**
  * Database operator for local administrative overrides of system-wide operator.
@@ -28,21 +28,21 @@ public final class LocalDbmsOperator extends DbmsOperator
     public void dropDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
-        desired.put( databaseName, new DatabaseState( id, DROPPED ) );
+        desired.put( databaseName, new EnterpriseDatabaseState( id, DROPPED ) );
         trigger( ReconcilerRequest.force() ).await( id );
     }
 
     public void startDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
-        desired.put( databaseName, new DatabaseState( id, STARTED ) );
+        desired.put( databaseName, new EnterpriseDatabaseState( id, STARTED ) );
         trigger( ReconcilerRequest.force() ).await( id );
     }
 
     public void stopDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
-        desired.put( databaseName, new DatabaseState( id, STOPPED ) );
+        desired.put( databaseName, new EnterpriseDatabaseState( id, STOPPED ) );
         trigger( ReconcilerRequest.force() ).await( id );
     }
 

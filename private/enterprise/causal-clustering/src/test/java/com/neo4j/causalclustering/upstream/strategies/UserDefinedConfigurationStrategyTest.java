@@ -11,18 +11,14 @@ import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUr
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,7 +28,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
@@ -40,7 +35,6 @@ import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
-import static com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategyTest.fakeCoreTopology;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.in;

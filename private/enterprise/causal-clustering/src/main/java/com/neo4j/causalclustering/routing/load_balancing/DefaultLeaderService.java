@@ -82,7 +82,7 @@ public class DefaultLeaderService implements LeaderService
                 .members()
                 .keySet()
                 .stream()
-                .filter( memberId -> topologyService.coreRole( databaseId, memberId ) == RoleInfo.LEADER )
+                .filter( memberId -> topologyService.role( databaseId, memberId ) == RoleInfo.LEADER )
                 .findFirst();
     }
 
