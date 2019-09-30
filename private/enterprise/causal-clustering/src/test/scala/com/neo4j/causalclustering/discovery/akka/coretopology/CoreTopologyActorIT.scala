@@ -24,7 +24,6 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
-import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
 
@@ -229,8 +228,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       replicatorProbe.ref,
       cluster,
       topologyBuilder,
-      config,
-      NullLogProvider.getInstance())
+      config)
     val topologyActorRef = system.actorOf(props)
 
     def awaitExpectedCoreTopology(newCoreTopology: DatabaseCoreTopology = expectedCoreTopology) = {

@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 import org.neo4j.kernel.database.{DatabaseId, TestDatabaseIdRepository}
-import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
 
@@ -127,7 +126,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     }
 
     val replicatedDataActorRef = system.actorOf(MetadataActor.props(
-      discoveryMember, cluster, replicator.ref, coreTopologyProbe.ref, config, NullLogProvider.getInstance()))
+      discoveryMember, cluster, replicator.ref, coreTopologyProbe.ref, config))
 
     def expectUpdateWithDatabases(databaseIds: Set[DatabaseId]): Unit = {
       val update = expectReplicatorUpdates(replicator, dataKey)

@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
-import org.neo4j.logging.NullLogProvider
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters._
@@ -80,7 +79,6 @@ class ReadReplicaTopologyActorIT extends BaseAkkaIT("ReadReplicaTopologyActorIT"
 
     val props = ReadReplicaTopologyActor.props(readReplicaTopologySink,
       receptionist,
-      NullLogProvider.getInstance(),
       Config.defaults(),
       Clocks.systemClock())
 
