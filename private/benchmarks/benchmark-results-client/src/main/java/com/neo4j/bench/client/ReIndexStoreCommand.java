@@ -9,8 +9,8 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.neo4j.bench.client.queries.CreateSchema;
-import com.neo4j.bench.client.queries.DropSchema;
+import com.neo4j.bench.client.queries.schema.CreateSchema;
+import com.neo4j.bench.client.queries.schema.DropSchema;
 
 import java.net.URI;
 
