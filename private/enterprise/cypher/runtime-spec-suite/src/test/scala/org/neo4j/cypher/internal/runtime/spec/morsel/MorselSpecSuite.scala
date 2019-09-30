@@ -156,6 +156,7 @@ class MorselOptionalSingleThreadedNoFusingTest extends OptionalTestBase(NO_FUSIN
 
 // CARTESIAN PRODUCT
 class MorselCartesianProductTest extends CartesianProductTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // GENERAL
 class MorselMiscTest extends MiscTestBase(FUSING, MORSEL)

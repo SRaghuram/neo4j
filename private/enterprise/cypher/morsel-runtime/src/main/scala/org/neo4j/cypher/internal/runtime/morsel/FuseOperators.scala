@@ -68,7 +68,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     }
 
     // Check if there are any unhandled middle operators that causes this pipeline (or upstream pipelines in case it has a WorkCanceller)
-    // require the use of FilteringMorselExecutionContext
+    // require the use of FilteringMorselExecutionContext. All upstreams from LIMIT need filtering morsels.
     val thisNeedsFilteringMorsel = unhandledMiddlePlans.foldLeft(needsFilteringMorsel) {
       case (thisNeeds, _: Limit)     => thisNeeds || needsMorsel
       case (thisNeeds, _: Selection) => thisNeeds || needsMorsel

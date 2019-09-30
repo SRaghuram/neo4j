@@ -188,7 +188,7 @@ object ArgumentStateMap {
     def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
 
     /**
-      * True if argument states create by this factory should be completed on construction. This means that
+      * True if argument states created by this factory should be completed on construction. This means that
       * the execution graph has been constructed in such a way that no updates will ever arrive to this
       * argument state.
       */

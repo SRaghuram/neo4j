@@ -53,7 +53,11 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = CartesianProductOperator.this.workIdentity
 
+    // This is the LHS input. We create a shallow copy because
+    // accumulator.lhsMorsel may be accessed in parallel by multiple tasks, with different RHS morsels.
     override val inputMorsel: MorselExecutionContext = accumulator.lhsMorsel.shallowCopy()
+
+    private val lhsSlots = inputMorsel.slots
 
     override def toString: String = "CartesianProductTask"
 
@@ -72,7 +76,6 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
       while (outputRow.isValidRow && rhsRow.hasNextRow) {
         rhsRow.moveToNextRow()
         inputMorsel.copyTo(outputRow) // lhs
-        val lhsSlots = inputMorsel.slots
         rhsRow.copyTo(outputRow,
                       sourceLongOffset = argumentSize.nLongs, // Skip over arguments since they should be identical to lhsCtx
                       sourceRefOffset = argumentSize.nReferences,
@@ -95,7 +98,7 @@ object CartesianProductOperator {
     extends MorselAccumulator[MorselExecutionContext] {
 
     override def update(morsel: MorselExecutionContext): Unit =
-      throw new IllegalStateException("LHSMorsel is completed directly on construction, and cannot be further updated")
+      throw new IllegalStateException("LHSMorsel is complete on construction, and cannot be further updated.")
 
     override def toString: String = {
       s"LHSMorsel(argumentRowId=$argumentRowId)"

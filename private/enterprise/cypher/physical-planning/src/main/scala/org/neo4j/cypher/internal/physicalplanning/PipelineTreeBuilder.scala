@@ -38,6 +38,8 @@ object PipelineTreeBuilder {
     var serial: Boolean = false
   }
 
+  // In the execution graph for cartesian product we directly connect an applyBuffer with the LHS of an
+  // LHSAccumulatingRHSStreamingBuffer. We use NO_PIPELINE_BUILD to signal that.
   val NO_PIPELINE_BUILD = new PipelineDefinitionBuild(PipelineId.NO_PIPELINE, null)
 
   /**
@@ -433,7 +435,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
 
-      case cartesianProduct: CartesianProduct =>
+      case _: CartesianProduct =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           val buffer = outputToLhsAccumulatingRhsStreamingBuffer(NO_PIPELINE_BUILD, rhs, plan.id, argument, argument.argumentSlotOffset)

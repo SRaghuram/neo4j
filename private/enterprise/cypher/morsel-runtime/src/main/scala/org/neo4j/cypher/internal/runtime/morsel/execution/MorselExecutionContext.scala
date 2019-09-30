@@ -70,6 +70,10 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   }
 
   def detach(): MorselExecutionContext = {
+    Preconditions.checkState(
+      attachedMorsel != null,
+      "Cannot detach if no attachment available.")
+
     val temp = attachedMorsel
     attachedMorsel = null
     temp
