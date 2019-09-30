@@ -17,19 +17,19 @@ object Runtimes {
     if (runtimes.nonEmpty) Runtimes(runtimes: _*) else all
   }
 
-  object CompiledSource extends Runtime(Set("COMPILED", "PROCEDURE"), "runtime=compiled debug=generate_java_source")
+  object CompiledSource extends Runtime(Set("COMPILED", "SCHEMA"), "runtime=compiled debug=generate_java_source")
 
-  object CompiledBytecode extends Runtime(Set("COMPILED", "PROCEDURE"), "runtime=compiled")
+  object CompiledBytecode extends Runtime(Set("COMPILED", "SCHEMA"), "runtime=compiled")
 
-  object Slotted extends Runtime(Set("SLOTTED", "PROCEDURE"), "runtime=slotted")
+  object Slotted extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted")
 
-  object SlottedWithCompiledExpressions extends Runtime(Set("SLOTTED", "PROCEDURE"), "runtime=slotted expressionEngine=COMPILED")
+  object SlottedWithCompiledExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=COMPILED")
 
-  object Interpreted extends Runtime(Set("INTERPRETED", "PROCEDURE"), "runtime=interpreted")
+  object Interpreted extends Runtime(Set("INTERPRETED", "SCHEMA"), "runtime=interpreted")
 
   object Parallel extends Runtime(Set("PARALLEL"), "runtime=parallel")
 
-  object Morsel extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel")
+  object Morsel extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel")
 
   object MorselFull extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel interpretedPipesFallback=all")
 }

@@ -17,7 +17,7 @@ object Planners {
     if (planners.nonEmpty) Planners(planners: _*) else all
   }
 
-  object Cost extends Planner(Set("COST", "IDP", "PROCEDURE"), "planner=cost")
+  object Cost extends Planner(Set("COST", "IDP", "ADMINISTRATION"), "planner=cost")
 
 }
 
