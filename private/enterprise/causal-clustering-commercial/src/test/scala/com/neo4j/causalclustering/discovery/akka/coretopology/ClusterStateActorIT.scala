@@ -190,7 +190,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
     val config = Config.defaults()
     config.augment(akka_failure_detector_heartbeat_interval, "1s")
     config.augment(akka_failure_detector_acceptable_heartbeat_pause, "1s")
-    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config, NullLogProvider.getInstance())
+    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config)
     val clusterStateRef = system.actorOf(props)
   }
 

@@ -169,7 +169,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     val myAddress = Address("akka", system.name, "myHost", 12)
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
 
-    val props = CoreTopologyActor.props(new MemberId(UUID.randomUUID()), topologySink, readReplicaProbe.ref, replicatorProbe.ref, cluster, topologyBuilder, config, NullLogProvider.getInstance())
+    val props = CoreTopologyActor.props(new MemberId(UUID.randomUUID()), topologySink, readReplicaProbe.ref, replicatorProbe.ref, cluster, topologyBuilder, config)
     val topologyActorRef = system.actorOf(props)
 
     def awaitExpectedCoreTopology(newCoreTopology: CoreTopology = expectedCoreTopology) = {

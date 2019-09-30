@@ -19,14 +19,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
-import org.neo4j.logging.LogProvider;
 
 public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,ReplicatedLeaderInfo>>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
-            ActorRef rrTopologyActor, LogProvider logProvider )
+            ActorRef rrTopologyActor )
     {
-        return Props.create( DirectoryActor.class, () -> new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, logProvider ) );
+        return Props.create( DirectoryActor.class, () -> new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor ) );
     }
 
     static final String PER_DB_LEADER_KEY = "per-db-leader-name";
@@ -35,10 +34,10 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink;
     private final ActorRef rrTopologyActor;
 
-    private DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink, ActorRef rrTopologyActor,
-            LogProvider logProvider )
+    private DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
+            ActorRef rrTopologyActor )
     {
-        super( cluster, replicator, ORMapKey.create( PER_DB_LEADER_KEY ), ORMap::create, logProvider );
+        super( cluster, replicator, ORMapKey.create( PER_DB_LEADER_KEY ), ORMap::create );
         this.discoveryUpdateSink = discoveryUpdateSink;
         this.rrTopologyActor = rrTopologyActor;
     }

@@ -19,34 +19,26 @@ import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 public class TopologyBuilder
 {
     private final Config config;
-    private final Log log;
     private final UniqueAddress uniqueAddress;
 
-    public TopologyBuilder( Config config, UniqueAddress uniqueAddress, LogProvider logProvider )
+    public TopologyBuilder( Config config, UniqueAddress uniqueAddress )
     {
         this.config = config;
         this.uniqueAddress = uniqueAddress;
-        this.log = logProvider.getLog( getClass() );
     }
 
     CoreTopology buildCoreTopology( @Nullable ClusterId clusterId, ClusterViewMessage cluster, MetadataMessage memberData )
     {
-
-        log.debug( "Building new view of Topology from actor %s, cluster state is: %s, metadata is %s", uniqueAddress, cluster, memberData );
         Map<MemberId, CoreServerInfo> coreMembers =
                 getCoreInfos( cluster, memberData )
                 .collect( Collectors.toMap( CoreServerInfoForMemberId::memberId, CoreServerInfoForMemberId::coreServerInfo ) );
 
         boolean canBeBootstrapped = canBeBootstrapped( cluster, memberData );
-        CoreTopology newCoreTopology = new CoreTopology( clusterId, canBeBootstrapped, coreMembers );
-        log.debug( "Returned topology: %s", newCoreTopology );
-        return newCoreTopology;
+        return new CoreTopology( clusterId, canBeBootstrapped, coreMembers );
     }
 
     private Stream<CoreServerInfoForMemberId> getCoreInfos( ClusterViewMessage cluster, MetadataMessage memberData )

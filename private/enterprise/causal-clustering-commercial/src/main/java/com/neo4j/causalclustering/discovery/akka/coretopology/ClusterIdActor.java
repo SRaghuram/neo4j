@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.causalclustering.identity.ClusterId;
-import org.neo4j.logging.LogProvider;
 
 public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,ClusterId>>
 {
@@ -33,16 +32,16 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     private final LWWRegister.Clock<ClusterId> clock = LWWRegister.reverseClock();
     private final int minRuntimeQuorumSize;
 
-    ClusterIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider, int minRuntimeCores )
+    ClusterIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, int minRuntimeCores )
     {
-        super( cluster, replicator, LWWMapKey.create( CLUSTER_ID_PER_DB_KEY ), LWWMap::create, logProvider );
+        super( cluster, replicator, LWWMapKey.create( CLUSTER_ID_PER_DB_KEY ), LWWMap::create );
         this.coreTopologyActor = coreTopologyActor;
         this.minRuntimeQuorumSize = ( minRuntimeCores / 2 ) + 1;
     }
 
-    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider, int minRuntimeCores )
+    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, int minRuntimeCores )
     {
-        return Props.create( ClusterIdActor.class, () -> new ClusterIdActor( cluster, replicator, coreTopologyActor, logProvider, minRuntimeCores ) );
+        return Props.create( ClusterIdActor.class, () -> new ClusterIdActor( cluster, replicator, coreTopologyActor, minRuntimeCores ) );
     }
 
     @Override
@@ -70,7 +69,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
 
     private void setClusterId( ClusterIdSetRequest message )
     {
-        log.info( "Telling Replicator to set ClusterId to %s", message );
+        log().info( "Telling Replicator to set ClusterId to {}", message );
         modifyReplicatedData( key, map ->
         {
             if ( map.contains( message.database() ) )

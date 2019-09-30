@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent;
@@ -13,30 +13,25 @@ import akka.event.EventStream;
 import akka.japi.pf.ReceiveBuilder;
 import akka.remote.ThisActorSystemQuarantinedEvent;
 
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
-
-public class RestartNeededListeningActor extends AbstractActor
+public class RestartNeededListeningActor extends AbstractLoggingActor
 {
     public static String NAME = "cc-core-restart-needed-listener";
 
-    public static Props props( Runnable restart, EventStream eventStream, Cluster cluster, LogProvider logProvider )
+    public static Props props( Runnable restart, EventStream eventStream, Cluster cluster )
     {
-        return Props.create( RestartNeededListeningActor.class, () -> new RestartNeededListeningActor( restart, eventStream, cluster, logProvider ) );
+        return Props.create( RestartNeededListeningActor.class, () -> new RestartNeededListeningActor( restart, eventStream, cluster ) );
     }
 
-    private RestartNeededListeningActor( Runnable restart, EventStream eventStream, Cluster cluster, LogProvider logProvider )
+    private RestartNeededListeningActor( Runnable restart, EventStream eventStream, Cluster cluster )
     {
         this.restart = restart;
         this.eventStream = eventStream;
         this.cluster = cluster;
-        this.log = logProvider.getLog( getClass() );
     }
 
     private final Runnable restart;
     private final EventStream eventStream;
     private final Cluster cluster;
-    private final Log log;
 
     @Override
     public void preStart()
@@ -69,7 +64,7 @@ public class RestartNeededListeningActor extends AbstractActor
 
     private void doRestart( Object event )
     {
-        log.info( "Restart triggered by %s ", event );
+        log().info( "Restart triggered by {}", event );
         restart.run();
         unsubscribe();
         getContext().become( createShuttingDownReceive() );
@@ -86,6 +81,6 @@ public class RestartNeededListeningActor extends AbstractActor
 
     private void ignore( Object event )
     {
-        log.debug( "Ignoring as restart has been triggered: %s", event );
+        log().debug( "Ignoring as restart has been triggered: {}", event );
     }
 }

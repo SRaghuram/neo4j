@@ -80,6 +80,6 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
       conf
     }
 
-    val replicatedDataActorRef = system.actorOf(MetadataActor.props(myself, cluster, replicator.ref, coreTopologyProbe.ref, config, NullLogProvider.getInstance()))
+    val replicatedDataActorRef = system.actorOf(MetadataActor.props(myself, cluster, replicator.ref, coreTopologyProbe.ref, config))
   }
 }

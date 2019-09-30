@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
@@ -23,13 +23,10 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopology;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
-public class ReadReplicaTopologyActor extends AbstractActor
+public class ReadReplicaTopologyActor extends AbstractLoggingActor
 {
     private final SourceQueueWithComplete<ReadReplicaTopology> topologySink;
-    private final Log log;
 
     private CoreTopology coreTopology = CoreTopology.EMPTY;
     private LeaderInfoDirectoryMessage databaseLeaderInfo = LeaderInfoDirectoryMessage.EMPTY;
@@ -38,26 +35,23 @@ public class ReadReplicaTopologyActor extends AbstractActor
     private Set<ActorRef> myClusterClients = new HashSet<>();
     private ReadReplicaViewMessage readReplicaViewMessage = ReadReplicaViewMessage.EMPTY;
 
-    public static Props props( SourceQueueWithComplete<ReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist, LogProvider logProvider,
-            Config config, Clock clock )
+    public static Props props( SourceQueueWithComplete<ReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist, Config config, Clock clock )
     {
         return Props.create( ReadReplicaTopologyActor.class,
-                () -> new ReadReplicaTopologyActor( topologySink, receptionist, logProvider, config, clock ) );
+                () -> new ReadReplicaTopologyActor( topologySink, receptionist, config, clock ) );
     }
 
     public static final String NAME = "cc-rr-topology-actor";
 
-    ReadReplicaTopologyActor( SourceQueueWithComplete<ReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist, LogProvider logProvider,
-            Config config, Clock clock )
+    ReadReplicaTopologyActor( SourceQueueWithComplete<ReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist, Config config, Clock clock )
     {
         this.topologySink = topologySink;
-        this.log = logProvider.getLog( getClass() );
 
         Duration refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
-        Props readReplicaViewProps = ReadReplicaViewActor.props( getSelf(), receptionist, clock, refresh, logProvider );
+        Props readReplicaViewProps = ReadReplicaViewActor.props( getSelf(), receptionist, clock, refresh );
         getContext().actorOf( readReplicaViewProps );
 
-        Props clusterClientViewProps = ClusterClientViewActor.props( getSelf(), receptionist.underlying(), logProvider );
+        Props clusterClientViewProps = ClusterClientViewActor.props( getSelf(), receptionist.underlying() );
         getContext().actorOf( clusterClientViewProps );
     }
 
@@ -94,7 +88,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void sendTopologiesToClients( ReadReplicaViewActor.Tick ignored )
     {
-        log.debug( "Sending to clients: %s, %s, %s", readReplicaTopology, coreTopology, databaseLeaderInfo );
+        log().debug( "Sending to clients: {}, {}, {}", readReplicaTopology, coreTopology, databaseLeaderInfo );
         myTopologyClients().forEach( client -> {
             client.tell( readReplicaTopology, getSelf() );
             client.tell( coreTopology, getSelf() );
@@ -114,9 +108,9 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void buildTopology()
     {
-        log.debug( "Building read replica topology with read replicas: %s", readReplicaViewMessage );
+        log().debug( "Building read replica topology with read replicas: {}", readReplicaViewMessage );
         ReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology();
-        log.debug( "Built read replica topology %s", readReplicaTopology );
+        log().debug( "Built read replica topology {}", readReplicaTopology );
 
         if ( !this.readReplicaTopology.equals( readReplicaTopology ) )
         {

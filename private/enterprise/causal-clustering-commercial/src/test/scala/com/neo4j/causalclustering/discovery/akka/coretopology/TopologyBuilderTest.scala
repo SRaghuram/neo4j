@@ -130,7 +130,7 @@ class TopologyBuilderTest
     val clusterId = new ClusterId(UUID.randomUUID)
     
     def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head, config: Config = Config.defaults) =
-      new TopologyBuilder(config, self, NullLogProvider.getInstance())
+      new TopologyBuilder(config, self)
 
     def clusterState(numMembers: Int, numUnreachable: Int = 0): ClusterViewMessage = {
       require(numMembers >= numUnreachable)

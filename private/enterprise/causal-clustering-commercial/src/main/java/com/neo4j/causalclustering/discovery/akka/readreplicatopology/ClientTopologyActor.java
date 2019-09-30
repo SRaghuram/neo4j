@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
-import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.client.ClusterClient;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 
 import java.time.Duration;
@@ -23,19 +23,17 @@ import org.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
-public class ClientTopologyActor extends AbstractActorWithTimers
+public class ClientTopologyActor extends AbstractActorWithTimersAndLogging
 {
     private static final String REFRESH = "topology refresh";
 
     public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink,
             SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink, SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient,
-            Config config, LogProvider logProvider )
+            Config config )
     {
         return Props.create( ClientTopologyActor.class,
-                () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config, logProvider ) );
+                () -> new ClientTopologyActor( myself, coreTopologySink, rrTopologySink, discoverySink, clusterClient, config ) );
     }
 
     public static final String NAME = "cc-client-topology-actor";
@@ -47,17 +45,15 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     private final SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink;
     private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink;
     private final ActorRef clusterClient;
-    private final Log log;
 
     ClientTopologyActor( MemberId myself, SourceQueueWithComplete<CoreTopology> coreTopologySink, SourceQueueWithComplete<ReadReplicaTopology> rrTopologySink,
-            SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient, Config config, LogProvider logProvider )
+            SourceQueueWithComplete<Map<String,LeaderInfo>> discoverySink, ActorRef clusterClient, Config config )
     {
         this.myself = myself;
         this.coreTopologySink = coreTopologySink;
         this.rrTopologySink = rrTopologySink;
         this.discoverySink = discoverySink;
         this.clusterClient = clusterClient;
-        this.log = logProvider.getLog( getClass() );
         this.readReplicaInfo = ReadReplicaInfo.from( config );
         this.refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
     }
@@ -90,7 +86,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     public void postStop()
     {
         ReadReplicaRemovalMessage msg = new ReadReplicaRemovalMessage( clusterClient );
-        log.debug( "Shutting down and sending removal message: %s", msg );
+        log().debug( "Shutting down and sending removal message: {}", msg );
         sendToCore( msg );
     }
 

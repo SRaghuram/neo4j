@@ -60,7 +60,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private Optional<ActorRef> coreTopologyActorRef = Optional.empty();
     private Optional<ActorRef> directoryActorRef = Optional.empty();
     private final ActorSystemLifecycle actorSystemLifecycle;
-    private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
     private final TopologyState topologyState;
     private final RetryStrategy restartRetryStrategy;
@@ -74,7 +73,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
-        this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
         this.restartRetryStrategy = restartRetryStrategy;
         this.executor = executor;
@@ -105,7 +103,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private ActorRef coreTopologyActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<CoreTopologyMessage> topologySink,
             ActorRef rrTopologyActor )
     {
-        TopologyBuilder topologyBuilder = new TopologyBuilder( config, cluster.selfUniqueAddress(), logProvider );
+        TopologyBuilder topologyBuilder = new TopologyBuilder( config, cluster.selfUniqueAddress() );
         Props coreTopologyProps = CoreTopologyActor.props(
                 myself,
                 topologySink,
@@ -113,22 +111,21 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
                 replicator,
                 cluster,
                 topologyBuilder,
-                config,
-                logProvider );
+                config );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
-        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, logProvider );
+        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor );
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
     private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<ReadReplicaTopology> topologySink )
     {
         ClusterClientReceptionist receptionist = actorSystemLifecycle.clusterClientReceptionist();
-        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, logProvider, config, clock );
+        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, config, clock );
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
@@ -136,7 +133,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     {
         Runnable restart = () -> executor.submit( this::restart );
         EventStream eventStream = actorSystemLifecycle.eventStream();
-        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, logProvider );
+        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster );
         return actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 
