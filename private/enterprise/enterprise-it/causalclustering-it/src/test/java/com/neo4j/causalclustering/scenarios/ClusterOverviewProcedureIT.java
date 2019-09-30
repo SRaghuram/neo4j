@@ -53,6 +53,11 @@ class ClusterOverviewProcedureIT
 {
     private static final Set<String> defaultDatabases = Set.of( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME );
 
+    private static final String CORE_GROUP = "core";
+    private static final String READ_REPLICA_GROUP = "replica";
+    private static final String EU_GROUP_PREFIX = "eu-";
+    private static final String US_GROUP_PREFIX = "us-";
+
     @Inject
     private static ClusterFactory clusterFactory;
 
@@ -134,8 +139,8 @@ class ClusterOverviewProcedureIT
                 .withSharedReadReplicaParam( online_backup_enabled, FALSE )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
-                .withInstanceCoreParam( server_groups, id -> "core,eu-" + id )
-                .withInstanceReadReplicaParam( server_groups, id -> "replica,us-" + id );
+                .withInstanceCoreParam( server_groups, id -> CORE_GROUP + "," + EU_GROUP_PREFIX + id )
+                .withInstanceReadReplicaParam( server_groups, id -> READ_REPLICA_GROUP + "," + US_GROUP_PREFIX + id );
     }
 
     private static class ClusterOverviewMatcher extends TypeSafeMatcher<List<Map<String,Object>>>
@@ -275,11 +280,11 @@ class ClusterOverviewProcedureIT
         {
             if ( isCore( member ) )
             {
-                return List.of( "core", "eu-" + member.serverId() );
+                return List.of( CORE_GROUP, EU_GROUP_PREFIX + member.serverId() );
             }
             if ( isReadReplica( member ) )
             {
-                return List.of( "replica", "us-" + member.serverId() );
+                return List.of( READ_REPLICA_GROUP, US_GROUP_PREFIX + member.serverId() );
             }
             throw new IllegalArgumentException( "Unable to find groups for " + member );
         }
