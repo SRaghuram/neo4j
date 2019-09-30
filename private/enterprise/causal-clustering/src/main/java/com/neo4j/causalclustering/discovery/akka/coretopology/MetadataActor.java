@@ -23,13 +23,12 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.LogProvider;
 
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForMemberId>>
 {
-    static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
+    static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config )
     {
-        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config, logProvider ) );
+        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config ) );
     }
 
     static final String MEMBER_DATA_KEY = "member-data";
@@ -40,9 +39,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
 
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
-    private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, LogProvider logProvider )
+    private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config )
     {
-        super( cluster, replicator, LWWMapKey.create( MEMBER_DATA_KEY ), LWWMap::empty, logProvider );
+        super( cluster, replicator, LWWMapKey.create( MEMBER_DATA_KEY ), LWWMap::empty );
         this.myself = myself;
         this.topologyActor = topologyActor;
         this.config = config;

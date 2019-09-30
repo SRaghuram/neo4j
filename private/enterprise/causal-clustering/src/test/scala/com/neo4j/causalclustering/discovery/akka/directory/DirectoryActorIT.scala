@@ -83,7 +83,7 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     val rrActor = TestProbe("ReadReplicaActor")
 
-    val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, NullLogProvider.getInstance())
+    val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
     override val dataKey: Key[ORMap[DatabaseId,ReplicatedLeaderInfo]] = ORMapKey(DirectoryActor.PER_DB_LEADER_KEY)
   }

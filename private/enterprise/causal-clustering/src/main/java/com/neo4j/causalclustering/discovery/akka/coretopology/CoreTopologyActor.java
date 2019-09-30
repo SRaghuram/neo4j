@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
 import akka.actor.Address;
 import akka.actor.Props;
@@ -14,6 +13,7 @@ import akka.cluster.Member;
 import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
@@ -24,21 +24,19 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toSet;
 
-public class CoreTopologyActor extends AbstractActorWithTimers
+public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 {
     public static Props props( DiscoveryMember myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor, ActorRef replicator,
-            Cluster cluster, TopologyBuilder topologyBuilder, Config config, LogProvider logProvider )
+            Cluster cluster, TopologyBuilder topologyBuilder, Config config )
     {
         return Props.create( CoreTopologyActor.class,
                 () -> new CoreTopologyActor( myself, topologyUpdateSink, bootstrapStateSink, rrTopologyActor, replicator,
-                        cluster, topologyBuilder, config, logProvider ) );
+                        cluster, topologyBuilder, config ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
@@ -49,7 +47,6 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private final UniqueAddress myClusterAddress;
 
-    private final Log log;
     private final Config config;
 
     private Set<DatabaseId> knownDatabaseIds = emptySet();
@@ -70,8 +67,7 @@ public class CoreTopologyActor extends AbstractActorWithTimers
             ActorRef replicator,
             Cluster cluster,
             TopologyBuilder topologyBuilder,
-            Config config,
-            LogProvider logProvider )
+            Config config )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.bootstrapStateSink = bootstrapStateSink;
@@ -79,16 +75,15 @@ public class CoreTopologyActor extends AbstractActorWithTimers
         this.topologyBuilder = topologyBuilder;
         this.memberData = MetadataMessage.EMPTY;
         this.raftIdPerDb = RaftIdDirectoryMessage.EMPTY;
-        this.log = logProvider.getLog( getClass() );
         this.clusterView = ClusterViewMessage.EMPTY;
         this.myClusterAddress = cluster.selfUniqueAddress();
         this.config = config;
 
         // Children, who will be sending messages to us
-        metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, logProvider ) );
-        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster, logProvider ) );
-        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, logProvider ) );
-        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), logProvider ) );
+        metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config ) );
+        ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster ) );
+        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config ) );
+        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf() ) );
     }
 
     @Override
@@ -158,7 +153,9 @@ public class CoreTopologyActor extends AbstractActorWithTimers
 
     private void buildTopology( DatabaseId databaseId )
     {
+        log().debug( "Building new view of core topology from actor {}, cluster state is: {}, metadata is {}", myClusterAddress, clusterView, memberData );
         DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, raftIdPerDb.get( databaseId ), clusterView, memberData );
+        log().debug( "Returned topology: {}", newCoreTopology );
 
         Collection<Address> akkaMemberAddresses = clusterView.members()
                 .stream()

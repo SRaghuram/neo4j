@@ -121,7 +121,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
     val rrMessage1 = new ReadReplicaRefreshMessage(rrInfo1, memberId1, clusterClient1, topologyClient1)
     val rrMessage2 = new ReadReplicaRefreshMessage(rrInfo2, memberId2, clusterClient2, topologyClient2)
 
-    val props = ReadReplicaViewActor.props(parent.ref, receptionist, clock, refresh, NullLogProvider.getInstance())
+    val props = ReadReplicaViewActor.props(parent.ref, receptionist, clock, refresh)
     val actorRef = system.actorOf(props)
     
     val pubSub = DistributedPubSub.get(system)

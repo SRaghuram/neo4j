@@ -115,7 +115,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
             SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor )
     {
         DiscoveryMember discoveryMember = discoveryMemberFactory.create( myself );
-        TopologyBuilder topologyBuilder = new TopologyBuilder( cluster.selfUniqueAddress(), logProvider );
+        TopologyBuilder topologyBuilder = new TopologyBuilder();
         Props coreTopologyProps = CoreTopologyActor.props(
                 discoveryMember,
                 topologySink,
@@ -124,22 +124,21 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
                 replicator,
                 cluster,
                 topologyBuilder,
-                config,
-                logProvider );
+                config );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
-        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, logProvider );
+        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor );
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
     private ActorRef readReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink )
     {
         ClusterClientReceptionist receptionist = actorSystemLifecycle.clusterClientReceptionist();
-        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, logProvider, config, clock );
+        Props readReplicaTopologyProps = ReadReplicaTopologyActor.props( topologySink, receptionist, config, clock );
         return actorSystemLifecycle.applicationActorOf( readReplicaTopologyProps, ReadReplicaTopologyActor.NAME );
     }
 
@@ -147,7 +146,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     {
         Runnable restart = () -> executor.execute( this::restart );
         EventStream eventStream = actorSystemLifecycle.eventStream();
-        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster, logProvider );
+        Props props = RestartNeededListeningActor.props( restart, eventStream, cluster );
         actorSystemLifecycle.applicationActorOf( props, RestartNeededListeningActor.NAME );
     }
 

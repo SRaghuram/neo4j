@@ -20,7 +20,6 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
 import org.neo4j.internal.helpers.collection.Iterators
-import org.neo4j.logging.NullLogProvider
 
 import scala.collection.immutable.SortedSet
 import scala.concurrent.duration.FiniteDuration
@@ -192,7 +191,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
       .set(akka_failure_detector_heartbeat_interval, Duration.ofSeconds( 1 ) )
       .set(akka_failure_detector_acceptable_heartbeat_pause, Duration.ofSeconds( 1 ) )
       .build()
-    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config, NullLogProvider.getInstance())
+    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config)
     val clusterStateRef = system.actorOf(props)
   }
 

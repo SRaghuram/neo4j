@@ -15,22 +15,21 @@ import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.LogProvider;
 
 public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,RaftId>>
 {
     static final String RAFT_ID_PER_DB_KEY = "raft-id-per-db-name";
     private final ActorRef coreTopologyActor;
 
-    public RaftIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider )
+    public RaftIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor )
     {
-        super( cluster, replicator, LWWMapKey.create( RAFT_ID_PER_DB_KEY ), LWWMap::create, logProvider );
+        super( cluster, replicator, LWWMapKey.create( RAFT_ID_PER_DB_KEY ), LWWMap::create );
         this.coreTopologyActor = coreTopologyActor;
     }
 
-    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, LogProvider logProvider )
+    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor )
     {
-        return Props.create( RaftIdActor.class, () -> new RaftIdActor( cluster, replicator, coreTopologyActor, logProvider ) );
+        return Props.create( RaftIdActor.class, () -> new RaftIdActor( cluster, replicator, coreTopologyActor ) );
     }
 
     @Override
@@ -44,7 +43,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,RaftI
     {
         builder.match( RaftIdSettingMessage.class, message ->
                 {
-                    log.debug( "Setting RaftId: %s", message );
+                    log().debug( "Setting RaftId: {}", message );
                     modifyReplicatedData( key, map -> map.put( cluster, message.database(), message.raftId() ) );
                 } );
     }

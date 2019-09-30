@@ -83,6 +83,6 @@ class RestartNeededListeningActorIT extends BaseAkkaIT("Quarantine") {
     }
     val quarantine = ThisActorSystemQuarantinedEvent(null, null)
 
-    val actorRef = system.actorOf(RestartNeededListeningActor.props(restart, eventStream, cluster, NullLogProvider.getInstance()))
+    val actorRef = system.actorOf(RestartNeededListeningActor.props(restart, eventStream, cluster))
   }
 }

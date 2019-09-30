@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
-import org.neo4j.logging.NullLogProvider
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
@@ -102,8 +101,8 @@ class TopologyBuilderTest
     val databaseId = randomDatabaseId()
     val raftId = RaftId.from(databaseId)
 
-    def topologyBuilder(self: UniqueAddress = uniqueAddressStream.head) =
-      new TopologyBuilder(self, NullLogProvider.getInstance())
+    def topologyBuilder() =
+      new TopologyBuilder()
 
     def clusterState(numMembers: Int, numUnreachable: Int = 0): ClusterViewMessage = {
       require(numMembers >= numUnreachable)

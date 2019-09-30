@@ -5,19 +5,17 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
-import akka.actor.AbstractActorWithTimers;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
 import akka.japi.pf.ReceiveBuilder;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 
 import java.time.Duration;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_heartbeat_interval;
@@ -29,11 +27,11 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.akka_fail
  * an actor that subscribes to cluster events may receive those events before CurrentClusterState, so if CurrentClusterState is accessed on a cluster event
  * it may be stale. Furthermore if no further cluster events are received then the updated CurrentClusterState may never be accessed.
  */
-public class ClusterStateActor extends AbstractActorWithTimers
+public class ClusterStateActor extends AbstractActorWithTimersAndLogging
 {
-    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config, LogProvider logProvider )
+    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config )
     {
-        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config, logProvider ) );
+        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config ) );
     }
 
     private final Cluster cluster;
@@ -41,19 +39,17 @@ public class ClusterStateActor extends AbstractActorWithTimers
     private final ActorRef downingActor;
     private final ActorRef metadataActor;
     private final Duration clusterStabilityWait;
-    private final Log log;
 
     private ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
     private static final String DOWNING_TIMER_KEY = "DOWNING_TIMER_KEY key";
 
-    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config, LogProvider logProvider )
+    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config )
     {
         this.cluster = cluster;
         this.topologyActor = topologyActor;
         this.downingActor = downingActor;
         this.metadataActor = metadataActor;
-        this.log = logProvider.getLog( getClass() );
 
         clusterStabilityWait = config.get( akka_failure_detector_heartbeat_interval )
                 .plus( config.get( akka_failure_detector_acceptable_heartbeat_pause ) );
@@ -90,41 +86,41 @@ public class ClusterStateActor extends AbstractActorWithTimers
     private void handleCurrentClusterState( ClusterEvent.CurrentClusterState event )
     {
         clusterView = new ClusterViewMessage( event );
-        log.debug( "Akka initial cluster state %s", event );
+        log().debug( "Akka initial cluster state {}", event );
         sendClusterView();
     }
 
     private void handleReachableMember( ClusterEvent.ReachableMember event )
     {
-        log.debug( "Akka cluster event %s", event );
+        log().debug( "Akka cluster event {}", event );
         clusterView = clusterView.withoutUnreachable( event.member() );
         sendClusterView();
     }
 
     private void handleUnreachableMember( ClusterEvent.UnreachableMember event )
     {
-        log.debug( "Akka cluster event %s", event );
+        log().debug( "Akka cluster event {}", event );
         clusterView = clusterView.withUnreachable( event.member() );
         sendClusterView();
     }
 
     private void handleMemberUp( ClusterEvent.MemberUp event )
     {
-        log.debug( "Akka cluster event %s", event );
+        log().debug( "Akka cluster event {}", event );
         clusterView = clusterView.withMember( event.member() );
         sendClusterView();
     }
 
     private void handleMemberWeaklyUp( ClusterEvent.MemberWeaklyUp event )
     {
-        log.debug( "Akka cluster event %s", event );
+        log().debug( "Akka cluster event {}", event );
         clusterView = clusterView.withMember( event.member() );
         sendClusterView();
     }
 
     private void handleMemberRemoved( ClusterEvent.MemberRemoved event )
     {
-        log.debug( "Akka cluster event %s", event );
+        log().debug( "Akka cluster event {}", event );
         Member member = event.member();
         clusterView = clusterView.withoutMember( member );
         sendClusterView();
@@ -133,20 +129,20 @@ public class ClusterStateActor extends AbstractActorWithTimers
 
     private void handleLeaderChanged( ClusterEvent.LeaderChanged event )
     {
-        log.debug( "Akka cluster event %s", event );
+        log().debug( "Akka cluster event {}", event );
         clusterView = clusterView.withConverged( event.leader().isDefined() );
         sendClusterView();
     }
 
     private void handleOtherClusterEvent( ClusterEvent.ClusterDomainEvent event )
     {
-        log.debug( "Ignoring Akka cluster event %s", event );
+        log().debug( "Ignoring Akka cluster event {}", event );
         resetDowningTimer();
     }
 
     private void notifyDowningActor( StabilityMessage ignored )
     {
-        log.debug( "Cluster is stable at %s", clusterView );
+        log().debug( "Cluster is stable at {}", clusterView );
         downingActor.tell( clusterView, getSelf() );
     }
 

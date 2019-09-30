@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
@@ -26,15 +26,12 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static java.util.stream.Collectors.toSet;
 
-public class ReadReplicaTopologyActor extends AbstractActor
+public class ReadReplicaTopologyActor extends AbstractLoggingActor
 {
     private final SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink;
-    private final Log log;
 
     private final Map<DatabaseId,DatabaseCoreTopology> coreTopologies = new HashMap<>();
     private final Map<DatabaseId,DatabaseReadReplicaTopology> readReplicaTopologies = new HashMap<>();
@@ -44,25 +41,24 @@ public class ReadReplicaTopologyActor extends AbstractActor
     private ReadReplicaViewMessage readReplicaViewMessage = ReadReplicaViewMessage.EMPTY;
 
     public static Props props( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist,
-            LogProvider logProvider, Config config, Clock clock )
+            Config config, Clock clock )
     {
         return Props.create( ReadReplicaTopologyActor.class,
-                () -> new ReadReplicaTopologyActor( topologySink, receptionist, logProvider, config, clock ) );
+                () -> new ReadReplicaTopologyActor( topologySink, receptionist, config, clock ) );
     }
 
     public static final String NAME = "cc-rr-topology-actor";
 
     ReadReplicaTopologyActor( SourceQueueWithComplete<DatabaseReadReplicaTopology> topologySink, ClusterClientReceptionist receptionist,
-            LogProvider logProvider, Config config, Clock clock )
+            Config config, Clock clock )
     {
         this.topologySink = topologySink;
-        this.log = logProvider.getLog( getClass() );
 
         Duration refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
-        Props readReplicaViewProps = ReadReplicaViewActor.props( getSelf(), receptionist, clock, refresh, logProvider );
+        Props readReplicaViewProps = ReadReplicaViewActor.props( getSelf(), receptionist, clock, refresh );
         getContext().actorOf( readReplicaViewProps );
 
-        Props clusterClientViewProps = ClusterClientViewActor.props( getSelf(), receptionist.underlying(), logProvider );
+        Props clusterClientViewProps = ClusterClientViewActor.props( getSelf(), receptionist.underlying() );
         getContext().actorOf( clusterClientViewProps );
     }
 
@@ -99,7 +95,7 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void sendTopologiesToClients( ReadReplicaViewActor.Tick ignored )
     {
-        log.debug( "Sending to clients: %s, %s, %s", readReplicaTopologies, coreTopologies, databaseLeaderInfo );
+        log().debug( "Sending to clients: {}, {}, {}", readReplicaTopologies, coreTopologies, databaseLeaderInfo );
         myTopologyClients().forEach( client -> {
             sendReadReplicaTopologiesTo( client );
             sendCoreTopologiesTo( client );
@@ -151,9 +147,9 @@ public class ReadReplicaTopologyActor extends AbstractActor
 
     private void buildTopology( DatabaseId databaseId )
     {
-        log.debug( "Building read replica topology for database %s with read replicas: %s", databaseId.name(), readReplicaViewMessage );
+        log().debug( "Building read replica topology for database {} with read replicas: {}", databaseId.name(), readReplicaViewMessage );
         DatabaseReadReplicaTopology readReplicaTopology = readReplicaViewMessage.toReadReplicaTopology( databaseId );
-        log.debug( "Built read replica topology for database %s: %s", databaseId.name(), readReplicaTopology );
+        log().debug( "Built read replica topology for database {}: {}", databaseId.name(), readReplicaTopology );
 
         topologySink.offer( readReplicaTopology );
         if ( readReplicaTopology.members().isEmpty() )
