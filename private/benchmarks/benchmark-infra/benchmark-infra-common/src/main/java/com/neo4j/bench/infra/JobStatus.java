@@ -39,6 +39,11 @@ public class JobStatus
         return !isDone();
     }
 
+    public boolean isFailed()
+    {
+        return "FAILED".equals( status );
+    }
+
     @Override
     public int hashCode()
     {
