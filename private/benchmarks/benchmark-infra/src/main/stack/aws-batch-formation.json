@@ -566,13 +566,6 @@
           "Memory": 8384
         }
       }
-    },
-    "BatchJobsLogs" : {
-  		"Type" : "AWS::Logs::LogGroup",
-  		"Properties" : {
-      		"LogGroupName" : "/aws/batch/job",
-      		"RetentionInDays" : 14
-    	}
     }
   },
   "Outputs": {
