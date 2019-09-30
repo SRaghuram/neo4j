@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
@@ -134,9 +135,10 @@ class ClusterOverviewProcedureIT
 
     private static ClusterConfig buildClusterConfig()
     {
+        var disableBoltAndBackup = Map.of( BoltConnector.enabled.name(), FALSE, online_backup_enabled.name(), FALSE );
         return clusterConfig()
-                .withSharedCoreParam( online_backup_enabled, FALSE )
-                .withSharedReadReplicaParam( online_backup_enabled, FALSE )
+                .withSharedCoreParams( disableBoltAndBackup )
+                .withSharedReadReplicaParams( disableBoltAndBackup )
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 2 )
                 .withInstanceCoreParam( server_groups, id -> CORE_GROUP + "," + EU_GROUP_PREFIX + id )
