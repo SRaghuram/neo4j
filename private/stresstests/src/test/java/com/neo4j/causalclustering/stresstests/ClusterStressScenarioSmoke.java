@@ -89,4 +89,13 @@ public class ClusterStressScenarioSmoke
 
         stressTest( config, fileSystem, pageCache );
     }
+
+    @Test
+    public void stressCreateManyDatabases() throws Exception
+    {
+        config.numberOfDatabases( 10 );
+        config.workloads( Workloads.CreateManyDatabases );
+
+        stressTest( config, fileSystem, pageCache );
+    }
 }

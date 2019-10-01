@@ -17,10 +17,12 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedMap;
 import java.util.function.IntFunction;
 
@@ -36,6 +38,8 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.io.layout.StoreLayoutConfig;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdRepository;
@@ -58,6 +62,7 @@ public class CoreClusterMember implements ClusterMember
     }
 
     private final File neo4jHome;
+    private final Neo4jLayout neo4jLayout;
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final DatabaseLayout defaultDatabaseLayout;
     private final ClusterStateLayout clusterStateLayout;
@@ -137,12 +142,14 @@ public class CoreClusterMember implements ClusterMember
         this.neo4jHome = new File( parentDir, "server-core-" + serverId );
         config.set( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath().toAbsolutePath() );
         config.set( GraphDatabaseSettings.logs_directory, new File( neo4jHome, "logs" ).toPath().toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( parentDir, "core-tx-logs-" + serverId ).toPath().toAbsolutePath() );
+        File transactionLogsRoot = new File( parentDir, "core-tx-logs-" + serverId );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
 
         this.discoveryServiceFactory = discoveryServiceFactory;
         File dataDir = new File( neo4jHome, "data" );
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         databasesDirectory = new File( dataDir, "databases" );
+        neo4jLayout = Neo4jLayout.of( neo4jHome, databasesDirectory, () -> Optional.of( transactionLogsRoot ) );
         memberConfig = config.build();
 
         threadGroup = new ThreadGroup( toString() );
@@ -232,6 +239,12 @@ public class CoreClusterMember implements ClusterMember
         {
             return new FileNames( raftLogDirectory( databaseName ) ).getAllFiles( fileSystem, null );
         }
+    }
+
+    @Override
+    public Neo4jLayout neo4jLayout()
+    {
+        return neo4jLayout;
     }
 
     @Override

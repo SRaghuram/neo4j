@@ -81,4 +81,9 @@ public class Control
     {
         log.info( DumpUtils.threadDump() );
     }
+
+    void onFinish()
+    {
+        stopTheWorld.set( true );
+    }
 }

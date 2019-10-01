@@ -14,6 +14,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.Monitors;
 
@@ -70,6 +71,8 @@ public interface ClusterMember
     DatabaseLayout databaseLayout();
 
     File homeDir();
+
+    Neo4jLayout neo4jLayout();
 
     int serverId();
 

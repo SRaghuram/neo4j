@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.IntFunction;
 
@@ -30,6 +31,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
@@ -50,6 +52,7 @@ public class ReadReplica implements ClusterMember
 
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final File neo4jHome;
+    private final Neo4jLayout neo4jLayout;
     private final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
     private final MemberId memberId;
@@ -104,12 +107,14 @@ public class ReadReplica implements ClusterMember
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
         config.set( GraphDatabaseSettings.logs_directory, new File( neo4jHome, "logs" ).toPath().toAbsolutePath() );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( neo4jHome, "replica-tx-logs-" + serverId ).toPath().toAbsolutePath() );
+        File transactionLogsRoot = new File( neo4jHome, "replica-tx-logs-" + serverId );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
         File dataDirectory = new File( neo4jHome, "data" );
         databasesDirectory = new File( dataDirectory, "databases" );
+        neo4jLayout = Neo4jLayout.of( neo4jHome, databasesDirectory, () -> Optional.of( transactionLogsRoot ) );
         this.monitors = monitors;
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
@@ -211,6 +216,12 @@ public class ReadReplica implements ClusterMember
     public File homeDir()
     {
         return neo4jHome;
+    }
+
+    @Override
+    public Neo4jLayout neo4jLayout()
+    {
+        return neo4jLayout;
     }
 
     public void setUpstreamDatabaseSelectionStrategy( String... strategies )

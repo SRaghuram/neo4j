@@ -88,6 +88,14 @@ enum Workloads
                 {
                     return new FailingWorkload( control );
                 }
+            },
+    CreateManyDatabases
+            {
+                @Override
+                Workload create( Control control, Resources resources, Config config )
+                {
+                    return new CreateManyDatabases( control, resources, config );
+                }
             };
 
     abstract Workload create( Control control, Resources resources, Config config );

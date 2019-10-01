@@ -50,6 +50,7 @@ public class Config
     /* workload specific */
     private boolean enableIndexes;
     private long reelectIntervalSeconds;
+    private int numberOfDatabases;
 
     public Config()
     {
@@ -73,6 +74,7 @@ public class Config
 
         enableIndexes = envOrDefault( "ENABLE_INDEXES", false );
         reelectIntervalSeconds = envOrDefault( "REELECT_INTERVAL_SECONDS", 60L );
+        numberOfDatabases = envOrDefault( "NUMBER_OF_DATABASES", 100 );
     }
 
     private static String envOrDefault( String name, String defaultValue )
@@ -212,6 +214,16 @@ public class Config
         this.reelectIntervalSeconds = reelectIntervalSeconds;
     }
 
+    public int numberOfDatabases()
+    {
+        return numberOfDatabases;
+    }
+
+    public void numberOfDatabases( int numberOfDatabases )
+    {
+        this.numberOfDatabases = numberOfDatabases;
+    }
+
     private void populateCommonParams( Map<String,String> params )
     {
         params.put( GraphDatabaseSettings.keep_logical_logs.name(), txPrune );
@@ -241,6 +253,6 @@ public class Config
                numberOfCores + ", numberOfEdges=" + numberOfEdges + ", raftMessagesLog=" + raftMessagesLog + ", workDurationMinutes=" + workDurationMinutes +
                ", shutdownDurationMinutes=" + shutdownDurationMinutes + ", txPrune='" + txPrune + '\'' + ", checkpointPolicy='" + checkpointPolicy + '\'' +
                ", preparations=" + preparations + ", workloads=" + workloads + ", validations=" + validations + ", enableIndexes=" + enableIndexes +
-               ", reelectIntervalSeconds=" + reelectIntervalSeconds + '}';
+               ", reelectIntervalSeconds=" + reelectIntervalSeconds + ", numberOfDatabases=" + numberOfDatabases + '}';
     }
 }
