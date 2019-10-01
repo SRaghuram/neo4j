@@ -101,6 +101,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import org.neo4j.kernel.enterprise.builtinprocs.SettingsWhitelist;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
@@ -200,6 +201,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         final Dependencies dependencies = platformModule.dependencies;
         final LogService logging = platformModule.logging;
         final LifeSupport life = platformModule.life;
+
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( platformModule.config );
+        platformModule.dependencies.satisfyDependency( settingsWhiteList );
 
         this.platformModule = platformModule;
         config = platformModule.config;

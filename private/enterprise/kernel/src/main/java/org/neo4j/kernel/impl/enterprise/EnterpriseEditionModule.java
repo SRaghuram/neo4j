@@ -23,8 +23,8 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import org.neo4j.kernel.enterprise.builtinprocs.SettingsWhitelist;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import org.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
@@ -43,6 +43,7 @@ import org.neo4j.logging.internal.LogService;
  */
 public class EnterpriseEditionModule extends CommunityEditionModule
 {
+
     @Override
     public void registerEditionSpecificProcedures( Procedures procedures ) throws KernelException
     {
@@ -54,6 +55,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule
     {
         super( platformModule );
         ioLimiter = new ConfigurableIOLimiter( platformModule.config );
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( platformModule.config );
+        platformModule.dependencies.satisfyDependency( settingsWhiteList );
     }
 
     @Override

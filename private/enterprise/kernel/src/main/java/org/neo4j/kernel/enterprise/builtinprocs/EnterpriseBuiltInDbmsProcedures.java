@@ -275,7 +275,15 @@ public class EnterpriseBuiltInDbmsProcedures
     public void setConfigValue( @Name( "setting" ) String setting, @Name( "value" ) String value )
     {
         Config config = resolver.resolveDependency( Config.class );
-        config.updateDynamicSetting( setting, value, "dbms.setConfigValue" ); // throws if something goes wrong
+        SettingsWhitelist settingsWhiteList = resolver.resolveDependency( SettingsWhitelist.class );
+        if ( settingsWhiteList.isWhiteListed( setting ) )
+        {
+            config.updateDynamicSetting( setting, value, "dbms.setConfigValue" ); // throws if something goes wrong
+        }
+        else
+        {
+            throw new AuthorizationViolationException( "Failed to set value for `" + setting + "` using procedure `dbms.setConfigValue`: access denied." );
+        }
     }
 
     /*

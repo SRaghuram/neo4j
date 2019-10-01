@@ -5,6 +5,8 @@
  */
 package org.neo4j.kernel.ha.factory;
 
+import org.jboss.netty.logging.InternalLoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -15,8 +17,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 import org.neo4j.cluster.ClusterSettings;
 import org.neo4j.cluster.InstanceId;
@@ -67,6 +67,7 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import org.neo4j.kernel.enterprise.builtinprocs.SettingsWhitelist;
 import org.neo4j.kernel.ha.BranchDetectingTxVerifier;
 import org.neo4j.kernel.ha.BranchedDataMigrator;
 import org.neo4j.kernel.ha.DelegateInvocationHandler;
@@ -195,6 +196,8 @@ public class HighlyAvailableEditionModule extends DefaultEditionModule
     public HighlyAvailableEditionModule( final PlatformModule platformModule )
     {
         ioLimiter = new ConfigurableIOLimiter( platformModule.config );
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( platformModule.config );
+        platformModule.dependencies.satisfyDependency( settingsWhiteList );
 
         final LifeSupport life = platformModule.life;
         life.add( platformModule.dataSourceManager );

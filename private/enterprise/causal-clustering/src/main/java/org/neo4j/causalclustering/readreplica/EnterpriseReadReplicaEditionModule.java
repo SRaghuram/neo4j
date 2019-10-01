@@ -18,7 +18,6 @@ import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import org.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
@@ -32,6 +31,7 @@ import org.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import org.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import org.neo4j.causalclustering.helper.CompositeSuspendable;
 import org.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import org.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -52,6 +52,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import org.neo4j.kernel.enterprise.builtinprocs.SettingsWhitelist;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -73,7 +74,6 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.udc.UsageData;
 
-import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
 import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
@@ -102,6 +102,9 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myself ) );
 
         ioLimiter = new ConfigurableIOLimiter( platformModule.config );
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( platformModule.config );
+        platformModule.dependencies.satisfyDependency( settingsWhiteList );
+
         platformModule.jobScheduler.setTopLevelGroupName( "ReadReplica " + myself );
 
         Dependencies dependencies = platformModule.dependencies;
