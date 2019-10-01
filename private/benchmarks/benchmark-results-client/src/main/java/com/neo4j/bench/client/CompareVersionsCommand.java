@@ -43,7 +43,7 @@ public class CompareVersionsCommand implements Runnable
     @Required
     private String resultsStoreUsername;
 
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results_store_pass";
+    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_PASSWORD},
              description = "Password for Neo4j database server that stores benchmarking results",
@@ -51,7 +51,7 @@ public class CompareVersionsCommand implements Runnable
     @Required
     private String resultsStorePassword;
 
-    private static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
+    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_URI},
              description = "URI to Neo4j database server for storing benchmarking results",
@@ -59,7 +59,7 @@ public class CompareVersionsCommand implements Runnable
     @Required
     private URI resultsStoreUri;
 
-    private static final String CMD_OLD_VERSION = "--old_version";
+    private static final String CMD_OLD_VERSION = "--old-version";
     @Option( type = OptionType.COMMAND,
              name = {CMD_OLD_VERSION},
              description = "Old (baseline) Neo4j version to compare against",
@@ -67,7 +67,7 @@ public class CompareVersionsCommand implements Runnable
     @Required
     private String oldNeo4jVersion;
 
-    private static final String CMD_NEW_VERSION = "--new_version";
+    private static final String CMD_NEW_VERSION = "--new-version";
     @Option( type = OptionType.COMMAND,
              name = {CMD_NEW_VERSION},
              description = "New Neo4j version to compare to",
@@ -75,7 +75,7 @@ public class CompareVersionsCommand implements Runnable
     @Required
     private String newNeo4jVersion;
 
-    private static final String CMD_OUTPUT_DIRECTORY = "--output_dir";
+    private static final String CMD_OUTPUT_DIRECTORY = "--output-dir";
     @Option( type = OptionType.COMMAND,
              name = {CMD_OUTPUT_DIRECTORY},
              description = "Directory to write .csv files to",
@@ -83,7 +83,7 @@ public class CompareVersionsCommand implements Runnable
     @Required
     private File outputDir;
 
-    private static final String CMD_MINIMUM_DIFFERENCE = "--min_diff";
+    private static final String CMD_MINIMUM_DIFFERENCE = "--min-diff";
     @Option( type = OptionType.COMMAND,
              name = {CMD_MINIMUM_DIFFERENCE},
              description = "Filter out results that have not changed by this factor, e.g., '1.2'",
