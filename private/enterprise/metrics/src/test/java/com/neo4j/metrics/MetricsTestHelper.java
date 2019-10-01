@@ -7,6 +7,7 @@ package com.neo4j.metrics;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -136,7 +137,7 @@ public class MetricsTestHelper
     }
 
     private static <T, FIELD extends Enum<FIELD> & CsvField> T readValueAndAssert( File metricFile, T startValue, FIELD timeStampField, FIELD metricsValue,
-            Function<String,T> parser, BiPredicate<T,T> assumption ) throws IOException, InterruptedException
+            Function<String,T> parser, BiPredicate<T,T> assumption ) throws IOException
     {
         // let's try until the file is in place (since the reporting is async that might take a while)
         long endTime = currentTimeMillis() + MINUTES.toMillis( 2 );
@@ -174,6 +175,10 @@ public class MetricsTestHelper
                     continue;
                 }
                 return currentValue;
+            }
+            catch ( FileNotFoundException e )
+            {
+                // File not there a.t.m. just keep retrying
             }
         }
         return startValue;
