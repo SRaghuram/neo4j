@@ -59,9 +59,11 @@ public class FabricServicesBootstrap
             var cypherConfig = CypherConfiguration.fromConfig( config );
             Supplier<GlobalProcedures> proceduresSupplier = () -> dependencies.resolveDependency( GlobalProcedures.class );
             var signatureResolver = new SignatureResolver( proceduresSupplier );
-            var planner = serviceBootstrapper.registerService( new FabricPlanner( fabricConfig, cypherConfig, monitors, signatureResolver ), FabricPlanner.class );
+            var planner =
+                    serviceBootstrapper.registerService( new FabricPlanner( fabricConfig, cypherConfig, monitors, signatureResolver ), FabricPlanner.class );
             var catalog = Catalog.fromConfig( fabricConfig );
-            var fromEvaluation = serviceBootstrapper.registerService( new FromEvaluation( catalog, proceduresSupplier, signatureResolver), FromEvaluation.class );
+            var fromEvaluation =
+                    serviceBootstrapper.registerService( new FromEvaluation( catalog, proceduresSupplier, signatureResolver ), FromEvaluation.class );
             var executor = new FabricExecutor( fabricConfig, planner, fromEvaluation );
             serviceBootstrapper.registerService( executor, FabricExecutor.class );
         }
