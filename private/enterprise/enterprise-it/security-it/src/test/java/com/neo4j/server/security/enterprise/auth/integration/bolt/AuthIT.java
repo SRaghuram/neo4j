@@ -313,7 +313,6 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
         embeddedTestCertificates = new EmbeddedTestCertificates();
     }
 
-    @Before
     public void setup()
     {
         startDatabase();
@@ -364,6 +363,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldLoginWithCorrectInformation()
     {
+        setup();
         assertAuth( boltUri, READ_USER, password );
         assertAuth( boltUri, READ_USER, password );
     }
@@ -371,6 +371,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldFailLoginWithIncorrectCredentials()
     {
+        setup();
         assertAuthFail( boltUri, READ_USER, "WRONG" );
         assertAuthFail( boltUri, READ_USER, "ALSO WRONG" );
     }
@@ -378,6 +379,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldFailLoginWithInvalidCredentialsFollowingSuccessfulLogin()
     {
+        setup();
         assertAuth( boltUri, READ_USER, password );
         assertAuthFail( boltUri, READ_USER, "WRONG" );
     }
@@ -385,6 +387,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldLoginFollowingFailedLogin()
     {
+        setup();
         assertAuthFail( boltUri, READ_USER, "WRONG" );
         assertAuth( boltUri, READ_USER, password );
     }
@@ -392,6 +395,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldGetCorrectAuthorizationNoPermission()
     {
+        setup();
         try ( Driver driver = connectDriver( boltUri, NONE_USER, password ) )
         {
             assertReadFails( driver, ACCESS_DENIED );
@@ -402,6 +406,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldGetCorrectAuthorizationReaderUser()
     {
+        setup();
         try ( Driver driver = connectDriver( boltUri, READ_USER, password ) )
         {
             assertReadSucceeds( driver );
@@ -412,6 +417,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldGetCorrectAuthorizationWriteUser()
     {
+        setup();
         try ( Driver driver = connectDriver( boltUri, WRITE_USER, password ) )
         {
             assertReadSucceeds( driver );
@@ -422,6 +428,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldGetCorrectAuthorizationAllowedProcedure() throws KernelException
     {
+        setup();
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         try ( Driver driver = connectDriver( boltUri, PROC_USER, password ) )
         {
@@ -434,6 +441,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     @Test
     public void shouldShowDatabasesOnSystem()
     {
+        setup();
         try ( Driver driver = connectDriver( boltUri, READ_USER, password ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
@@ -448,7 +456,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldLoginWithSamAccountName()
     {
         assumeTrue( ldapWithAD );
-
+        setup();
         // dn: cn=local.user,ou=local,ou=users,dc=example,dc=com
         assertAuth( boltUri, "luser", "abc123" );
         assertAuth( boltUri, "luser", "abc123" );
@@ -461,6 +469,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldFailLoginSamAccountNameWrongPassword()
     {
         assumeTrue( ldapWithAD );
+        setup();
         assertAuthFail( boltUri, "luser", "wrong" );
     }
 
@@ -468,6 +477,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldFailLoginSamAccountNameWithDN()
     {
         assumeTrue( ldapWithAD );
+        setup();
         assertAuthFail( boltUri, "local.user", "abc123" );
     }
 
@@ -475,6 +485,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldReadWithSamAccountName()
     {
         assumeTrue( ldapWithAD );
+        setup();
 
         try ( Driver driver = connectDriver( boltUri, "luser", "abc123" ) )
         {
@@ -486,6 +497,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldFailNicelyOnCreateDuplicateUser()
     {
         assumeTrue( createUsers );
+        setup();
 
         try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password ) )
         {
@@ -505,6 +517,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldFailNicelyOnAlterUserPassword()
     {
         assumeTrue( createUsers );
+        setup();
 
         try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password ) )
         {
@@ -526,6 +539,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldFailNicelyOnAlterCurrentUserPassword()
     {
         assumeTrue( createUsers );
+        setup();
 
         try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password ) )
         {
@@ -546,6 +560,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     public void shouldFailNicelyOnGrantToNonexistentRole()
     {
         assumeTrue( createUsers );
+        setup();
 
         try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password ) )
         {
