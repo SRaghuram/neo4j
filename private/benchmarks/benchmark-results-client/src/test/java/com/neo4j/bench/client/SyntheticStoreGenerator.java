@@ -372,7 +372,7 @@ public class SyntheticStoreGenerator
                     generationResult.addProject( project );
                     String triggeredBy = randomOwnerFor( project.repository() );
                     TestRun testRun = new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
-                    generationResult.incTestRuns();
+                    generationResult.addTestRun( testRun );
 
                     Environment environment = new Environment(
                             randomFrom( operatingSystems ),
@@ -404,9 +404,11 @@ public class SyntheticStoreGenerator
 
                     if ( RNG.nextDouble() > TEST_RUN_ANNOTATION_PROBABILITY )
                     {
+                        String randomComment = "comment_" + UUID.randomUUID().toString();
+                        String randomAuthor = "author_" + UUID.randomUUID().toString();
                         AttachTestRunAnnotation attachTestRunAnnotation = new AttachTestRunAnnotation(
                                 testRunReport.testRun().id(),
-                                new Annotation( "comment", System.currentTimeMillis(), "author" ) );
+                                new Annotation( randomComment, System.currentTimeMillis(), randomAuthor ) );
                         generationResult.incTestRunAnnotations();
                         queryRetrier.execute( client, attachTestRunAnnotation, 1 );
                     }
@@ -470,7 +472,7 @@ public class SyntheticStoreGenerator
         Edition neo4jEdition = randomFrom( neo4jEditions );
         String branch = BranchAndVersion.isPersonalBranch( repository, owner )
                         ? neo4jVersion + "-" + owner
-                        : neo4jVersion;
+                        : neo4jVersion.substring( 0, neo4jVersion.lastIndexOf( "." ) );
         return new Project( repository, commit, neo4jVersion, neo4jEdition, branch, owner );
     }
 
@@ -564,6 +566,7 @@ public class SyntheticStoreGenerator
         private Set<List<String>> benchmarkGroups = new HashSet<>();
         private Set<List<String>> benchmarks = new HashSet<>();
         private int testRuns;
+        private List<Long> packagingBuildIds = new ArrayList<>();
         private Set<Environment> environments = new HashSet<>();
         private Set<Java> javas = new HashSet<>();
         private Set<Project> projects = new HashSet<>();
@@ -587,8 +590,9 @@ public class SyntheticStoreGenerator
             toolVersions.add( tool );
         }
 
-        private void incTestRuns()
+        private void addTestRun( TestRun testRun )
         {
+            packagingBuildIds.add( testRun.parentBuild() );
             testRuns++;
         }
 
@@ -710,6 +714,11 @@ public class SyntheticStoreGenerator
         int metricsAnnotations()
         {
             return metricsAnnotations;
+        }
+
+        List<Long> packagingBuildIds()
+        {
+            return packagingBuildIds;
         }
     }
 }
