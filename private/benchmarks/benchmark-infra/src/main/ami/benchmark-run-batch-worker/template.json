@@ -10,7 +10,7 @@
      "access_key": "{{user `aws_access_key`}}",
      "secret_key": "{{user `aws_secret_key`}}",
      "region": "eu-north-1",
-     "source_ami": "ami-03f8f3eb89dcfe553",
+     "source_ami": "ami-03611bd6dccda00ec",
      "instance_type": "t3.micro",
      "ssh_username": "ec2-user",
      "ami_name": "benchmarking {{timestamp}}",
