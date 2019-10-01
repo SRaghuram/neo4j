@@ -19,7 +19,7 @@ import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
-import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery}
+import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.monitoring.Monitors
@@ -468,7 +468,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
   "Acceptance:" - {
 
-    "a single procedure local query" in {
+    "a single known procedure local query" in {
       val q =
         """CALL myProcedure()
           |""".stripMargin
@@ -476,8 +476,21 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       planner.plan(q, params)
         .check(_.asDirect.asLocalSingleQuery.clauses
           .check(_.size.shouldEqual(2))
-          .check(_ (0).should(matchPattern { case ResolvedCall(_, _, _, _, _) => }))
+          .check(_ (0).should(matchPattern { case _: ResolvedCall => }))
           .check(_ (1).shouldEqual(return_(varFor("a").aliased, varFor("b").aliased)))
+        )
+    }
+
+    "a unknown procedure local query" in {
+      val q =
+        """CALL unknownProcedure() YIELD x, y
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses
+          .check(_.size.shouldEqual(2))
+          .check(_ (0).should(matchPattern { case _: UnresolvedCall => }))
+          .check(_ (1).shouldEqual(return_(varFor("x").aliased, varFor("y").aliased)))
         )
     }
 

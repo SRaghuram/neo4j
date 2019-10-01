@@ -127,11 +127,14 @@ case class FabricPreparatoryRewriting(
     "rewrite the AST into a shape that the fabric planner can act on"
 
   override def process(from: BaseState, context: BaseContext): BaseState =
-    from.withStatement(from.statement().endoRewrite(
+    from.withStatement(from.statement().endoRewrite(chain(
       // we need all return columns for data flow analysis between query segments
-      expandStar(from.semantics()) andThen
-        RewriteProcedureCalls.rewriter(signatures)
-    ))
+      expandStar(from.semantics()),
+      TryResolveProcedures(signatures)
+    )))
+
+  private def chain[T](funcs: (T => T)*): T => T =
+    funcs.reduceLeft(_ andThen _)
 
   override def postConditions: Set[Condition] = Set()
 }

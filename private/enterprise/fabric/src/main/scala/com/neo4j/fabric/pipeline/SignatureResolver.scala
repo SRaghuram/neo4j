@@ -27,32 +27,31 @@ class SignatureResolver(
 ) extends ProcedureSignatureResolver {
 
   override def functionSignature(name: QualifiedName): Option[UserFunctionSignature] = {
-    val fcn = Option(registrySupplier.get().function(asKernelQualifiedName(name)))
-      .getOrElse(Errors.notFound("Function", name.toString, InputPosition.NONE))
+    Option(registrySupplier.get().function(asKernelQualifiedName(name)))
+      .map { fcn =>
 
-    val signature = fcn.signature()
+        val signature = fcn.signature()
 
-    Some(UserFunctionSignature(
-      name = name,
-      inputSignature = signature.inputSignature().asScala.toIndexedSeq.map(s => FieldSignature(
-        name = s.name(),
-        typ = asCypherType(s.neo4jType()),
-        default = s.defaultValue().asScala.map(asCypherValue))),
-      outputType = asCypherType(signature.outputType()),
-      deprecationInfo = signature.deprecated().asScala,
-      allowed = signature.allowed(),
-      description = signature.description().asScala,
-      isAggregate = false,
-      id = fcn.id(),
-      threadSafe = fcn.threadSafe()
-    ))
+        UserFunctionSignature(
+          name = name,
+          inputSignature = signature.inputSignature().asScala.toIndexedSeq.map(s => FieldSignature(
+            name = s.name(),
+            typ = asCypherType(s.neo4jType()),
+            default = s.defaultValue().asScala.map(asCypherValue))),
+          outputType = asCypherType(signature.outputType()),
+          deprecationInfo = signature.deprecated().asScala,
+          allowed = signature.allowed(),
+          description = signature.description().asScala,
+          isAggregate = false,
+          id = fcn.id(),
+          threadSafe = fcn.threadSafe()
+        )
+      }
   }
 
   override def procedureSignature(name: QualifiedName): ProcedureSignature = {
-    val procedures = registrySupplier.get()
     val kn = new procs.QualifiedName(name.namespace.asJava, name.name)
-
-    val handle = procedures.procedure(kn)
+    val handle = registrySupplier.get().procedure(kn)
     val signature = handle.signature()
 
     ProcedureSignature(
