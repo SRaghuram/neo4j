@@ -6,9 +6,9 @@
 package com.neo4j.bench.client;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
-import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -38,6 +38,8 @@ import org.neo4j.harness.junit.EnterpriseNeo4jRule;
 import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
+import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
+import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
 import static com.neo4j.bench.common.model.Repository.LDBC_BENCH;
 import static com.neo4j.bench.common.model.Repository.MACRO_BENCH;
 import static com.neo4j.bench.common.model.Repository.MICRO_BENCH;
@@ -66,13 +68,6 @@ public class CommandsSmokeTestIT
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
-    private final ToolBenchGroup[] toolBenchGroups = {ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
-                                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
-                                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
-                                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
-                                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
-                                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) )};
-
     @Test
     public void shouldRunAnnotateTestRunsCommand() throws Exception
     {
@@ -95,7 +90,7 @@ public class CommandsSmokeTestIT
                                                                        "author " + UUID.randomUUID(),
                                                                        "3.0",
                                                                        benchmarkTools,
-                                                                       AnnotationTarget.ONLY_TEST_RUN );
+                                                                       Sets.newHashSet( TEST_RUN ) );
             Main.main( args.stream().toArray( String[]::new ) );
         }
 
@@ -117,7 +112,7 @@ public class CommandsSmokeTestIT
                                                                        "author " + UUID.randomUUID(),
                                                                        "3.0",
                                                                        benchmarkTools,
-                                                                       AnnotationTarget.ONLY_METRICS );
+                                                                       Sets.newHashSet( METRICS ) );
             Main.main( args.stream().toArray( String[]::new ) );
         }
 
@@ -139,7 +134,7 @@ public class CommandsSmokeTestIT
                                                                        "author " + UUID.randomUUID(),
                                                                        "3.0",
                                                                        benchmarkTools,
-                                                                       AnnotationTarget.BOTH_TEST_RUN_AND_METRICS );
+                                                                       Sets.newHashSet( TEST_RUN, METRICS ) );
             Main.main( args.stream().toArray( String[]::new ) );
         }
 
@@ -244,7 +239,12 @@ public class CommandsSmokeTestIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( toolBenchGroups )
+                .withBenchmarkGroups( ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
+                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
+                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
+                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
+                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
+                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
                 .withNeo4jVersions( "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )

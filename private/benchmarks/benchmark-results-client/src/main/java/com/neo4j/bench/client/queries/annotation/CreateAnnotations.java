@@ -5,23 +5,24 @@
  */
 package com.neo4j.bench.client.queries.annotation;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.client.queries.Query;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.util.Resources;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Session;
 
-import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.BOTH_TEST_RUN_AND_METRICS;
-import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.ONLY_METRICS;
-import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.ONLY_TEST_RUN;
+import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
+import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
 import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 public class CreateAnnotations implements Query<Void>
@@ -31,9 +32,8 @@ public class CreateAnnotations implements Query<Void>
 
     public enum AnnotationTarget
     {
-        ONLY_TEST_RUN,
-        ONLY_METRICS,
-        BOTH_TEST_RUN_AND_METRICS
+        TEST_RUN,
+        METRICS
     }
 
     private final long packagingBuildId;
@@ -41,20 +41,24 @@ public class CreateAnnotations implements Query<Void>
     private final String author;
     private final String neo4jSeries;
     private final List<String> benchmarkTools;
-    private final AnnotationTarget annotationTarget;
+    private final Set<AnnotationTarget> annotationTargets;
 
     public CreateAnnotations( long packagingBuildId,
                               String comment,
                               String author,
                               String neo4jSeries,
                               List<Repository> benchmarkTools,
-                              AnnotationTarget annotationTarget )
+                              Set<AnnotationTarget> annotationTargets )
     {
         this.packagingBuildId = packagingBuildId;
         this.comment = comment;
         this.author = author;
         this.neo4jSeries = neo4jSeries;
-        this.annotationTarget = annotationTarget;
+        if ( annotationTargets.isEmpty() )
+        {
+            throw new IllegalStateException( format( "Must annotate at least one of: %s", Arrays.toString( AnnotationTarget.values() ) ) );
+        }
+        this.annotationTargets = annotationTargets;
         this.benchmarkTools = benchmarkTools.stream()
                                             .peek( r ->
                                                    {
@@ -72,11 +76,11 @@ public class CreateAnnotations implements Query<Void>
     {
         try ( Session session = driver.session() )
         {
-            if ( Lists.newArrayList( ONLY_TEST_RUN, BOTH_TEST_RUN_AND_METRICS ).contains( annotationTarget ) )
+            if ( annotationTargets.contains( TEST_RUN ) )
             {
                 session.run( ANNOTATE_TEST_RUNS, params() ).consume();
             }
-            if ( Lists.newArrayList( ONLY_METRICS, BOTH_TEST_RUN_AND_METRICS ).contains( annotationTarget ) )
+            if ( annotationTargets.contains( METRICS ) )
             {
                 session.run( ANNOTATE_METRICS, params() ).consume();
             }
