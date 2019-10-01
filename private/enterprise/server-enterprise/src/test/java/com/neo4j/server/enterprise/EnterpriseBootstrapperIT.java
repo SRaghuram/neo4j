@@ -64,7 +64,8 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
                 "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
                 "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.homeDir(), data_directory ).toString() ),
-                "-c", configOption( logs_directory, testDirectory.homeDir().getAbsolutePath() ) ) );
+                "-c", configOption( logs_directory, testDirectory.homeDir().getAbsolutePath() ),
+                "-c", "dbms.connector.bolt.listen_address=:0" ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
