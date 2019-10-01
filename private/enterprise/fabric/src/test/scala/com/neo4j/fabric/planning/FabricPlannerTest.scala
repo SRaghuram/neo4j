@@ -582,6 +582,47 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
   }
 
+  "Options:" - {
+
+    "allow EXPLAIN" in {
+      val q =
+        """EXPLAIN
+          |RETURN 1 AS x
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.executionType.shouldEqual(FabricPlan.EXPLAIN))
+        .check(_.query.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(literal(1).as("x")),
+        )))
+    }
+
+    "disallow PROFILE" in {
+      val q =
+        """PROFILE
+          |RETURN 1 AS x
+          |""".stripMargin
+
+      the[NotImplementedError].thrownBy(planner.plan(q, params))
+        .check(_.getMessage.should(include("not implemented: PROFILE")))
+    }
+
+    "disallow options" in {
+      def shouldFail(qry: String, error: String) =
+        the[NotImplementedError].thrownBy(planner.plan(qry, params))
+          .check(_.getMessage.should(include(error)))
+
+      shouldFail("CYPHER 3.5 RETURN 1", "not implemented: version")
+      shouldFail("CYPHER planner=cost RETURN 1", "not implemented: planner")
+      shouldFail("CYPHER runtime=parallel RETURN 1", "not implemented: runtime")
+      shouldFail("CYPHER updateStrategy=eager RETURN 1", "not implemented: updateStrategy")
+      shouldFail("CYPHER expressionEngine=compiled RETURN 1", "not implemented: expressionEngine")
+      shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "not implemented: operatorEngine")
+      shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "not implemented: interpretedPipesFallback")
+      shouldFail("CYPHER debug=foo RETURN 1", "not implemented: debug")
+    }
+  }
+
   "Acceptance:" - {
 
     "a plain local query" in {

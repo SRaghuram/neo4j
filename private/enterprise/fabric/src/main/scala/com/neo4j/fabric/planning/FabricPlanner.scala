@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
 import org.neo4j.cypher.internal.{CypherConfiguration, CypherPreParser, FullyParsedQuery, PreParser, QueryOptions}
-import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption}
+import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
@@ -77,6 +77,8 @@ case class FabricPlanner(
     parameters: MapValue
   ): PlannerContext = {
     val preParsed = preParser.preParseQuery(query)
+    assertOptionsNotSet(preParsed.options)
+
     val pipeline = Pipeline.Instance(monitors, query, signatures)
     val state = pipeline.parseAndPrepare.process(preParsed.statement)
     PlannerContext(
@@ -87,6 +89,20 @@ case class FabricPlanner(
       catalog = catalog,
       pipeline = pipeline,
     )
+  }
+
+  private def assertOptionsNotSet(options: QueryOptions): Unit = {
+    def check[T](name: String, a: T, b: T): Unit =
+      if (a != b) Errors.unimplemented("Query option", name)
+
+    check("version", options.version, cypherConfig.version)
+    check("planner", options.planner, cypherConfig.planner)
+    check("runtime", options.runtime, cypherConfig.runtime)
+    check("updateStrategy", options.updateStrategy, CypherUpdateStrategy.default)
+    check("expressionEngine", options.expressionEngine, cypherConfig.expressionEngineOption)
+    check("operatorEngine", options.operatorEngine, cypherConfig.operatorEngine)
+    check("interpretedPipesFallback", options.interpretedPipesFallback, cypherConfig.interpretedPipesFallback)
+    check("debug", options.debugOptions, Set.empty)
   }
 
   case class PlannerContext(
@@ -257,7 +273,7 @@ case class FabricPlanner(
       val executionType: FabricPlan.ExecutionType = options.executionMode match {
         case CypherExecutionMode.normal  => FabricPlan.Execute
         case CypherExecutionMode.explain => FabricPlan.Explain
-        case CypherExecutionMode.profile => FabricPlan.Profile
+        case CypherExecutionMode.profile => Errors.unimplemented("Query option", "PROFILE")
       }
 
       FabricPlan(fabricQuery, queryType, executionType)
