@@ -66,7 +66,8 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
                 "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
-                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ) ) );
+                "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ),
+                "-c", "dbms.connector.bolt.listen_address=:0" ) );
 
         // Then
         assertEquals( ServerBootstrapper.OK, resultCode );
