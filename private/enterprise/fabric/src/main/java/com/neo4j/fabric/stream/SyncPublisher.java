@@ -60,6 +60,7 @@ public class SyncPublisher implements Publisher<Record>
             catch ( Throwable t )
             {
                 output.onError( t );
+                running = false;
             }
         }
 
