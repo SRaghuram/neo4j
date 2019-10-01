@@ -1163,15 +1163,19 @@ public class ProcedureIT
 
             Result res = transaction.execute( query );
 
-            assertTrue( res.hasNext() );
-            res.next();
-
             assertFalse( onCloseCalled[0] );
 
             assertTrue( res.hasNext() );
             res.next();
 
+            // Pipelined runtime will exhaust the stream on the first result because of batching, but Slotted/Interpreted will not
+
+            assertTrue( res.hasNext() );
+            res.next();
+
             assertTrue( onCloseCalled[0] );
+
+            assertFalse( res.hasNext() );
         }
     }
 
