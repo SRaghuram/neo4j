@@ -86,8 +86,8 @@ class SchemaRuleCollisionTest
     {
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            db.schema().getConstraints().forEach( ConstraintDefinition::drop );
-            db.schema().getIndexes().forEach( IndexDefinition::drop );
+            tx.schema().getConstraints().forEach( ConstraintDefinition::drop );
+            tx.schema().getIndexes().forEach( IndexDefinition::drop );
             tx.commit();
         }
     }
@@ -357,7 +357,7 @@ class SchemaRuleCollisionTest
     {
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
             tx.commit();
         }
     }

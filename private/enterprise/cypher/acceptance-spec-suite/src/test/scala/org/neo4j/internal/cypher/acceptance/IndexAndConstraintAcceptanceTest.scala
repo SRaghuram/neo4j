@@ -1193,15 +1193,15 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     graph.awaitIndexesOnline()
 
     // THEN
-    graph.inTx {
-      val indexes = graph.schema().getIndexes(Label.label("Label")).asScala.toList.map(_.getName).toSet
-      val node_constraints = graph.schema().getConstraints(Label.label("Label")).asScala.toList.map(_.getName).toSet
-      val rel_constraints = graph.schema().getConstraints(RelationshipType.withName("Type")).asScala.toList.map(_.getName).toSet
+    withTx( tx => {
+      val indexes = tx.schema().getIndexes(Label.label("Label")).asScala.toList.map(_.getName).toSet
+      val node_constraints = tx.schema().getConstraints(Label.label("Label")).asScala.toList.map(_.getName).toSet
+      val rel_constraints = tx.schema().getConstraints(RelationshipType.withName("Type")).asScala.toList.map(_.getName).toSet
 
       indexes should equal(Set("Index on :Label (prop1)", "index1", "Node key constraint on :Label (prop2)", "constraint1", "Uniqueness constraint on :Label (prop3)", "constraint2"))
       node_constraints should equal(Set("Node key constraint on :Label (prop2)", "constraint1", "Uniqueness constraint on :Label (prop3)", "constraint2", "Property existence constraint on :Label (prop4)", "constraint3"))
       rel_constraints should equal(Set("Property existence constraint on ()-[:Type]-() (prop5)", "constraint4"))
-    }
+    } )
   }
 
   test("creating constraint on same schema as existing index") {

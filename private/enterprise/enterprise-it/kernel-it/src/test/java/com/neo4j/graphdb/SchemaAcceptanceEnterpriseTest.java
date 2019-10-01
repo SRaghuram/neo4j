@@ -386,7 +386,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = db.beginTx() )
         {
-            ConstraintCreator creator = db.schema().constraintFor( label );
+            ConstraintCreator creator = tx.schema().constraintFor( label );
             creator = creator.assertPropertyIsUnique( prop ).withName( name );
             ConstraintDefinition constraint = creator.create();
             tx.commit();
@@ -403,7 +403,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = db.beginTx() )
         {
-            ConstraintCreator creator = db.schema().constraintFor( label );
+            ConstraintCreator creator = tx.schema().constraintFor( label );
             creator = creator.assertPropertyIsNodeKey( prop ).withName( name );
             ConstraintDefinition constraint = creator.create();
             tx.commit();
@@ -420,7 +420,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = db.beginTx() )
         {
-            ConstraintCreator creator = db.schema().constraintFor( label );
+            ConstraintCreator creator = tx.schema().constraintFor( label );
             creator = creator.assertPropertyExists( prop ).withName( name );
             ConstraintDefinition constraint = creator.create();
             tx.commit();
@@ -437,7 +437,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = db.beginTx() )
         {
-            ConstraintCreator creator = db.schema().constraintFor( relType );
+            ConstraintCreator creator = tx.schema().constraintFor( relType );
             creator = creator.assertPropertyExists( prop ).withName( name );
             ConstraintDefinition constraint = creator.create();
             tx.commit();
@@ -467,7 +467,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
     {
         try ( Transaction tx = db.beginTx() )
         {
-            final List<ConstraintDefinition> allConstraints = Iterables.asList( db.schema().getConstraints( label ) );
+            final List<ConstraintDefinition> allConstraints = Iterables.asList( tx.schema().getConstraints( label ) );
             for ( ConstraintDefinition expectedConstraint : expectedConstraints )
             {
                 assertTrue( allConstraints.remove( expectedConstraint ), "Constraints did not contain " + expectedConstraint );
