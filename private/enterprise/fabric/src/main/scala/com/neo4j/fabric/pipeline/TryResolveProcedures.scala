@@ -22,13 +22,13 @@ case class TryResolveProcedures(signatures: ProcedureSignatureResolver) extends 
       .bottomUp {
         // Try resolving procedures
         case unresolved: UnresolvedCall =>
-          Try(ResolvedCall(signatures.procedureSignature)(unresolved).coerceArguments)
+          Try(ResolvedCall(signatures.procedureSignature)(unresolved))
             .getOrElse(unresolved)
         // Try resolving functions
         case function: FunctionInvocation if function.needsToBeResolved =>
           val name = QualifiedName(function)
           signatures.functionSignature(name)
-            .map(sig => ResolvedFunctionInvocation(name, Some(sig), function.args)(function.position).coerceArguments)
+            .map(sig => ResolvedFunctionInvocation(name, Some(sig), function.args)(function.position))
             .getOrElse(function)
       }
       .rewritten

@@ -466,19 +466,42 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
   }
 
-  "Acceptance:" - {
+  "Procedures:" - {
 
     "a single known procedure local query" in {
       val q =
-        """CALL myProcedure()
+        """CALL my.ns.myProcedure()
           |""".stripMargin
 
       planner.plan(q, params)
-        .check(_.asDirect.asLocalSingleQuery.clauses
-          .check(_.size.shouldEqual(2))
-          .check(_ (0).should(matchPattern { case _: ResolvedCall => }))
-          .check(_ (1).shouldEqual(return_(varFor("a").aliased, varFor("b").aliased)))
-        )
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          call(Seq("my", "ns"), "myProcedure", Some(Seq()), Some(Seq(varFor("a"), varFor("b")))),
+          return_(varFor("a").aliased, varFor("b").aliased),
+        )))
+    }
+
+    "a single known procedure local query without args" in {
+      val q =
+        """CALL my.ns.myProcedure
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          call(Seq("my", "ns"), "myProcedure", Some(Seq()), Some(Seq(varFor("a"), varFor("b")))),
+          return_(varFor("a").aliased, varFor("b").aliased),
+        )))
+    }
+
+    "a single known procedure local query with args" in {
+      val q =
+        """CALL my.ns.myProcedure2(1)
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          call(Seq("my", "ns"), "myProcedure2", Some(Seq(literal(1))), Some(Seq(varFor("a"), varFor("b")))),
+          return_(varFor("a").aliased, varFor("b").aliased),
+        )))
     }
 
     "a unknown procedure local query" in {
@@ -487,12 +510,47 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |""".stripMargin
 
       planner.plan(q, params)
-        .check(_.asDirect.asLocalSingleQuery.clauses
-          .check(_.size.shouldEqual(2))
-          .check(_ (0).should(matchPattern { case _: UnresolvedCall => }))
-          .check(_ (1).shouldEqual(return_(varFor("x").aliased, varFor("y").aliased)))
-        )
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          call(Seq(), "unknownProcedure", Some(Seq()), Some(Seq(varFor("x"), varFor("y")))),
+          return_(varFor("x").aliased, varFor("y").aliased),
+        )))
     }
+
+    "a known function" in {
+      val q =
+        """RETURN const0() AS x
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(function("const0").as("x"))
+        )))
+    }
+
+    "a known function with namespace and args" in {
+      val q =
+        """RETURN my.ns.const0(1) AS x
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(function(Seq("my", "ns"), "const0", literal(1)).as("x"))
+        )))
+    }
+
+    "an unknown function" in {
+      val q =
+        """RETURN my.unknown() AS x
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(function(Seq("my"), "unknown").as("x"))
+        )))
+    }
+  }
+
+  "Acceptance:" - {
 
     "a plain local query" in {
       val q =

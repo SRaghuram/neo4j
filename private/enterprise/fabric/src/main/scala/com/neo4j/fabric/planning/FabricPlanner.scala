@@ -13,10 +13,11 @@ import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten._
+import org.neo4j.cypher.internal.logical.plans.{ResolvedCall, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticState, SemanticTable}
-import org.neo4j.cypher.internal.v4_0.ast.{SingleQuery, Statement}
+import org.neo4j.cypher.internal.v4_0.ast.{ProcedureResult, SingleQuery, Statement, UnresolvedCall}
+import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, FunctionName, Namespace, ProcedureName}
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
@@ -339,6 +340,29 @@ case class FabricPlanner(
                     case _             => q.withReturnAliased(lq.columns.output)
                   }
               }
+          }
+          .rewritten
+          .bottomUp {
+            // Un-resolve procedures for rendering
+            case rc: ResolvedCall =>
+              val pos = rc.position
+              val name = rc.signature.name
+              UnresolvedCall(
+                procedureNamespace = Namespace(name.namespace.toList)(pos),
+                procedureName = ProcedureName(name.name)(pos),
+                declaredArguments = if (rc.declaredArguments) Some(rc.callArguments) else None,
+                declaredResult = if (rc.declaredResults) Some(ProcedureResult(rc.callResults)(pos)) else None,
+              )(pos)
+            // Un-resolve functions for rendering
+            case rf: ResolvedFunctionInvocation =>
+              val pos = rf.position
+              val name = rf.qualifiedName
+              FunctionInvocation(
+                namespace = Namespace(name.namespace.toList)(pos),
+                functionName = FunctionName(name.name)(pos),
+                distinct = false,
+                args = rf.arguments.toIndexedSeq,
+              )(pos)
           }
           .rewritten
           .bottomUp {
