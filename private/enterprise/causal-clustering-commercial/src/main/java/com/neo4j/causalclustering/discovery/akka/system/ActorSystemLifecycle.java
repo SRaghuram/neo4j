@@ -55,7 +55,6 @@ public class ActorSystemLifecycle
     private final JoinMessageFactory joinMessageFactory;
     private final Config config;
     private final Log log;
-    private final LogProvider logProvider;
 
     @VisibleForTesting
     protected ActorSystemComponents actorSystemComponents;
@@ -68,13 +67,12 @@ public class ActorSystemLifecycle
         this.joinMessageFactory = joinMessageFactory;
         this.config = config;
         this.log = logProvider.getLog( getClass() );
-        this.logProvider = logProvider;
     }
 
     public void createClusterActorSystem()
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
-        Props props = ClusterJoiningActor.props( cluster(), resolver, config, logProvider );
+        Props props = ClusterJoiningActor.props( cluster(), resolver, config );
         applicationActorOf( props, ClusterJoiningActor.NAME ).tell( joinMessageFactory.message(), ActorRef.noSender() );
     }
 

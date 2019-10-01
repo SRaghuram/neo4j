@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.discovery.akka.system;
 
-import akka.actor.AbstractActorWithTimers;
 import akka.actor.Address;
 import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.japi.pf.ReceiveBuilder;
+import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -18,18 +18,16 @@ import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.hostname;
 
-public class ClusterJoiningActor extends AbstractActorWithTimers
+public class ClusterJoiningActor extends AbstractActorWithTimersAndLogging
 {
     static final String AKKA_SCHEME = "akka";
 
-    public static Props props( Cluster cluster, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
+    public static Props props( Cluster cluster, RemoteMembersResolver resolver, Config config )
     {
-        return Props.create( ClusterJoiningActor.class, () -> new ClusterJoiningActor( cluster, resolver, config, logProvider ) );
+        return Props.create( ClusterJoiningActor.class, () -> new ClusterJoiningActor( cluster, resolver, config ) );
     }
 
     public static final String NAME = "joiner";
@@ -38,14 +36,12 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
 
     private final Cluster cluster;
     private final RemoteMembersResolver remoteMembersResolver;
-    private final Log log;
     private final Duration retry;
 
-    private ClusterJoiningActor( Cluster cluster, RemoteMembersResolver remoteMembersResolver, Config config, LogProvider logProvider )
+    private ClusterJoiningActor( Cluster cluster, RemoteMembersResolver remoteMembersResolver, Config config )
     {
         this.cluster = cluster;
         this.remoteMembersResolver = remoteMembersResolver;
-        this.log = logProvider.getLog( getClass() );
         this.retry = config.get( CausalClusteringSettings.cluster_binding_retry_timeout );
     }
 
@@ -54,7 +50,7 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
     {
         cluster.registerOnMemberUp( () ->
         {
-            log.debug( "Join successful, exiting" );
+            log().debug( "Join successful, exiting" );
             getContext().stop( getSelf() );
         } );
     }
@@ -69,11 +65,11 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
 
     private void join( JoinMessage message )
     {
-        log.debug( "Processing: %s", message );
+        log().debug( "Processing: {}", message );
         if ( !message.isReJoin() )
         {
             ArrayList<Address> seedNodes = resolve();
-            log.info( "Joining seed nodes: %s", seedNodes );
+            log().info( "Joining seed nodes: {}", seedNodes );
             cluster.joinSeedNodes( seedNodes );
             startTimer( message );
         }
@@ -84,13 +80,13 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
         }
         else if ( message.head().equals( cluster.selfAddress() ) )
         {
-            log.info( "Not joining to self. Retrying next." );
+            log().info( "Not joining to self. Retrying next." );
             getSelf().tell( message.tailMsg(), getSelf() );
         }
         else
         {
             Address address = message.head();
-            log.info( "Attempting to join: %s", address );
+            log().info( "Attempting to join: {}", address );
             cluster.join( address );
             startTimer( message.tailMsg() );
         }
