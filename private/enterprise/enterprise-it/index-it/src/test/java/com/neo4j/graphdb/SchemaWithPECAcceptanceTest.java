@@ -243,6 +243,7 @@ class SchemaWithPECAcceptanceTest
     {
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             List<String> propertyKeys = new ArrayList<>( Arrays.asList( expectedProperties ) );
             assertEquals( expectedType.name(), constraint.getRelationshipType().name() );
             assertEquals( propertyKeys, Iterables.asList( constraint.getPropertyKeys() ) );
@@ -255,6 +256,7 @@ class SchemaWithPECAcceptanceTest
     {
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             List<String> propertyKeys = new ArrayList<>( Arrays.asList( expectedProperties ) );
             assertEquals( expectedLabel.name(), constraint.getLabel().name() );
             assertEquals( propertyKeys, Iterables.asList( constraint.getPropertyKeys() ) );
@@ -268,6 +270,7 @@ class SchemaWithPECAcceptanceTest
     {
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             List<String> propertyKeys = new ArrayList<>( Arrays.asList( expectedProperties ) );
             assertEquals( name, constraint.getName() );
             assertEquals( expectedLabel.name(), constraint.getLabel().name() );
