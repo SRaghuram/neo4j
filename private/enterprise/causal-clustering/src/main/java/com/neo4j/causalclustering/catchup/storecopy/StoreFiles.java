@@ -58,6 +58,14 @@ public class StoreFiles
         }
     }
 
+    public void delete( LogFiles logFiles )
+    {
+        for ( File txLog : logFiles.logFiles() )
+        {
+            fs.deleteFile( txLog );
+        }
+    }
+
     public void moveTo( File source, DatabaseLayout target, LogFiles logFiles ) throws IOException
     {
         fs.mkdirs( logFiles.logFilesDirectory() );

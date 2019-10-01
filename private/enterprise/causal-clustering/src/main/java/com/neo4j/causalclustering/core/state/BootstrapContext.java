@@ -44,4 +44,9 @@ public class BootstrapContext
         storeFiles.delete( databaseLayout, transactionLogs );
         storeFiles.moveTo( sourceDir, databaseLayout, transactionLogs );
     }
+
+    void removeTransactionLogs()
+    {
+        storeFiles.delete( transactionLogs );
+    }
 }

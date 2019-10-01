@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabasePageCache;
@@ -165,17 +164,7 @@ public class RaftBootstrapper
 
         DatabaseLayout databaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir );
 
-        changeStoreId( databaseLayout );
         bootstrapContext.replaceWith( databaseLayout.databaseDirectory() );
-    }
-
-    private void changeStoreId( DatabaseLayout databaseLayout ) throws IOException
-    {
-        StoreId storeId = MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore() );
-        long creationTime = currentTimeMillis();
-        long randomId = ThreadLocalRandom.current().nextLong();
-        storeId = new StoreId( creationTime, randomId, storeId.getStoreVersion() );
-        MetaDataStore.setStoreId( pageCache, databaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP );
     }
 
     private boolean isStorePresent()
@@ -199,6 +188,9 @@ public class RaftBootstrapper
             }
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
             bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory() );
+
+            // delete transaction logs so they will be recreated with the new store id, they should be empty so it's fine
+            bootstrapContext.removeTransactionLogs();
         }
         finally
         {
@@ -252,10 +244,12 @@ public class RaftBootstrapper
         DatabaseLayout layout = bootstrapContext.databaseLayout();
         try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
         {
+            StoreId storeId = storageEngineFactory.storeId( layout, pageCache );
             TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache );
             LogFiles logFiles = LogFilesBuilder
                     .activeFilesBuilder( layout, fs, databasePageCache )
                     .withConfig( config )
+                    .withStoreId( storeId )
                     .withLastCommittedTransactionIdSupplier( () -> readOnlyTransactionIdStore.getLastClosedTransactionId() - 1 )
                     .build();
 
