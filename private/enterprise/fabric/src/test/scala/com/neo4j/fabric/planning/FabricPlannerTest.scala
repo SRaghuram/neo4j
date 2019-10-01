@@ -9,11 +9,15 @@ import java.net.URI
 import java.time.Duration
 import java.util
 
-import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.{Database, GlobalDriverConfig, Graph}
-import com.neo4j.fabric.planning.FabricQuery.{Apply, ChainedQuery, Direct, LocalQuery, RemoteQuery, UnionQuery}
+import com.neo4j.fabric.pipeline.SignatureResolver
+import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.util.Errors.InvalidQueryException
+import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
+import org.neo4j.configuration.Config
+import org.neo4j.cypher.internal.CypherConfiguration
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery}
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
@@ -27,7 +31,7 @@ import org.scalatest.exceptions.TestFailedException
 import scala.reflect.ClassTag
 
 //noinspection ZeroIndexToHead
-class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
+class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport {
 
   private val shardFoo0 = new Graph(0, URI.create("bolt://foo"), "s0", "shard-name-0", null)
   private val shardFoo1 = new Graph(1, URI.create("bolt://foo"), "s1", "shard-name-1", null)
@@ -39,7 +43,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
   )
   private val params = MapValue.EMPTY
   private val monitors = new Monitors
-  private val planner = FabricPlanner(config, monitors)
+  private val cypherConfig = CypherConfiguration.fromConfig(Config.defaults())
+  private val signatures = new SignatureResolver(() => procedures)
+  private val planner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
   "FROM handling: " - {
 
@@ -462,6 +468,19 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
 
   "Acceptance:" - {
 
+    "a single procedure local query" in {
+      val q =
+        """CALL myProcedure()
+          |""".stripMargin
+
+      planner.plan(q, params)
+        .check(_.asDirect.asLocalSingleQuery.clauses
+          .check(_.size.shouldEqual(2))
+          .check(_ (0).should(matchPattern { case ResolvedCall(_, _, _, _, _) => }))
+          .check(_ (1).shouldEqual(return_(varFor("a").aliased, varFor("b").aliased)))
+        )
+    }
+
     "a plain local query" in {
       val q =
         """MATCH (y)
@@ -571,10 +590,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
           return_(varFor("x").aliased))
         ))
         .check(_.queries(1).asApply.asChainedQuery
-            .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-              with_(literal(2).as("y")),
-              return_(varFor("y").aliased))
-            ))
+          .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            with_(literal(2).as("y")),
+            return_(varFor("y").aliased))
+          ))
           .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
             return_(literal(3).as("z")))
           ))
@@ -663,7 +682,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
   "Cache:" - {
 
     "two equal input strings" in {
-      val newPlanner = FabricPlanner(config, monitors)
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
       val q =
         """WITH 1 AS x
@@ -686,7 +705,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport {
     }
 
     "two equal input strings with different params" in {
-      val newPlanner = FabricPlanner(config, monitors)
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
       val q =
         """WITH 1 AS x

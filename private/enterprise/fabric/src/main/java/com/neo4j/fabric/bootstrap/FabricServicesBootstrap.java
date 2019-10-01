@@ -15,13 +15,16 @@ import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.functions.GraphIdsFunction;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.pipeline.SignatureResolver;
 import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.transaction.TransactionManager;
 
 import java.time.Clock;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.CypherConfiguration;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -53,10 +56,12 @@ public class FabricServicesBootstrap
             serviceBootstrapper.registerService( new FabricLocalExecutor( fabricConfig, fabricDatabaseManager ), FabricLocalExecutor.class );
             serviceBootstrapper.registerService( new TransactionManager( dependencies ), TransactionManager.class );
             var monitors = new Monitors();
-            var planner = serviceBootstrapper.registerService( new FabricPlanner( fabricConfig, monitors ), FabricPlanner.class );
+            var cypherConfig = CypherConfiguration.fromConfig( config );
+            Supplier<GlobalProcedures> proceduresSupplier = () -> dependencies.resolveDependency( GlobalProcedures.class );
+            var signatureResolver = new SignatureResolver( proceduresSupplier );
+            var planner = serviceBootstrapper.registerService( new FabricPlanner( fabricConfig, cypherConfig, monitors, signatureResolver ), FabricPlanner.class );
             var catalog = Catalog.fromConfig( fabricConfig );
-            var fromEvaluation = serviceBootstrapper.registerService( new FromEvaluation( catalog,
-                    () -> dependencies.resolveDependency( GlobalProcedures.class ) ), FromEvaluation.class );
+            var fromEvaluation = serviceBootstrapper.registerService( new FromEvaluation( catalog, proceduresSupplier, signatureResolver), FromEvaluation.class );
             var executor = new FabricExecutor( fabricConfig, planner, fromEvaluation );
             serviceBootstrapper.registerService( executor, FabricExecutor.class );
         }

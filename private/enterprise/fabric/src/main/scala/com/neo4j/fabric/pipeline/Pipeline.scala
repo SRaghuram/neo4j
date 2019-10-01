@@ -6,7 +6,8 @@
 package com.neo4j.fabric.pipeline
 
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
-import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
+import org.neo4j.cypher.internal.compiler.phases.RewriteProcedureCalls
+import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, ProcedureSignatureResolver}
 import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.v4_0.ast.Statement
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{CorrelatedSubQueries, Cypher9Comparability, ExpressionsInViewInvocations, MultipleDatabases, MultipleGraphs}
@@ -18,12 +19,12 @@ import org.neo4j.cypher.internal.v4_0.util.CypherExceptionFactory
 import org.neo4j.monitoring.{Monitors => KernelMonitors}
 
 
-
 object Pipeline {
 
   case class Instance(
     kernelMonitors: KernelMonitors,
     queryText: String,
+    signatures: ProcedureSignatureResolver
   ) {
     private val monitors = WrappedMonitors(kernelMonitors)
     private val exceptionFactory = Neo4jCypherExceptionFactory(queryText, None)
@@ -34,13 +35,14 @@ object Pipeline {
       deprecations,
       prepare,
       semantics,
-      fabricPrepare,
+      fabricPrepare(signatures),
       semantics
     ), context)
 
     val checkAndFinalize = AnalysisPipeline(Seq(
       prepare,
       semantics,
+      namespace,
       rewrite
     ), context)
   }
@@ -77,15 +79,17 @@ object Pipeline {
   private val prepare =
     PreparatoryRewriting(Deprecations.V2)
 
-  private val fabricPrepare =
-    FabricPreparatoryRewriting()
+  private def fabricPrepare(signatures: ProcedureSignatureResolver) =
+    FabricPreparatoryRewriting(signatures)
+
+  private val namespace =
+    Namespacer
 
   private val rewrite =
     AstRewriting(
       sequencer = RewriterStepSequencer.newPlain,
       literalExtraction = Never,
       innerVariableNamer = new GeneratingNamer)
-
 }
 
 trait Pipeline {
@@ -113,7 +117,9 @@ case class AnalysisPipeline(
   }
 }
 
-case class FabricPreparatoryRewriting() extends Phase[BaseContext, BaseState, BaseState] {
+case class FabricPreparatoryRewriting(
+  signatures: ProcedureSignatureResolver
+) extends Phase[BaseContext, BaseState, BaseState] {
   override val phase =
     CompilationPhaseTracer.CompilationPhase.AST_REWRITE
 
@@ -123,7 +129,8 @@ case class FabricPreparatoryRewriting() extends Phase[BaseContext, BaseState, Ba
   override def process(from: BaseState, context: BaseContext): BaseState =
     from.withStatement(from.statement().endoRewrite(
       // we need all return columns for data flow analysis between query segments
-      expandStar(from.semantics())
+      expandStar(from.semantics()) andThen
+        RewriteProcedureCalls.rewriter(signatures)
     ))
 
   override def postConditions: Set[Condition] = Set()

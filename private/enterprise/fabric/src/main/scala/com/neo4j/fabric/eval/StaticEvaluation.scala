@@ -7,6 +7,7 @@ package com.neo4j.fabric.eval
 
 import java.net.URL
 import java.time.Clock
+import java.util.function.Supplier
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.common.DependencyResolver
@@ -34,9 +35,9 @@ import scala.collection.Iterator
 
 object StaticEvaluation {
 
-  class StaticEvaluator(proceduresSupplier: ()=>GlobalProcedures) extends SimpleInternalExpressionEvaluator {
+  class StaticEvaluator(proceduresSupplier: Supplier[GlobalProcedures]) extends SimpleInternalExpressionEvaluator {
     override def queryState(nExpressionSlots: Int, slottedParams: Array[AnyValue]) = new QueryState(
-      query = new StaticQueryContext(proceduresSupplier.apply()),
+      query = new StaticQueryContext(proceduresSupplier.get()),
       resources = null,
       params = slottedParams,
       cursors = null,

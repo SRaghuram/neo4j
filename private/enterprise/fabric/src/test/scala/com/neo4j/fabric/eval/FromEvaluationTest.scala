@@ -9,27 +9,22 @@ import java.net.URI
 import java.time.Duration
 import java.util
 
-import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
 import com.neo4j.fabric.eval.Catalog.RemoteGraph
+import com.neo4j.fabric.pipeline.SignatureResolver
+import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.cypher.internal.v4_0.ast.FromGraph
 import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.TestName
-import org.neo4j.internal.kernel.api.procs.FieldSignature.inputField
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName, UserFunctionSignature}
-import org.neo4j.kernel.api.procedure.{CallableUserFunction, Context}
-import org.neo4j.procedure.impl.GlobalProceduresRegistry
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.parboiled.scala.ReportingParseRunner
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
-class FromEvaluationTest extends FabricTest with TestName {
+class FromEvaluationTest extends FabricTest with ProcedureRegistryTestSupport with TestName {
 
   private val mega0 = new Graph(0L, URI.create("bolt://mega:1111"), "neo4j", "source_of_all_truth", null)
   private val mega1 = new Graph(1L, URI.create("bolt://mega:2222"), "neo4j", null, null)
@@ -63,28 +58,9 @@ class FromEvaluationTest extends FabricTest with TestName {
         ReportingParseRunner(this.FromGraph).run(from).result.get
     }
 
-    private def userFunction(name: String, args: String*)(body: => AnyValue) =
-      new CallableUserFunction.BasicUserFunction(
-        new UserFunctionSignature(
-          new QualifiedName(Array[String](), name),
-          ListBuffer(args: _*).map(inputField(_, Neo4jTypes.NTAny)).asJava,
-          Neo4jTypes.NTAny,
-          null, Array[String](), name, false
-        )
-      ) {
-        override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = body
-      }
-
-    private val procedures = {
-      val reg = new GlobalProceduresRegistry()
-      reg.register(userFunction("const0")(Values.intValue(0)))
-      reg.register(userFunction("const1")(Values.intValue(1)))
-      reg
-    }
-
     private val catalog = Catalog.fromConfig(config)
-
-    private val evaluation = FromEvaluation(catalog, ()=> procedures)
+    private val signatures = new SignatureResolver(() => procedures)
+    private val evaluation = FromEvaluation(catalog, () => procedures, signatures)
 
     def queryFromTestName: String =
       testName.split(":", 2).last.trim

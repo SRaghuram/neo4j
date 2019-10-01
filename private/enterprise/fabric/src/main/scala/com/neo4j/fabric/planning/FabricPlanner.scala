@@ -13,6 +13,7 @@ import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten._
+import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticState, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.ast.{SingleQuery, Statement}
@@ -21,7 +22,7 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
-import org.neo4j.cypher.internal.{CypherPreParser, FullyParsedQuery, PreParser, QueryOptions}
+import org.neo4j.cypher.internal.{CypherConfiguration, CypherPreParser, FullyParsedQuery, PreParser, QueryOptions}
 import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
@@ -34,8 +35,22 @@ object FabricPlanner {
   def setPrintBasePlans(enabled: Boolean): Unit = printBasePlans = enabled
   def setPrintFragments(enabled: Boolean): Unit = printFragments = enabled
 }
-case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
 
+case class FabricPlanner(
+  config: FabricConfig,
+  cypherConfig: CypherConfiguration,
+  monitors: Monitors,
+  signatures: ProcedureSignatureResolver
+) {
+
+  private val preParser = new PreParser(
+    cypherConfig.version,
+    cypherConfig.planner,
+    cypherConfig.runtime,
+    cypherConfig.expressionEngineOption,
+    cypherConfig.operatorEngine,
+    cypherConfig.queryCacheSize,
+  )
   private val catalog = Catalog.fromConfig(config)
   private[planning] val queryCache = new FabricQueryCache()
 
@@ -60,10 +75,9 @@ case class FabricPlanner(config: FabricConfig, monitors: Monitors) {
     query: String,
     parameters: MapValue
   ): PlannerContext = {
-
-    val pipeline = Pipeline.Instance(monitors, query)
-    val state = pipeline.parseAndPrepare.process(query)
-
+    val preParsed = preParser.preParseQuery(query)
+    val pipeline = Pipeline.Instance(monitors, query, signatures)
+    val state = pipeline.parseAndPrepare.process(preParsed.statement)
     PlannerContext(
       original = state.statement(),
       parameters = parameters,
