@@ -17,15 +17,19 @@ import com.neo4j.bench.common.model.Repository;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
+import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 @Command( name = "packaging" )
 public class AnnotatePackagingBuildCommand implements Runnable
 {
-    private static final String CMD_RESULTS_STORE_USER = "--results_store_user";
+    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_USER},
              description = "Username for Neo4j database server that stores benchmarking results",
@@ -33,7 +37,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private String resultsStoreUsername;
 
-    private static final String CMD_RESULTS_STORE_PASSWORD = "--results_store_pass";
+    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_PASSWORD},
              description = "Password for Neo4j database server that stores benchmarking results",
@@ -41,7 +45,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private String resultsStorePassword;
 
-    private static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
+    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_URI},
              description = "URI to Neo4j database server for storing benchmarking results",
@@ -49,7 +53,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private URI resultsStoreUri;
 
-    private static final String CMD_PACKAGING_BUILD_ID = "--packaging_build_id";
+    private static final String CMD_PACKAGING_BUILD_ID = "--packaging-build-id";
     @Option( type = OptionType.COMMAND,
              name = {CMD_PACKAGING_BUILD_ID},
              description = "ID of packaging build that contained the commit to annotate",
@@ -57,7 +61,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private long packagingBuildId;
 
-    private static final String CMD_ANNOTATION_COMMENT = "--annotation_comment";
+    private static final String CMD_ANNOTATION_COMMENT = "--annotation-comment";
     @Option( type = OptionType.COMMAND,
              name = {CMD_ANNOTATION_COMMENT},
              description = "Annotation comment",
@@ -65,7 +69,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private String annotationComment;
 
-    private static final String CMD_ANNOTATION_AUTHOR = "--annotation_author";
+    private static final String CMD_ANNOTATION_AUTHOR = "--annotation-author";
     @Option( type = OptionType.COMMAND,
              name = {CMD_ANNOTATION_AUTHOR},
              description = "Annotation author",
@@ -73,7 +77,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private String annotationAuthor;
 
-    private static final String CMD_NEO4J_SERIES = "--neo4j_series";
+    private static final String CMD_NEO4J_SERIES = "--neo4j-series";
     @Option( type = OptionType.COMMAND,
              name = {CMD_NEO4J_SERIES},
              description = "Neo4j Series, e.g., '3.4', '3.5', etc.",
@@ -81,21 +85,21 @@ public class AnnotatePackagingBuildCommand implements Runnable
     @Required
     private String neo4jSeries;
 
-    private static final String CMD_BENCHMARK_TOOLS = "--benchmark_tools";
+    private static final String CMD_BENCHMARK_TOOLS = "--benchmark-tools";
     @Option( type = OptionType.COMMAND,
              name = {CMD_BENCHMARK_TOOLS},
              description = "Annotates the latest test run for each benchmark tool in this comma-separated list, e.g., 'micro,ldbc,macro'",
              title = "Benchmark Tools" )
     private String benchmarkToolNames;
 
-    private static final String CMD_ANNOTATE_TEST_RUNS = "--annotate_test_runs";
+    private static final String CMD_ANNOTATE_TEST_RUNS = "--annotate-test-runs";
     @Option( type = OptionType.COMMAND,
              name = {CMD_ANNOTATE_TEST_RUNS},
              description = "If flag is set, annotations will be created on :TestRun nodes",
              title = "Annotate Test Runs" )
     private boolean doTestRunAnnotations;
 
-    private static final String CMD_ANNOTATE_METRICS = "--annotate_metrics";
+    private static final String CMD_ANNOTATE_METRICS = "--annotate-metrics";
     @Option( type = OptionType.COMMAND,
              name = {CMD_ANNOTATE_METRICS},
              description = "If flag is set, annotations will be created on :Metrics nodes",
@@ -121,7 +125,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
                                                              annotationAuthor,
                                                              neo4jSeries,
                                                              benchmarkTools,
-                                                             getAnnotationTarget() );
+                                                             getAnnotationTargets() );
             client.execute( query );
         }
         catch ( Exception e )
@@ -130,24 +134,18 @@ public class AnnotatePackagingBuildCommand implements Runnable
         }
     }
 
-    private AnnotationTarget getAnnotationTarget()
+    private Set<AnnotationTarget> getAnnotationTargets()
     {
-        if ( doTestRunAnnotations && doMetricsAnnotations )
+        Set<AnnotationTarget> annotationTargets = new HashSet<>();
+        if ( doTestRunAnnotations )
         {
-            return AnnotationTarget.BOTH_TEST_RUN_AND_METRICS;
+            annotationTargets.add( TEST_RUN );
         }
-        else if ( !doTestRunAnnotations && !doMetricsAnnotations )
+        if ( doMetricsAnnotations )
         {
-            throw new IllegalStateException( "Must annotate at least one of: TestRun, Metrics" );
+            annotationTargets.add( METRICS );
         }
-        else if ( doTestRunAnnotations )
-        {
-            return AnnotationTarget.ONLY_TEST_RUN;
-        }
-        else
-        {
-            return AnnotationTarget.ONLY_METRICS;
-        }
+        return annotationTargets;
     }
 
     public static List<String> argsFor(
@@ -159,7 +157,7 @@ public class AnnotatePackagingBuildCommand implements Runnable
             String annotationAuthor,
             String neo4jSeries,
             List<Repository> benchmarkTools,
-            AnnotationTarget annotationTarget )
+            Set<AnnotationTarget> annotationTargets )
     {
         ArrayList<String> args = Lists.newArrayList( "annotate",
                                                      "packaging",
@@ -182,18 +180,13 @@ public class AnnotatePackagingBuildCommand implements Runnable
             args.add( CMD_BENCHMARK_TOOLS );
             args.add( benchmarkTools.stream().map( Repository::projectName ).collect( joining( "," ) ) );
         }
-        switch ( annotationTarget )
+        if ( annotationTargets.contains( TEST_RUN ) )
         {
-        case BOTH_TEST_RUN_AND_METRICS:
             args.add( CMD_ANNOTATE_TEST_RUNS );
+        }
+        if ( annotationTargets.contains( METRICS ) )
+        {
             args.add( CMD_ANNOTATE_METRICS );
-            break;
-        case ONLY_TEST_RUN:
-            args.add( CMD_ANNOTATE_TEST_RUNS );
-            break;
-        case ONLY_METRICS:
-            args.add( CMD_ANNOTATE_METRICS );
-            break;
         }
         return args;
     }
