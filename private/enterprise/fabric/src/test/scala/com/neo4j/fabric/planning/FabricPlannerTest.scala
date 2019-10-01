@@ -35,7 +35,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   private val shardFoo0 = new Graph(0, URI.create("bolt://foo"), "s0", "shard-name-0", null)
   private val shardFoo1 = new Graph(1, URI.create("bolt://foo"), "s1", "shard-name-1", null)
   private val shardBar0 = new Graph(2, URI.create("bolt://bar"), "neo4j", "shard-name-2", null)
-  val config = new FabricConfig(
+  private val config = new FabricConfig(
     true,
     new Database("mega", util.Set.of(shardFoo0, shardFoo1, shardBar0)),
     util.List.of(), 0L, Duration.ZERO, new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 1, null), new FabricConfig.DataStream(300, 1000, 50)
@@ -58,8 +58,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(0).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
         .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
         .check(_.queries(2).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
@@ -75,8 +74,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(0).asDirect.asLocalSingleQuery)
         .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
         .check(_.queries(2).asDirect.asLocalSingleQuery)
@@ -93,8 +91,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(0).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
         .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("h"))))
         .check(_.queries(2).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
@@ -197,7 +194,6 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
   }
 
-
   "Data flow: " - {
 
     "local subqueries as apply" in {
@@ -209,8 +205,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN y
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           return_(literal(3).as("z"))
         )))
@@ -225,8 +220,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN y
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.last
           .shouldEqual(return_(varFor("x").as("x"), varFor("y").as("y")))
         )
@@ -242,8 +236,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           with_(literal(2).as("y")),
           create(nodePat("z", "A"))
@@ -261,8 +254,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y, z
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           input(varFor("x")),
           with_(varFor("x").as("x")),
@@ -284,8 +276,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y, z
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.head.shouldEqual(
           input(varFor("x"), varFor("y"), varFor("z"))
         ))
@@ -304,8 +295,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asChainedQuery
           .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
             return_(literal(3).as("z")))
@@ -328,8 +318,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y, x1, y1
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqual(Seq(
           with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y")),
           with_(varFor("x").aliased, varFor("y").aliased),
@@ -348,8 +337,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y, z
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@x", CTAny).as("x")),
           with_(varFor("x").aliased),
@@ -375,8 +363,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y, z
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asChainedQuery
           .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
             return_(literal(3).as("z"))
@@ -398,8 +385,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y, z
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           call(Seq("some"), "procedure", yields = Some(Seq(varFor("z"), varFor("y")))),
           return_(varFor("y").aliased, varFor("z").aliased)
@@ -420,8 +406,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           create(nodePat("x", "X"))
         )))
@@ -445,8 +430,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x, y
           |""".stripMargin
 
-      val pl = planner.init(q, params)
-      pl.fabricQuery.asChainedQuery
+      planner.plan(q, params).query.asChainedQuery
         .check(_.queries(0).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(literal(1).as("x")),
           create(nodePat("y")),
@@ -472,7 +456,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """CALL my.ns.myProcedure()
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           call(Seq("my", "ns"), "myProcedure", Some(Seq()), Some(Seq(varFor("a"), varFor("b")))),
           return_(varFor("a").aliased, varFor("b").aliased),
@@ -484,7 +468,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """CALL my.ns.myProcedure
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           call(Seq("my", "ns"), "myProcedure", Some(Seq()), Some(Seq(varFor("a"), varFor("b")))),
           return_(varFor("a").aliased, varFor("b").aliased),
@@ -496,7 +480,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """CALL my.ns.myProcedure2(1)
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           call(Seq("my", "ns"), "myProcedure2", Some(Seq(literal(1))), Some(Seq(varFor("a"), varFor("b")))),
           return_(varFor("a").aliased, varFor("b").aliased),
@@ -508,7 +492,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """CALL unknownProcedure() YIELD x, y
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           call(Seq(), "unknownProcedure", Some(Seq()), Some(Seq(varFor("x"), varFor("y")))),
           return_(varFor("x").aliased, varFor("y").aliased),
@@ -520,7 +504,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """RETURN const0() AS x
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           return_(function("const0").as("x"))
         )))
@@ -531,7 +515,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """RETURN my.ns.const0(1) AS x
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           return_(function(Seq("my", "ns"), "const0", literal(1)).as("x"))
         )))
@@ -542,209 +526,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         """RETURN my.unknown() AS x
           |""".stripMargin
 
-      planner.plan(q, params)
+      planner.plan(q, params).query
         .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           return_(function(Seq("my"), "unknown").as("x"))
-        )))
-    }
-  }
-
-  "Acceptance:" - {
-
-    "a plain local query" in {
-      val q =
-        """MATCH (y)
-          |RETURN y
-          """.stripMargin
-
-      planner.plan(q, params)
-        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          match_(nodePat("y")), return_(varFor("y").aliased)
-        )))
-
-    }
-
-    "a plain shard query" in {
-      val q =
-        """FROM mega.shard0
-          |MATCH (y)
-          |RETURN y
-          """.stripMargin
-
-      planner
-        .plan(q, params).asDirect.asShardQuery
-        .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
-        .check(_.query.part
-          .as[SingleQuery].clauses.shouldEqual(Seq(match_(nodePat("y")), return_(varFor("y").aliased)))
-        )
-    }
-
-    "a simple composite query" in {
-      val q =
-        """CALL {
-          |  FROM mega.shard0
-          |  MATCH (y)
-          |  RETURN y
-          |}
-          |RETURN y
-          """.stripMargin
-
-      planner
-        .plan(q, params).asChainedQuery
-        .check(_.queries(0).asApply.asDirect.asShardQuery
-          .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
-          .check(_.asShardSingleQuery.clauses.shouldEqual(
-            Seq(match_(nodePat("y")), return_(varFor("y").aliased))
-          ))
-        )
-        .check(_.queries(1).asDirect.asLocalSingleQuery.clauses.shouldEqual(
-          Seq(input(varFor("y")), return_(varFor("y").aliased))
-        ))
-    }
-
-    "a flat composite query" in {
-      val q =
-        """UNWIND [1, 2] AS x
-          |CALL {
-          |  FROM mega.shard(x)
-          |  MATCH (y)
-          |  RETURN y
-          |}
-          |CALL {
-          |  FROM mega.shard(y)
-          |  RETURN 1 AS z, 2 AS w
-          |}
-          |RETURN x, y, z, w
-          """.stripMargin
-
-      planner.plan(q, params).asChainedQuery
-        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          unwind(listOf(literalInt(1), literalInt(2)), varFor("x")),
-          return_(varFor("x").aliased))
-        ))
-        .check(_.queries(1).asApply.asDirect.asShardQuery
-          .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
-          .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
-            match_(nodePat("y")),
-            return_(varFor("y").aliased)
-          )))
-        )
-        .check(_.queries(2).asApply.asDirect.asShardQuery
-          .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
-          .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
-            return_(literalInt(1).as("z"), literal(2).as("w"))
-          )))
-        )
-        .check(_.queries(3).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("x"), varFor("y"), varFor("z"), varFor("w")),
-          return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased, varFor("w").aliased)
-        )))
-    }
-
-    "a nested composite query" in {
-      val q =
-        """WITH 1 AS x
-          |CALL {
-          |  WITH 2 AS y
-          |  CALL {
-          |    RETURN 3 AS z
-          |  }
-          |  RETURN y, z
-          |}
-          |RETURN x, y, z
-          """.stripMargin
-
-      planner.plan(q, params).asChainedQuery
-        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          with_(literal(1).as("x")),
-          return_(varFor("x").aliased))
-        ))
-        .check(_.queries(1).asApply.asChainedQuery
-          .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-            with_(literal(2).as("y")),
-            return_(varFor("y").aliased))
-          ))
-          .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-            return_(literal(3).as("z")))
-          ))
-          .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-            input(varFor("y"), varFor("z")),
-            return_(varFor("y").aliased, varFor("z").aliased))
-          ))
-        )
-        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("x"), varFor("y"), varFor("z")),
-          return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased)
-        )))
-    }
-
-    "a write query" in {
-      val q =
-        """
-          |FROM mega.shard0
-          |CREATE (y:Foo)
-          """.stripMargin
-
-      planner
-        .plan(q, params).asDirect.asShardQuery
-        .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
-        .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
-          create(nodePat("y", "Foo"))
-        )))
-    }
-
-    "an outer union query" in {
-      val q =
-        """RETURN 1 AS x
-          |UNION
-          |RETURN 2 AS x
-          """.stripMargin
-
-      planner
-        .plan(q, params)
-        .as[UnionQuery]
-        .check(_.distinct.shouldEqual(true))
-        .check(_.lhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          return_(literalInt(1).as("x"))
-        )))
-        .check(_.rhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          return_(literalInt(2).as("x"))
-        )))
-    }
-
-    "an inner union query" in {
-      val q =
-        """WITH 1 AS x
-          |CALL {
-          |  FROM g
-          |  RETURN 1 AS y
-          |  UNION
-          |  WITH x
-          |  RETURN 2 AS y
-          |}
-          |RETURN x, y
-          """.stripMargin
-
-      planner
-        .plan(q, params).asChainedQuery
-        .check(_.queries(0).asDirect.asLocalSingleQuery)
-        .check(_.queries(1).asApply.as[UnionQuery]
-          .check(_.distinct.shouldEqual(true))
-          .check(_.lhs.asDirect.asShardQuery
-            .check(_.from.expression.shouldEqual(varFor("g")))
-            .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
-              return_(literalInt(1).as("y"))
-            )))
-          )
-          .check(_.rhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-            input(varFor("x")),
-            with_(varFor("x").aliased),
-            return_(literalInt(2).as("y"))
-          )))
-        )
-        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("x"), varFor("y")),
-          return_(varFor("x").aliased, varFor("y").aliased)
         )))
     }
   }
@@ -798,6 +582,200 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
   }
 
+  "Acceptance:" - {
+
+    "a plain local query" in {
+      val q =
+        """MATCH (y)
+          |RETURN y
+          """.stripMargin
+
+      planner.plan(q, params).query
+        .check(_.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          match_(nodePat("y")), return_(varFor("y").aliased)
+        )))
+
+    }
+
+    "a plain shard query" in {
+      val q =
+        """FROM mega.shard0
+          |MATCH (y)
+          |RETURN y
+          """.stripMargin
+
+      planner.plan(q, params).query.asDirect.asShardQuery
+        .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+        .check(_.query.part
+          .as[SingleQuery].clauses.shouldEqual(Seq(match_(nodePat("y")), return_(varFor("y").aliased)))
+        )
+    }
+
+    "a simple composite query" in {
+      val q =
+        """CALL {
+          |  FROM mega.shard0
+          |  MATCH (y)
+          |  RETURN y
+          |}
+          |RETURN y
+          """.stripMargin
+
+      planner.plan(q, params).query.asChainedQuery
+        .check(_.queries(0).asApply.asDirect.asShardQuery
+          .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+          .check(_.asShardSingleQuery.clauses.shouldEqual(
+            Seq(match_(nodePat("y")), return_(varFor("y").aliased))
+          ))
+        )
+        .check(_.queries(1).asDirect.asLocalSingleQuery.clauses.shouldEqual(
+          Seq(input(varFor("y")), return_(varFor("y").aliased))
+        ))
+    }
+
+    "a flat composite query" in {
+      val q =
+        """UNWIND [1, 2] AS x
+          |CALL {
+          |  FROM mega.shard(x)
+          |  MATCH (y)
+          |  RETURN y
+          |}
+          |CALL {
+          |  FROM mega.shard(y)
+          |  RETURN 1 AS z, 2 AS w
+          |}
+          |RETURN x, y, z, w
+          """.stripMargin
+
+      planner.plan(q, params).query.asChainedQuery
+        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          unwind(listOf(literalInt(1), literalInt(2)), varFor("x")),
+          return_(varFor("x").aliased))
+        ))
+        .check(_.queries(1).asApply.asDirect.asShardQuery
+          .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
+          .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
+            match_(nodePat("y")),
+            return_(varFor("y").aliased)
+          )))
+        )
+        .check(_.queries(2).asApply.asDirect.asShardQuery
+          .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
+          .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
+            return_(literalInt(1).as("z"), literal(2).as("w"))
+          )))
+        )
+        .check(_.queries(3).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          input(varFor("x"), varFor("y"), varFor("z"), varFor("w")),
+          return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased, varFor("w").aliased)
+        )))
+    }
+
+    "a nested composite query" in {
+      val q =
+        """WITH 1 AS x
+          |CALL {
+          |  WITH 2 AS y
+          |  CALL {
+          |    RETURN 3 AS z
+          |  }
+          |  RETURN y, z
+          |}
+          |RETURN x, y, z
+          """.stripMargin
+
+      planner.plan(q, params).query.asChainedQuery
+        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          with_(literal(1).as("x")),
+          return_(varFor("x").aliased))
+        ))
+        .check(_.queries(1).asApply.asChainedQuery
+          .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            with_(literal(2).as("y")),
+            return_(varFor("y").aliased))
+          ))
+          .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            return_(literal(3).as("z")))
+          ))
+          .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            input(varFor("y"), varFor("z")),
+            return_(varFor("y").aliased, varFor("z").aliased))
+          ))
+        )
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          input(varFor("x"), varFor("y"), varFor("z")),
+          return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased)
+        )))
+    }
+
+    "a write query" in {
+      val q =
+        """
+          |FROM mega.shard0
+          |CREATE (y:Foo)
+          """.stripMargin
+
+      planner.plan(q, params).query.asDirect.asShardQuery
+        .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+        .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
+          create(nodePat("y", "Foo"))
+        )))
+    }
+
+    "an outer union query" in {
+      val q =
+        """RETURN 1 AS x
+          |UNION
+          |RETURN 2 AS x
+          """.stripMargin
+
+      planner.plan(q, params).query
+        .as[UnionQuery]
+        .check(_.distinct.shouldEqual(true))
+        .check(_.lhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(literalInt(1).as("x"))
+        )))
+        .check(_.rhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          return_(literalInt(2).as("x"))
+        )))
+    }
+
+    "an inner union query" in {
+      val q =
+        """WITH 1 AS x
+          |CALL {
+          |  FROM g
+          |  RETURN 1 AS y
+          |  UNION
+          |  WITH x
+          |  RETURN 2 AS y
+          |}
+          |RETURN x, y
+          """.stripMargin
+
+      planner.plan(q, params).query.asChainedQuery
+        .check(_.queries(0).asDirect.asLocalSingleQuery)
+        .check(_.queries(1).asApply.as[UnionQuery]
+          .check(_.distinct.shouldEqual(true))
+          .check(_.lhs.asDirect.asShardQuery
+            .check(_.from.expression.shouldEqual(varFor("g")))
+            .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
+              return_(literalInt(1).as("y"))
+            )))
+          )
+          .check(_.rhs.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+            input(varFor("x")),
+            with_(varFor("x").aliased),
+            return_(literalInt(2).as("y"))
+          )))
+        )
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          input(varFor("x"), varFor("y")),
+          return_(varFor("x").aliased, varFor("y").aliased)
+        )))
+    }
+  }
 
   object ClauseOps {
     def pretty = Prettifier(ExpressionStringifier())
