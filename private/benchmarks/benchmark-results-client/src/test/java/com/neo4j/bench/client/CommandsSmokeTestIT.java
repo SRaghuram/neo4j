@@ -5,11 +5,13 @@
  */
 package com.neo4j.bench.client;
 
+import com.google.common.collect.Lists;
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.tool.macro.Deployment;
@@ -29,6 +31,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.EnterpriseNeo4jRule;
 import org.neo4j.harness.junit.Neo4jRule;
@@ -61,6 +64,46 @@ public class CommandsSmokeTestIT
     public final RuleChain ruleChain = RuleChain.outerRule( temporaryFolder ).around( neo4j );
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
+
+    @Test
+    public void shouldRunAnnotateTestRunsCommand() throws Exception
+    {
+        GenerationResult generationResult = createSyntheticResultsStore();
+
+        List<Long> packagingBuildIds = generationResult.packagingBuildIds();
+        // select lowest parent build ID, to maximize probability that every tool has at least one test run with higher parent build
+        Long packagingBuildId = packagingBuildIds.get( 0 );
+        List<Repository> benchmarkTools = Lists.newArrayList( MICRO_BENCH, MACRO_BENCH, LDBC_BENCH );
+
+        long testRunAnnotationCountBefore = testRunAnnotationCount();
+
+        String randomComment = "comment " + UUID.randomUUID().toString();
+        String randomAuthor = "author " + UUID.randomUUID().toString();
+        List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
+                                                                   PASSWORD,
+                                                                   neo4j.boltURI(),
+                                                                   packagingBuildId,
+                                                                   randomComment,
+                                                                   randomAuthor,
+                                                                   "3.0",
+                                                                   benchmarkTools );
+
+        Main.main( args.stream().toArray( String[]::new ) );
+
+        long testRunAnnotationCountAfter = testRunAnnotationCount();
+        assertThat("Should create exactly one annotation per benchmark tool - on the latest test run (after provided parent build ID) for that tool",
+                   testRunAnnotationCountAfter,
+                   equalTo( testRunAnnotationCountBefore + benchmarkTools.size() ) );
+    }
+
+    private long testRunAnnotationCount()
+    {
+        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        {
+            StatementResult result = client.session().run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS testRunAnnotations" );
+            return result.next().get( "testRunAnnotations" ).asLong();
+        }
+    }
 
     @Test
     public void shouldRunCompareVersionsCommand() throws Exception
