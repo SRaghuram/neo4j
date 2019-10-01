@@ -19,7 +19,6 @@ import org.mockito.Mockito
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
-import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -110,9 +109,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val self = Address("akka", system.name, "myHost", 1234 )
     Mockito.when(cluster.selfAddress).thenReturn(self)
 
-    val logProvider = NullLogProvider.getInstance()
-
-    val props = ClusterJoiningActor.props(cluster, resolver, config, logProvider)
+    val props = ClusterJoiningActor.props(cluster, resolver, config)
 
     val actorRef = system.actorOf(props)
   }
