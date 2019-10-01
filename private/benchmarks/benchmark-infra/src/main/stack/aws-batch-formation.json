@@ -373,9 +373,9 @@
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
             "Ref::--worker-artifact-uri",
+            "run-worker",
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
-            "run-worker",
 
             "--workload",
             "Ref::--workload",
@@ -485,9 +485,9 @@
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
             "Ref::--worker-artifact-uri",
+            "run-worker",
             "--artifact-base-uri",
             "Ref::--artifact-base-uri",
-            "run-worker",
 
             "--workload",
             "Ref::--workload",
