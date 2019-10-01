@@ -365,7 +365,7 @@ public class DbmsReconciler implements DatabaseStateService
             releaseLockOn( databaseName );
             var errorExists = throwable != null || result.error() != null;
             var outcome = errorExists ? "failed" : "succeeded";
-            log.debug( "Releasing lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
+            log.debug( "Released lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
                     result.desiredState().operationalState().description() );
         }
     }
