@@ -318,7 +318,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       pipeline.inputBuffer = delegate
       pipeline
     } else {
-      throw new UnsupportedOperationException("not implemented")
+      throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
     }
   }
 
@@ -351,7 +351,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           pipeline.inputBuffer = argumentStateBuffer
           pipeline
         } else {
-          throw new UnsupportedOperationException("not implemented")
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
       case _: Optional =>
@@ -361,7 +361,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           pipeline.inputBuffer = optionalMorselBuffer
           pipeline
         } else {
-          throw new UnsupportedOperationException("not implemented")
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
       case _: Limit =>
@@ -442,7 +442,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           pipeline.inputBuffer = buffer
           pipeline
         } else {
-          throw new UnsupportedOperationException("not implemented")
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
       case _: plans.NodeHashJoin =>
@@ -452,7 +452,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           pipeline.inputBuffer = buffer
           pipeline
         } else {
-          throw new UnsupportedOperationException("not implemented")
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
     }
   }
