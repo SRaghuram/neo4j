@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.TokenRead;
@@ -20,7 +21,6 @@ import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.util.dbstructure.DbStructureVisitor;
 import org.neo4j.kernel.impl.util.dbstructure.GraphDbStructureGuide;
@@ -140,7 +140,8 @@ class GraphDbStructureGuideTest
         commitAndReOpen();
 
         ConstraintDescriptor constraint = createUniqueConstraint( labelId, pkId );
-        IndexProviderDescriptor indexProvider = new IndexProviderDescriptor( "native-btree", "1.0" );
+        GraphDatabaseSettings.SchemaIndex providerSetting = GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10;
+        IndexProviderDescriptor indexProvider = new IndexProviderDescriptor( providerSetting.providerKey(), providerSetting.providerVersion() );
         IndexDescriptor descriptor = IndexPrototype.uniqueForSchema( constraint.schema(), indexProvider ).withName( constraint.getName() ).materialise( 1 );
 
         // WHEN
