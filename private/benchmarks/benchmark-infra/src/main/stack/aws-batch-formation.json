@@ -34,8 +34,8 @@
             "Ref": "AMIID"
           },
           "Ec2KeyPair": "benchmark",
-          "MinvCpus": 8,
-          "DesiredvCpus": 0,
+          "MinvCpus": 0,
+          "DesiredvCpus": 8,
           "MaxvCpus": 256,
           "InstanceTypes": [
             "m5d.2xlarge"
@@ -73,8 +73,8 @@
             "Ref": "AMIID"
           },
           "Ec2KeyPair": "benchmark",
-          "MinvCpus": 4,
-          "DesiredvCpus": 0,
+          "MinvCpus": 0,
+          "DesiredvCpus": 4,
           "MaxvCpus": 256,
           "InstanceTypes": [
             "m5d.large"
