@@ -25,7 +25,6 @@ import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
-import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
@@ -33,7 +32,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     private final Config config;
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final MemberId myself;
-    private final Log log;
     private final TopologyState topologyState;
 
     public AkkaTopologyClient( Config config, LogProvider logProvider, MemberId myself, ActorSystemLifecycle actorSystemLifecycle )
@@ -42,7 +40,6 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         this.myself = myself;
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.topologyState = new TopologyState( config, logProvider, ignored -> {} );
-        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
