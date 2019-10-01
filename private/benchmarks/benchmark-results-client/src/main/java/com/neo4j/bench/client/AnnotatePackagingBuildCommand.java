@@ -10,7 +10,8 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.client.queries.annotation.AnnotateTestRuns;
+import com.neo4j.bench.client.queries.annotation.CreateAnnotations;
+import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.common.model.Repository;
 
 import java.net.URI;
@@ -87,6 +88,20 @@ public class AnnotatePackagingBuildCommand implements Runnable
              title = "Benchmark Tools" )
     private String benchmarkToolNames;
 
+    private static final String CMD_ANNOTATE_TEST_RUNS = "--annotate_test_runs";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_ANNOTATE_TEST_RUNS},
+             description = "If flag is set, annotations will be created on :TestRun nodes",
+             title = "Annotate Test Runs" )
+    private boolean doTestRunAnnotations;
+
+    private static final String CMD_ANNOTATE_METRICS = "--annotate_metrics";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_ANNOTATE_METRICS},
+             description = "If flag is set, annotations will be created on :Metrics nodes",
+             title = "Annotate Test Runs" )
+    private boolean doMetricsAnnotations;
+
     @Override
     public void run()
     {
@@ -98,19 +113,40 @@ public class AnnotatePackagingBuildCommand implements Runnable
         {
             List<Repository> benchmarkTools = benchmarkToolNames == null
                                               // create annotation for all (supported) tools
-                                              ? Arrays.stream( Repository.values() ).filter( AnnotateTestRuns::isSupportedTool ).collect( toList() )
+                                              ? Arrays.stream( Repository.values() ).filter( CreateAnnotations::isSupportedTool ).collect( toList() )
                                               // create annotation for selected tools
                                               : Arrays.stream( benchmarkToolNames.split( "," ) ).map( Repository::forName ).collect( toList() );
-            AnnotateTestRuns query = new AnnotateTestRuns( packagingBuildId,
-                                                           annotationComment,
-                                                           annotationAuthor,
-                                                           neo4jSeries,
-                                                           benchmarkTools );
+            CreateAnnotations query = new CreateAnnotations( packagingBuildId,
+                                                             annotationComment,
+                                                             annotationAuthor,
+                                                             neo4jSeries,
+                                                             benchmarkTools,
+                                                             getAnnotationTarget() );
             client.execute( query );
         }
         catch ( Exception e )
         {
             throw new RuntimeException( "Error creating annotations", e );
+        }
+    }
+
+    private AnnotationTarget getAnnotationTarget()
+    {
+        if ( doTestRunAnnotations && doMetricsAnnotations )
+        {
+            return AnnotationTarget.BOTH_TEST_RUN_AND_METRICS;
+        }
+        else if ( !doTestRunAnnotations && !doMetricsAnnotations )
+        {
+            throw new IllegalStateException( "Must annotate at least one of: TestRun, Metrics" );
+        }
+        else if ( doTestRunAnnotations )
+        {
+            return AnnotationTarget.ONLY_TEST_RUN;
+        }
+        else
+        {
+            return AnnotationTarget.ONLY_METRICS;
         }
     }
 
@@ -122,7 +158,8 @@ public class AnnotatePackagingBuildCommand implements Runnable
             String annotationComment,
             String annotationAuthor,
             String neo4jSeries,
-            List<Repository> benchmarkTools )
+            List<Repository> benchmarkTools,
+            AnnotationTarget annotationTarget )
     {
         ArrayList<String> args = Lists.newArrayList( "annotate",
                                                      "packaging",
@@ -144,6 +181,19 @@ public class AnnotatePackagingBuildCommand implements Runnable
         {
             args.add( CMD_BENCHMARK_TOOLS );
             args.add( benchmarkTools.stream().map( Repository::projectName ).collect( joining( "," ) ) );
+        }
+        switch ( annotationTarget )
+        {
+        case BOTH_TEST_RUN_AND_METRICS:
+            args.add( CMD_ANNOTATE_TEST_RUNS );
+            args.add( CMD_ANNOTATE_METRICS );
+            break;
+        case ONLY_TEST_RUN:
+            args.add( CMD_ANNOTATE_TEST_RUNS );
+            break;
+        case ONLY_METRICS:
+            args.add( CMD_ANNOTATE_METRICS );
+            break;
         }
         return args;
     }
