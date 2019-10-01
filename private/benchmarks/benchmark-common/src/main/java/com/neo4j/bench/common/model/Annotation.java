@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.generateUniqueId;
 
@@ -19,6 +20,11 @@ public class Annotation
     public static final String DATE = "date";
     public static final String EVENT_ID = "event_id";
     public static final String AUTHOR = "author";
+
+    public static Annotation create( String comment, String author )
+    {
+        return new Annotation( comment, System.currentTimeMillis(), UUID.randomUUID().toString(), author );
+    }
 
     private final String comment;
     private final long date;

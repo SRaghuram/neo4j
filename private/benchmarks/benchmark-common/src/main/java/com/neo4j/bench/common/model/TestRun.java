@@ -83,6 +83,11 @@ public class TestRun
         return dateUtc;
     }
 
+    public long parentBuild()
+    {
+        return parentBuild;
+    }
+
     public long build()
     {
         return build;
