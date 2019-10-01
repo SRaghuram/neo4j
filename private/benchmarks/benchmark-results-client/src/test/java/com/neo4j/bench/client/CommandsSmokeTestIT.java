@@ -8,6 +8,7 @@ package com.neo4j.bench.client;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
+import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -65,6 +66,13 @@ public class CommandsSmokeTestIT
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
+    private final ToolBenchGroup[] toolBenchGroups = {ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
+                                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
+                                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
+                                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
+                                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
+                                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) )};
+
     @Test
     public void shouldRunAnnotateTestRunsCommand() throws Exception
     {
@@ -76,24 +84,73 @@ public class CommandsSmokeTestIT
         List<Repository> benchmarkTools = Lists.newArrayList( MICRO_BENCH, MACRO_BENCH, LDBC_BENCH );
 
         long testRunAnnotationCountBefore = testRunAnnotationCount();
+        long metricsAnnotationCountBefore = metricsAnnotationCount();
 
-        String randomComment = "comment " + UUID.randomUUID().toString();
-        String randomAuthor = "author " + UUID.randomUUID().toString();
-        List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
-                                                                   PASSWORD,
-                                                                   neo4j.boltURI(),
-                                                                   packagingBuildId,
-                                                                   randomComment,
-                                                                   randomAuthor,
-                                                                   "3.0",
-                                                                   benchmarkTools );
+        {
+            List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
+                                                                       PASSWORD,
+                                                                       neo4j.boltURI(),
+                                                                       packagingBuildId,
+                                                                       "comment " + UUID.randomUUID(),
+                                                                       "author " + UUID.randomUUID(),
+                                                                       "3.0",
+                                                                       benchmarkTools,
+                                                                       AnnotationTarget.ONLY_TEST_RUN );
+            Main.main( args.stream().toArray( String[]::new ) );
+        }
 
-        Main.main( args.stream().toArray( String[]::new ) );
+        long testRunAnnotationCountAfter1 = testRunAnnotationCount();
+        long metricsAnnotationCountAfter1 = metricsAnnotationCount();
+        assertThat( "Should create exactly one annotation per benchmark tool - on the latest test run (after provided parent build ID) for that tool",
+                    testRunAnnotationCountAfter1,
+                    equalTo( testRunAnnotationCountBefore + benchmarkTools.size() ) );
+        assertThat( "Should not have created any more :Metrics annotations at this point",
+                    metricsAnnotationCountAfter1,
+                    equalTo( metricsAnnotationCountBefore ) );
 
-        long testRunAnnotationCountAfter = testRunAnnotationCount();
-        assertThat("Should create exactly one annotation per benchmark tool - on the latest test run (after provided parent build ID) for that tool",
-                   testRunAnnotationCountAfter,
-                   equalTo( testRunAnnotationCountBefore + benchmarkTools.size() ) );
+        {
+            List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
+                                                                       PASSWORD,
+                                                                       neo4j.boltURI(),
+                                                                       packagingBuildId,
+                                                                       "comment " + UUID.randomUUID(),
+                                                                       "author " + UUID.randomUUID(),
+                                                                       "3.0",
+                                                                       benchmarkTools,
+                                                                       AnnotationTarget.ONLY_METRICS );
+            Main.main( args.stream().toArray( String[]::new ) );
+        }
+
+        long testRunAnnotationCountAfter2 = testRunAnnotationCount();
+        long metricsAnnotationCountAfter2 = metricsAnnotationCount();
+        assertThat( "Should not have created any more :TestRun annotations at this point",
+                    testRunAnnotationCountAfter2,
+                    equalTo( testRunAnnotationCountAfter1 ) );
+        assertThat( "Should create exactly one annotation per benchmark - at the latest test run (after provided parent build ID) it appears in",
+                    metricsAnnotationCountAfter2,
+                    equalTo( metricsAnnotationCountAfter1 + generationResult.benchmarks() ) );
+
+        {
+            List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
+                                                                       PASSWORD,
+                                                                       neo4j.boltURI(),
+                                                                       packagingBuildId,
+                                                                       "comment " + UUID.randomUUID(),
+                                                                       "author " + UUID.randomUUID(),
+                                                                       "3.0",
+                                                                       benchmarkTools,
+                                                                       AnnotationTarget.BOTH_TEST_RUN_AND_METRICS );
+            Main.main( args.stream().toArray( String[]::new ) );
+        }
+
+        long testRunAnnotationCountAfter3 = testRunAnnotationCount();
+        long metricsAnnotationCountAfter3 = metricsAnnotationCount();
+        assertThat( "Should create exactly one annotation per benchmark tool - on the latest test run (after provided parent build ID) for that tool",
+                    testRunAnnotationCountAfter3,
+                    equalTo( testRunAnnotationCountAfter2 + benchmarkTools.size() ) );
+        assertThat( "Should create exactly one annotation per benchmark - at the latest test run (after provided parent build ID) it appears in",
+                    metricsAnnotationCountAfter3,
+                    equalTo( metricsAnnotationCountAfter2 + generationResult.benchmarks() ) );
     }
 
     private long testRunAnnotationCount()
@@ -102,6 +159,15 @@ public class CommandsSmokeTestIT
         {
             StatementResult result = client.session().run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS testRunAnnotations" );
             return result.next().get( "testRunAnnotations" ).asLong();
+        }
+    }
+
+    private long metricsAnnotationCount()
+    {
+        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        {
+            StatementResult result = client.session().run( "RETURN size((:Metrics)-[:WITH_ANNOTATION]->(:Annotation)) AS metricsAnnotations" );
+            return result.next().get( "metricsAnnotations" ).asLong();
         }
     }
 
@@ -178,12 +244,7 @@ public class CommandsSmokeTestIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
-                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
-                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
-                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
-                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
-                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
+                .withBenchmarkGroups( toolBenchGroups )
                 .withNeo4jVersions( "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )
