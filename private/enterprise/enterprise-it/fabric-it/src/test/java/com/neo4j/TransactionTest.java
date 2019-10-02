@@ -65,17 +65,16 @@ import static org.mockito.Mockito.when;
 
 class TransactionTest
 {
-
     private static Driver clientDriver;
     private static TestServer testServer;
     private static KernelTransaction kernelTransaction;
-    private static DriverPool driverPool = mock( DriverPool.class );
-    private static PooledDriver shard1Driver = mock( PooledDriver.class );
-    private static PooledDriver shard2Driver = mock( PooledDriver.class );
-    private static PooledDriver shard3Driver = mock( PooledDriver.class );
-    private static JobScheduler jobScheduler = mock( JobScheduler.class );
-    private static DatabaseManagementService databaseManagementService = mock(DatabaseManagementService.class);
-    private static FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
+    private static final DriverPool driverPool = mock( DriverPool.class );
+    private static final PooledDriver shard1Driver = mock( PooledDriver.class );
+    private static final PooledDriver shard2Driver = mock( PooledDriver.class );
+    private static final PooledDriver shard3Driver = mock( PooledDriver.class );
+    private static final JobScheduler jobScheduler = mock( JobScheduler.class );
+    private static final DatabaseManagementService databaseManagementService = mock(DatabaseManagementService.class);
+    private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
 
     private final CountDownLatch latch = new CountDownLatch( 3 );
     private final FabricDriverTransaction tx1 = mockTransactionWithDefaultResult();
@@ -157,9 +156,10 @@ class TransactionTest
         when( fabricDatabaseManager.isFabricDatabase( "mega" ) ).thenReturn( true );
 
         InternalTransaction internalTransaction = mock( InternalTransaction.class );
-        when( graphDatabaseFacade.beginTransaction( any(), any(), any() ) ).thenReturn( internalTransaction );
+        when( graphDatabaseFacade.beginTransaction( any(), any(), any(), anyLong(), any() ) ).thenReturn( internalTransaction );
 
         kernelTransaction = mock( KernelTransaction.class );
+        when( internalTransaction.kernelTransaction() ).thenReturn( kernelTransaction );
 
         DependencyResolver dr = mock( DependencyResolver.class );
         when( graphDatabaseFacade.getDependencyResolver() ).thenReturn( dr );
