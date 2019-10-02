@@ -133,7 +133,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Person")
     createLabeledNode("Animal")
 
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (n:Person) CALL db.labels() YIELD label RETURN *",
       plan => {
         plan should includeSomewhere.aPlan("ProcedureCall")

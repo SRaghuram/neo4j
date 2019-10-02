@@ -448,10 +448,12 @@ class ExecutionResultTest
                 assertThat( "Mismatching db-hits for version " + version, stats.getDbHits(), equalTo( 2L ) );
                 assertThat( "Mismatching rows for version " + version, stats.getRows(), equalTo( 1L ) );
 
-                //These stats are not available in older versions, but should at least return 0, and >0 for newer
-                assertThat( "Mismatching page cache hits for version " + version, stats.getPageCacheHits(), greaterThanOrEqualTo( 0L ) );
-                assertThat( "Mismatching page cache misses for version " + version, stats.getPageCacheMisses(), greaterThanOrEqualTo( 0L ) );
-                assertThat( "Mismatching page cache hit ratio for version " + version, stats.getPageCacheHitRatio(), greaterThanOrEqualTo( 0.0 ) );
+                if ( stats.hasPageCacheStats() )
+                {
+                    assertThat( "Mismatching page cache hits for version " + version, stats.getPageCacheHits(), greaterThanOrEqualTo( 0L ) );
+                    assertThat( "Mismatching page cache misses for version " + version, stats.getPageCacheMisses(), greaterThanOrEqualTo( 0L ) );
+                    assertThat( "Mismatching page cache hit ratio for version " + version, stats.getPageCacheHitRatio(), greaterThanOrEqualTo( 0.0 ) );
+                }
                 transaction.commit();
             }
         }
