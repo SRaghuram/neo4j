@@ -130,15 +130,15 @@ class MorselTopTest extends TopTestBase(FUSING, MORSEL, SIZE_HINT)
 class MorselTopNoFusingTest extends TopTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // AGGREGATION
-class MorselSingleThreadedAggregationTest extends AggregationTestBase(FUSING, MORSEL, SIZE_HINT)
-class MorselSingleThreadedAggregationNoFusingTest extends AggregationTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselAggregationTest extends AggregationTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselAggregationNoFusingTest extends AggregationTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // NODE HASH JOIN
 class MorselNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, MORSEL, SIZE_HINT)
 
 // PROVIDED ORDER
-class MorselSingleThreadedProvidedOrderTest extends ProvidedOrderTestBase(FUSING, MORSEL, SIZE_HINT)
-class MorselSingleThreadedNoFusingProvidedOrderTest extends ProvidedOrderTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselProvidedOrderTest extends ProvidedOrderTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselNoFusingProvidedOrderTest extends ProvidedOrderTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // REACTIVE
 class MorselReactiveResultsTest extends ReactiveResultTestBase(FUSING, MORSEL)
@@ -151,8 +151,8 @@ class MorselReactiveResultsNoFusingStressTest
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1)//TODO this test is slow, hence the reduced size
 
 // OPTIONAL
-class MorselOptionalSingleThreadedTest extends OptionalTestBase(FUSING, MORSEL, SIZE_HINT)
-class MorselOptionalSingleThreadedNoFusingTest extends OptionalTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselOptionalTest extends OptionalTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // CARTESIAN PRODUCT
 class MorselCartesianProductTest extends CartesianProductTestBase(FUSING, MORSEL, SIZE_HINT)
