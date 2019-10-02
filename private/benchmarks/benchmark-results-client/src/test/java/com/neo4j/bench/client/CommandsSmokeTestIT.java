@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.client.SyntheticStoreGenerator.GenerationResult;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
+import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -29,6 +30,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -68,6 +70,13 @@ public class CommandsSmokeTestIT
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
+    private final ToolBenchGroup[] toolBenchGroups = {ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
+                                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
+                                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
+                                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
+                                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
+                                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) )};
+
     @Test
     public void shouldRunAnnotateTestRunsCommand() throws Exception
     {
@@ -81,40 +90,18 @@ public class CommandsSmokeTestIT
         long testRunAnnotationCountBefore = testRunAnnotationCount();
         long metricsAnnotationCountBefore = metricsAnnotationCount();
 
-        {
-            List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
-                                                                       PASSWORD,
-                                                                       neo4j.boltURI(),
-                                                                       packagingBuildId,
-                                                                       "comment " + UUID.randomUUID(),
-                                                                       "author " + UUID.randomUUID(),
-                                                                       "3.0",
-                                                                       benchmarkTools,
-                                                                       Sets.newHashSet( TEST_RUN ) );
-            Main.main( args.stream().toArray( String[]::new ) );
-        }
+        runAnnotateCommand( packagingBuildId, benchmarkTools, "3.0", Sets.newHashSet( TEST_RUN ) );
 
         long testRunAnnotationCountAfter1 = testRunAnnotationCount();
         long metricsAnnotationCountAfter1 = metricsAnnotationCount();
         assertThat( "Should create exactly one annotation per benchmark tool - on the latest test run (after provided parent build ID) for that tool",
                     testRunAnnotationCountAfter1,
-                    equalTo( testRunAnnotationCountBefore + benchmarkTools.size() ) );
+                    equalTo( testRunAnnotationCountBefore + toolBenchGroups.length ) );
         assertThat( "Should not have created any more :Metrics annotations at this point",
                     metricsAnnotationCountAfter1,
                     equalTo( metricsAnnotationCountBefore ) );
 
-        {
-            List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
-                                                                       PASSWORD,
-                                                                       neo4j.boltURI(),
-                                                                       packagingBuildId,
-                                                                       "comment " + UUID.randomUUID(),
-                                                                       "author " + UUID.randomUUID(),
-                                                                       "3.0",
-                                                                       benchmarkTools,
-                                                                       Sets.newHashSet( METRICS ) );
-            Main.main( args.stream().toArray( String[]::new ) );
-        }
+        runAnnotateCommand( packagingBuildId, benchmarkTools, "3.0", Sets.newHashSet( METRICS ) );
 
         long testRunAnnotationCountAfter2 = testRunAnnotationCount();
         long metricsAnnotationCountAfter2 = metricsAnnotationCount();
@@ -125,27 +112,33 @@ public class CommandsSmokeTestIT
                     metricsAnnotationCountAfter2,
                     equalTo( metricsAnnotationCountAfter1 + generationResult.benchmarks() ) );
 
-        {
-            List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
-                                                                       PASSWORD,
-                                                                       neo4j.boltURI(),
-                                                                       packagingBuildId,
-                                                                       "comment " + UUID.randomUUID(),
-                                                                       "author " + UUID.randomUUID(),
-                                                                       "3.0",
-                                                                       benchmarkTools,
-                                                                       Sets.newHashSet( TEST_RUN, METRICS ) );
-            Main.main( args.stream().toArray( String[]::new ) );
-        }
+        runAnnotateCommand( packagingBuildId, benchmarkTools, "3.0", Sets.newHashSet( TEST_RUN, METRICS ) );
 
         long testRunAnnotationCountAfter3 = testRunAnnotationCount();
         long metricsAnnotationCountAfter3 = metricsAnnotationCount();
         assertThat( "Should create exactly one annotation per benchmark tool - on the latest test run (after provided parent build ID) for that tool",
                     testRunAnnotationCountAfter3,
-                    equalTo( testRunAnnotationCountAfter2 + benchmarkTools.size() ) );
+                    equalTo( testRunAnnotationCountAfter2 + toolBenchGroups.length ) );
         assertThat( "Should create exactly one annotation per benchmark - at the latest test run (after provided parent build ID) it appears in",
                     metricsAnnotationCountAfter3,
                     equalTo( metricsAnnotationCountAfter2 + generationResult.benchmarks() ) );
+    }
+
+    private void runAnnotateCommand( Long packagingBuildId,
+                                     List<Repository> benchmarkTools,
+                                     String neo4jSeries,
+                                     Set<AnnotationTarget> annotationTargets ) throws Exception
+    {
+        List<String> args = AnnotatePackagingBuildCommand.argsFor( USERNAME,
+                                                                   PASSWORD,
+                                                                   neo4j.boltURI(),
+                                                                   packagingBuildId,
+                                                                   "comment " + UUID.randomUUID(),
+                                                                   "author " + UUID.randomUUID(),
+                                                                   neo4jSeries,
+                                                                   benchmarkTools,
+                                                                   annotationTargets );
+        Main.main( args.stream().toArray( String[]::new ) );
     }
 
     private long testRunAnnotationCount()
@@ -239,13 +232,8 @@ public class CommandsSmokeTestIT
         SyntheticStoreGenerator generator = new SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder()
                 .withDays( 5 )
                 .withResultsPerDay( 10 )
-                .withBenchmarkGroups( ToolBenchGroup.from( MICRO_BENCH, "Cypher", 5 ),
-                                      ToolBenchGroup.from( MICRO_BENCH, "Values", 5 ),
-                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_1, macroBench(), macroBench() ),
-                                      ToolBenchGroup.from( MACRO_BENCH, MACRO_COMPAT_GROUP_2, macroBench(), macroBench() ),
-                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_WRITE, ldbcBench( "Core API", 10 ) ),
-                                      ToolBenchGroup.from( LDBC_BENCH, LDBC_READ, ldbcBench( "Cypher", 1 ) ) )
-                .withNeo4jVersions( "3.0.1", "3.0.0" )
+                .withBenchmarkGroups( toolBenchGroups )
+                .withNeo4jVersions( "4.0.1", "3.0.1", "3.0.0" )
                 .withNeo4jEditions( ENTERPRISE )
                 .withSettingsInConfig( 1 )
                 .withNeo4jBranchOwners( "neo4j" )
