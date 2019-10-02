@@ -8,14 +8,12 @@ package org.neo4j.kernel.impl.enterprise.configuration;
 import java.util.List;
 
 import org.neo4j.configuration.Description;
-import org.neo4j.configuration.Dynamic;
 import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.id.IdType;
 
-import static org.neo4j.kernel.configuration.Settings.NO_DEFAULT;
 import static org.neo4j.kernel.configuration.Settings.STRING;
 import static org.neo4j.kernel.configuration.Settings.list;
 import static org.neo4j.kernel.configuration.Settings.optionsIgnoreCase;
@@ -50,8 +48,7 @@ public class EnterpriseEditionSettings implements LoadableConfig
     @Description( "A list of setting name patterns (comma separated) that are allowed to be dynamically changed. " +
             "The list may contain both full setting names, and partial names with the wildcard '*'. " +
             "If this setting is left empty all dynamic settings updates will be blocked." )
-    @Dynamic
-    public static final Setting<String> dynamic_setting_whitelist = setting( "dbms.dynamic.setting.whitelist", Settings.STRING, NO_DEFAULT );
+    public static final Setting<String> dynamic_setting_whitelist = setting( "dbms.dynamic.setting.whitelist", Settings.STRING, "*" );
 
     public enum Mode
     {

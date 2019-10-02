@@ -19,23 +19,20 @@ import static org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSe
 
 public class SettingsWhitelist
 {
-    private static final String DEFAULT_PATTERN = "*";
-    private List<Pattern> settingsWhitelist = emptyList();
+    private final List<Pattern> settingsWhitelist;
 
     public SettingsWhitelist( Config config )
     {
-        config.registerDynamicUpdateListener( dynamic_setting_whitelist, ( oldValue, newValue ) -> refreshWhiteList( newValue ) );
-        refreshWhiteList( config.isConfigured( dynamic_setting_whitelist ) ? config.get( dynamic_setting_whitelist ) : DEFAULT_PATTERN );
+        settingsWhitelist = refreshWhiteList( config.get( dynamic_setting_whitelist ) );
     }
 
-    private void refreshWhiteList( String whiteList )
+    private List<Pattern> refreshWhiteList( String whiteList )
     {
         if ( StringUtils.isEmpty( whiteList ) )
         {
-            settingsWhitelist = emptyList();
-            return;
+            return emptyList();
         }
-        settingsWhitelist = Arrays.stream( whiteList.trim().split( "," ) )
+        return Arrays.stream( whiteList.trim().split( "," ) )
                 .map( s -> s.replace( "*", ".*" ) )
                 .map( Pattern::compile )
                 .collect( toList() );

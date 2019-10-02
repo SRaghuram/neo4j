@@ -19,13 +19,14 @@ import org.neo4j.test.rule.ImpermanentEnterpriseDatabaseRule;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_parameter_logging_enabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.plugin_dir;
 import static org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.dynamic_setting_whitelist;
 
 public class SetConfigValueProcedureTest
 {
     @Rule
-    public final DatabaseRule db = new ImpermanentEnterpriseDatabaseRule();
+    public final DatabaseRule db = new ImpermanentEnterpriseDatabaseRule().startLazily();
 
     @Rule
     public final ExpectedException expect = ExpectedException.none();
@@ -73,26 +74,25 @@ public class SetConfigValueProcedureTest
     @Test
     public void forbidDynamicSettingOfNotMatchedSetting()
     {
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', 'dbmss*')" );
+        db.withSetting( dynamic_setting_whitelist, "dbmss*" );
 
         expect.expect( new NestedThrowableMatcher( AuthorizationViolationException.class ) );
-        expect.expectMessage( "Failed to set value for `dbms.dynamic.setting.whitelist` using procedure `dbms.setConfigValue`: access denied." );
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', '*')" );
+        expect.expectMessage( "Failed to set value for `" + log_queries.name() + "` using procedure `dbms.setConfigValue`: access denied." );
+        db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', '*')" );
     }
 
     @Test
     public void allowDynamicSettingChangeWhenItsMatchedByAnyPattern()
     {
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', 'dbmss*,*')" );
+        db.withSetting( dynamic_setting_whitelist, "dbmss*,*" );
 
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', '*')" );
+        db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" );
     }
 
     @Test
     public void allowDynamicSettingChangeWhenItsMatchedByMatchedPattern()
     {
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', '" + log_queries.name() + ","
-                + plugin_dir + "')" );
+        db.withSetting( dynamic_setting_whitelist, log_queries.name() + "," + plugin_dir.name() );
 
         db.execute( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'true')" );
     }
@@ -100,18 +100,18 @@ public class SetConfigValueProcedureTest
     @Test
     public void forbidDynamicSettingChangeWhenNotMatchedBySettingsListPattern()
     {
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', '" + log_queries.name() + ","
-                + plugin_dir + "')" );
+        db.withSetting( dynamic_setting_whitelist, log_queries.name() + "," + plugin_dir.name());
 
         expect.expect( new NestedThrowableMatcher( AuthorizationViolationException.class ) );
-        expect.expectMessage( "Failed to set value for `dbms.dynamic.setting.whitelist` using procedure `dbms.setConfigValue`: access denied." );
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', '*')" );
+        expect.expectMessage(
+                "Failed to set value for `" + log_queries_parameter_logging_enabled.name() + "` using procedure `dbms.setConfigValue`: access denied." );
+        db.execute( "CALL dbms.setConfigValue('" + log_queries_parameter_logging_enabled.name() + "', '*')" );
     }
 
     @Test
     public void forbidDynamicSettingChangeWhenWhitelistIsEmpty()
     {
-        db.execute( "CALL dbms.setConfigValue('" + dynamic_setting_whitelist.name() + "', '')" );
+        db.withSetting( dynamic_setting_whitelist, "" );
 
         expect.expect( new NestedThrowableMatcher( AuthorizationViolationException.class ) );
         expect.expectMessage( "Failed to set value for `dbms.dynamic.setting.whitelist` using procedure `dbms.setConfigValue`: access denied." );
