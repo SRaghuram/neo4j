@@ -11,6 +11,7 @@ import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.StatementResult;
+import com.neo4j.fabric.stream.summary.EmptySummary;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -189,6 +190,7 @@ class TransactionTest
         var result = mock( StatementResult.class );
         when( result.columns() ).thenReturn( Flux.fromIterable(List.of( "a", "b" )) );
         when( result.records() ).thenReturn( Flux.empty() );
+        when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
 
         when( tx.run( any(), any() ) ).thenReturn( result );
 

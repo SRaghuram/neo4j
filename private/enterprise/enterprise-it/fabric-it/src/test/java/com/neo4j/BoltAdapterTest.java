@@ -11,6 +11,7 @@ import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
+import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.transaction.TransactionManager;
 import org.junit.jupiter.api.AfterAll;
@@ -22,6 +23,7 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.List;
@@ -114,6 +116,7 @@ class BoltAdapterTest
 
         when( statementResult.columns() ).thenReturn( Flux.just( "c1", "c2" ) );
         when( statementResult.records() ).thenReturn( Flux.from( publisher ) );
+        when( statementResult.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
 
         when( fabricExecutor.run( any(), any(), any() ) ).thenReturn( statementResult );
 
