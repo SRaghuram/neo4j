@@ -443,7 +443,7 @@ class TransactionTest
 
                 timeoutCallback.getValue().run();
 
-                tx.run( "FROM mega.shard1 MATCH (n) RETURN n" ).consume();
+                tx.run( "USE mega.shard1 MATCH (n) RETURN n" ).consume();
 
                 fail( "Exception expected" );
             }
@@ -495,17 +495,17 @@ class TransactionTest
 
     private void queryShard1( Transaction tx )
     {
-        tx.run( "FROM mega.graph1 MATCH (n) RETURN n" ).consume();
+        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
     }
 
     private void queryShard2( Transaction tx )
     {
-        tx.run( "FROM mega.graph2 MATCH (n) RETURN n" ).consume();
+        tx.run( "USE mega.graph2 MATCH (n) RETURN n" ).consume();
     }
 
     private void queryShard3( Transaction tx )
     {
-        tx.run( "FROM mega.graph3 MATCH (n) RETURN n" ).consume();
+        tx.run( "USE mega.graph3 MATCH (n) RETURN n" ).consume();
     }
 
     private void verifyDriverReturned( PooledDriver... driver )

@@ -9,7 +9,7 @@ import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
-import org.neo4j.cypher.internal.v4_0.ast.{FromGraph, Query}
+import org.neo4j.cypher.internal.v4_0.ast.{Query, UseGraph}
 
 case class FabricPlan(
   query: FabricQuery,
@@ -93,7 +93,7 @@ object FabricQuery {
   }
 
   case class RemoteQuery(
-    from: FromGraph,
+    use: UseGraph,
     query: Query,
     columns: Columns,
   ) extends LeafQuery {
@@ -145,7 +145,7 @@ object FabricQuery {
         )
       )
       case q: RemoteQuery  => node(
-        name = "shard: " + expr(q.from.expression),
+        name = "use: " + expr(q.use.expression),
         fields = Columns.fields(q.columns) ++ Seq(
           "params" -> list(q.parameters.toSeq),
           "qry" -> query(q.query))

@@ -154,8 +154,8 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             result = Stream.concat(
-                    tx.run( "FROM mega.graph0 MATCH (n) RETURN n.name AS name" ).stream(),
-                    tx.run( "FROM mega.graph1 MATCH (n) RETURN n.name AS name" ).stream()
+                    tx.run( "USE mega.graph0 MATCH (n) RETURN n.name AS name" ).stream(),
+                    tx.run( "USE mega.graph1 MATCH (n) RETURN n.name AS name" ).stream()
             ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -174,8 +174,8 @@ class EndToEndTest
             Map<String,Object> sid1 = Map.of( "sid", 1 );
 
             result = Stream.concat(
-                    tx.run( "FROM mega.graph($sid) MATCH (n) RETURN n.name AS name", sid0 ).stream(),
-                    tx.run( "FROM mega.graph($sid) MATCH (n) RETURN n.name AS name", sid1 ).stream()
+                    tx.run( "USE mega.graph($sid) MATCH (n) RETURN n.name AS name", sid0 ).stream(),
+                    tx.run( "USE mega.graph($sid) MATCH (n) RETURN n.name AS name", sid1 ).stream()
             ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -191,8 +191,8 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = Stream.concat(
-                    tx.run( "FROM mega.graph0 MATCH (n) RETURN n" ).stream(),
-                    tx.run( "FROM mega.graph1 MATCH (n) RETURN n" ).stream()
+                    tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).stream(),
+                    tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).stream()
             ).map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -212,8 +212,8 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "FROM mega.graph0 CREATE (:Cat {name: 'Whiskers'})" );
-            tx.run( "FROM mega.graph0 CREATE (:Cat {name: 'Charlie'})" );
+            tx.run( "USE mega.graph0 CREATE (:Cat {name: 'Whiskers'})" );
+            tx.run( "USE mega.graph0 CREATE (:Cat {name: 'Charlie'})" );
             tx.success();
         }
 
@@ -222,11 +222,11 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "FROM mega.graph1 CREATE (:Cat {name: 'Misty'})" );
-            tx.run( "FROM mega.graph1 CREATE (:Cat {name: 'Cupcake'})" );
+            tx.run( "USE mega.graph1 CREATE (:Cat {name: 'Misty'})" );
+            tx.run( "USE mega.graph1 CREATE (:Cat {name: 'Cupcake'})" );
             r = Stream.concat(
-                    tx.run( "FROM mega.graph0 MATCH (c:Cat) RETURN c" ).stream(),
-                    tx.run( "FROM mega.graph1 MATCH (c:Cat) RETURN c" ).stream()
+                    tx.run( "USE mega.graph0 MATCH (c:Cat) RETURN c" ).stream(),
+                    tx.run( "USE mega.graph1 MATCH (c:Cat) RETURN c" ).stream()
             ).map( c -> c.get( "c" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -246,7 +246,7 @@ class EndToEndTest
         {
             Map<String,Object> uid = Map.of( "uid", 100 );
             r = tx.run( String.join( "\n",
-                    "FROM mega.graph(com.neo4j.utils.personShard($uid))",
+                    "USE mega.graph(com.neo4j.utils.personShard($uid))",
                     "MATCH (n {uid: $uid})",
                     "RETURN n"
             ), uid ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
@@ -267,9 +267,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "FROM mega.graph0 MATCH (n) RETURN n",
+                    "USE mega.graph0 MATCH (n) RETURN n",
                     "UNION ALL",
-                    "FROM mega.graph1 MATCH (n) RETURN n"
+                    "USE mega.graph1 MATCH (n) RETURN n"
             ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -290,9 +290,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "FROM mega.graph0 MATCH (n) RETURN n",
+                    "USE mega.graph0 MATCH (n) RETURN n",
                     "UNION",
-                    "FROM mega.graph1 MATCH (n) RETURN n"
+                    "USE mega.graph1 MATCH (n) RETURN n"
             ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -312,9 +312,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "FROM mega.graph0 MATCH (n) RETURN n.age AS a",
+                    "USE mega.graph0 MATCH (n) RETURN n.age AS a",
                     "UNION ALL",
-                    "FROM mega.graph1 MATCH (n) RETURN n.age AS a"
+                    "USE mega.graph1 MATCH (n) RETURN n.age AS a"
             ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -330,9 +330,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "FROM mega.graph0 MATCH (n) RETURN n.age AS a",
+                    "USE mega.graph0 MATCH (n) RETURN n.age AS a",
                     "UNION",
-                    "FROM mega.graph1 MATCH (n) RETURN n.age AS a"
+                    "USE mega.graph1 MATCH (n) RETURN n.age AS a"
             ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -346,14 +346,14 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "FROM mega.graph0 CREATE (:User {id:1}) - [:FRIEND] -> (:User)" );
+            tx.run( "USE mega.graph0 CREATE (:User {id:1}) - [:FRIEND] -> (:User)" );
             tx.success();
         }
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.READ ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "FROM mega.graph0 MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" ).consume();
             tx.success();
         }
     }
@@ -383,7 +383,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND [0, 1] AS x",
                     "CALL {",
-                    "  FROM mega.graph(x)",
+                    "  USE mega.graph(x)",
                     "  MATCH (y)",
                     "  RETURN y",
                     "}",
@@ -418,7 +418,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND mega.graphIds() AS gid",
                     "CALL {",
-                    "  FROM mega.graph(gid)",
+                    "  USE mega.graph(gid)",
                     "  MATCH (y)",
                     "  RETURN y",
                     "}",
@@ -460,7 +460,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND mega.graphIds() AS gid",
                     "CALL {",
-                    "  FROM mega.graph(gid)",
+                    "  USE mega.graph(gid)",
                     "  MATCH (p)",
                     "  RETURN p, id(p) AS local_id",
                     "}",
@@ -487,7 +487,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND [0, 1] AS x",
                     "CALL {",
-                    "  FROM mega.graph(x)",
+                    "  USE mega.graph(x)",
                     "  MATCH (y)",
                     "  RETURN y",
                     "}",
@@ -514,7 +514,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND [0, 1] AS x",
                     "CALL {",
-                    "  FROM mega.graph(x)",
+                    "  USE mega.graph(x)",
                     "  MATCH (y)",
                     "  RETURN y.age AS age, y.name AS name",
                     "}",
@@ -551,7 +551,7 @@ class EndToEndTest
                     "}",
                     "WITH 3 AS z, y AS y",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  WITH y",
                     "  CREATE (a: A)",
                     "  RETURN y*10 AS x",
@@ -582,7 +582,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND [1, 2, 3] AS x",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  WITH x",
                     "  WITH x*10 AS y",
                     "  CALL {",
@@ -616,7 +616,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "WITH 1 AS x",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  CREATE (:Foo)",
                     "}",
                     "RETURN x"
@@ -639,7 +639,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "WITH 1 AS x",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  CREATE (f:Foo {name: 'abc'})",
                     "}",
                     "RETURN x"
@@ -662,7 +662,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "WITH 1 AS x",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  CREATE (f:Foo {name: 'abc'})",
                     "  RETURN f.name AS name",
                     "}",
@@ -688,7 +688,7 @@ class EndToEndTest
             var query = String.join( "\n",
                     "UNWIND [10, 20] AS x",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  WITH x",
                     "  RETURN 1 + x AS y",
                     "}",
@@ -730,7 +730,7 @@ class EndToEndTest
                     "  localtime('12:50:35.556') AS localtime,",
                     "  duration('PT16H12M') AS duration",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  WITH",
                     "    nothing,",
                     "    boolean,",
@@ -809,12 +809,12 @@ class EndToEndTest
             {
                 var query = String.join( "\n",
                         "CALL {",
-                        "  FROM mega.graph(0)",
+                        "  USE mega.graph(0)",
                         "  CREATE (n:Test)",
                         "  RETURN n",
                         "}",
                         "CALL {",
-                        "  FROM mega.graph(0)",
+                        "  USE mega.graph(0)",
                         "  WITH n",
                         "  RETURN 1 AS x",
                         "}",
@@ -838,12 +838,12 @@ class EndToEndTest
             {
                 var query = String.join( "\n",
                         "CALL {",
-                        "  FROM mega.graph(0)",
+                        "  USE mega.graph(0)",
                         "  CREATE (:Test)-[r:Rel]->(:Test)",
                         "  RETURN r",
                         "}",
                         "CALL {",
-                        "  FROM mega.graph(0)",
+                        "  USE mega.graph(0)",
                         "  WITH r",
                         "  RETURN 1 AS x",
                         "}",
@@ -867,12 +867,12 @@ class EndToEndTest
             {
                 var query = String.join( "\n",
                         "CALL {",
-                        "  FROM mega.graph(0)",
+                        "  USE mega.graph(0)",
                         "  CREATE p = (:T)-[:R]->(:T)",
                         "  RETURN p",
                         "}",
                         "CALL {",
-                        "  FROM mega.graph(0)",
+                        "  USE mega.graph(0)",
                         "  WITH p",
                         "  RETURN 1 AS x",
                         "}",

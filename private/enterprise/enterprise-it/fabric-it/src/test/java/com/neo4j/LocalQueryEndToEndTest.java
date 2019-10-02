@@ -92,7 +92,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
@@ -120,7 +120,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
@@ -147,7 +147,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
@@ -174,7 +174,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (x)",
                     "  RETURN x",
                     "}",
@@ -202,7 +202,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (n)",
                     "  RETURN n",
                     "}",
@@ -229,7 +229,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (n)-[r]->()",
                     "  RETURN n, r",
                     "}",
@@ -256,7 +256,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
@@ -285,7 +285,7 @@ class LocalQueryEndToEndTest
         {
             var query = String.join( "\n",
                     "CALL {",
-                    "  FROM mega.graph(0)",
+                    "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
