@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.lang3.ArrayUtils;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.BaseBootstrapperIT;
@@ -54,6 +56,12 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     {
         String[] args = new String[]{"-c", OnlineBackupSettings.online_backup_enabled.name() + "=false"};
         return ArrayUtils.addAll( super.getAdditionalArguments(), args );
+    }
+
+    @Override
+    protected DatabaseManagementService newEmbeddedDbms( File homeDir )
+    {
+        return new EnterpriseDatabaseManagementServiceBuilder( homeDir ).build();
     }
 
     @Test
