@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations;
 import com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget;
+import com.neo4j.bench.client.queries.annotation.CreateAnnotationsResult;
 import com.neo4j.bench.common.model.Repository;
 
 import java.net.URI;
@@ -23,6 +24,7 @@ import java.util.Set;
 
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -126,7 +128,12 @@ public class AnnotatePackagingBuildCommand implements Runnable
                                                              neo4jSeries,
                                                              benchmarkTools,
                                                              getAnnotationTargets() );
-            client.execute( query );
+            CreateAnnotationsResult result = client.execute( query );
+            System.out.println( format( "Annotations created!\n" +
+                                        "Test Run Annotations: %s\n" +
+                                        "Metrics Annotations:  %s",
+                                        result.createdTestRunAnnotations(),
+                                        result.createdMetricsAnnotations() ) );
         }
         catch ( Exception e )
         {
