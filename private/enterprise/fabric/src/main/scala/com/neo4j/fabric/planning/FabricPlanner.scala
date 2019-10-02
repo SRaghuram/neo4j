@@ -50,6 +50,7 @@ case class FabricPlanner(
     cypherConfig.runtime,
     cypherConfig.expressionEngineOption,
     cypherConfig.operatorEngine,
+    cypherConfig.interpretedPipesFallback,
     cypherConfig.queryCacheSize,
   )
   private val catalog = Catalog.fromConfig(config)
