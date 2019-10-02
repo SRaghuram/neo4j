@@ -232,7 +232,7 @@ public class Main
                                        Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
 
-            new QueryRetrier().execute( client, submitTestRun );
+            new QueryRetrier( true ).execute( client, submitTestRun );
         }
         catch ( Exception e )
         {

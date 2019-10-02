@@ -84,7 +84,7 @@ public class ReportCommand implements Runnable
                 assertNoErrors( testRunReport );
             }
             SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport );
-            new QueryRetrier().execute( client, submitTestRun );
+            new QueryRetrier( true, QueryRetrier.DEFAULT_TIMEOUT ).execute( client, submitTestRun );
             System.out.println( "Successfully reported results" );
             if ( errorReportingPolicy.equals( ErrorReportingPolicy.REPORT_THEN_FAIL ) )
             {

@@ -9,6 +9,8 @@ import com.neo4j.bench.client.queries.Query;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Supplier;
 
 import static java.lang.String.format;
@@ -17,16 +19,20 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class QueryRetrier
 {
     static final int DEFAULT_RETRY_COUNT = 10;
-    private final boolean verbose;
+    static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes( 5 );
 
-    public QueryRetrier()
-    {
-        this( true );
-    }
+    private final boolean verbose;
+    private final Duration timeout;
 
     public QueryRetrier( boolean verbose )
     {
+        this( verbose, DEFAULT_TIMEOUT );
+    }
+
+    public QueryRetrier( boolean verbose, Duration timeout )
+    {
         this.verbose = verbose;
+        this.timeout = timeout;
     }
 
     public <QUERY extends Query<RESULT>, RESULT> RESULT execute( StoreClient client, QUERY query )
@@ -41,9 +47,11 @@ public class QueryRetrier
 
     <R> R retry( Supplier<R> supplier, int retries )
     {
+        Instant start = Instant.now();
         Throwable lastException = null;
         int retry = 0;
-        while ( retry <= retries )
+        while ( retry <= retries &&
+                start.plus( timeout ).isBefore( Instant.now() ) )
         {
             try
             {
