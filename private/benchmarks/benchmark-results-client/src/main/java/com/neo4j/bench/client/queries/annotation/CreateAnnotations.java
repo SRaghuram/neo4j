@@ -18,6 +18,7 @@ import java.util.Set;
 
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.v1.summary.ResultSummary;
 
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
@@ -25,7 +26,7 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
-public class CreateAnnotations implements Query<Void>
+public class CreateAnnotations implements Query<CreateAnnotationsResult>
 {
     private static final String ANNOTATE_TEST_RUNS = Resources.fileToString( "/queries/annotations/annotate_test_runs.cypher" );
     private static final String ANNOTATE_METRICS = Resources.fileToString( "/queries/annotations/annotate_metrics.cypher" );
@@ -72,20 +73,24 @@ public class CreateAnnotations implements Query<Void>
     }
 
     @Override
-    public Void execute( Driver driver )
+    public CreateAnnotationsResult execute( Driver driver )
     {
         try ( Session session = driver.session() )
         {
+            long createdTestRunAnnotations = 0;
+            long createdMetricsAnnotations = 0;
             if ( annotationTargets.contains( TEST_RUN ) )
             {
-                session.run( ANNOTATE_TEST_RUNS, params() ).consume();
+                ResultSummary result = session.run( ANNOTATE_TEST_RUNS, params() ).consume();
+                createdTestRunAnnotations = result.counters().nodesCreated();
             }
             if ( annotationTargets.contains( METRICS ) )
             {
-                session.run( ANNOTATE_METRICS, params() ).consume();
+                ResultSummary result = session.run( ANNOTATE_METRICS, params() ).consume();
+                createdMetricsAnnotations = result.counters().nodesCreated();
             }
+            return new CreateAnnotationsResult( createdTestRunAnnotations, createdMetricsAnnotations );
         }
-        return null;
     }
 
     public static boolean isSupportedTool( Repository repository )
