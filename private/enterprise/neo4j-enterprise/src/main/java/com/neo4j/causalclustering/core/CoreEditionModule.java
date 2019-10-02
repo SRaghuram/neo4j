@@ -53,12 +53,13 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
+import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.io.File;
 import java.util.Collection;
@@ -142,6 +143,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         this.globalModule = globalModule;
         this.globalConfig = globalModule.getGlobalConfig();
         this.logProvider = logService.getInternalLogProvider();
+
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalConfig );
+        globalDependencies.satisfyDependency( settingsWhiteList );
 
         RaftMonitor.register( logService, globalModule.getGlobalMonitors() );
 

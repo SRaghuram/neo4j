@@ -39,6 +39,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.neo4j</groupId>
+      <artifactId>neo4j-enterprise-kernel</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-procedure</artifactId>
       <version>${project.version}</version>

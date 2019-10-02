@@ -33,6 +33,7 @@ import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
+import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -92,7 +93,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final GlobalModule globalModule;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final FabricDatabaseManager fabricDatabaseManager;
-    private FabricServicesBootstrap fabricServicesBootstrap;
+    private final FabricServicesBootstrap fabricServicesBootstrap;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
     {
@@ -108,6 +109,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
         fabricServicesBootstrap = new FabricServicesBootstrap( globalModule.getGlobalLife(), dependencies );
         fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );
+        dependencies.satisfyDependency( settingsWhiteList );
     }
 
     @Override

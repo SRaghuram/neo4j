@@ -5,8 +5,6 @@
  */
 package com.neo4j.procedure.enterprise.builtin;
 
-import org.apache.commons.lang3.StringUtils;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -71,6 +69,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.function.ThrowingFunction.catchThrown;
 import static org.neo4j.function.ThrowingFunction.throwIfPresent;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
@@ -293,7 +292,15 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         Config config = resolver.resolveDependency( Config.class );
         SettingImpl<Object> settingObj = (SettingImpl<Object>) config.getSetting( setting );
-        config.setDynamic( settingObj, settingObj.parse( StringUtils.isNotEmpty( value ) ? value : null ), "dbms.setConfigValue" );
+        SettingsWhitelist settingsWhiteList = resolver.resolveDependency( SettingsWhitelist.class );
+        if ( settingsWhiteList.isWhiteListed( setting ) )
+        {
+            config.setDynamic( settingObj, settingObj.parse( isNotEmpty( value ) ? value : null ), "dbms.setConfigValue" );
+        }
+        else
+        {
+            throw new AuthorizationViolationException( "Failed to set value for `" + setting + "` using procedure `dbms.setConfigValue`: access denied." );
+        }
     }
 
     /*

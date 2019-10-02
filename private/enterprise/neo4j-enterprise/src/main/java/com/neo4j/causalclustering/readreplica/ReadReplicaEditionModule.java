@@ -33,6 +33,7 @@ import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurit
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
+import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
@@ -105,6 +106,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         jobScheduler.setTopLevelGroupName( "ReadReplica " + myIdentity );
 
         Dependencies globalDependencies = globalModule.getGlobalDependencies();
+
+        SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalConfig );
+        globalDependencies.satisfyDependency( settingsWhiteList );
 
         panicService = new PanicService( jobScheduler, logService );
         // used in tests

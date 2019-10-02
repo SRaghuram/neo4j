@@ -5,16 +5,19 @@
  */
 package com.neo4j.kernel.impl.enterprise.configuration;
 
+import java.util.List;
+
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
-import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.graphdb.config.Setting;
 
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.LONG;
+import static org.neo4j.configuration.SettingValueParsers.STRING;
+import static org.neo4j.configuration.SettingValueParsers.listOf;
 import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 
 /**
@@ -30,7 +33,13 @@ public class EnterpriseEditionSettings implements SettingsDeclaration
 
     @Internal
     public static final Setting<String> security_module =
-            newBuilder( "unsupported.dbms.security.module", SettingValueParsers.STRING, ENTERPRISE_SECURITY_MODULE_ID ).build();
+            newBuilder( "unsupported.dbms.security.module", STRING, ENTERPRISE_SECURITY_MODULE_ID ).build();
+
+    @Description( "A list of setting name patterns (comma separated) that are allowed to be dynamically changed. " +
+            "The list may contain both full setting names, and partial names with the wildcard '*'. " +
+            "If this setting is left empty all dynamic settings updates will be blocked." )
+    public static final Setting<List<String>> dynamic_setting_whitelist =
+            newBuilder( "dbms.dynamic.setting.whitelist", listOf( STRING ), List.of( "*" ) ).build();
 
     @Description( "Configure the operating mode of the database -- 'SINGLE' for stand-alone operation, " +
             "'CORE' for operating as a core member of a Causal Cluster, " + "or 'READ_REPLICA' for operating as a read replica member of a Causal Cluster." )
