@@ -12,7 +12,7 @@ import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.v4_0.ast.{CatalogName, FromGraph}
+import org.neo4j.cypher.internal.v4_0.ast.{CatalogName, UseGraph}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.internal.kernel.api.{QueryContext => _}
 import org.neo4j.kernel.api.procedure.GlobalProcedures
@@ -22,7 +22,7 @@ import org.neo4j.values.virtual.MapValue
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-case class FromEvaluation(
+case class UseEvaluation(
   catalog: Catalog,
   proceduresSupplier: Supplier[GlobalProcedures],
   signatureResolver: ProcedureSignatureResolver,
@@ -31,19 +31,19 @@ case class FromEvaluation(
   private val evaluator = new StaticEvaluation.StaticEvaluator(proceduresSupplier)
 
   def evaluate(
-    from: FromGraph,
+    use: UseGraph,
     parameters: MapValue,
     context: java.util.Map[String, AnyValue]
   ): Catalog.Graph =
-    evaluate(from, parameters, context.asScala)
+    evaluate(use, parameters, context.asScala)
 
   def evaluate(
-    from: FromGraph,
+    use: UseGraph,
     parameters: MapValue,
     context: mutable.Map[String, AnyValue]
-  ): Catalog.Graph = Errors.errorContext(from) {
+  ): Catalog.Graph = Errors.errorContext(use) {
 
-    from.expression match {
+    use.expression match {
       case v: Variable =>
         catalog.resolve(nameFromVar(v))
 

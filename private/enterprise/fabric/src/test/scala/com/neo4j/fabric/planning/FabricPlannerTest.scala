@@ -47,11 +47,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   private val signatures = new SignatureResolver(() => procedures)
   private val planner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
-  "FROM handling: " - {
+  "USE handling: " - {
 
-    "propagate FROM down and in" in {
+    "propagate USE down and in" in {
       val q =
-        """FROM g
+        """USE g
           |WITH 1 AS x
           |CALL {
           |  RETURN 2 AS y
@@ -61,16 +61,16 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(0).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(2).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(0).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
+        .check(_.queries(2).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
     }
 
-    "not propagate FROM out" in {
+    "not propagate USE out" in {
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g
+          |  USE g
           |  RETURN 2 AS y
           |}
           |RETURN x
@@ -79,16 +79,16 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
         .check(_.queries(0).asDirect.asLocalSingleQuery)
-        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
         .check(_.queries(2).asDirect.asLocalSingleQuery)
     }
 
-    "override FROM in subquery" in {
+    "override USE in subquery" in {
       val q =
-        """FROM g
+        """USE g
           |WITH 1 AS x
           |CALL {
-          |  FROM h
+          |  USE h
           |  RETURN 2 AS y
           |}
           |RETURN x
@@ -96,15 +96,15 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       val pl = planner.init(q, params)
       pl.fabricQuery.asChainedQuery
-        .check(_.queries(0).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
-        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(varFor("h"))))
-        .check(_.queries(2).asDirect.asShardQuery.from.shouldEqual(from(varFor("g"))))
+        .check(_.queries(0).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(varFor("h"))))
+        .check(_.queries(2).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
     }
 
-    "disallow embedded FROM" in {
+    "disallow embedded USE" in {
       val q =
         """WITH 1 AS x
-          |FROM i
+          |USE i
           |RETURN x
           |""".stripMargin
 
@@ -112,17 +112,17 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         planner.init(q, params).fabricQuery
       )
         .check(_.errors.size.shouldEqual(1))
-        .check(_.errors(0).msg.should(include("FROM can only appear at the beginning of a (sub-)query")))
+        .check(_.errors(0).msg.should(include("USE can only appear at the beginning of a (sub-)query")))
 
     }
 
-    "disallow FROM at start of fragment" in {
+    "disallow USE at start of fragment" in {
       val q =
         """WITH 1 AS x
           |CALL {
           |  RETURN 2 AS y
           |}
-          |FROM i
+          |USE i
           |RETURN x
           |""".stripMargin
 
@@ -130,14 +130,14 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         planner.init(q, params).fabricQuery
       )
         .check(_.errors.size.shouldEqual(1))
-        .check(_.errors(0).msg.should(include("FROM can only appear at the beginning of a (sub-)query")))
+        .check(_.errors(0).msg.should(include("USE can only appear at the beginning of a (sub-)query")))
     }
 
-    "allow FROM to reference outer variable" in {
+    "allow USE to reference outer variable" in {
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g(x)
+          |  USE g(x)
           |  RETURN 2 AS y
           |}
           |RETURN x
@@ -145,15 +145,15 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       planner.init(q, params).fabricQuery
         .asChainedQuery
-        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(function("g", varFor("x")))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(function("g", varFor("x")))))
     }
 
-    "allow FROM to reference imported variable" in {
+    "allow USE to reference imported variable" in {
       val q =
         """WITH 1 AS x
           |CALL {
           |  WITH x
-          |  FROM g(x)
+          |  USE g(x)
           |  RETURN 2 AS y
           |}
           |RETURN x
@@ -161,14 +161,14 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       planner.init(q, params).fabricQuery
         .asChainedQuery
-        .check(_.queries(1).asApply.asDirect.asShardQuery.from.shouldEqual(from(function("g", varFor("x")))))
+        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(function("g", varFor("x")))))
     }
 
-    "disallow FROM to reference missing variable" in {
+    "disallow USE to reference missing variable" in {
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g(z)
+          |  USE g(z)
           |  RETURN 2 AS y
           |}
           |RETURN x
@@ -180,12 +180,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         .check(_.getMessage.should(include("Variable `z` not defined")))
     }
 
-    "disallow FROM to reference outer variable after WITH" in {
+    "disallow USE to reference outer variable after WITH" in {
       val q =
         """WITH 1 AS x, 2 AS y
           |CALL {
           |  WITH x
-          |  FROM g(y)
+          |  USE g(y)
           |  RETURN 2 AS z
           |}
           |RETURN z
@@ -197,7 +197,6 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         .check(_.getMessage.should(include("Variable `y` not defined")))
     }
   }
-
 
   "Data flow: " - {
 
@@ -322,7 +321,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val q =
         """WITH 1 AS x, 2 AS y
           |CALL {
-          |  FROM g
+          |  USE g
           |  WITH x, y
           |  RETURN x AS x1, y AS y1
           |}
@@ -340,7 +339,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
     "local columns translated into parameters in remote trailing fragments" in {
       val q =
-        """FROM g
+        """USE g
           |WITH 1 AS x, 2 AS y
           |CALL {
           |  WITH x
@@ -366,7 +365,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g
+          |  USE g
           |  WITH 2 AS y
           |  CALL {
           |    RETURN 3 AS z
@@ -393,7 +392,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g
+          |  USE g
           |  CALL some.procedure() YIELD z, y
           |}
           |RETURN x, y, z
@@ -415,7 +414,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g
+          |  USE g
           |  CREATE (x:X)
           |}
           |RETURN x
@@ -434,12 +433,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
     "remote fragments with update" in {
       val q =
-        """FROM g
+        """USE g
           |WITH 1 AS x
           |CREATE (y)
           |WITH x, y
           |CALL {
-          |  FROM h
+          |  USE h
           |  WITH y
           |  CREATE (z)
           |}
@@ -567,14 +566,14 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
     "a plain shard query" in {
       val q =
-        """FROM mega.shard0
+        """USE mega.shard0
           |MATCH (y)
           |RETURN y
           """.stripMargin
 
       planner
         .plan(q, params).asDirect.asShardQuery
-        .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+        .check(_.use.expression.shouldEqual(prop(varFor("mega"), "shard0")))
         .check(_.query.part
           .as[SingleQuery].clauses.shouldEqual(Seq(match_(nodePat("y")), return_(varFor("y").aliased)))
         )
@@ -583,7 +582,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     "a simple composite query" in {
       val q =
         """CALL {
-          |  FROM mega.shard0
+          |  USE mega.shard0
           |  MATCH (y)
           |  RETURN y
           |}
@@ -593,7 +592,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       planner
         .plan(q, params).asChainedQuery
         .check(_.queries(0).asApply.asDirect.asShardQuery
-          .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+          .check(_.use.expression.shouldEqual(prop(varFor("mega"), "shard0")))
           .check(_.asShardSingleQuery.clauses.shouldEqual(
             Seq(match_(nodePat("y")), return_(varFor("y").aliased))
           ))
@@ -607,12 +606,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val q =
         """UNWIND [1, 2] AS x
           |CALL {
-          |  FROM mega.shard(x)
+          |  USE mega.shard(x)
           |  MATCH (y)
           |  RETURN y
           |}
           |CALL {
-          |  FROM mega.shard(y)
+          |  USE mega.shard(y)
           |  RETURN 1 AS z, 2 AS w
           |}
           |RETURN x, y, z, w
@@ -624,14 +623,14 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           return_(varFor("x").aliased))
         ))
         .check(_.queries(1).asApply.asDirect.asShardQuery
-          .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
+          .check(_.use.expression.shouldEqual(function(Seq("mega"), "shard", varFor("x"))))
           .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
             match_(nodePat("y")),
             return_(varFor("y").aliased)
           )))
         )
         .check(_.queries(2).asApply.asDirect.asShardQuery
-          .check(_.from.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
+          .check(_.use.expression.shouldEqual(function(Seq("mega"), "shard", varFor("y"))))
           .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
             return_(literalInt(1).as("z"), literal(2).as("w"))
           )))
@@ -682,13 +681,13 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     "a write query" in {
       val q =
         """
-          |FROM mega.shard0
+          |USE mega.shard0
           |CREATE (y:Foo)
           """.stripMargin
 
       planner
         .plan(q, params).asDirect.asShardQuery
-        .check(_.from.expression.shouldEqual(prop(varFor("mega"), "shard0")))
+        .check(_.use.expression.shouldEqual(prop(varFor("mega"), "shard0")))
         .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
           create(nodePat("y", "Foo"))
         )))
@@ -717,7 +716,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       val q =
         """WITH 1 AS x
           |CALL {
-          |  FROM g
+          |  USE g
           |  RETURN 1 AS y
           |  UNION
           |  WITH x
@@ -732,7 +731,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         .check(_.queries(1).asApply.as[UnionQuery]
           .check(_.distinct.shouldEqual(true))
           .check(_.lhs.asDirect.asShardQuery
-            .check(_.from.expression.shouldEqual(varFor("g")))
+            .check(_.use.expression.shouldEqual(varFor("g")))
             .check(_.asShardSingleQuery.clauses.shouldEqual(Seq(
               return_(literalInt(1).as("y"))
             )))

@@ -7,7 +7,7 @@ package com.neo4j.fabric.executor;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.eval.Catalog;
-import com.neo4j.fabric.eval.FromEvaluation;
+import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.planner.api.Plan;
 import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.planning.FabricQuery;
@@ -24,7 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-import org.neo4j.cypher.internal.v4_0.ast.FromGraph;
+import org.neo4j.cypher.internal.v4_0.ast.UseGraph;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
@@ -42,13 +42,13 @@ public class FabricExecutor
 
     private final FabricConfig config;
     private final FabricPlanner planner;
-    private final FromEvaluation fromEvaluation;
+    private final UseEvaluation useEvaluation;
 
-    public FabricExecutor( FabricConfig config, FabricPlanner planner, FromEvaluation fromEvaluation )
+    public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation )
     {
         this.config = config;
         this.planner = planner;
-        this.fromEvaluation = fromEvaluation;
+        this.useEvaluation = useEvaluation;
     }
 
     public StatementResult run( FabricTransaction fabricTransaction, String statement, MapValue params )
@@ -171,7 +171,7 @@ public class FabricExecutor
             return input.flatMap( inputRecord ->
             {
                 Map<String,AnyValue> recordValues = recordAsMap( query, inputRecord );
-                FabricConfig.Graph graph = evalFrom( query.from(), recordValues );
+                FabricConfig.Graph graph = evalUse( query.use(), recordValues );
                 MapValue parameters = addImportParams( recordValues, mapAsJavaMap( query.parameters() ) );
 
                 StatementResult statementResult = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
@@ -190,9 +190,9 @@ public class FabricExecutor
             return Records.asMap( inputRecord, seqAsJavaList( query.columns().incoming() ) );
         }
 
-        private FabricConfig.Graph evalFrom( FromGraph from, Map<String,AnyValue> record )
+        private FabricConfig.Graph evalUse( UseGraph use, Map<String,AnyValue> record )
         {
-            Catalog.Graph graph = fromEvaluation.evaluate( from, params, record );
+            Catalog.Graph graph = useEvaluation.evaluate( use, params, record );
             if ( graph instanceof Catalog.RemoteGraph )
             {
                 return ((Catalog.RemoteGraph) graph).graph();

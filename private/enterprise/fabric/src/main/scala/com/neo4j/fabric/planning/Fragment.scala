@@ -38,7 +38,7 @@ object Fragment {
   ) extends Fragment
 
   case class Leaf(
-    from: Option[ast.FromGraph],
+    use: Option[ast.UseGraph],
     clauses: Seq[ast.Clause],
     columns: Columns,
   ) extends Fragment
@@ -73,7 +73,7 @@ object Fragment {
       case f: Fragment.Leaf => node(
         name = "leaf",
         fields = Columns.fields(f.columns) ++ Seq(
-          "from" -> f.from.map(_.expression).map(expr).getOrElse(""),
+          "use" -> f.use.map(_.expression).map(expr).getOrElse(""),
           "qry" -> query(f.clauses)
         )
       )
