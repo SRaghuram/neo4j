@@ -21,8 +21,7 @@ import org.neo4j.values.AnyValue
   * the thread which calls execute, without any synchronization with other queries
   * or any parallel execution.
   */
-class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
-                                 cursors: CursorFactory) extends QueryExecutor with WorkerWaker {
+class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor with WorkerWaker {
 
   override def wakeOne(): Unit = ()
 
@@ -61,7 +60,6 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder,
                                 tracker,
                                 morselSize,
                                 queryIndexes,
-                                transactionBinder,
                                 numberOfWorkers = 1,
                                 nExpressionSlots,
                                 prePopulateResults,

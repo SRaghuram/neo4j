@@ -118,26 +118,21 @@ class Worker(val workerId: Int,
     var workUnitEvent: WorkUnitEvent = null
     var preparedOutput: PreparedOutput = null
     try {
-      try {
-        executingQuery.bindTransactionToThread()
 
-        DebugLog.log("[WORKER%2d] working on %s", workerId, task)
-        DebugSupport.WORKERS.log("[WORKER%2d] working on %s of %s", workerId, task, executingQuery)
+      DebugLog.log("[WORKER%2d] working on %s", workerId, task)
+      DebugSupport.WORKERS.log("[WORKER%2d] working on %s of %s", workerId, task, executingQuery)
 
-        sleeper.reportStartWorkUnit()
-        workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-        preparedOutput = task.executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
-      } finally {
-        if (workUnitEvent != null) {
-          workUnitEvent.stop()
-          sleeper.reportStopWorkUnit()
-        }
-      }
-      // This just puts the output in a buffer, which is not part of the workUnit
-      preparedOutput.produce()
+      sleeper.reportStartWorkUnit()
+      workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
+      preparedOutput = task.executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
     } finally {
-      executingQuery.unbindTransaction()
+      if (workUnitEvent != null) {
+        workUnitEvent.stop()
+        sleeper.reportStopWorkUnit()
+      }
     }
+    // This just puts the output in a buffer, which is not part of the workUnit
+    preparedOutput.produce()
   }
 
   // protected to allow unit-testing

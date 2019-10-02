@@ -32,7 +32,7 @@ object RuntimeEnvironment {
   }
 
   private def createMorselQueryExecutor(cursors: CursorFactory) = {
-    new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER, cursors)
+    new CallingThreadQueryExecutor(cursors)
   }
 
   private def createParallelQueryExecutor(cursors: CursorFactory,

@@ -18,12 +18,6 @@ class ExecutingQuery(val executionState: ExecutionState,
                      val workerResourceProvider: WorkerResourceProvider) extends QuerySubscription {
   protected val flowControl: FlowControl = queryState.flowControl
 
-  def bindTransactionToThread(): Unit =
-    queryState.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
-
-  def unbindTransaction(): Unit =
-    queryState.transactionBinder.unbindFromThread()
-
   override def request(numberOfRecords: Long): Unit = {
     flowControl.request(numberOfRecords)
   }

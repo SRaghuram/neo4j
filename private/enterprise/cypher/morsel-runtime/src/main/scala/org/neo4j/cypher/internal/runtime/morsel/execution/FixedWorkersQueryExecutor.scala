@@ -61,7 +61,6 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                 tracker,
                                 morselSize,
                                 queryIndexes,
-                                null,
                                 workerManager.numberOfWorkers,
                                 nExpressionSlots,
                                 prePopulateResults,
