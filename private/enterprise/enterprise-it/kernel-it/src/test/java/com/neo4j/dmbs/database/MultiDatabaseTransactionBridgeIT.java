@@ -14,7 +14,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
@@ -32,17 +31,6 @@ class MultiDatabaseTransactionBridgeIT
     private GraphDatabaseAPI db;
     @Inject
     private DatabaseManagementService managementService;
-
-    @Test
-    void beginTransactionOnSystemDbInsideOtherDbTransaction()
-    {
-        GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
-        try ( Transaction transaction = db.beginTx() )
-        {
-            TransactionFailureException exception = assertThrows( TransactionFailureException.class, systemDb::beginTx );
-            assertThat( exception.getMessage(), containsString( "Fail to start new transaction. Already have transaction in the context." ) );
-        }
-    }
 
     @Test
     void createRelationshipOnSystemDbNodeInsideOtherDbTransaction()
