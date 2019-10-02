@@ -28,17 +28,15 @@ public class GraphiteOutput implements Lifecycle, EventReporter
     private final long period;
     private final MetricRegistry registry;
     private final Log logger;
-    private final String prefix;
 
     private GraphiteReporter graphiteReporter;
 
-    GraphiteOutput( HostnamePort hostnamePort, long period, MetricRegistry registry, Log logger, String prefix )
+    GraphiteOutput( HostnamePort hostnamePort, long period, MetricRegistry registry, Log logger )
     {
         this.hostnamePort = hostnamePort;
         this.period = period;
         this.registry = registry;
         this.logger = logger;
-        this.prefix = prefix;
     }
 
     @Override
@@ -48,7 +46,6 @@ public class GraphiteOutput implements Lifecycle, EventReporter
         final Graphite graphite = new Graphite( hostnamePort.getHost(), hostnamePort.getPort() );
 
         graphiteReporter = GraphiteReporter.forRegistry( registry )
-                .prefixedWith( prefix )
                 .convertRatesTo( TimeUnit.SECONDS )
                 .convertDurationsTo( TimeUnit.MILLISECONDS )
                 .filter( MetricFilter.ALL )

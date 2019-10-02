@@ -60,7 +60,6 @@ public class EventReporterBuilder
     public CompositeEventReporter build()
     {
         CompositeEventReporter reporter = new CompositeEventReporter();
-        final String prefix = createMetricsPrefix( config );
         if ( config.get( csvEnabled ) )
         {
             CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem, scheduler );
@@ -72,7 +71,7 @@ public class EventReporterBuilder
         {
             HostnamePort server = config.get( graphiteServer );
             long period = config.get( graphiteInterval ).toMillis();
-            GraphiteOutput graphiteOutput = new GraphiteOutput( server, period, registry, logger, prefix );
+            GraphiteOutput graphiteOutput = new GraphiteOutput( server, period, registry, logger );
             reporter.add( graphiteOutput );
             life.add( graphiteOutput );
         }
@@ -87,17 +86,13 @@ public class EventReporterBuilder
 
         if ( config.get( MetricsSettings.jmxEnabled ) )
         {
-            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( prefix + METRICS_JMX_BEAN_SUFFIX )
+            String domain = config.get( metricsPrefix ) + METRICS_JMX_BEAN_SUFFIX;
+            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( domain )
                     .createsObjectNamesWith( new MetricsObjectNameFactory() ).build();
             life.add( new JmxOutput( jmxReporter ) );
         }
 
         return reporter;
-    }
-
-    private String createMetricsPrefix( Config config )
-    {
-        return config.get( metricsPrefix );
     }
 
     private static class MetricsObjectNameFactory implements ObjectNameFactory
