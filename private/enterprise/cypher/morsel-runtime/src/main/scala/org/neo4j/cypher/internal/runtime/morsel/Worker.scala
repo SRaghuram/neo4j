@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
   */
 class Worker(val workerId: Int,
              queryManager: QueryManager,
-             schedulingPolicy: SchedulingPolicy,
+             val schedulingPolicy: SchedulingPolicy,
              val sleeper: Sleeper) extends Runnable {
 
   @volatile
@@ -68,15 +68,15 @@ class Worker(val workerId: Int,
     *
     * @param executingQuery the query
     * @param resources      the query resources for this worker
-    * @return `true` if some work was performed, otherwise `false`
+    * @return `true` if some work was performed or cancelled, otherwise `false`
     */
   def workOnQuery(executingQuery: ExecutingQuery, resources: QueryResources): Boolean = {
-    val task = scheduleNextTask(executingQuery, resources)
-    if (task == null) {
-      false
+    val schedulingResult = scheduleNextTask(executingQuery, resources)
+    if (schedulingResult.task == null) {
+      schedulingResult.someTaskWasFilteredOut
     } else {
       try {
-        task match {
+        schedulingResult.task match {
           case cleanUpTask: CleanUpTask =>
             cleanUpTask.executeWorkUnit(resources, null, null)
           case pipelineTask: PipelineTask =>
@@ -95,7 +95,7 @@ class Worker(val workerId: Int,
         // Failure while executing `task`
         case throwable: Throwable =>
           try {
-            task match {
+            schedulingResult.task match {
               case pipelineTask: PipelineTask =>
                 executingQuery.executionState.failQuery(throwable, resources, pipelineTask.pipelineState.pipeline)
                 pipelineTask.close(resources)
@@ -112,7 +112,7 @@ class Worker(val workerId: Int,
     }
   }
 
-  private def executeTask(executingQuery: ExecutingQuery,
+  protected[morsel] def executeTask(executingQuery: ExecutingQuery,
                           task: PipelineTask,
                           resources: QueryResources): Unit = {
     var workUnitEvent: WorkUnitEvent = null
@@ -136,7 +136,7 @@ class Worker(val workerId: Int,
   }
 
   // protected to allow unit-testing
-  protected[morsel] def scheduleNextTask(executingQuery: ExecutingQuery, resources: QueryResources): Task[QueryResources] = {
+  protected[morsel] def scheduleNextTask(executingQuery: ExecutingQuery, resources: QueryResources): SchedulingResult[Task[QueryResources]] = {
     try {
       schedulingPolicy.nextTask(executingQuery, resources)
     } catch {
@@ -144,23 +144,23 @@ class Worker(val workerId: Int,
       case NextTaskException(pipeline, SchedulingInputException(morsel: MorselParallelizer, cause)) =>
         executingQuery.executionState.closeMorselTask(pipeline, morsel.originalForClosing)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
-        null
+        SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Accumulator
       case NextTaskException(pipeline, SchedulingInputException(acc: MorselAccumulator[_], cause)) =>
         executingQuery.executionState.closeAccumulatorTask(pipeline, acc)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
-        null
+        SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline
       case NextTaskException(pipeline, cause) =>
         executingQuery.executionState.failQuery(cause, resources, pipeline)
-        null
+        SchedulingResult(null, someTaskWasFilteredOut = false)
 
       // Failure in scheduling query
       case throwable: Throwable =>
         executingQuery.executionState.failQuery(throwable, resources, null)
-        null
+        SchedulingResult(null, someTaskWasFilteredOut = false)
     }
   }
 

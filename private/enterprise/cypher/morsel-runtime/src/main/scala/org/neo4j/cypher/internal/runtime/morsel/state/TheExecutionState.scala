@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.debug.{DebugSupport, QueryFailHardException}
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
@@ -294,18 +294,6 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def hasEnded: Boolean = tracker.hasEnded
-
-  override def failHardIfError(): Unit = {
-    val error = tracker.peekError
-    if (error != null) {
-      if (DebugSupport.ERROR_HANDLING.enabled) {
-        if (!tracker.hasEnded) {
-          DebugSupport.ERROR_HANDLING.log("Query still not completed: %s", tracker.toString)
-        }
-      }
-      throw new QueryFailHardException("Query failed hard", error)
-    }
-  }
 
   override def prettyString(pipeline: ExecutablePipeline): String = {
     s"""continuations: ${continuations(pipeline.id.x)}

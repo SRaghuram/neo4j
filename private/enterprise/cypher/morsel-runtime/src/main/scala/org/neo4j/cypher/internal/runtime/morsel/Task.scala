@@ -35,3 +35,11 @@ trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
 
   override def toString: String = s"${getClass.getSimpleName}[$workId]($workDescription)"
 }
+
+/**
+ * Result from scheduling something
+ * @param task a task or `null`
+ * @param someTaskWasFilteredOut `true` if some task was filtered out, `false` otherwise.
+ * @tparam T the type of task
+ */
+case class SchedulingResult[+T](task: T, someTaskWasFilteredOut: Boolean)

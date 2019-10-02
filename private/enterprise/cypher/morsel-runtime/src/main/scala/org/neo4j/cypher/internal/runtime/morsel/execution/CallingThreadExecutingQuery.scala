@@ -27,9 +27,9 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   override def request(numberOfRecords: Long): Unit = {
     super.request(numberOfRecords)
     while (!executionState.hasEnded && flowControl.hasDemand) {
-      worker.workOnQuery(this, workerResources)
-      if (DebugSupport.FAIL_HARD && !executionState.hasEnded && flowControl.hasDemand) {
-        executionState.failHardIfError()
+      val worked = worker.workOnQuery(this, workerResources)
+      if (!worked && !executionState.hasEnded && flowControl.hasDemand) {
+        return
       }
     }
   }

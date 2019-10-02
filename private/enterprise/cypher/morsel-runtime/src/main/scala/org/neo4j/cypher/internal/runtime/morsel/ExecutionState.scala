@@ -243,9 +243,4 @@ trait ExecutionState extends ArgumentStateMapCreator {
    */
   def argumentStateMaps: ArgumentStateMaps
 
-  /**
-   * Force a hard failure if an error was reported
-   */
-  def failHardIfError(): Unit
-
 }

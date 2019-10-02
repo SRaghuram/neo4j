@@ -35,7 +35,6 @@ import org.neo4j.logging.NullLog
 import org.scalatest.matchers.{BeMatcher, MatchResult}
 
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 
 class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  {
   private val theId = new Id(3)

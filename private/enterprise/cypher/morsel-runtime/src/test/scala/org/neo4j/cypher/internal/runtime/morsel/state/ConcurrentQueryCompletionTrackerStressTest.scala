@@ -158,7 +158,6 @@ object ConcurrentQueryCompletionTrackerStressTest {
     override def request(numberOfRecords: Long): Unit = fail()
     override def cancel(): Unit = fail()
     override def await(): Boolean = fail()
-    override def peekError: Throwable = fail()
 
     private def fail() =
       throw new AssertionError("This is not the QueryCompletionTracker you are looking for")

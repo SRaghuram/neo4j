@@ -83,8 +83,18 @@ class PipelineState(val pipeline: ExecutablePipeline,
     */
   def nextTask(context: QueryContext,
                state: QueryState,
-               resources: QueryResources): PipelineTask = {
+               resources: QueryResources): SchedulingResult[PipelineTask] = {
     var task: PipelineTask = null
+    var someTaskWasFilteredOut = false
+
+    def taskCancelled(task: PipelineTask): Boolean = {
+      val cancelled = task.filterCancelledArguments(resources)
+      if (cancelled) {
+        someTaskWasFilteredOut = true
+      }
+      cancelled
+    }
+
     try {
       // Loop until we find a task that is not completely cancelled
       do {
@@ -104,7 +114,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
         }
         // filterCancelledArguments checks if there is work left to do for a task
         // if it returns `true`, there is no work left and the task has been already closed.
-      } while (task != null && task.filterCancelledArguments(resources))
+      } while (task != null && taskCancelled(task))
     } catch {
       case t: Throwable =>
         if (DebugSupport.SCHEDULING.enabled)
@@ -113,7 +123,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
           DebugSupport.WORKERS.log(s"[nextTask] failed with $t")
         throw NextTaskException(pipeline, t)
     }
-    task
+    SchedulingResult(task, someTaskWasFilteredOut)
   }
 
   def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {

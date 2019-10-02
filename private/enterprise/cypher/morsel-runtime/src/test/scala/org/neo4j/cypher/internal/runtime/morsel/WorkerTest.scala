@@ -21,7 +21,7 @@ class WorkerTest extends CypherFunSuite {
       new QueryManager {
         override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = countDown.next()
       }
-    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => null
+    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => SchedulingResult(null, someTaskWasFilteredOut = false)
     val sleeper = mock[Sleeper]
 
     val worker = new Worker(1, queryManager, schedulingPolicy, sleeper)
@@ -40,7 +40,7 @@ class WorkerTest extends CypherFunSuite {
       }
 
     val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
-    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => countDown.next()
+    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => SchedulingResult(countDown.next(), someTaskWasFilteredOut = false)
 
     val sleeper = mock[Sleeper]
     val worker = new Worker(1, queryManager, schedulingPolicy,  sleeper)
@@ -67,7 +67,7 @@ class WorkerTest extends CypherFunSuite {
         throw NextTaskException(pipeline, SchedulingInputException(input, cause))
 
     val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
-    worker.scheduleNextTask(query, resources) shouldBe null
+    worker.scheduleNextTask(query, resources) shouldBe SchedulingResult(null, someTaskWasFilteredOut = true)
 
     verify(input).originalForClosing
     verify(input, never()).nextCopy
@@ -91,7 +91,7 @@ class WorkerTest extends CypherFunSuite {
         throw NextTaskException(pipeline, SchedulingInputException(input, cause))
 
     val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
-    worker.scheduleNextTask(query, resources) shouldBe null
+    worker.scheduleNextTask(query, resources) shouldBe SchedulingResult(null, someTaskWasFilteredOut = true)
 
     verify(input).originalForClosing
     verify(input, never()).nextCopy

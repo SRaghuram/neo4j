@@ -40,7 +40,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     */
   private var _output: MorselExecutionContext = _
 
-  override final def executeWorkUnit(resources: QueryResources,
+  override def executeWorkUnit(resources: QueryResources,
                                      workUnitEvent: WorkUnitEvent,
                                      queryProfiler: QueryProfiler): PreparedOutput = {
     if (_output == null) {
