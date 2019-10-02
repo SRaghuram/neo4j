@@ -511,7 +511,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             return Integer.parseInt( s );
         }
 
-        public SchemaStateCheck setUp() throws TransactionFailureException
+        public SchemaStateCheck setUp()
         {
             KernelTransaction transaction = newTransaction();
             checkState( transaction );

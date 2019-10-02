@@ -521,8 +521,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     )
 
     graph.withTx( tx => tx.execute("CALL db.awaitIndexes(10)"))
-    val index = inTx(tx => tx.kernelTransaction().schemaRead().index(tokenReader(tx,t => t.nodeLabel("Person")),
-      tokenReader(tx, t => t.propertyKey("name"))))
+    val index = inTx(tx => Iterators.single(tx.kernelTransaction().schemaRead().index(
+      SchemaDescriptor.forLabel(tokenReader(tx, t => t.nodeLabel("Person")), tokenReader(tx, t => t.propertyKey("name"))))))
 
     // when
     val listResult = executeWith(Configs.ProcedureCall, "CALL db.indexes()")

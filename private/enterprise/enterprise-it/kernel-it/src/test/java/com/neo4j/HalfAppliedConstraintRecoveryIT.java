@@ -82,10 +82,10 @@ public class HalfAppliedConstraintRecoveryIT
             tx.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).withName( NAME ).create();
 
     private static final BiConsumer<GraphDatabaseAPI,Transaction> NODE_KEY_CONSTRAINT_CREATOR = ( db, tx ) ->
-            db.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).withName( NAME ).create();
+            tx.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).withName( NAME ).create();
 
     private static final BiConsumer<GraphDatabaseAPI,Transaction> COMPOSITE_NODE_KEY_CONSTRAINT_CREATOR = ( db, tx ) ->
-            db.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).assertPropertyIsNodeKey( KEY2 ).withName( NAME ).create();
+            tx.schema().constraintFor( LABEL ).assertPropertyIsNodeKey( KEY ).assertPropertyIsNodeKey( KEY2 ).withName( NAME ).create();
 
     private static final BiConsumer<GraphDatabaseAPI,List<TransactionRepresentation>> REAPPLY =
             ( db, txs ) -> apply( db, txs.subList( txs.size() - 1, txs.size() ) );
@@ -104,11 +104,11 @@ public class HalfAppliedConstraintRecoveryIT
      */
     private static BiConsumer<GraphDatabaseAPI,Transaction> dropIndexAnd( BiConsumer<GraphDatabaseAPI,Transaction> createConstraint )
     {
-        return ( db, txs ) ->
+        return ( db, tx ) ->
         {
-            IndexDefinition index = db.schema().getIndexByName( NAME );
+            IndexDefinition index = tx.schema().getIndexByName( NAME );
             index.drop();
-            createConstraint.accept( db, txs );
+            createConstraint.accept( db, tx );
         };
     }
 
