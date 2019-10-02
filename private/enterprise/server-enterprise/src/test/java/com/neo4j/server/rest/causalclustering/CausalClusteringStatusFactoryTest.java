@@ -104,8 +104,8 @@ class CausalClusteringStatusFactoryTest
     {
         var dbService = mock( DatabaseService.class );
         var db = mock( GraphDatabaseFacade.class );
+        when( db.databaseInfo() ).thenReturn( knownDbInfo );
         var dependencyResolver = mock( DependencyResolver.class );
-        when( dependencyResolver.resolveDependency( DatabaseInfo.class ) ).thenReturn( knownDbInfo );
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         when( dbService.getDatabase( KNOWN_DB ) ).thenReturn( db );
         when( dbService.getDatabase( UNKNOWN_DB ) ).thenThrow( new DatabaseNotFoundException() );

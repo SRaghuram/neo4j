@@ -6,7 +6,6 @@
 package com.neo4j.server.rest.causalclustering;
 
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -24,8 +23,7 @@ public class CausalClusteringStatusFactory
             return new FixedStatus( NOT_FOUND );
         }
 
-        var databaseInfo = db.getDependencyResolver().resolveDependency( DatabaseInfo.class );
-        switch ( databaseInfo )
+        switch ( db.databaseInfo() )
         {
         case CORE:
             return new CoreStatus( output, db, clusterService );

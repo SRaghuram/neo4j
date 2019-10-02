@@ -86,6 +86,7 @@ class CoreStatusTest
         var dbService = mock( DatabaseService.class );
         var databaseFacade = mock( GraphDatabaseFacade.class );
         when( databaseFacade.databaseName() ).thenReturn( databaseName );
+        when( databaseFacade.databaseInfo() ).thenReturn( DatabaseInfo.CORE );
         when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
         when( dbService.getDatabase( databaseName ) ).thenReturn( databaseFacade );
 
@@ -97,7 +98,6 @@ class CoreStatusTest
         topologyService = dependencyResolver.satisfyDependency(
                 new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );
 
-        dependencyResolver.satisfyDependency( DatabaseInfo.CORE );
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );

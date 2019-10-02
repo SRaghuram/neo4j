@@ -76,9 +76,9 @@ class ReadReplicaStatusTest
         var dbService = mock( DatabaseService.class );
         var db = mock( GraphDatabaseFacade.class );
         when( db.databaseName() ).thenReturn( databaseName );
+        when( db.databaseInfo() ).thenReturn( DatabaseInfo.READ_REPLICA );
         when( dbService.getDatabase( databaseName ) ).thenReturn( db );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
-        dependencyResolver.satisfyDependency( DatabaseInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );
         var jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         dependencyResolver.satisfyDependency( jobScheduler );
