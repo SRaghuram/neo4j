@@ -34,7 +34,7 @@
             "Ref": "AMIID"
           },
           "Ec2KeyPair": "benchmark",
-          "MinvCpus": 0,
+          "MinvCpus": 8,
           "DesiredvCpus": 8,
           "MaxvCpus": 256,
           "InstanceTypes": [
@@ -63,7 +63,7 @@
         "ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
       }
     },
-    "M5DLargeComputeEnvironment": {
+    "M5DXLargeComputeEnvironment": {
       "Type": "AWS::Batch::ComputeEnvironment",
       "Properties": {
         "Type": "MANAGED",
@@ -73,8 +73,8 @@
             "Ref": "AMIID"
           },
           "Ec2KeyPair": "benchmark",
-          "MinvCpus": 0,
-          "DesiredvCpus": 4,
+          "MinvCpus": 2,
+          "DesiredvCpus": 2,
           "MaxvCpus": 256,
           "InstanceTypes": [
             "m5d.large"
@@ -126,12 +126,12 @@
           {
             "Order": 1,
             "ComputeEnvironment": {
-              "Ref": "M5DLargeComputeEnvironment"
+              "Ref": "M5DXLargeComputeEnvironment"
             }
           }
         ],
         "JobQueueName": {
-          "Fn::Sub": "M5DLargeComputeEnvironment-${BUILDID}"
+          "Fn::Sub": "M5DLargeJobQueue-${BUILDID}"
         },
         "Priority": 1
       }
@@ -244,7 +244,7 @@
           ],
           "Privileged": true,
           "Vcpus": 8,
-          "Memory": 16384
+          "Memory": 32768
         }
       }
     },
@@ -355,8 +355,8 @@
             }
           ],
           "Privileged": true,
-          "Vcpus": 4,
-          "Memory": 8384
+          "Vcpus": 2,
+          "Memory": 8192
         }
       }
     },
@@ -468,7 +468,7 @@
           ],
           "Privileged": true,
           "Vcpus": 8,
-          "Memory": 16384
+          "Memory": 32768
         }
       }
     },
@@ -579,8 +579,8 @@
             }
           ],
           "Privileged": true,
-          "Vcpus": 4,
-          "Memory": 8384
+          "Vcpus": 2,
+          "Memory": 8192
         }
       }
     }
@@ -593,7 +593,7 @@
     },
     "M5DLargeJobQueue": {
       "Value": {
-        "Fn::Sub": "M5DLargeComputeEnvironment-${BUILDID}"
+        "Fn::Sub": "M5DLargeJobQueue-${BUILDID}"
       }
     }
   }
