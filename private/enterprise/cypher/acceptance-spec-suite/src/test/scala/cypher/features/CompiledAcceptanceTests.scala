@@ -17,13 +17,13 @@ class CompiledAcceptanceTests extends EnterpriseBaseAcceptanceTest {
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseAcceptanceTest
 
   @TestFactory
-  def runCostCompiled(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostCompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def runCompiled(): util.Collection[DynamicTest] = {
+    createTests(scenarios, CompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled
-  def generateBlacklistCostCompiled(): Unit = {
-    printComputedBlacklist(scenarios, CostCompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateBlacklistCompiled(): Unit = {
+    printComputedBlacklist(scenarios, CompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

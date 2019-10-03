@@ -17,13 +17,13 @@ class SlottedTCKTests extends EnterpriseBaseTCKTests {
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseTCKTests
 
   @TestFactory
-  def runCostSlotted(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostSlottedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def runSlotted(): util.Collection[DynamicTest] = {
+    createTests(scenarios, SlottedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled
-  def generateBlacklistCostSlotted(): Unit = {
-    printComputedBlacklist(scenarios, CostSlottedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateBlacklistSlotted(): Unit = {
+    printComputedBlacklist(scenarios, SlottedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

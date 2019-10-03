@@ -18,11 +18,11 @@ class ParallelRuntimeTCKTests extends EnterpriseBaseTCKTests {
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseTCKTests
 
   @TestFactory
-  def runCostMorsel(): util.Collection[DynamicTest] = {
+  def runMorsel(): util.Collection[DynamicTest] = {
     if (runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, CostParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     }
   }
 
@@ -32,8 +32,8 @@ class ParallelRuntimeTCKTests extends EnterpriseBaseTCKTests {
   }
 
   @Disabled
-  def generateBlacklistCostMorsel(): Unit = {
-    printComputedBlacklist(scenarios, CostParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateBlacklistMorsel(): Unit = {
+    printComputedBlacklist(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

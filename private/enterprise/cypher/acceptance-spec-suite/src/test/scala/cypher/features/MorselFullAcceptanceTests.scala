@@ -12,18 +12,18 @@ import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
-class MorselSingleThreadedFullAcceptanceTests extends EnterpriseBaseAcceptanceTest {
+class MorselFullAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseAcceptanceTest
 
   @TestFactory
-  def runCostMorselSingleThreadedFull(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostMorselSingleThreadedFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def runMorselSingleThreadedFull(): util.Collection[DynamicTest] = {
+    createTests(scenarios, MorselFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled
-  def generateBlacklistCostMorselFull(): Unit = {
-    printComputedBlacklist(scenarios, CostMorselSingleThreadedFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateBlacklistMorselFull(): Unit = {
+    printComputedBlacklist(scenarios, MorselFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

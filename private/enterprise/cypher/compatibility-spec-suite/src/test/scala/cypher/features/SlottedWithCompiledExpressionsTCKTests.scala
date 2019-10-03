@@ -17,13 +17,13 @@ class SlottedWithCompiledExpressionsTCKTests extends EnterpriseBaseTCKTests {
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseTCKTests
 
   @TestFactory
-  def runCostSlottedWithCompiledExpressions(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostSlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def runSlottedWithCompiledExpressions(): util.Collection[DynamicTest] = {
+    createTests(scenarios, SlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled
-  def generateBlacklistCostSlotted(): Unit = {
-    printComputedBlacklist(scenarios, CostSlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateBlacklistSlotted(): Unit = {
+    printComputedBlacklist(scenarios, SlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }

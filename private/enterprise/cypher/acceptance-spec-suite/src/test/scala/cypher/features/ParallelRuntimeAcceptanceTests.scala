@@ -18,17 +18,17 @@ class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseAcceptanceTest
 
   @TestFactory
-  def runCostMorsel(): util.Collection[DynamicTest] = {
+  def runParallel(): util.Collection[DynamicTest] = {
     if (Configs.runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, CostParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     }
   }
 
   @Disabled
   def generateBlacklistCostMorsel(): Unit = {
-    printComputedBlacklist(scenarios, CostParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    printComputedBlacklist(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }
