@@ -10,7 +10,6 @@
         "csv": "csv/user.csv"
       },
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {
@@ -21,7 +20,6 @@
         "csv": "csv/person.csv"
       },
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {
@@ -32,7 +30,6 @@
         "csv": "csv/movie.csv"
       },
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {
