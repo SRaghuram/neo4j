@@ -62,7 +62,6 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
             {
                 Map<String,Object> params = params();
                 StatementResult statementResult = tx.run( SUBMIT_TEST_RUN, params );
-                tx.success();
                 if ( statementResult.hasNext() )
                 {
                     Record record = statementResult.next();
