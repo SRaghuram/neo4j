@@ -58,7 +58,6 @@
       "name": "WQ6",
       "description": "Add FRIEND relationships among Users",
       "queryFile": "queries/WQ6.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ6.cypher",
       "parameters": {
         "csv": "csv/friend.csv"
       },
@@ -69,7 +68,6 @@
       "name": "WQ7",
       "description": "Add RATED relationships between Users and Moviesl",
       "queryFile": "queries/WQ7.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ7.cypher",
       "parameters": {
         "csv": "csv/rated.csv"
       },

@@ -1,4 +1,0 @@
-MATCH (n:Track)
-WITH n
-LIMIT 10000
-RETURN count(n)

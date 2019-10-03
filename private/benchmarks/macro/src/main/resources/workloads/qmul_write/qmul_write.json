@@ -163,7 +163,6 @@
       "name": "WQ21",
       "description": "Match friends and delete them",
       "queryFile": "queries/WQ21.cypher",
-      "warmupQueryFile": "queries/WQ21.cypher",
       "parameters": {
         "file": "parameters/names.txt"
       },
