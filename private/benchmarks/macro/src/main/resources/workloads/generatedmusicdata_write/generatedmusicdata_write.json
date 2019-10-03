@@ -7,7 +7,6 @@
       "queryFile": "queries/WQ1.cypher",
       "description": "Create dummy nodes for each track",
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {
@@ -15,7 +14,6 @@
       "queryFile": "queries/WQ2.cypher",
       "description": "Merge albums and relationships for each track",
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {
@@ -29,7 +27,6 @@
       "name": "WQ4",
       "queryFile": "queries/WQ4.cypher",
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {

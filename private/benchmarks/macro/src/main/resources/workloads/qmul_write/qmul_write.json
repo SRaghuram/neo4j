@@ -94,7 +94,6 @@
       "description": "Match many nodes and create many others (eager in older code)",
       "queryFile": "queries/WQ11.cypher",
       "isSingleShot": true,
-      "hasWarmup": false,
       "isMutating": true
     },
     {

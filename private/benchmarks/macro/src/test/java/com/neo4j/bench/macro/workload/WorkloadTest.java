@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,7 +57,7 @@ public class WorkloadTest
     }
 
     @Test
-    public void allWorkloadsShouldHaveConfigurationFile() throws Exception
+    public void allWorkloadsShouldHaveExactlyOneConfigurationFile() throws Exception
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
         {
@@ -64,8 +65,15 @@ public class WorkloadTest
             try ( Stream<Path> workloadDirs = Files.list( workloadsDir )
                                                    .filter( Files::isDirectory ) )
             {
-                workloadDirs.forEach( workloadDir -> assertTrue( "Workload directory did not contain config file" + workloadDir.toAbsolutePath(),
-                                                                 containsAtLeastOneConfigurationFile( workloadDir ) ) );
+                workloadDirs.forEach( workloadDir ->
+                                      {
+                                          List<String> configFilenames = configurationFilesIn( workloadDir );
+                                          assertThat( "Workload directory did not contain exactly one config file\n" +
+                                                      "Workload folder:     " + workloadDir.toAbsolutePath() + "\n" +
+                                                      String.join( "\n", configFilenames ),
+                                                      configFilenames.size(),
+                                                      equalTo( 1 ) );
+                                      } );
             }
         }
     }
@@ -81,12 +89,12 @@ public class WorkloadTest
                                   String expectedWorkloadName =
                                           workload.configFile().getFileName().toString().replace( ".json",
                                                                                                   "" );
-                                  assertThat( String.format( "Workload with config: %s%n" +
-                                                             "Should have name: %s%n" +
-                                                             "But had name: %s",
-                                                             workload.configFile(),
-                                                             expectedWorkloadName,
-                                                             workload.name() ),
+                                  assertThat( format( "Workload with config: %s%n" +
+                                                      "Should have name: %s%n" +
+                                                      "But had name: %s",
+                                                      workload.configFile(),
+                                                      expectedWorkloadName,
+                                                      workload.name() ),
                                               workload.name(),
                                               equalTo( expectedWorkloadName ) );
                               } );
@@ -134,7 +142,9 @@ public class WorkloadTest
                     .forEach( query ->
                               {
                                   assertFalse( query.queryString().value().contains( "CALL " ) );
-                                  assertFalse( query.warmupQueryString().value().contains( "CALL " ) );
+                                  assertFalse( query.warmupQueryString()
+                                                    .map( q -> q.value().contains( "CALL " ) )
+                                                    .orElse( false ) );
                               } );
         }
     }
@@ -180,12 +190,12 @@ public class WorkloadTest
             Path validWorkloadConfig = workloadDir.resolve( "valid.json" );
             Workload workload = Workload.fromFile( validWorkloadConfig, Deployment.embedded() );
             String expectedWorkloadName = workload.configFile().getFileName().toString().replace( ".json", "" );
-            assertThat( String.format( "Workload with config: %s%n" +
-                                       "Should have name: %s%n" +
-                                       "But had name: %s",
-                                       workload.configFile(),
-                                       expectedWorkloadName,
-                                       workload.name() ),
+            assertThat( format( "Workload with config: %s%n" +
+                                "Should have name: %s%n" +
+                                "But had name: %s",
+                                workload.configFile(),
+                                expectedWorkloadName,
+                                workload.name() ),
                         workload.name(),
                         equalTo( expectedWorkloadName ) );
             List<Query> queries = workload.queries();
@@ -196,8 +206,8 @@ public class WorkloadTest
             assertThat( query1.description(), equalTo( "D1" ) );
             assertThat( query1.isSingleShot(), equalTo( true ) );
             assertThat( query1.isMutating(), equalTo( true ) );
-            assertThat( query1.hasWarmup(), equalTo( Query.DEFAULT_HAS_WARMUP ) );
-            assertThat( BenchmarkUtil.lessWhiteSpace( query1.warmupQueryString().value().trim() ), equalTo( "MATCH (n) RETURN n" ) );
+            assertThat( query1.warmupQueryString().isPresent(), equalTo( true ) );
+            assertThat( BenchmarkUtil.lessWhiteSpace( query1.warmupQueryString().get().value().trim() ), equalTo( "MATCH (n) RETURN n" ) );
             assertThat( BenchmarkUtil.lessWhiteSpace( query1.queryString().value().trim() ), equalTo( "MATCH (n) RETURN n LIMIT 1" ) );
 
             assertTrue( query1.parameters().isLoopable() );
@@ -213,8 +223,7 @@ public class WorkloadTest
             assertThat( query2.description(), equalTo( Query.DEFAULT_DESCRIPTION ) );
             assertThat( query2.isSingleShot(), equalTo( false ) );
             assertThat( query2.isMutating(), equalTo( Query.DEFAULT_IS_MUTATING ) );
-            assertThat( query2.hasWarmup(), equalTo( false ) );
-            assertThat( query2.warmupQueryString().value(), equalTo( query2.queryString().value() ) );
+            assertThat( query2.warmupQueryString().isPresent(), equalTo( false ) );
             assertThat( BenchmarkUtil.lessWhiteSpace( query2.queryString().value().trim() ), equalTo( "MATCH (n) RETURN count(n)" ) );
 
             assertFalse( query2.parameters().isLoopable() );
@@ -230,8 +239,7 @@ public class WorkloadTest
             assertThat( query3.description(), equalTo( Query.DEFAULT_DESCRIPTION ) );
             assertThat( query3.isSingleShot(), equalTo( Query.DEFAULT_IS_SINGLE_SHOT ) );
             assertThat( query3.isMutating(), equalTo( false ) );
-            assertThat( query3.hasWarmup(), equalTo( true ) );
-            assertThat( query3.warmupQueryString().value(), equalTo( query3.queryString().value() ) );
+            assertThat( query3.warmupQueryString().isPresent(), equalTo( false ) );
             assertThat( query3.queryString().value().trim(), equalTo( "MATCH (n) RETURN n.foo" ) );
 
             assertThat( query3.parameters().isLoopable(), equalTo( Parameters.IS_LOOPABLE_DEFAULT ) );
@@ -247,8 +255,8 @@ public class WorkloadTest
             assertThat( query4.description(), equalTo( Query.DEFAULT_DESCRIPTION ) );
             assertThat( query4.isSingleShot(), equalTo( Query.DEFAULT_IS_SINGLE_SHOT ) );
             assertThat( query4.isMutating(), equalTo( Query.DEFAULT_IS_MUTATING ) );
-            assertThat( query4.hasWarmup(), equalTo( Query.DEFAULT_HAS_WARMUP ) );
-            assertThat( BenchmarkUtil.lessWhiteSpace( query4.warmupQueryString().value().trim() ), equalTo( "MATCH (n) RETURN n ORDER BY n" ) );
+            assertThat( query4.warmupQueryString().isPresent(), equalTo( true ) );
+            assertThat( BenchmarkUtil.lessWhiteSpace( query4.warmupQueryString().get().value().trim() ), equalTo( "MATCH (n) RETURN n ORDER BY n" ) );
             assertThat( query4.queryString().value().trim(), equalTo( "MATCH (n) RETURN n.bar" ) );
 
             assertThat( query4.parameters().isLoopable(), equalTo( Parameters.IS_LOOPABLE_DEFAULT ) );
@@ -421,8 +429,11 @@ public class WorkloadTest
         }
     }
 
-    private boolean containsAtLeastOneConfigurationFile( Path workloadDir ) throws UncheckedIOException
+    private List<String> configurationFilesIn( Path workloadDir ) throws UncheckedIOException
     {
-        return Workload.workloadConfigFilesIn( workloadDir ).anyMatch( file -> file.toString().endsWith( ".json" ) );
+        return Workload.workloadConfigFilesIn( workloadDir )
+                       .map( Path::toString )
+                       .filter( filename -> filename.endsWith( ".json" ) )
+                       .collect( toList() );
     }
 }
