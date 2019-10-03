@@ -54,6 +54,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         // THEN
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             assertEquals( ConstraintType.NODE_PROPERTY_EXISTENCE, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
@@ -71,6 +72,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         // Then
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             assertEquals( ConstraintType.NODE_PROPERTY_EXISTENCE, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
@@ -88,6 +90,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         // THEN
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             assertEquals( ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE, constraint.getConstraintType() );
             assertEquals( relType.name(), constraint.getRelationshipType().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
@@ -105,6 +108,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         // Then
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             assertEquals( ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE, constraint.getConstraintType() );
             assertEquals( relType.name(), constraint.getRelationshipType().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
@@ -122,6 +126,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         // THEN
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             assertEquals( ConstraintType.NODE_KEY, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
@@ -139,6 +144,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         // Then
         try ( Transaction tx = db.beginTx() )
         {
+            constraint = tx.schema().getConstraintByName( constraint.getName() );
             assertEquals( ConstraintType.NODE_KEY, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
@@ -452,11 +458,11 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         {
             if ( drop1 )
             {
-                constraint1.drop();
+                tx.schema().getConstraintByName( constraint1.getName() ).drop();
             }
             else
             {
-                constraint2.drop();
+                tx.schema().getConstraintByName( constraint2.getName() ).drop();
             }
             tx.commit();
         }
