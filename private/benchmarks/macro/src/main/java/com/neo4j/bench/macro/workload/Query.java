@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.fileToString;
@@ -32,35 +33,29 @@ public class Query
     private static final String WARMUP_QUERY_FILE = "warmupQueryFile";
     private static final String QUERY_FILE = "queryFile";
     private static final String IS_SINGLE_SHOT = "isSingleShot";
-    private static final String HAS_WARMUP = "hasWarmup";
     private static final String IS_MUTATING = "isMutating";
     private static final String PARAMETERS = "parameters";
 
     static final String DEFAULT_DESCRIPTION = "n/a";
     static final boolean DEFAULT_IS_SINGLE_SHOT = false;
-    static final boolean DEFAULT_HAS_WARMUP = true;
     static final boolean DEFAULT_IS_MUTATING = false;
     private static final Set<String> VALID_KEYS = Sets.newHashSet( NAME,
                                                                    DESCRIPTION,
                                                                    WARMUP_QUERY_FILE,
                                                                    QUERY_FILE,
                                                                    IS_SINGLE_SHOT,
-                                                                   HAS_WARMUP,
                                                                    IS_MUTATING,
                                                                    PARAMETERS );
 
     private final String group;
     private final String name;
     private final String description;
-    private final QueryString warmupQueryString;
+    private final Optional<QueryString> warmupQueryString;
     private final QueryString queryString;
-    private final boolean hasWarmup;
     private final boolean isSingleShot;
     private final boolean isMutating;
     private final Parameters parameters;
     private final DeploymentMode mode;
-
-    // TODO write detailed comments about interplay between: has warmup, is single shot, periodic commit, is mutating
 
     public static Query from( Map<String,Object> configEntry, String group, Path workloadDir, DeploymentMode mode )
     {
@@ -72,23 +67,20 @@ public class Query
                                     ? Parameters.from( (Map<String,Object>) configEntry.get( PARAMETERS ), workloadDir )
                                     : Parameters.empty();
             Path queryFile = workloadDir.resolve( (String) getOrFail( configEntry, QUERY_FILE ) );
+            QueryString queryString = loadQueryString( queryFile );
+
             Path warmupQueryFile = configEntry.containsKey( WARMUP_QUERY_FILE )
                                    ? workloadDir.resolve( (String) configEntry.get( WARMUP_QUERY_FILE ) )
-                                   : queryFile;
-
-            if ( !Files.exists( warmupQueryFile ) || !Files.exists( queryFile ) )
-            {
-                throw new WorkloadConfigException( WorkloadConfigError.QUERY_FILE_NOT_FOUND );
-            }
+                                   : null;
+            Optional<QueryString> warmupQueryString = Optional.ofNullable( warmupQueryFile ).map( Query::loadQueryString );
 
             return new Query(
                     group,
                     ((String) getOrFail( configEntry, NAME )).trim(),
                     ((String) configEntry.getOrDefault( DESCRIPTION, DEFAULT_DESCRIPTION )).trim(),
-                    StaticQueryString.atDefaults( fileToString( warmupQueryFile ) ),
-                    StaticQueryString.atDefaults( fileToString( queryFile ) ),
+                    warmupQueryString,
+                    queryString,
                     (boolean) configEntry.getOrDefault( IS_SINGLE_SHOT, DEFAULT_IS_SINGLE_SHOT ),
-                    (boolean) configEntry.getOrDefault( HAS_WARMUP, DEFAULT_HAS_WARMUP ),
                     (boolean) configEntry.getOrDefault( IS_MUTATING, DEFAULT_IS_MUTATING ),
                     parameters,
                     mode );
@@ -101,6 +93,15 @@ public class Query
         {
             throw new RuntimeException( "Error parsing query config: " + configEntry, e );
         }
+    }
+
+    private static QueryString loadQueryString( Path queryFile )
+    {
+        if ( !Files.exists( queryFile ) )
+        {
+            throw new WorkloadConfigException( WorkloadConfigError.QUERY_FILE_NOT_FOUND );
+        }
+        return StaticQueryString.atDefaults( fileToString( queryFile ) );
     }
 
     private static void assertConfigHasValidKeys( Map<String,Object> queryConfigs )
@@ -131,22 +132,14 @@ public class Query
             throw new WorkloadConfigException( format( "Query config contained unrecognized keys: %s", invalidKeys ),
                                                WorkloadConfigError.INVALID_QUERY_FIELD );
         }
-
-        boolean hasWarmup = (boolean) queryConfigs.getOrDefault( HAS_WARMUP, DEFAULT_HAS_WARMUP );
-        if ( !hasWarmup && queryConfigs.containsKey( WARMUP_QUERY_FILE ) )
-        {
-            throw new RuntimeException( format( "Inconsistent warmup settings in query config, contained %s yet %s=false",
-                                                WARMUP_QUERY_FILE, HAS_WARMUP ) );
-        }
     }
 
     Query( String group,
            String name,
            String description,
-           QueryString warmupQueryString,
+           Optional<QueryString> warmupQueryString,
            QueryString queryString,
            boolean isSingleShot,
-           boolean hasWarmup,
            boolean isMutating,
            Parameters parameters,
            DeploymentMode mode )
@@ -158,7 +151,6 @@ public class Query
         this.queryString = queryString;
         this.parameters = parameters;
         this.isSingleShot = isSingleShot;
-        this.hasWarmup = hasWarmup;
         this.isMutating = isMutating;
         this.mode = mode;
     }
@@ -194,17 +186,12 @@ public class Query
         return isSingleShot;
     }
 
-    public boolean hasWarmup()
-    {
-        return hasWarmup;
-    }
-
     public boolean isMutating()
     {
         return isMutating;
     }
 
-    public QueryString warmupQueryString()
+    public Optional<QueryString> warmupQueryString()
     {
         return warmupQueryString;
     }
@@ -219,10 +206,9 @@ public class Query
         return new Query( group,
                           name,
                           description,
-                          warmupQueryString.copyWith( newPlanner ),
+                          warmupQueryString.map( q -> q.copyWith( newPlanner ) ),
                           queryString.copyWith( newPlanner ),
                           isSingleShot,
-                          hasWarmup,
                           isMutating,
                           parameters,
                           mode );
@@ -233,10 +219,9 @@ public class Query
         return new Query( group,
                           name,
                           description,
-                          warmupQueryString.copyWith( newRuntime ),
+                          warmupQueryString.map( q -> q.copyWith( newRuntime ) ),
                           queryString.copyWith( newRuntime ),
                           isSingleShot,
-                          hasWarmup,
                           isMutating,
                           parameters,
                           mode );
@@ -247,10 +232,9 @@ public class Query
         return new Query( group,
                           name,
                           description,
-                          warmupQueryString.copyWith( newExecutionMode ),
+                          warmupQueryString.map( q -> q.copyWith( newExecutionMode ) ),
                           queryString.copyWith( newExecutionMode ),
                           isSingleShot,
-                          hasWarmup,
                           isMutating,
                           parameters,
                           mode );
@@ -282,7 +266,7 @@ public class Query
                "\truntime         : " + queryString.runtime() + "\n" +
                "\texecution mode  : " + queryString.executionMode() + "\n" +
                "\tsingle shot     : " + isSingleShot + "\n" +
-               "\thas warmup      : " + hasWarmup + "\n" +
+               "\thas warmup      : " + warmupQueryString.isPresent() + "\n" +
                "\tis mutating     : " + isMutating + "\n" +
                "\tparameters      : " + parameters + "\n" +
                "\tdeployment      : " + mode;

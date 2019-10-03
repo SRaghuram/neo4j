@@ -9,7 +9,6 @@
       "queryFile": "queries/IT_Q1.cypher",
       "isSingleShot": false,
       "isMutating": false,
-      "hasWarmup": true,
       "parameters": {
         "file": "parameters/valid_param_types.txt",
         "isLoopable": true
@@ -19,7 +18,6 @@
       "name": "IT_Q2",
       "queryFile": "queries/IT_Q2.cypher",
       "isSingleShot": false,
-      "hasWarmup": false,
       "isMutating": true,
       "parameters": {
         "file": "parameters/valid_param_types.txt",

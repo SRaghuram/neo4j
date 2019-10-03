@@ -17,6 +17,7 @@ import com.neo4j.bench.macro.workload.QueryString;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
@@ -104,10 +105,12 @@ public class CypherExecutingRunner extends QueryRunner
             else
             {
                 // mutating cases where main query contains PERIODIC COMMIT -> not possible to rollback
-                if ( query.hasWarmup() )
+                Optional<QueryString> maybeWarmupQuery = query.warmupQueryString();
+                if ( maybeWarmupQuery.isPresent() )
                 {
                     // when there is a (non-mutating) warmup query fallback to it
-                    return new WarmupStrategy( false, query.copyWith( EXECUTE ).warmupQueryString(), warmupControl );
+                    QueryString warmupQuery = maybeWarmupQuery.map( qs -> qs.copyWith( EXECUTE ) ).get();
+                    return new WarmupStrategy( false, warmupQuery, warmupControl );
                 }
                 else
                 {
@@ -141,7 +144,7 @@ public class CypherExecutingRunner extends QueryRunner
             return warmupQuery;
         }
 
-        public MeasurementControl warmupControl()
+        MeasurementControl warmupControl()
         {
             return warmupControl;
         }

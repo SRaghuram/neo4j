@@ -11,6 +11,8 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class QueryTest
@@ -20,9 +22,8 @@ class QueryTest
             "g",
             "n",
             "d",
+            Optional.of( queryString ),
             queryString,
-            queryString,
-            true,
             true,
             false,
             Parameters.empty(),
@@ -34,7 +35,7 @@ class QueryTest
     {
         Query copiedQuery = baseQuery.copyWith( Planner.COST );
         assertEquals( Planner.COST, copiedQuery.queryString().planner() );
-        assertEquals( Planner.COST, copiedQuery.warmupQueryString().planner() );
+        assertEquals( Planner.COST, copiedQuery.warmupQueryString().orElseThrow( RuntimeException::new ).planner() );
     }
 
     @Test
@@ -42,7 +43,7 @@ class QueryTest
     {
         Query copiedQuery = baseQuery.copyWith( Runtime.SLOTTED );
         assertEquals( Runtime.SLOTTED, copiedQuery.queryString().runtime() );
-        assertEquals( Runtime.SLOTTED, copiedQuery.warmupQueryString().runtime() );
+        assertEquals( Runtime.SLOTTED, copiedQuery.warmupQueryString().orElseThrow( RuntimeException::new ).runtime() );
     }
 
     @Test
@@ -50,6 +51,6 @@ class QueryTest
     {
         Query copiedQuery = baseQuery.copyWith( ExecutionMode.EXECUTE );
         assertEquals( ExecutionMode.EXECUTE, copiedQuery.queryString().executionMode() );
-        assertEquals( ExecutionMode.EXECUTE, copiedQuery.warmupQueryString().executionMode() );
+        assertEquals( ExecutionMode.EXECUTE, copiedQuery.warmupQueryString().orElseThrow( RuntimeException::new ).executionMode() );
     }
 }
