@@ -160,7 +160,7 @@ class EndToEndTest
             tx.success();
         }
 
-        assertThat( result, contains( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
+        assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
     }
 
     @Test
@@ -180,7 +180,7 @@ class EndToEndTest
             tx.success();
         }
 
-        assertThat( result, contains( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
+        assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
     }
 
     @Test
@@ -197,15 +197,12 @@ class EndToEndTest
             tx.success();
         }
 
-        assertThat( r.size(), equalTo( 4 ) );
-        assertThat( r.get( 0 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 0 ).get( "name" ).asString(), equalTo( "Anna" ) );
-        assertThat( r.get( 1 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 1 ).get( "name" ).asString(), equalTo( "Bob" ) );
-        assertThat( r.get( 2 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 2 ).get( "name" ).asString(), equalTo( "Carrie" ) );
-        assertThat( r.get( 3 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 3 ).get( "name" ).asString(), equalTo( "Dave" ) );
+        var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
+        assertThat( labels, containsInAnyOrder( contains( "Person" ), contains( "Person" ), contains( "Person" ), contains( "Person" ) ) );
+
+        var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
+        assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
+
     }
 
     @Test
@@ -234,15 +231,10 @@ class EndToEndTest
             tx.success();
         }
 
-        assertThat( r.size(), equalTo( 4 ) );
-        assertThat( r.get( 0 ).labels(), contains( equalTo( "Cat" ) ) );
-        assertThat( r.get( 0 ).get( "name" ).asString(), equalTo( "Whiskers" ) );
-        assertThat( r.get( 1 ).labels(), contains( equalTo( "Cat" ) ) );
-        assertThat( r.get( 1 ).get( "name" ).asString(), equalTo( "Charlie" ) );
-        assertThat( r.get( 2 ).labels(), contains( equalTo( "Cat" ) ) );
-        assertThat( r.get( 2 ).get( "name" ).asString(), equalTo( "Misty" ) );
-        assertThat( r.get( 3 ).labels(), contains( equalTo( "Cat" ) ) );
-        assertThat( r.get( 3 ).get( "name" ).asString(), equalTo( "Cupcake" ) );
+        var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
+        assertThat( labels, containsInAnyOrder( contains( "Cat" ), contains( "Cat" ), contains( "Cat" ), contains( "Cat" ) ) );
+        var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
+        assertThat( names, containsInAnyOrder( "Whiskers", "Charlie", "Misty", "Cupcake" ) );
     }
 
     @Test
@@ -285,6 +277,7 @@ class EndToEndTest
         assertThat( r.size(), equalTo( 4 ) );
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
         labels.forEach( l -> assertThat( l, contains( equalTo( "Person" ) ) ) );
+
         var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
         assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
     }
