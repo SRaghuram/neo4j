@@ -11,6 +11,7 @@ import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 
@@ -106,10 +107,9 @@ class AdditionalQueries
         return new Query( group,
                           name,
                           "",
-                          queryString,
+                          Optional.empty(),
                           queryString,
                           false,
-                          true,
                           false,
                           Parameters.empty(),
                           mode );
