@@ -22,6 +22,8 @@ while (( "$#" )); do
   esac
 done
 
+rm -rf /work/*
+
 # download bootstrap jar
 aws --region eu-north-1 s3 cp "${workerArtifactUri}" /work/benchmark-worker.jar
 
