@@ -61,6 +61,64 @@ public class WorkloadTest
         }
     }
 
+    @Test
+    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+    public void shouldAlwaysMarkMutatingQueriesAsMutating() throws IOException
+    {
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        {
+            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            {
+                for ( Query query : workload.queries() )
+                {
+                    String cypherString = query.queryString().value();
+                    boolean isReallyMutating = cypherString.contains( "SET " ) ||
+                                               cypherString.contains( "REMOVE " ) ||
+                                               cypherString.contains( "CREATE " ) ||
+                                               cypherString.contains( "DELETE " ) ||
+                                               cypherString.contains( "MERGE " );
+                    assertThat( errMsg( "Mutating queries should be marked as `isMutating`, and vice versa\n" +
+                                        "`isMutating`:               " + query.isMutating() + "\n" +
+                                        "But query actually mutates: " + isReallyMutating, workload, query ),
+                                isReallyMutating,
+                                equalTo( query.isMutating() ) );
+                }
+            }
+        }
+    }
+
+    @Test
+    // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
+    //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
+    public void shouldNeverHaveMutatingWarmupQueries() throws IOException
+    {
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        {
+            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            {
+                for ( Query query : workload.queries() )
+                {
+                    QueryString warmupQuery = query.warmupQueryString().orElse( null );
+                    if ( null != warmupQuery )
+                    {
+                        String cypherString = warmupQuery.value();
+                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'SET'", workload, query ),
+                                     cypherString.contains( "SET " ) );
+                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'REMOVE'", workload, query ),
+                                     cypherString.contains( "REMOVE " ) );
+                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'CREATE'", workload, query ),
+                                     cypherString.contains( "CREATE " ) );
+                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'DELETE'", workload, query ),
+                                     cypherString.contains( "DELETE " ) );
+                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'MERGE'", workload, query ),
+                                     cypherString.contains( "MERGE " ) );
+                    }
+                }
+            }
+        }
+    }
+
     private String errMsg( String error, Workload workload, Query query )
     {
         return format( "%s\n" +
