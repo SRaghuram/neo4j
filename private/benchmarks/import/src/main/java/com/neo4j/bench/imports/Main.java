@@ -267,7 +267,7 @@ public class Main
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
             System.out.println( "Test run reported: " + report );
 
-            new QueryRetrier().execute( client, submitTestRun );
+            new QueryRetrier( true ).execute( client, submitTestRun );
         }
         catch ( Exception e )
         {
