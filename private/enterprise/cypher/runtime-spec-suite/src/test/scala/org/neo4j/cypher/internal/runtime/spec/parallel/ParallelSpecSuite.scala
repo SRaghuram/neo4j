@@ -202,8 +202,8 @@ class ParallelRuntimeNoFusingWorkloadTest extends WorkloadTestBase(ENTERPRISE.NO
 class ParallelErrorHandlingTest extends ParallelErrorHandlingTestBase(PARALLEL) with TimeLimitedCypherTest
 
 // PROFILE
-class ParallelRuntimeProfileNoFusingRowsTest extends ProfileRowsTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
-class ParallelRuntimeProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeProfileNoFusingRowsTest extends ProfileRowsTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with TimeLimitedCypherTest
+class ParallelRuntimeProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with TimeLimitedCypherTest
 class ParallelRuntimeProfileNoFusingTimeTest extends ProfileTimeTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest {
   //this test differs in Morsel and Parallel since we fuse differently

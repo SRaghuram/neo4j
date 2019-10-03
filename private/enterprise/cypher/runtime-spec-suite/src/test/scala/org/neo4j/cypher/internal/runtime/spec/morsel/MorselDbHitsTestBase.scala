@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
-import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, Edition}
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileDbHitsTestBase
 import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
 
@@ -20,4 +20,5 @@ abstract class MorselDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Edition[
                                 costOfPropertyJumpedOverInChain = 1,
                                 costOfProperty = 1,
                                 costOfExpand = 2,
-                                costOfRelationshipTypeLookup = 0)
+                                costOfRelationshipTypeLookup = 0,
+                                cartesianProductChunkSize = ENTERPRISE.MORSEL_SIZE)

@@ -177,8 +177,8 @@ class MorselWorkloadTest extends WorkloadTestBase(FUSING, MORSEL, SIZE_HINT)
 class MorselNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 
 // PROFILE
-class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, MORSEL, SIZE_HINT)
-class MorselProfileRowsTest extends ProfileRowsTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, MORSEL, SIZE_HINT, ENTERPRISE.MORSEL_SIZE)
+class MorselProfileRowsTest extends ProfileRowsTestBase(FUSING, MORSEL, SIZE_HINT, ENTERPRISE.MORSEL_SIZE)
 class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, MORSEL, SIZE_HINT)
 class MorselProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, MORSEL, SIZE_HINT) {
   //this test differs in Morsel and Parallel since we fuse differently
@@ -212,4 +212,6 @@ class MorselProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, MORSEL, SIZE
   }
 }
 class MorselProfileNoFusingDbHitsTest extends MorselDbHitsTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+                                      with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
 class MorselProfileDbHitsTest extends MorselDbHitsTestBase(FUSING, MORSEL, SIZE_HINT)
+                              with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
