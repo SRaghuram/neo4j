@@ -40,7 +40,7 @@ class MorselBuffer(id: BufferId,
                     with SinkByOrigin
                     with DataHolder {
 
-  private val cancellerMaps = {
+  private val cancellerASMs = {
     val x = new Array[ArgumentStateMap[WorkCanceller]](workCancellers.size)
     var i = 0
     while (i < workCancellers.size) {
@@ -126,7 +126,7 @@ class MorselBuffer(id: BufferId,
       if(!rowsToCancel.isEmpty) {
         decrementReducers(filteringMorsel, rowsToCancel)
         // Actually cancel all rows
-        filteringMorsel.cancelAllRows(rowsToCancel)
+        filteringMorsel.cancelRows(rowsToCancel)
       }
       filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
     }
@@ -194,10 +194,10 @@ class MorselBuffer(id: BufferId,
 
       // Determine if the current row is cancelled by any canceller
       while (i < workCancellers.size && !isCancelled) {
-        val cancellerMap = cancellerMaps(i)
-        cancellerArgumentRowId = filteringMorsel.getArgumentAt(cancellerMap.argumentSlotOffset)
-        if (cancellerMap.peek(cancellerArgumentRowId).isCancelled) {
-          cancellerArgumentSlotOffset = cancellerMap.argumentSlotOffset
+        val cancellerASM = cancellerASMs(i)
+        cancellerArgumentRowId = filteringMorsel.getArgumentAt(cancellerASM.argumentSlotOffset)
+        if (cancellerASM.peek(cancellerArgumentRowId).isCancelled) {
+          cancellerArgumentSlotOffset = cancellerASM.argumentSlotOffset
           isCancelled = true // break
         }
         i += 1

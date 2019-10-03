@@ -12,14 +12,14 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.SinkByOrigin
 
 /**
- * A buffer which groups input morsels by argument row id and folds each
- * such group/view into an attachment of a new morsel. This Buffer is used for CartesinProduct.
+ * A buffer which groups input morsels by argument row id. For each view  a new morsel is created and the view is "attached" to the new morsel.
+ * This Buffer is used for CartesianProduct. A Morsel allows to attach another morsel as form of communication, for this particular case.
  *
- * The new morsel is given to an ApplyBuffer which has the the a [[org.neo4j.cypher.internal.runtime.morsel.operators.CartesianProductOperator.LHSMorsel]]
+ * The new morsel is given to an ApplyBuffer which has the a [[org.neo4j.cypher.internal.runtime.morsel.operators.CartesianProductOperator.LHSMorsel]]
  * as one delegate (this is the LHS of the MrBuff that sits before the CartesianProduct) and the RHS leaf/leaves as more delegates.
  *
- * The LHSMorsel will detach the attachment morsel. The RHS operators on the new morsel, which consists of a single row. The CartesianProduct operators
- * than associates the right LHSMorsel with data from the RHS.
+ * The LHSMorsel will detach the attachment morsel. The RHS operates on the new morsel, which consists of a single row. The CartesianProduct operator
+ * then associates the right LHSMorsel with data from the RHS.
  *
  * The execution graph looks like this:
  *

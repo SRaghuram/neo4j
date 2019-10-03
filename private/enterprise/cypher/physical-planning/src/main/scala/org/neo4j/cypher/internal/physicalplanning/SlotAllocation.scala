@@ -84,6 +84,11 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
   private val nestedPlanArgumentConfigurations = new NestedPlanArgumentConfigurations
 
   /**
+   * We need argument row id slots for cartesian product in the pipelines runtime
+   */
+  private def argumentRowIdSlotForCartesianProductNeeded(plan: LogicalPlan): Boolean = allocateArgumentSlots && plan.isInstanceOf[CartesianProduct]
+
+  /**
     * Allocate slot for every operator in the logical plan tree `lp`.
     *
     * @param lp the logical plan to process.
@@ -166,9 +171,11 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
         case (Some(left), Some(right)) if comingFrom eq left =>
           planStack.push((nullable, current))
-          if (allocateArgumentSlots && current.isInstanceOf[CartesianProduct]) {
+          if (argumentRowIdSlotForCartesianProductNeeded(current)) {
             val previousArgument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
                                    else argumentStack.top
+            // We put a new argument on the argument stack, but in contrast to Apply, we create a copy of the previous argument, because
+            // the RHS does not need any slots from the LHS.
             val newArgument = previousArgument.slotConfiguration.copy().newArgument(current.id)
             argumentStack.push(SlotsAndArgument(newArgument, newArgument.size(), current.id))
           }
@@ -185,8 +192,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           allocateExpressions(current, nullable, rhsSlots, semanticTable, shouldAllocateLhs = false)
           val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), argument)
           allocations.set(current.id, result)
-          if (current.isInstanceOf[ApplyPlan] ||
-            (current.isInstanceOf[CartesianProduct] && allocateArgumentSlots)) {
+          if (current.isInstanceOf[ApplyPlan] || argumentRowIdSlotForCartesianProductNeeded(current)) {
             argumentStack.pop()
           }
           resultStack.push(result)

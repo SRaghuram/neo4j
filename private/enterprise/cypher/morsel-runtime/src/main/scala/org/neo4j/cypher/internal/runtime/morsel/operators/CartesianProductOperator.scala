@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.operators.CartesianProductOperator.LHSMorsel
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
-import org.neo4j.cypher.internal.runtime.morsel.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.morsel.state.buffers.{ArgumentStateBuffer, MorselAttachBuffer}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 
@@ -106,6 +106,11 @@ object CartesianProductOperator {
   }
 
   object LHSMorsel {
+
+    /**
+     * This Factory creates [[LHSMorsel]] instances by detaching the morsel which is attached to the argument morsel. It has been attached in
+     * the [[MorselAttachBuffer]].
+     */
     class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[LHSMorsel] {
       override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LHSMorsel =
         new LHSMorsel(argumentRowId, argumentMorsel.detach(), argumentRowIdsForReducers)

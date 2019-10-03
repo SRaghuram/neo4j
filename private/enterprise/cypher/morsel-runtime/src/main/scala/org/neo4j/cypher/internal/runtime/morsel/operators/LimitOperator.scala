@@ -179,10 +179,10 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   private var countExpression: IntermediateExpression = _
   private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_countLeft", constant(0L))
   private val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_reserved", constant(0L))
-  private val limitStateField = field[StlLimitState](codeGen.namer.nextVariableName() + "_limitState",
+  private val limitStateField = field[SerialTopLevelLimitState](codeGen.namer.nextVariableName() + "_limitState",
     // Get the limit operator state from the ArgumentStateMaps that is passed to the constructor
     // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
-    cast[StlLimitState](
+    cast[SerialTopLevelLimitState](
       invoke(
         invoke(load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name), method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
                constant(argumentStateMapId.x)),
@@ -218,8 +218,8 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     // NOTE: We would typically prefer to do this in the constructor, but that is called using reflection, and the error handling
     // does not work so well when exceptions are thrown from evaluateCountValue (which can be expected due to it performing user error checking!)
     block(
-      condition(invoke(loadField(limitStateField), method[StlLimitState, Boolean]("isUninitialized")))(
-        invoke(loadField(limitStateField), method[StlLimitState, Unit, Long]("initialize"),
+      condition(invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Boolean]("isUninitialized")))(
+        invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Unit, Long]("initialize"),
           invokeStatic(method[LimitOperator, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
       ),
       assign(reservedVar, invoke(loadField(limitStateField), method[LimitState, Long, Long]("reserve"), howMuchToReserve)),
@@ -240,7 +240,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      invoke(loadField(limitStateField), method[StlLimitState, Unit, Long]("update"), subtract(load(reservedVar), load(countLeftVar))),
+      invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Unit, Long]("update"), subtract(load(reservedVar), load(countLeftVar))),
       profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar)))),
       inner.genOperateExit
     )
@@ -262,7 +262,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   /**
     * This LimitState is intended for use with `SerialTopLevelLimitOperatorTaskTemplate`.
     *
-    * The StlLimitState (x) while be used in the following way from compiled code:
+    * The SerialTopLevelLimitState (x) while be used in the following way from compiled code:
     *
     * {{{
     *   def operate() {
@@ -280,7 +280,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     *   }
     * }}}
     */
-  abstract class StlLimitState extends LimitState {
+  abstract class SerialTopLevelLimitState extends LimitState {
 
     protected def getCount: Long
     protected def setCount(count: Long): Unit
@@ -304,7 +304,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
 
     override def reserve(wanted: Long): Long = {
       val count = getCount
-      Preconditions.checkState(count != -1, "StlLimitState has not been initialized")
+      Preconditions.checkState(count != -1, "SerialTopLevelLimitState has not been initialized")
       math.min(count, wanted)
     }
 
@@ -312,37 +312,37 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   }
 
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object StlLimitStateFactory extends ArgumentStateFactory[StlLimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): StlLimitState =
-      new StandardStlLimitState(argumentRowId, argumentRowIdsForReducers)
+  object SerialTopLevelLimitStateFactory extends ArgumentStateFactory[SerialTopLevelLimitState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
+      new StandardSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): StlLimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
-      new VolatileStlLimitState(argumentRowId, argumentRowIdsForReducers)
+      new VolatileSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
   }
 
-  class StandardStlLimitState(override val argumentRowId: Long,
-                              override val argumentRowIdsForReducers: Array[Long]) extends StlLimitState {
+  class StandardSerialTopLevelLimitState(override val argumentRowId: Long,
+                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelLimitState {
 
     private var countLeft: Long = -1L
 
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
-    override def toString: String = s"StandardStlLimitState($argumentRowId, countLeft=$countLeft)"
+    override def toString: String = s"StandardSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
   }
 
   /**
-    * The StlLimitState intended for use with `SerialTopLevelLimitOperatorTaskTemplate` when used
+    * The SerialTopLevelLimitState intended for use with `SerialTopLevelLimitOperatorTaskTemplate` when used
     * in `ParallelRuntime`. It provides thread-safe calls of `isCancelled`, while all other methods have
     * to be accessed in serial.
     */
-  class VolatileStlLimitState(override val argumentRowId: Long,
-                              override val argumentRowIdsForReducers: Array[Long]) extends StlLimitState {
+  class VolatileSerialTopLevelLimitState(override val argumentRowId: Long,
+                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelLimitState {
 
     @volatile private var countLeft: Long = -1L
 
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
-    override def toString: String = s"VolatileStlLimitState($argumentRowId, countLeft=$countLeft)"
+    override def toString: String = s"VolatileSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
   }
 }
