@@ -276,7 +276,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val c = createNode("C")
     val r = relate(a, b, "X")
 
-    executeWith(Configs.InterpretedAndSlotted,
+    executeWith(Configs.InterpretedAndSlottedAndMorsel,
       """
     match (a {name:'A'}), (x) where x.name in ['B', 'C']
     optional match p = shortestPath((a)-[*]->(x))

@@ -465,7 +465,7 @@ object LdbcQueries {
       Map("friendLastName" -> "last2-ᚠさ丵פش", "friendId" -> 2, "friendFirstName" -> "f2", "yCount" -> 1, "xyCount" -> 2, "xCount" -> 1),
       Map("friendLastName" -> "last6-ᚠさ丵פش", "friendId" -> 6, "friendFirstName" -> "ff6", "yCount" -> 1, "xyCount" -> 2, "xCount" -> 1))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
 
   }
 
@@ -1302,7 +1302,7 @@ object LdbcQueries {
       Map("friendLastName" -> "one one-ᚠさ丵פش", "friendId" -> 11, "companyName" -> "company zero",
         "friendFirstName" -> "friend friend", "workFromYear" -> 3))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
 
   }
 
@@ -1495,7 +1495,7 @@ object LdbcQueries {
 
     def expectedResult = List(Map("pathLength" -> 5))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
 
   }
 

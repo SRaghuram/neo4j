@@ -101,7 +101,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
         |CREATE (n2)-[:Rel {weight:2}]->(e)
         |""".stripMargin)
 
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (s:Start),(e:End) CALL org.neo4j.graphAlgosDijkstra( s, e, 'Rel', 'weight' ) YIELD node RETURN node")
 
     result.size should equal(5) // s -> n3 -> n4 -> n5 -> e

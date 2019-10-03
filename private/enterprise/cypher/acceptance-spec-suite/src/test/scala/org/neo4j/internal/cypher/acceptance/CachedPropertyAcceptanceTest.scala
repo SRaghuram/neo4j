@@ -75,7 +75,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("prop" -> 3), "M")
     createLabeledNode(Map("prop" -> 4), "M")
     val q ="PROFILE MATCH (n:N), (m:M) WHERE n.prop <> m.prop WITH n AS m, m AS x, sum(m.prop) AS whoCares RETURN m.prop, x.prop"
-    val res = executeWith(Configs.InterpretedAndSlotted, q,
+    val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, q,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgument("{m.prop : cache[m.prop], x.prop : cache[x.prop]}")

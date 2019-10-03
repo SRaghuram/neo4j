@@ -206,7 +206,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (a), (b) CALL user.mkRel(a, b) YIELD relId WITH * MATCH ()-[rel]->() WHERE id(rel) = relId RETURN rel.foo"
 
     // Correct! Eagerization happens as part of query context operation
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       executeBefore = tx => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
@@ -248,7 +248,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (a), (b) CALL user.mkRel(a, b) MATCH (a)-[rel]->(b) RETURN rel.foo"
 
     // Correct! Eagerization happens as part of query context operation
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       executeBefore = tx => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
@@ -302,7 +302,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (x), (y) CALL user.expand(x, y) YIELD relId RETURN x, y, relId"
 
     // Correct! No eagerization necessary
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.size should equal(2)
@@ -352,7 +352,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (x), (y) CALL user.expand(x, y) WITH * MATCH (x)-[rel]->(y) RETURN *"
 
     // Correct! No eagerization necessary
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       executeBefore = _ => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
