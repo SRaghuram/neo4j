@@ -25,7 +25,7 @@ import static org.neo4j.driver.v1.AccessMode.READ;
 public class StoreClient implements AutoCloseable
 {
     public static final long VERSION = 10;
-    private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false );
+    private static final QueryRetrier QUERY_RETRIER = new QueryRetrier( false, QueryRetrier.DEFAULT_TIMEOUT );
     private final Supplier<Driver> driverSupplier;
     private final int retries;
     private Driver driver;
