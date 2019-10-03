@@ -54,14 +54,12 @@
       "name": "WQ12",
       "description": "Refactor graph to re-label tracks",
       "queryFile": "queries/WQ12.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ12.cypher",
       "isMutating": true
     },
     {
       "name": "WQ14",
       "description": "Remove Artist labels when redundant",
       "queryFile": "queries/WQ14.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ14.cypher",
       "isSingleShot": true,
       "isMutating": true
     },
@@ -69,28 +67,24 @@
       "name": "WQ15",
       "description": "Create unlabeled node",
       "queryFile": "queries/WQ15.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ15.cypher",
       "isMutating": true
     },
     {
       "name": "WQ16",
       "description": "Create labeled node",
       "queryFile": "queries/WQ16.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ16.cypher",
       "isMutating": true
     },
     {
       "name": "WQ17",
       "description": "Create labeled node which is also schema indexed",
       "queryFile": "queries/WQ17.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ17.cypher",
       "isMutating": true
     },
     {
       "name": "WQ18",
       "description": "Create labeled node with two labels, one of which is indexed",
       "queryFile": "queries/WQ18.cypher",
-      "warmupQueryFile": "queries/WARMUP-WQ18.cypher",
       "isMutating": true
     }
   ]

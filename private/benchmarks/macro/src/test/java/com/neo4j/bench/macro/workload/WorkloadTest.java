@@ -41,6 +41,44 @@ public class WorkloadTest
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
+    public void onlyPeriodicCommitQueriesShouldHaveWarmupQueries() throws IOException
+    {
+        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        {
+            for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
+            {
+                for ( Query query : workload.queries() )
+                {
+                    if ( query.warmupQueryString().isPresent() )
+                    {
+                        assertFalse( errMsg( "Warmup query not allowed to do PERIODIC COMMIT", workload, query ),
+                                     query.warmupQueryString().get().isPeriodicCommit() );
+                        assertTrue( errMsg( "Only PERIODIC COMMIT queries should have warmup query", workload, query ),
+                                    query.queryString().isPeriodicCommit() );
+                    }
+                }
+            }
+        }
+    }
+
+    private String errMsg( String error, Workload workload, Query query )
+    {
+        return format( "%s\n" +
+                       "Workload: %s\n" +
+                       "Query:    %s\n" +
+                       "----------------- Warmup Query ----------------------\n" +
+                       "%s\n" +
+                       "----------------- Measure Query ---------------------\n" +
+                       "%s\n" +
+                       "-----------------------------------------------------",
+                       error,
+                       workload.name(),
+                       query.name(),
+                       query.warmupQueryString().map( QueryString::value ).orElse( "n/a" ),
+                       query.queryString().value() );
+    }
+
+    @Test
     public void allWorkloadsShouldHaveUniqueName() throws IOException
     {
         try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
