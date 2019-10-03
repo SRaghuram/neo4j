@@ -17,7 +17,6 @@ import com.neo4j.bench.macro.workload.QueryString;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.EXECUTE;
@@ -70,22 +69,26 @@ public class CypherExecutingRunner extends QueryRunner
 
     /*
       Warmup strategy preference:
-      1. Rollback     : even when warmup query is available, if safe to rollback that is preferred as it means warmup is as close to measurement as possible.
-      2. Warmup query : when not safe to rollback (e.g., with PERIODIC COMMIT) and warmup query is available, that is the best we can do.
-                        * note, warmup queries are assumed to always be non-mutating <-- TODO move isMutating to QueryString
-      3. PLAN         : when neither of the other options is available to us, fallback to EXPLAIN, it is the best we can do.
-     ----------------------------------------------------------------------------------------------------------------------------------------------------------
-     HAS_WARMUP IS_MUTATING PERIODIC_COMMIT IS_SINGLE_SHOT |  RUN_MODE DO_ROLL_BACK WARMUP_QUERY   | Reason
-     ----------------------------------------------------------------------------------------------------------------------------------------------------------
-     0          0           0               n/a            |  EXECUTE  false        MAIN           | not mutating                    > no need for rollback
-     0          0           1               n/a            |  EXECUTE  false        MAIN           | not mutating                    > no need for rollback
-     0          1           0               n/a            |  EXECUTE  true         MAIN           | mutating                        > rollback required
-     0          1           1               n/a            |  PLAN     false        MAIN           | mutating & PERIODIC & no warmup > only option is PLAN
-     1          0           0               n/a            |  EXECUTE  false        MAIN           | not mutating                    > no need for rollback
-     1          0           1               n/a            |  EXECUTE  false        MAIN           | not mutating                    > no need for rollback
-     1          1           0               n/a            |  EXECUTE  true         MAIN           | mutating                        > rollback required
-     1          1           1               n/a            |  EXECUTE  false        WARMUP         | mutating & PERIODIC & warmup    > warmup query best option
-     ----------------------------------------------------------------------------------------------------------------------------------------------------------
+      1. Rollback      : even if warmup query is available, if safe to rollback that is preferred as it means warmup is as closer to measurement.
+      2. Warmup + PLAN : when not safe to rollback (PERIODIC COMMIT) and warmup query is available, EXPLAIN measurement query & execute warmup query.
+                         * EXPLAIN forces code generation to occur during warmup phase
+                         * warmup query performs additional warmup, e.g., pulls data into the page cache
+                         * NOTE: warmup queries are assumed to always be non-mutating <-- TODO move isMutating to QueryString
+                         * NOTE: only PERIODIC COMMIT queries can have a warmup query
+      3. PLAN          : when neither of the other options is available to us, fallback to EXPLAIN, it is the best we can do.
+
+     -------------------------------------------------------------------------------------------------------------------------------------------------------
+     HAS_WARMUP IS_MUTATING PERIODIC_COMMIT IS_SINGLE_SHOT | RUN_MODE DO_ROLL_BACK WARMUP_QUERY | Reason
+     -------------------------------------------------------------------------------------------------------------------------------------------------------
+     -          0           0               -              | EXEC     false        MAIN         | not mutating                    > no need for rollback
+     0          0           1               -              | EXEC     false        MAIN         | not mutating                    > no need for rollback
+     -          1           0               -              | EXEC     true         MAIN         | mutating                        > rollback required
+     0          1           1               -              | PLAN     false        MAIN         | mutating & PERIODIC & no warmup > only option is PLAN
+     -          0           0               -              | ----     -----        ----         | <duplicate>
+     1          0           1               -              | EXEC     false        MAIN         | not mutating                    > no need for rollback
+     -          1           0               -              | ----     -----        ----         | <duplicate>
+     1          1           1               -              | EXEC     false        WARMUP       | mutating & PERIODIC & warmup    > PLAN + warmup query
+     -------------------------------------------------------------------------------------------------------------------------------------------------------
      */
     private static WarmupStrategy warmupStrategyFor( Query query, MeasurementControl warmupControl )
     {
@@ -105,17 +108,19 @@ public class CypherExecutingRunner extends QueryRunner
             else
             {
                 // mutating cases where main query contains PERIODIC COMMIT -> not possible to rollback
-                Optional<QueryString> maybeWarmupQuery = query.warmupQueryString();
-                if ( maybeWarmupQuery.isPresent() )
+                QueryString warmupQuery = query.warmupQueryString().orElse( null );
+                if ( null != warmupQuery )
                 {
+                    // TODO we should both PLAN & run warmup query in here, for now prefer PLAN of measurement query over execute of warmup query
                     // when there is a (non-mutating) warmup query fallback to it
-                    QueryString warmupQuery = maybeWarmupQuery.map( qs -> qs.copyWith( EXECUTE ) ).get();
-                    return new WarmupStrategy( false, warmupQuery, warmupControl );
+//                    return new WarmupStrategy( false, warmupQuery.copyWith( EXECUTE ), warmupControl );
+                    return new WarmupStrategy( false, query.copyWith( PLAN ).queryString(), warmupControl );
                 }
                 else
                 {
-                    // there is no (non-mutating) warmup query to fallback to -> only option is to PLAN, and only one execution is needed to cache the plan
-                    return new WarmupStrategy( false, query.copyWith( PLAN ).queryString(), MeasurementControl.single() );
+                    // there is no (non-mutating) warmup query to fallback to -> only option is to PLAN,
+                    // use same warmup control: PLAN as many times as possible within warmup, to both cache logical plan and try to trigger (JIT) code generation
+                    return new WarmupStrategy( false, query.copyWith( PLAN ).queryString(), warmupControl );
                 }
             }
         }
