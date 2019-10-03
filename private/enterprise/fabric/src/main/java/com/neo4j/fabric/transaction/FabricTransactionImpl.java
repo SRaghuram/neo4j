@@ -306,7 +306,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
     {
         if ( timeoutHandle != null )
         {
-            timeoutHandle.cancel( false );
+            timeoutHandle.cancel();
         }
     }
 }

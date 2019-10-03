@@ -71,7 +71,7 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
         if ( updateValuesHandle != null )
         {
-            updateValuesHandle.cancel( false );
+            updateValuesHandle.cancel();
             updateValuesHandle = null;
         }
     }
