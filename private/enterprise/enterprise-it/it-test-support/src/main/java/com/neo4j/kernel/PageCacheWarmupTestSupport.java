@@ -21,9 +21,9 @@ import org.neo4j.util.concurrent.BinaryLatch;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-class PageCacheWarmupTestSupport
+public class PageCacheWarmupTestSupport
 {
-    static void createTestData( Transaction tx )
+    public static void createTestData( Transaction tx )
     {
         Label label = Label.label( "Label" );
         RelationshipType relationshipType = RelationshipType.withName( "REL" );
@@ -41,7 +41,7 @@ class PageCacheWarmupTestSupport
         }
     }
 
-    static long waitForCacheProfile( Monitors monitors )
+    public static long waitForCacheProfile( Monitors monitors )
     {
         AtomicLong pageCount = new AtomicLong();
         BinaryLatch profileLatch = new BinaryLatch();
@@ -52,7 +52,7 @@ class PageCacheWarmupTestSupport
         return pageCount.get();
     }
 
-    static BinaryLatch pauseProfile( Monitors monitors )
+    public static BinaryLatch pauseProfile( Monitors monitors )
     {
         return new PauseProfileMonitor( monitors );
     }
