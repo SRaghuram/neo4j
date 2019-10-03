@@ -85,7 +85,6 @@ public class AWSS3ArtifactStorageTest
         AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
         //when
         URI uri = URI.create( "s3://benchmarking.neo4j.com/artifacts/buildID" );
-        artifactStorage.verifyBuildArtifactsExpirationRule( uri );
         URI artifactURI = artifactStorage.uploadBuildArtifacts( uri, workspace );
         // then
         assertEquals(
