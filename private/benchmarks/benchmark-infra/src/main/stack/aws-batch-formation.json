@@ -34,8 +34,8 @@
             "Ref": "AMIID"
           },
           "Ec2KeyPair": "benchmark",
-          "MinvCpus": 8,
-          "DesiredvCpus": 8,
+          "MinvCpus": 0,
+          "DesiredvCpus": 0,
           "MaxvCpus": 256,
           "InstanceTypes": [
             "m5d.2xlarge"
@@ -74,8 +74,8 @@
             "Ref": "AMIID"
           },
           "Ec2KeyPair": "benchmark",
-          "MinvCpus": 2,
-          "DesiredvCpus": 2,
+          "MinvCpus": 0,
+          "DesiredvCpus": 0,
           "MaxvCpus": 256,
           "InstanceTypes": [
             "m5d.large"
@@ -246,7 +246,7 @@
           ],
           "Privileged": true,
           "Vcpus": 8,
-          "Memory": 32768
+          "Memory": 31000
         }
       }
     },
@@ -358,7 +358,7 @@
           ],
           "Privileged": true,
           "Vcpus": 2,
-          "Memory": 8192
+          "Memory": 7000
         }
       }
     },
@@ -470,7 +470,7 @@
           ],
           "Privileged": true,
           "Vcpus": 8,
-          "Memory": 32768
+          "Memory": 31000
         }
       }
     },
@@ -582,7 +582,7 @@
           ],
           "Privileged": true,
           "Vcpus": 2,
-          "Memory": 8192
+          "Memory": 7000
         }
       }
     }
