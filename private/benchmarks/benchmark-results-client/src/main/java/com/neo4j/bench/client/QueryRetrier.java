@@ -51,7 +51,7 @@ public class QueryRetrier
         Throwable lastException = null;
         int retry = 0;
         while ( retry <= retries &&
-                start.plus( timeout ).isBefore( Instant.now() ) )
+                Instant.now().isBefore( start.plus( timeout ) ) )
         {
             try
             {
