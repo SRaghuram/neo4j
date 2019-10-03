@@ -45,19 +45,19 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_NODES;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_RELS;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.array;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
 @ResourceLock( Resources.SYSTEM_OUT )
 class FulltextIndexBackupIT
 {
+    private static final String NODE = "node";
+    private static final String RELATIONSHIP = "relationship";
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String PROP = "prop";
     private static final RelationshipType REL = RelationshipType.withName( "REL" );

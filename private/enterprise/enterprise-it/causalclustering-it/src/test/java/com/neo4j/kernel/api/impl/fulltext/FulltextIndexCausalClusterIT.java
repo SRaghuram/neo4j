@@ -56,25 +56,25 @@ import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.AWAIT_REFRESH;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.NODE_CREATE_WITH_CONFIG;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_NODES;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.QUERY_RELS;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE_WITH_CONFIG;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigMap;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asConfigString;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.asProcedureConfigMap;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.AWAIT_REFRESH;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.NODE_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.NODE_CREATE_WITH_CONFIG;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_NODES;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_RELS;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE_WITH_CONFIG;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.array;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigMap;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigString;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asProcedureConfigMap;
 import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
 class FulltextIndexCausalClusterIT
 {
+    private static final String NODE = "node";
+    private static final String RELATIONSHIP = "relationship";
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String PROP = "prop";
     private static final String PROP2 = "otherprop";
