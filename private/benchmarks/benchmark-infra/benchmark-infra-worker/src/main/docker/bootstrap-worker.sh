@@ -22,13 +22,16 @@ while (( "$#" )); do
   esac
 done
 
-rm -rf /work/*
+cd /work
+
+worker_artifact=/work/benchmark-worker.jar
+work_dir=$(pwd)/macro_work_dir/
+
+rm -rf "${worker_artifact}" "${work_dir}"
 
 # download bootstrap jar
-aws --region eu-north-1 s3 cp "${workerArtifactUri}" /work/benchmark-worker.jar
+aws --region eu-north-1 s3 cp "${workerArtifactUri}" "${worker_artifact}"
 
-cd /work
-work_dir=$(pwd)/macro_work_dir/
 mkdir "${work_dir}"
 
 # shellcheck disable=SC2086
