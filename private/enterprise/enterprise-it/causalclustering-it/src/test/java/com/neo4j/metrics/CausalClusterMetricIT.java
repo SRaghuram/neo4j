@@ -47,12 +47,12 @@ class CausalClusterMetricIT
     private static final int TIMEOUT = 15;
 
     @Inject
-    private static ClusterFactory clusterFactory;
+    private ClusterFactory clusterFactory;
 
-    private static Cluster cluster;
+    private Cluster cluster;
 
     @BeforeAll
-    static void startCluster() throws Exception
+    void startCluster() throws Exception
     {
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
