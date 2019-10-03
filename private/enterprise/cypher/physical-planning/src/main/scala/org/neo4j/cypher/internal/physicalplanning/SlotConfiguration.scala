@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -284,14 +285,18 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   // NOTE: This will give duplicate slots when we have aliases
   def foreachSlotOrdered(onVariable: (String, Slot) => Unit,
                          onCachedProperty: ASTCachedProperty => Unit,
-                         startReferenceOffset: Int = 0
+                         onApplyPlan: Id => Unit = _ => (),
+                         skipFirst: Size = Size.zero
                         ): Unit = {
     val (longs, refs) = slots.toSeq.partition(_._2.isLongSlot)
-    for ((variable, slot) <- longs.sortBy(_._2.offset)) onVariable(variable, slot)
 
-    var sortedRefs = refs.sortBy(_._2.offset)
-    var sortedCached = cachedProperties.toSeq.sortBy(_._2.offset)
-    var i = startReferenceOffset
+    var sortedRefs: Seq[(String, Slot)] = refs.filter(_._2.offset >= skipFirst.nReferences).sortBy(_._2.offset)
+    var sortedLongs: Seq[(String, Slot)] = longs.filter(_._2.offset >= skipFirst.nLongs).sortBy(_._2.offset)
+    var sortedCached: Seq[(ASTCachedProperty, RefSlot)] = cachedProperties.toSeq.filter(_._2.offset >= skipFirst.nReferences).sortBy(_._2.offset)
+    var sortedApplyPlanIds: Seq[(Id, Int)] = applyPlans.toSeq.filter(_._2 >= skipFirst.nLongs).sortBy(_._2)
+
+
+    var i = skipFirst.nReferences
     while (i < numberOfReferences) {
       if (sortedRefs.nonEmpty && sortedRefs.head._2.offset == i) {
         val (variable, slot) = sortedRefs.head
@@ -300,6 +305,19 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
       } else {
         onCachedProperty(sortedCached.head._1)
         sortedCached = sortedCached.tail
+      }
+      i += 1
+    }
+
+    i = skipFirst.nLongs
+    while (i < numberOfLongs) {
+      if (sortedLongs.nonEmpty && sortedLongs.head._2.offset == i) {
+        val (variable, slot) = sortedLongs.head
+        onVariable(variable, slot)
+        sortedLongs = sortedLongs.tail
+      } else {
+        onApplyPlan(sortedApplyPlanIds.head._1)
+        sortedApplyPlanIds = sortedApplyPlanIds.tail
       }
       i += 1
     }
