@@ -20,7 +20,7 @@ import org.openjdk.jmh.infra.Blackhole
 class CartesianProduct extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
-    base = Array(Slotted.NAME))
+    base = Array(Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var CartesianProduct_runtime: String = _
 
