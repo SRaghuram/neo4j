@@ -119,7 +119,7 @@ public class CypherExecutingRunner extends QueryRunner
                 else
                 {
                     // there is no (non-mutating) warmup query to fallback to -> only option is to PLAN,
-                    // use same warmup control: PLAN as many times as possible within warmup, to both cache logical plan and try to trigger (JIT) code generation
+                    // use same warmup control: PLAN as many times as possible within warmup, to both cache plan and try to trigger (JIT) code generation
                     return new WarmupStrategy( false, query.copyWith( PLAN ).queryString(), warmupControl );
                 }
             }
