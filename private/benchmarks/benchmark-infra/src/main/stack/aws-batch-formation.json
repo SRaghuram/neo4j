@@ -55,6 +55,7 @@
             "neo4jcommit": {
               "Ref": "NEO4JCOMMIT"
             },
+            "owner": "benchmarking",
             "stage": {
               "Ref": "STAGE"
             }
@@ -94,6 +95,7 @@
             "neo4jcommit": {
               "Ref": "NEO4JCOMMIT"
             },
+            "owner": "benchmarking",
             "stage": {
               "Ref": "STAGE"
             }
