@@ -8,19 +8,19 @@ package com.neo4j.backup;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreDatabaseManager;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.restore.RestoreDatabaseCommand;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.junit.jupiter.api.AfterEach;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +36,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -48,10 +47,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 @TestDirectoryExtension
+@ClusterExtension
+@TestInstance( PER_METHOD )
 @ExtendWith( SuppressOutputExtension.class )
 class ClusteredSystemDatabaseBackupRestoreIT
 {
@@ -59,27 +61,18 @@ class ClusteredSystemDatabaseBackupRestoreIT
     private TestDirectory testDirectory;
     @Inject
     private DefaultFileSystemAbstraction fs;
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
     private File backupLocation;
-    private File clusterLocation;
 
     @BeforeEach
     void setup() throws InterruptedException, ExecutionException
     {
         backupLocation = testDirectory.directory( "backupLocation" + UUID.randomUUID().toString() );
-        clusterLocation = testDirectory.directory( "cluster" + UUID.randomUUID().toString() );
-        cluster = createCluster( clusterLocation, getConfigMap() );
+        cluster = createCluster( getConfigMap() );
         cluster.start();
-    }
-
-    @AfterEach
-    void tearDown()
-    {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
     }
 
     @Test
@@ -162,15 +155,11 @@ class ClusteredSystemDatabaseBackupRestoreIT
         {
             fs.deleteRecursively( member.clusterStateDirectory() );
         }
-
-        this.cluster = createCluster( clusterLocation, getConfigMap() );
     }
 
-    private static Cluster createCluster( File clusterLocation, Map<String,String> configMap )
+    private Cluster createCluster( Map<String,String> configMap )
     {
-        return new Cluster( clusterLocation, 3, 0,
-                new AkkaDiscoveryServiceFactory(), configMap, Collections.emptyMap(), configMap,
-                Collections.emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
+        return clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ).withSharedCoreParams( configMap ) );
     }
 
     private static void runRestore( FileSystemAbstraction fs, File backupLocation, Config memberConfig ) throws Exception
