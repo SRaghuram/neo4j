@@ -122,7 +122,6 @@ public class CoreServerInfo implements DiscoveryServerInfo
     @Override
     public int hashCode()
     {
-
         return Objects.hash( raftServer, catchupServer, clientConnectorAddresses, groups, dbName, refuseToBeLeader );
     }
 }
