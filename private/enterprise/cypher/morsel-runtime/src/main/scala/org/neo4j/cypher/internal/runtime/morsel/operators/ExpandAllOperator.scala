@@ -155,6 +155,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
                                                       arrayOf[String](missingTypes.map(constant):_*))
 
+  override final def scopeId: String = "expandAll" + id.x
+
   override def genMoreFields: Seq[Field] = {
     val localFields =
       ArrayBuffer(nodeCursorField, relationshipsField, typeField)
@@ -259,6 +261,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         if (innermost.shouldWriteToContext) {
+          // TODO: This does not work if not head operator. We need to overload copyFrom in OperatorExpressionCompiler
+          //       so that we can copy local slot variables if they exist
           invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, MorselExecutionContext]("copyFrom"),
                            loadField(INPUT_MORSEL))
         } else {

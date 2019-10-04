@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.{LocalVariableSlotMapper, LocalsForSlots}
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.{LocalVariableSlotMapper, LocalsForSlots, ScopeContinuationState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
 import org.neo4j.cypher.operations.CursorUtils
@@ -26,7 +26,7 @@ object OperatorExpressionCompiler {
   case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration) {
     val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
     val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
-    val cachedProperties: ArrayBuffer[(Int, String)] = ArrayBuffer.empty[(Int, String)]
+    val cachedProperties: ArrayBuffer[(Int, String)] = ArrayBuffer.empty[(Int, String)] // TODO: FIXME This needs to be a map or we will get duplicates
 
     def addLocalForLongSlot(offset: Int): String = {
       val local = s"longSlot$offset"
@@ -71,6 +71,19 @@ object OperatorExpressionCompiler {
       locals
     }
 
+    def merge(other: LocalVariableSlotMapper): Unit = {
+      other.getAllLocalsForLongSlots.foreach { case (slot, local) =>
+        longSlotToLocal(slot) = local
+      }
+      other.getAllLocalsForRefSlots.foreach { case (slot, local) =>
+        refSlotToLocal(slot) = local
+      }
+      // TODO: FIXME Cached properties as map
+      other.getAllLocalsForCachedProperties.foreach { p =>
+        cachedProperties += p
+      }
+    }
+
     def genScopeContinuationState: ScopeContinuationState = {
       val fields = new ArrayBuffer[Field]()
       val saveOps = new ArrayBuffer[IntermediateRepresentation]()
@@ -82,13 +95,6 @@ object OperatorExpressionCompiler {
         restoreOps += assign(local, loadField(f))
       }
 
-      // We use a boolean flag to control if the state is used
-      //  - true if it has been saved, and can be restored
-      //  - false if it has been restored
-      // (this could be made volatile if it needs to be used in places that lacks memory barriers)
-      val hasStateField = field[Boolean](scopeId + "HasContinuationState")
-      fields += hasStateField
-
       getAllLocalsForLongSlots.foreach { case (_, local) =>
         addField(field[Long]("saved" + local.capitalize), local)
       }
@@ -97,28 +103,65 @@ object OperatorExpressionCompiler {
         addField(field[AnyValue]("saved" + local.capitalize), local)
       }
 
-      saveOps += setField(hasStateField, constant(true))
-      restoreOps += setField(hasStateField, constant(false))
+      // We use a boolean flag to control if the state is used
+      //  - true if it has been saved, and can be restored
+      //  - false if it has been restored
+      // (this could be made volatile if it needs to be used in places that lacks memory barriers)
+      if (fields.nonEmpty) {
+        val hasStateField = field[Boolean](scopeId + "HasContinuationState")
+        fields += hasStateField
+
+        saveOps += setField(hasStateField, constant(true))
+        restoreOps += setField(hasStateField, constant(false))
+      }
 
       ScopeContinuationState(fields, block(saveOps: _*), block(restoreOps: _*))
     }
   }
 
-  case class ScopeContinuationState(fields: Seq[Field], saveStateIR: IntermediateRepresentation, restoreStateIR: IntermediateRepresentation)
+  case class ScopeContinuationState(fields: Seq[Field], saveStateIR: IntermediateRepresentation, restoreStateIR: IntermediateRepresentation) {
+    def isEmpty: Boolean = fields.isEmpty
+    def nonEmpty: Boolean = fields.nonEmpty
+  }
 
   case class LocalsForSlots(slots: SlotConfiguration) {
     private val rootScope: LocalVariableSlotMapper = LocalVariableSlotMapper("root", slots)
     private var scopeStack: List[LocalVariableSlotMapper] = rootScope :: Nil
 
+    /**
+     * Mark the beginning of a new scope
+     *
+     * Pushes a new scope to a scope stack.
+     * Local slot variables that are adde
+     *
+     * @param scopeId A string identifier for this scope.
+     *                NOTE: This will be used as a prefix to a generated variable name for the continuation state returned by [[endScope]],
+     *                so the string has to follow Java variable naming rules
+     */
     def beginScope(scopeId: String): Unit = {
       val localVariableSlotMapper = LocalVariableSlotMapper(scopeId, slots)
       scopeStack = localVariableSlotMapper :: scopeStack
     }
 
-    def endScope(): LocalVariableSlotMapper = {
+    /**
+     * End the scope started by the previous call to [[beginScope]]
+     *
+     * Pops the current scope from the scope state, and generates a [[ScopeContinuationState]] that contains
+     * fields for all local slot variables that were added in this scope, along with code to save and restore this state to/from local variables
+     *
+     * @param mergeIntoParentScope true if locals added in this scope should be merged back into the parent scope, otherwise they will be discarded
+     *                             @note The caller is responsible for making sure that the locals are indeed declared and initialized in the parent scope!
+     *
+     * @return continuationState The generated [[ScopeContinuationState]] for this scope
+     */
+    def endScope(mergeIntoParentScope: Boolean): ScopeContinuationState = {
       val endedScope = scopeStack.head
       scopeStack = scopeStack.tail
-      endedScope
+      val continuationState = endedScope.genScopeContinuationState
+      if (mergeIntoParentScope) {
+        scopeStack.head.merge(endedScope)
+      }
+      continuationState
     }
 
     def addLocalForLongSlot(offset: Int): String = {
@@ -375,8 +418,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     locals.beginScope(scopeId)
   }
 
-  def endScope(): LocalVariableSlotMapper = {
-    locals.endScope()
+  def endScope(mergeIntoParentScope: Boolean = false): ScopeContinuationState = {
+    locals.endScope(mergeIntoParentScope)
   }
 
   def getAllLocalsForLongSlots: Seq[(Int, String)] = {
