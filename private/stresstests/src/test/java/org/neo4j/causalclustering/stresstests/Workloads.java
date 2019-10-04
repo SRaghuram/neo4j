@@ -57,6 +57,14 @@ enum Workloads
                     return new ReplaceRandomMember( control, resources );
                 }
             },
+    ReplaceRandomCore
+            {
+                @Override
+                Workload create( Control control, Resources resources, Config config )
+                {
+                    return new ReplaceRandomCore( control, resources );
+                }
+            },
     IdReuseInsertion
             {
                 @Override

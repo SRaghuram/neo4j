@@ -76,6 +76,15 @@ public class ClusterStressScenarioSmoke
     }
 
     @Test
+    public void stressReplaceRandomCore() throws Exception
+    {
+        config.numberOfEdges( 0 );
+        config.workloads( Workloads.ReplaceRandomCore );
+
+        stressTest( config, fileSystem, pageCache );
+    }
+
+    @Test
     public void stressIdReuse() throws Exception
     {
         config.numberOfEdges( 0 );
