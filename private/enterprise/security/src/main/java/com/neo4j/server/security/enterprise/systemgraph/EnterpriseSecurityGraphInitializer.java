@@ -196,7 +196,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             catch ( ConstraintViolationException e )
             {
                 // Makes the creation of constraints for security idempotent
-                if ( !e.getMessage().startsWith( "Constraint already exists" ) )
+                if ( !e.getMessage().startsWith( "An equivalent constraint already exists" ) )
                 {
                     throw e;
                 }
