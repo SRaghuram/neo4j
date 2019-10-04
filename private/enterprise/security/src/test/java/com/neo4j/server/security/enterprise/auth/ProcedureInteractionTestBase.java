@@ -842,6 +842,7 @@ public abstract class ProcedureInteractionTestBase<S>
         public Stream<AuthProceduresBase.StringResult> allowedProcedure3()
         {
             transaction.execute( "CREATE INDEX FOR (n:VeryUniqueLabel) ON (n.prop)" );
+            transaction.execute( "DROP INDEX ON :VeryUniqueLabel(prop)" );
             return Stream.of( new AuthProceduresBase.StringResult( "OK" ) );
         }
 

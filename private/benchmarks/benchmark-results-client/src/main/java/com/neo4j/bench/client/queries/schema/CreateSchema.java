@@ -29,6 +29,10 @@ public class CreateSchema implements Query<Void>
                 {
                     session.run( cypher );
                 }
+                catch ( Exception e )
+                {
+                    System.out.println( "Error executing statement: " + cypher + ": " + e.getMessage() );
+                }
             }
         }
         return null;
