@@ -62,7 +62,7 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
     @Override
     protected void handleIncomingData( ORMap<String,ReplicatedLeaderInfo> newData )
     {
-        data = data.merge( newData );
+        data = newData;
         Map<String,LeaderInfo> leaderInfos = data.getEntries().entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> e.getValue().leaderInfo() ) );
         discoveryUpdateSink.offer( leaderInfos );

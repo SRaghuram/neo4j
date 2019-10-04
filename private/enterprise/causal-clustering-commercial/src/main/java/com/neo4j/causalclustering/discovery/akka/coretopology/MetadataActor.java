@@ -62,9 +62,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<UniqueAddress,CoreServerInfoForMemberId> delta )
+    protected void handleIncomingData( LWWMap<UniqueAddress,CoreServerInfoForMemberId> newData )
     {
-        data = data.merge( delta );
+        data = newData;
         topologyActor.tell( new MetadataMessage( data ), getSelf() );
     }
 

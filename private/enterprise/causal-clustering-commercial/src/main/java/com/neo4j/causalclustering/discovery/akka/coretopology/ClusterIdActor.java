@@ -62,7 +62,7 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
     @Override
     protected void handleIncomingData( LWWMap<String,ClusterId> newData )
     {
-        data = data.merge( newData );
+        data = newData;
         coreTopologyActor.tell( new ClusterIdDirectoryMessage( data ), getSelf() );
     }
 
