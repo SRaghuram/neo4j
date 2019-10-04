@@ -93,7 +93,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.systemTx( ( db, tx ) ->
         {
             tx.execute( "CALL dbms.security.createUser('newAdmin', 'testPassword', false)" );
             tx.commit();
@@ -112,7 +112,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         CoreClusterMember leader = cluster.awaitLeader();
         String leaderAddress = leader.settingValue( online_backup_listen_address ).toString();
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.systemTx( ( db, tx ) ->
         {
             tx.execute( "CALL dbms.security.createUser('" + preBackupUsername + "', 'testPassword', false)" );
             tx.commit();
@@ -120,7 +120,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.systemTx( ( db, tx ) ->
         {
             tx.execute( "CALL dbms.security.createUser('" + postBackupUsername + "', 'testPassword', false)" );
             tx.commit();
@@ -142,7 +142,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         //then
         cluster.awaitLeader();
 
-        cluster.coreTx( ( db, tx ) ->
+        cluster.systemTx( ( db, tx ) ->
         {
             Result securityResults = tx.execute( "CALL dbms.security.listUsers() YIELD username" );
             Set<String> systemUsernames = securityResults.stream().map( r -> (String) r.get( "username" ) ).collect( Collectors.toSet() );
