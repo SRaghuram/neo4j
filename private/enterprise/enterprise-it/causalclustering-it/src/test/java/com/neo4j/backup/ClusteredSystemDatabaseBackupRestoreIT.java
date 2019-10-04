@@ -90,7 +90,11 @@ class ClusteredSystemDatabaseBackupRestoreIT
         String leaderAddress = leader.settingValue( online_backup_listen_address ).toString();
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( backupLocation, databaseName, Config
+                .newBuilder()
+                .set( GraphDatabaseSettings.transaction_logs_root_path, backupLocation.toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.databases_root_path, backupLocation.toPath().toAbsolutePath() )
+                .build() );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
         cluster.systemTx( ( db, tx ) ->
