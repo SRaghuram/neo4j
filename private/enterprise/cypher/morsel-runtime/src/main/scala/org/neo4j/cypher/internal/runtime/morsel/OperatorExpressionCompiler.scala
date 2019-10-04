@@ -158,10 +158,11 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         // It is sub-optimal to check this every time at runtime, so we should come up with a better solution
         // e.g. to do this initialization only once at the entry-point of each nested fused loop
         //      or if possible, save the state when we exit with a continuation, and restore it when we come back
-        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
-          // We need to initialize the local from the execution context
-          assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-        ),
+// Remove runtime check to provoke the bug
+//        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
+//          // We need to initialize the local from the execution context
+//          assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+//        ),
         load(local)
       )
     }
@@ -173,10 +174,11 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
       // (See full comment in getLongAt above)
       block(
-        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
-          // We need to initialize the local from the execution context
-          assign(local, orElse),
-        ),
+// Remove runtime check to provoke the bug
+//        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
+//          // We need to initialize the local from the execution context
+//          assign(local, orElse),
+//        ),
         load(local)
       )
     }
@@ -193,10 +195,11 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     } else {
       // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
       // (See full comment in getLongAt above)
+// Remove runtime check to provoke the bug
       block(
-        condition(isNull(load(local)))(
-          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-        ),
+//        condition(isNull(load(local)))(
+//          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
+//        ),
         load(local)
       )
     }
@@ -208,9 +211,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
       // (See full comment in getLongAt above)
       block(
-        condition(isNull(load(local)))(
-          assign(local, orElse),
-        ),
+// Remove runtime check to provoke the bug
+//        condition(isNull(load(local)))(
+//          assign(local, orElse),
+//        ),
         load(local)
       )
     }
@@ -256,15 +260,17 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         local = locals.addCachedProperty(offset)
         initializeFromStoreIR
       } else {
+        noop()
         // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
         // (See full comment in getLongAt above)
-        condition(isNull(load(local)))(
-          if (maybeCachedProperty.isDefined) {
-            initializeFromContextIR
-          } else {
-            initializeFromStoreIR
-          }
-        )
+// Remove runtime check to provoke the bug
+//        condition(isNull(load(local)))(
+//          if (maybeCachedProperty.isDefined) {
+//            initializeFromContextIR
+//          } else {
+//            initializeFromStoreIR
+//          }
+//        )
       }
 
     block(prepareOps, cast[Value](load(local)))
