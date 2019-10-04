@@ -202,7 +202,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.newBuilder()
-                .set( middleware_akka_external_config, Path.of( "/this isnt a real file" ) )
+                .set( middleware_akka_external_config, Path.of( "this isnt a real file" ).toAbsolutePath() )
                 .set( EnterpriseEditionSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
