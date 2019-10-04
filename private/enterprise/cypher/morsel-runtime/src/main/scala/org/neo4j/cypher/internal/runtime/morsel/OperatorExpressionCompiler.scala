@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
+import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, constant, field, load, loadField, setField}
+import org.neo4j.codegen.api.{CodeGeneration, Field, IntermediateRepresentation}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
@@ -69,7 +70,41 @@ object OperatorExpressionCompiler {
       }
       locals
     }
+
+    def genScopeContinuationState: ScopeContinuationState = {
+      val fields = new ArrayBuffer[Field]()
+      val saveOps = new ArrayBuffer[IntermediateRepresentation]()
+      val restoreOps = new ArrayBuffer[IntermediateRepresentation]()
+
+      def addField(f: Field, local: String): Unit = {
+        fields += f
+        saveOps += setField(f, load(local))
+        restoreOps += assign(local, loadField(f))
+      }
+
+      // We use a boolean flag to control if the state is used
+      //  - true if it has been saved, and can be restored
+      //  - false if it has been restored
+      // (this could be made volatile if it needs to be used in places that lacks memory barriers)
+      val hasStateField = field[Boolean](scopeId + "HasContinuationState")
+      fields += hasStateField
+
+      getAllLocalsForLongSlots.foreach { case (_, local) =>
+        addField(field[Long]("saved" + local.capitalize), local)
+      }
+
+      getAllLocalsForRefSlots.foreach { case (_, local) =>
+        addField(field[AnyValue]("saved" + local.capitalize), local)
+      }
+
+      saveOps += setField(hasStateField, constant(true))
+      restoreOps += setField(hasStateField, constant(false))
+
+      ScopeContinuationState(fields, block(saveOps: _*), block(restoreOps: _*))
+    }
   }
+
+  case class ScopeContinuationState(fields: Seq[Field], saveStateIR: IntermediateRepresentation, restoreStateIR: IntermediateRepresentation)
 
   case class LocalsForSlots(slots: SlotConfiguration) {
     private val rootScope: LocalVariableSlotMapper = LocalVariableSlotMapper("root", slots)
