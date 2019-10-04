@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.{LocalVariableSlotMapper, LocalsForSlots}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
 import org.neo4j.cypher.operations.CursorUtils
@@ -22,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object OperatorExpressionCompiler {
 
-  class LocalVariableSlotMapper(slots: SlotConfiguration) {
+  case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration) {
     val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
     val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
     val cachedProperties: ArrayBuffer[(Int, String)] = ArrayBuffer.empty[(Int, String)]
@@ -70,6 +70,66 @@ object OperatorExpressionCompiler {
       locals
     }
   }
+
+  case class LocalsForSlots(slots: SlotConfiguration) {
+    private val rootScope: LocalVariableSlotMapper = LocalVariableSlotMapper("root", slots)
+    private var scopeStack: List[LocalVariableSlotMapper] = rootScope :: Nil
+
+    def beginScope(scopeId: String): Unit = {
+      val localVariableSlotMapper = LocalVariableSlotMapper(scopeId, slots)
+      scopeStack = localVariableSlotMapper :: scopeStack
+    }
+
+    def endScope(): LocalVariableSlotMapper = {
+      val endedScope = scopeStack.head
+      scopeStack = scopeStack.tail
+      endedScope
+    }
+
+    def addLocalForLongSlot(offset: Int): String = {
+      scopeStack.head.addLocalForLongSlot(offset)
+    }
+
+    def addLocalForRefSlot(offset: Int): String = {
+      scopeStack.head.addLocalForRefSlot(offset)
+    }
+
+    def addCachedProperty(offset: Int): String = {
+      scopeStack.head.addCachedProperty(offset)
+    }
+
+    def getLocalForLongSlot(offset: Int): String = {
+      var local: String = null
+      var scope = scopeStack
+      do {
+        local = scope.head.getLocalForLongSlot(offset)
+        scope = scope.tail
+      } while (local == null && scope != Nil)
+      local
+    }
+
+    def getLocalForRefSlot(offset: Int): String = {
+      var local: String = null
+      var scope = scopeStack
+      do {
+        local = scope.head.getLocalForRefSlot(offset)
+        scope = scope.tail
+      } while (local == null && scope != Nil)
+      local
+    }
+
+    def getAllLocalsForLongSlots: Seq[(Int, String)] = {
+      scopeStack.head.getAllLocalsForLongSlots
+    }
+
+    def getAllLocalsForRefSlots: Seq[(Int, String)] = {
+      scopeStack.head.getAllLocalsForRefSlots
+    }
+
+    def getAllLocalsForCachedProperties: Seq[(Int, String)] = {
+      scopeStack.head.getAllLocalsForCachedProperties
+    }
+  }
 }
 
 class OperatorExpressionCompiler(slots: SlotConfiguration,
@@ -81,7 +141,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   import org.neo4j.codegen.api.IntermediateRepresentation._
 
-  val locals: LocalVariableSlotMapper = new LocalVariableSlotMapper(slots)
+  private val locals = LocalsForSlots(slots)
 
   override final def getLongAt(offset: Int): IntermediateRepresentation = {
     var local = locals.getLocalForLongSlot(offset)
@@ -265,5 +325,28 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       setRefInExecutionContext(offset, load(local))
     }
     block(writeLongs ++ writeRefs: _*)
+  }
+
+  //===========================================================================
+  // Delegates to LocalsForSlots
+
+  def beginScope(scopeId: String): Unit = {
+    locals.beginScope(scopeId)
+  }
+
+  def endScope(): LocalVariableSlotMapper = {
+    locals.endScope()
+  }
+
+  def getAllLocalsForLongSlots: Seq[(Int, String)] = {
+    locals.getAllLocalsForLongSlots
+  }
+
+  def getAllLocalsForRefSlots: Seq[(Int, String)] = {
+    locals.getAllLocalsForRefSlots
+  }
+
+  def getAllLocalsForCachedProperties: Seq[(Int, String)] = {
+    locals.getAllLocalsForCachedProperties
   }
 }

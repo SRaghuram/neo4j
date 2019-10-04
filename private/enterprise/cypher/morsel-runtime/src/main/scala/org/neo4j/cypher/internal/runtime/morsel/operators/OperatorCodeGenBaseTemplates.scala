@@ -600,7 +600,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
 
   def resetCachedPropertyVariables: IntermediateRepresentation = {
     block(
-        codeGen.locals.getAllLocalsForCachedProperties.map {
+        codeGen.getAllLocalsForCachedProperties.map {
           case (_, name) =>
             assign(name, constant(null))
         } :_*)
@@ -652,11 +652,11 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
 
   override def genLocalVariables: Seq[LocalVariable] = {
     val localsForSlots =
-      codeGen.locals.getAllLocalsForLongSlots.map {
+      codeGen.getAllLocalsForLongSlots.map {
         case (_, name) =>
           variable[Long](name, UNINITIALIZED_LONG_SLOT_VALUE)
       } ++
-      codeGen.locals.getAllLocalsForRefSlots.map {
+      codeGen.getAllLocalsForRefSlots.map {
         case (_, name) =>
           variable[AnyValue](name, constant(null))
       }
