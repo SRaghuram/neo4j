@@ -38,6 +38,7 @@ import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
@@ -243,7 +244,8 @@ public class AkkaCoreTopologyDowningIT
                 new NoRetriesStrategy(),
                 new RetryStrategy( 0L, 10L ),
                 pool,
-                Clocks.systemClock()
+                Clocks.systemClock(),
+                new Monitors()
         );
 
         service.init();

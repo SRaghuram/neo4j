@@ -13,9 +13,9 @@ import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.neo4j.causalclustering.discovery.TestTopology
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA
 import org.neo4j.causalclustering.identity.MemberId
 import org.neo4j.kernel.configuration.Config
-import org.neo4j.logging.NullLogProvider
 
 class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
   "metadata actor" should {
@@ -70,7 +70,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
   class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForMemberId]] {
     val coreTopologyProbe = TestProbe("topology")
     val myself = new MemberId(UUID.randomUUID())
-    val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
+    val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](METADATA.keyName())
 
     val coreServerInfo = TestTopology.addressesForCore(0, false)
 
@@ -80,6 +80,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {
       conf
     }
 
-    val replicatedDataActorRef = system.actorOf(MetadataActor.props(myself, cluster, replicator.ref, coreTopologyProbe.ref, config))
+    val replicatedDataActorRef = system.actorOf(MetadataActor.props(myself, cluster, replicator.ref, coreTopologyProbe.ref, config, monitor))
+    val data = LWWMap.create[UniqueAddress, CoreServerInfoForMemberId]()
   }
 }

@@ -19,6 +19,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+
 public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractLoggingActor
 {
     private static final Replicator.WriteConsistency WRITE_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
@@ -26,16 +29,21 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     protected final Cluster cluster;
     protected final ActorRef replicator;
     protected final Key<T> key;
-    protected final Supplier<T> emptyData;
     protected T data;
+    private final ReplicatedDataIdentifier identifier;
+    private final Supplier<T> emptyData;
+    private final ReplicatedDataMonitor monitor;
 
-    protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Key<T> key, Supplier<T> emptyData )
+    protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Function<String,Key<T>> keyFunction, Supplier<T> emptyData,
+            ReplicatedDataIdentifier identifier, ReplicatedDataMonitor monitor )
     {
         this.cluster = cluster;
         this.replicator = replicator;
-        this.key = key;
+        this.key = keyFunction.apply( identifier.keyName() );
         this.emptyData = emptyData;
         this.data = emptyData.get();
+        this.identifier = identifier;
+        this.monitor = monitor;
     }
 
     @Override
@@ -69,6 +77,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
             {
                 T newData = (T) message.dataValue();
                 handleIncomingData( newData );
+                logDataMetric();
             } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) );
     }
 
@@ -78,6 +87,16 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     }
 
     protected abstract void handleIncomingData( T newData );
+
+    private final void logDataMetric()
+    {
+        monitor.setVisibleDataSize( identifier, dataMetricVisible() );
+        monitor.setInvisibleDataSize( identifier, dataMetricInvisible() );
+    }
+
+    protected abstract int dataMetricVisible();
+
+    protected abstract int dataMetricInvisible();
 
     private void subscribeToReplicatorEvents( Replicator.ReplicatorMessage message )
     {

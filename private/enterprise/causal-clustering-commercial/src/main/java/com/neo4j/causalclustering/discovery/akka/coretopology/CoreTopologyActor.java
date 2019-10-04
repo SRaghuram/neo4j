@@ -19,17 +19,18 @@ import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.CoreTopology;
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 
 public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 {
     public static Props props( MemberId myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink, ActorRef rrTopologyActor, ActorRef replicator,
-            Cluster cluster, TopologyBuilder topologyBuilder, Config config )
+            Cluster cluster, TopologyBuilder topologyBuilder, Config config, ReplicatedDataMonitor monitor )
     {
         return Props.create( CoreTopologyActor.class,
                 () -> new CoreTopologyActor( myself, topologyUpdateSink, rrTopologyActor, replicator, cluster,
-                        topologyBuilder, config ) );
+                        topologyBuilder, config, monitor ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
@@ -57,7 +58,8 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             ActorRef replicator,
             Cluster cluster,
             TopologyBuilder topologyBuilder,
-            Config config )
+            Config config,
+            ReplicatedDataMonitor monitor )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
@@ -71,10 +73,10 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.myAddress = cluster.selfAddress();
 
         // Children, who will be sending messages to us
-        ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config ) );
+        ActorRef metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, monitor ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config ) );
-        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), minCoreHostsAtRuntime ) );
+        clusterIdActor = getContext().actorOf( ClusterIdActor.props( cluster, replicator, getSelf(), minCoreHostsAtRuntime, monitor ) );
     }
 
     @Override

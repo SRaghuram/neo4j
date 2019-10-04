@@ -24,6 +24,7 @@ import org.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -59,7 +60,8 @@ public class AkkaCoreTopologyServiceTest
             catchupAddressretryStrategy,
             restartRetryStrategy,
             executor,
-            clock );
+            clock,
+            new Monitors() );
 
     private ThisActorSystemQuarantinedEvent event = ThisActorSystemQuarantinedEvent.apply(
             new Address( "protocol", "system", "host1", 1 ),

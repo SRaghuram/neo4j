@@ -16,11 +16,11 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink}
 import org.neo4j.causalclustering.core.consensus.LeaderInfo
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DIRECTORY
 import org.neo4j.causalclustering.identity.MemberId
-import org.neo4j.logging.NullLogProvider
 
-import scala.util.Random
 import scala.collection.JavaConverters._
+import scala.util.Random
 
 class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
@@ -81,8 +81,9 @@ class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {
 
     val rrActor = TestProbe("ReadReplicaActor")
 
-    val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref)
+    val props = DirectoryActor.props(cluster, replicator.ref, discoverySink, rrActor.ref, monitor)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
-    override val dataKey: Key[ORMap[String,ReplicatedLeaderInfo]] = ORMapKey(DirectoryActor.PER_DB_LEADER_KEY)
+    override val dataKey: Key[ORMap[String,ReplicatedLeaderInfo]] = ORMapKey(DIRECTORY.keyName())
+    override val data = ORMap.create[String,ReplicatedLeaderInfo]()
   }
 }

@@ -19,6 +19,7 @@ import org.neo4j.causalclustering.discovery.NoRetriesStrategy;
 import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
 
@@ -43,7 +44,8 @@ public class CoreTopologyChangeListenerTest
             catchupAddressRetryStrategy,
             discoveryRestartRetryStrategy,
             executor,
-            Clocks.systemClock() );
+            Clocks.systemClock(),
+            new Monitors() );
 
     @Test
     public void shouldNotifyListenersOnTopologyChange()

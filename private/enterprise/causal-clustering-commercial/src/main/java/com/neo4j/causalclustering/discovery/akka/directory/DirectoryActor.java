@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.discovery.akka.directory;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.cluster.Cluster;
-import akka.cluster.UniqueAddress;
 import akka.cluster.ddata.ORMap;
 import akka.cluster.ddata.ORMapKey;
 import akka.japi.pf.ReceiveBuilder;
@@ -19,25 +18,27 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.consensus.LeaderInfo;
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+
+import static org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.DIRECTORY;
 
 public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,ReplicatedLeaderInfo>>
 {
     public static Props props( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
-            ActorRef rrTopologyActor )
+            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor )
     {
-        return Props.create( DirectoryActor.class, () -> new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor ) );
+        return Props.create( DirectoryActor.class, () -> new DirectoryActor( cluster, replicator, discoveryUpdateSink, rrTopologyActor, monitor ) );
     }
 
-    static final String PER_DB_LEADER_KEY = "per-db-leader-name";
     public static final String NAME = "cc-directory-actor";
 
     private final SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink;
     private final ActorRef rrTopologyActor;
 
     private DirectoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> discoveryUpdateSink,
-            ActorRef rrTopologyActor )
+            ActorRef rrTopologyActor, ReplicatedDataMonitor monitor )
     {
-        super( cluster, replicator, ORMapKey.create( PER_DB_LEADER_KEY ), ORMap::create );
+        super( cluster, replicator, ORMapKey::create, ORMap::create, DIRECTORY, monitor );
         this.discoveryUpdateSink = discoveryUpdateSink;
         this.rrTopologyActor = rrTopologyActor;
     }
@@ -66,5 +67,17 @@ public class DirectoryActor extends BaseReplicatedDataActor<ORMap<String,Replica
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> e.getValue().leaderInfo() ) );
         discoveryUpdateSink.offer( leaderInfos );
         rrTopologyActor.tell( new LeaderInfoDirectoryMessage( leaderInfos ), getSelf() );
+    }
+
+    @Override
+    protected int dataMetricVisible()
+    {
+        return data.size();
+    }
+
+    @Override
+    protected int dataMetricInvisible()
+    {
+        return data.keys().vvector().size();
     }
 }

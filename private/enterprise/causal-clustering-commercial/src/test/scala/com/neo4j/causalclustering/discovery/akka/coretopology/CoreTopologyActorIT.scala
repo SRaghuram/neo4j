@@ -20,9 +20,10 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.causalclustering.discovery._
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.{CLUSTER_ID, METADATA}
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
 import org.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.kernel.configuration.Config
-import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._
 
@@ -149,8 +150,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
 
     val replicatorProbe = TestProbe("replicator")
 
-    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
-    val clusterIdKey = LWWMapKey[String, ClusterId](ClusterIdActor.CLUSTER_ID_PER_DB_KEY)
+    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](METADATA.keyName())
+    val clusterIdKey = LWWMapKey[String, ClusterId](CLUSTER_ID.keyName())
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new CoreTopology(
@@ -169,7 +170,16 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
     val myAddress = Address("akka", system.name, "myHost", 12)
     Mockito.when(cluster.selfAddress).thenReturn(myAddress)
 
-    val props = CoreTopologyActor.props(new MemberId(UUID.randomUUID()), topologySink, readReplicaProbe.ref, replicatorProbe.ref, cluster, topologyBuilder, config)
+    val props = CoreTopologyActor.props(
+      new MemberId(UUID.randomUUID()),
+      topologySink,
+      readReplicaProbe.ref,
+      replicatorProbe.ref,
+      cluster,
+      topologyBuilder,
+      config,
+      mock[ReplicatedDataMonitor])
+
     val topologyActorRef = system.actorOf(props)
 
     def awaitExpectedCoreTopology(newCoreTopology: CoreTopology = expectedCoreTopology) = {

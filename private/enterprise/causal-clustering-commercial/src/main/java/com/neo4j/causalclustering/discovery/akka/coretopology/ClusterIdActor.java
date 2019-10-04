@@ -15,33 +15,32 @@ import akka.cluster.ddata.LWWRegister;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
-import scala.concurrent.duration.FiniteDuration;
 
-import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import org.neo4j.causalclustering.identity.ClusterId;
+
+import static org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.CLUSTER_ID;
 
 public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,ClusterId>>
 {
-    static final String CLUSTER_ID_PER_DB_KEY = "cluster-id-per-db-name";
     private final ActorRef coreTopologyActor;
     //We use a reverse clock because we want the ClusterId map to observe first-write-wins semantics, not the standard last-write-wins
     private final LWWRegister.Clock<ClusterId> clock = LWWRegister.reverseClock();
     private final int minRuntimeQuorumSize;
 
-    ClusterIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, int minRuntimeCores )
+    ClusterIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, int minRuntimeCores, ReplicatedDataMonitor monitors )
     {
-        super( cluster, replicator, LWWMapKey.create( CLUSTER_ID_PER_DB_KEY ), LWWMap::create );
+        super( cluster, replicator, LWWMapKey::create, LWWMap::create, CLUSTER_ID, monitors );
         this.coreTopologyActor = coreTopologyActor;
         this.minRuntimeQuorumSize = ( minRuntimeCores / 2 ) + 1;
     }
 
-    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, int minRuntimeCores )
+    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, int minRuntimeCores, ReplicatedDataMonitor monitor )
     {
-        return Props.create( ClusterIdActor.class, () -> new ClusterIdActor( cluster, replicator, coreTopologyActor, minRuntimeCores ) );
+        return Props.create( ClusterIdActor.class, () -> new ClusterIdActor( cluster, replicator, coreTopologyActor, minRuntimeCores, monitor ) );
     }
 
     @Override
@@ -134,6 +133,18 @@ public class ClusterIdActor extends BaseReplicatedDataActor<LWWMap<String,Cluste
                     String message = String.format( "Failed to set ClusterId with request %s. Failure was %s", m, updateFailure.toString() );
                     m.replyTo().tell( new Failure( new IllegalArgumentException( message ) ), getSelf() );
                 } );
+    }
+
+    @Override
+    protected int dataMetricVisible()
+    {
+        return data.size();
+    }
+
+    @Override
+    protected int dataMetricInvisible()
+    {
+        return data.underlying().keys().vvector().size();
     }
 
     public enum PublishClusterIdOutcome

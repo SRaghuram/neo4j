@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -50,6 +51,8 @@ public class CoreMetrics extends LifecycleAdapter
     public static final String DELAY = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
     @Documented( "Timer for RAFT message processing" )
     public static final String TIMER = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
+    @Documented( "Size of replicated data structures" )
+    public static final String DISCOVERY_REPLICATED_DATA = name( CAUSAL_CLUSTERING_PREFIX, "discovery_replicated_data" );
     @Documented( "Raft replication new request count" )
     public static final String REPLICATION_NEW = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
     @Documented( "Raft replication attempt count" )
@@ -71,6 +74,7 @@ public class CoreMetrics extends LifecycleAdapter
     private final InFlightCacheMetric inFlightCacheMetric = new InFlightCacheMetric();
     private final RaftMessageProcessingMetric raftMessageProcessingMetric = RaftMessageProcessingMetric.create();
     private final ReplicationMetric replicationMetric = new ReplicationMetric();
+    private final ReplicatedDataMetric discoveryReplicatedDataMetric = new ReplicatedDataMetric();
 
     public CoreMetrics( Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
     {
@@ -90,6 +94,7 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.addMonitorListener( inFlightCacheMetric );
         monitors.addMonitorListener( raftMessageProcessingMetric );
         monitors.addMonitorListener( replicationMetric );
+        monitors.addMonitorListener( discoveryReplicatedDataMetric );
 
         registry.register( COMMIT_INDEX, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
         registry.register( APPEND_INDEX, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
@@ -112,6 +117,12 @@ public class CoreMetrics extends LifecycleAdapter
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
             registry.register( messageTimerName( type ), raftMessageProcessingMetric.timer( type ) );
+        }
+
+        for ( ReplicatedDataIdentifier identifier : ReplicatedDataIdentifier.values() )
+        {
+            registry.register( discoveryReplicatedDataName( identifier, "visible" ), discoveryReplicatedDataMetric.getVisibleDataSize( identifier ) );
+            registry.register( discoveryReplicatedDataName( identifier, "invisible" ), discoveryReplicatedDataMetric.getInvisibleDataSize( identifier ) );
         }
     }
 
@@ -141,6 +152,12 @@ public class CoreMetrics extends LifecycleAdapter
             registry.remove( messageTimerName( type ) );
         }
 
+        for ( ReplicatedDataIdentifier identifier : ReplicatedDataIdentifier.values() )
+        {
+            registry.remove( discoveryReplicatedDataName( identifier, "visible" ) );
+            registry.remove( discoveryReplicatedDataName( identifier, "invisible" ) );
+        }
+
         monitors.removeMonitorListener( raftLogCommitIndexMetric );
         monitors.removeMonitorListener( raftLogAppendIndexMetric );
         monitors.removeMonitorListener( raftTermMetric );
@@ -149,11 +166,17 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.removeMonitorListener( inFlightCacheMetric );
         monitors.removeMonitorListener( raftMessageProcessingMetric );
         monitors.removeMonitorListener( replicationMetric );
+        monitors.removeMonitorListener( discoveryReplicatedDataMetric );
     }
 
     private String messageTimerName( RaftMessages.Type type )
     {
         return name( TIMER, type.name().toLowerCase() );
+    }
+
+    private String discoveryReplicatedDataName( ReplicatedDataIdentifier identifier, String visibility )
+    {
+        return name( DISCOVERY_REPLICATED_DATA, identifier.keyName().replace( '-', '_' ) + "." + visibility );
     }
 
     private class LeaderGauge implements Gauge<Integer>

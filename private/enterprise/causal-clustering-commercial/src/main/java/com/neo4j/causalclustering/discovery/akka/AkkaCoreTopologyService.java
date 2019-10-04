@@ -44,11 +44,13 @@ import org.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import org.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import org.neo4j.causalclustering.discovery.RetryStrategy;
 import org.neo4j.causalclustering.discovery.RoleInfo;
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import org.neo4j.causalclustering.identity.ClusterId;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;
 
@@ -65,11 +67,12 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final RetryStrategy restartRetryStrategy;
     private final ExecutorService executor;
     private final Clock clock;
+    private final ReplicatedDataMonitor monitor;
     private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
-            ExecutorService executor, Clock clock )
+            ExecutorService executor, Clock clock, Monitors monitors )
     {
         super( config, myself, logProvider, userLogProvider );
         this.actorSystemLifecycle = actorSystemLifecycle;
@@ -77,6 +80,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         this.restartRetryStrategy = restartRetryStrategy;
         this.executor = executor;
         this.clock = clock;
+        this.monitor = monitors.newMonitor( ReplicatedDataMonitor.class );
         this.topologyState = new TopologyState( config, logProvider, listenerService::notifyListeners );
     }
 
@@ -111,14 +115,15 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
                 replicator,
                 cluster,
                 topologyBuilder,
-                config );
+                config,
+                monitor );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<String,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
-        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor );
+        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, monitor );
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 

@@ -49,7 +49,8 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
                 catchupAddressRetryStrategy,
                 restartRetryStrategy,
                 executor,
-                clock );
+                clock,
+                monitors );
     }
 
     private ExecutorService executorService( Config config, JobScheduler jobScheduler )

@@ -15,25 +15,27 @@ import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 
 import org.neo4j.causalclustering.discovery.CoreServerInfo;
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.kernel.configuration.Config;
 
+import static org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
+
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForMemberId>>
 {
-    static Props props( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config )
+    static Props props( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
     {
-        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config ) );
+        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config, monitor ) );
     }
 
-    static final String MEMBER_DATA_KEY = "member-data";
     private final MemberId myself;
 
     private final ActorRef topologyActor;
     private final Config config;
 
-    private MetadataActor( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config )
+    private MetadataActor( MemberId myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
     {
-        super( cluster, replicator, LWWMapKey.create( MEMBER_DATA_KEY ), LWWMap::empty );
+        super( cluster, replicator, LWWMapKey::create, LWWMap::empty, METADATA, monitor );
         this.myself = myself;
         this.topologyActor = topologyActor;
         this.config = config;
@@ -64,5 +66,17 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     {
         data = data.merge( delta );
         topologyActor.tell( new MetadataMessage( data ), getSelf() );
+    }
+
+    @Override
+    protected int dataMetricVisible()
+    {
+        return data.size();
+    }
+
+    @Override
+    protected int dataMetricInvisible()
+    {
+        return data.underlying().keys().vvector().size();
     }
 }

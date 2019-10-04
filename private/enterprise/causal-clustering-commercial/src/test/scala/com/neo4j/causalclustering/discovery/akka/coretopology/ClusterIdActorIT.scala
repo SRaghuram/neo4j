@@ -12,6 +12,7 @@ import akka.actor.ActorRef
 import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.CLUSTER_ID
 import org.neo4j.causalclustering.identity.ClusterId
 
 class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
@@ -60,9 +61,10 @@ class ClusterIdActorIT extends BaseAkkaIT("ClusterIdActorTest") {
   }
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[String, ClusterId]] {
-    override val dataKey: Key[LWWMap[String, ClusterId]] = LWWMapKey(ClusterIdActor.CLUSTER_ID_PER_DB_KEY)
+    override val dataKey: Key[LWWMap[String, ClusterId]] = LWWMapKey(CLUSTER_ID.keyName())
+    override val data = LWWMap.create[String, ClusterId]()
     val coreTopologyProbe = TestProbe("coreTopologyActor")
-    val props = ClusterIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, 3)
+    val props = ClusterIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, 3, monitor)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
 
     def expectClusterIdReplicatorUpdatesWithOutcome(initial: LWWMap[String,ClusterId], expected: LWWMap[String,ClusterId]): Unit =
