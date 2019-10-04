@@ -51,11 +51,16 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
         if ( currentLeaderInfo.term() < newLeader.term() && localDBName().equals( dbName ) )
         {
             log.info( "Leader %s updating leader info for database %s and term %s", myself, dbName, newLeader.term() );
-            setLeader0( newLeader );
+            publishLeader( newLeader );
         }
     }
 
-    protected abstract void setLeader0( LeaderInfo newLeader );
+    /** Fetches info for the current leader */
+    protected abstract LeaderInfo getLeader();
+
+    protected abstract void publishLeader( LeaderInfo newLeader );
+
+    protected abstract void publishStepDown( LeaderInfo steppingDown );
 
     @Override
     public final void handleStepDown( long term, String dbName )
@@ -71,11 +76,9 @@ public abstract class AbstractCoreTopologyService extends SafeLifecycle implemen
         {
             log.info( "Step down event detected. This topology member, with MemberId %s, was leader in term %s, now moving " +
                     "to follower.", myself, localLeaderInfo.term() );
-            handleStepDown0( localLeaderInfo.stepDown() );
+            publishStepDown( localLeaderInfo.stepDown() );
         }
     }
-
-    protected abstract void handleStepDown0( LeaderInfo steppingDown );
 
     @Override
     public MemberId myself()

@@ -59,7 +59,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void setLeader0( LeaderInfo newLeader )
+    public void publishLeader( LeaderInfo newLeader )
     {
         leaderInfo =  newLeader;
         sharedDiscoveryService.casLeaders( newLeader, localDBName );
@@ -150,7 +150,7 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void publishStepDown( LeaderInfo steppingDown )
     {
         sharedDiscoveryService.casLeaders( steppingDown, localDBName );
     }

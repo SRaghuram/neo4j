@@ -248,7 +248,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo leaderInfo )
+    public void publishLeader( LeaderInfo leaderInfo )
     {
         this.leaderInfo = leaderInfo;
         if ( leaderInfo.memberId() != null || leaderInfo.isSteppingDown() )
@@ -258,9 +258,9 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void publishStepDown( LeaderInfo steppingDown )
     {
-        setLeader0( steppingDown );
+        publishLeader( steppingDown );
     }
 
     @Override

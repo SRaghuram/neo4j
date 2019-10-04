@@ -127,7 +127,7 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo newLeaderInfo )
+    public void publishLeader( LeaderInfo newLeaderInfo )
     {
         leaderInfo.set( newLeaderInfo );
     }
@@ -139,7 +139,7 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void publishStepDown( LeaderInfo steppingDown )
     {
         stepDownInfo.set( Optional.of( steppingDown ) );
     }
