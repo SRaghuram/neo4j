@@ -262,7 +262,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 schema1 -> schema1.constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).withName( "otherName" ).create(),
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
-        String expectedMessage = "Constraint already exists: CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT (my_label.my_property_key) IS UNIQUE";
+        String expectedMessage = "Constraint already exists: Constraint( UNIQUE, :MY_LABEL(my_property_key) )";
         assertExpectedException( expectedCause, expectedMessage, exception );
     }
 
@@ -288,7 +288,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 schema1 -> schema1.constraintFor( label ).assertPropertyIsUnique( propertyKey ).withName( "otherName" ).create(),
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
-        String expectedMessage = "Constraint already exists: CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT (my_label.my_property_key) IS NODE KEY";
+        String expectedMessage = "Constraint already exists: Constraint( UNIQUE_EXISTS, :MY_LABEL(my_property_key) )";
         assertExpectedException( expectedCause, expectedMessage, exception );
     }
 
@@ -301,7 +301,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 schema1 -> schema1.constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).withName( "otherName" ).create(),
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
-        String expectedMessage = "Constraint already exists: CONSTRAINT ON ( my_label:MY_LABEL ) ASSERT (my_label.my_property_key) IS NODE KEY";
+        String expectedMessage = "Constraint already exists: Constraint( UNIQUE_EXISTS, :MY_LABEL(my_property_key) )";
         assertExpectedException( expectedCause, expectedMessage, exception );
     }
 
