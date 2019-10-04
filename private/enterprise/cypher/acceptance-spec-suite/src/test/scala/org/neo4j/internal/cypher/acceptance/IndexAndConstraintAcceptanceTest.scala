@@ -110,47 +110,62 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("name", "age"))
   }
 
-  test("should not fail to create multiple indexes with same schema (old syntax)") {
+  test("should fail to create multiple indexes with same schema (old syntax)") {
     // GIVEN
     executeSingle("CREATE INDEX ON :Person(name)")
     graph.awaitIndexesOnline()
 
-    // THEN
-    executeSingle("CREATE INDEX ON :Person(name)")
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE INDEX ON :Person(name)")
+      // THEN
+    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL, :Person(name), native-btree-1.0 )'."
   }
 
-  test("should not fail to create multiple indexes with same schema (new syntax)") {
+  test("should fail to create multiple indexes with same schema (new syntax)") {
     // GIVEN
     executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
     graph.awaitIndexesOnline()
 
-    // THEN
-    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+      // THEN
+    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL, :Person(name), native-btree-1.0 )'."
   }
 
-  test("should not fail to create multiple indexes with same schema (mixed syntax)") {
+  test("should fail to create multiple indexes with same schema (mixed syntax)") {
     // GIVEN: old syntax
     executeSingle("CREATE INDEX ON :Person(name)")
     graph.awaitIndexesOnline()
 
-    // THEN: new syntax
-    executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+    the[CypherExecutionException] thrownBy {
+      // WHEN: new syntax
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
+      // THEN
+    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL, :Person(name), native-btree-1.0 )'."
 
     // GIVEN: new syntax
     executeSingle("CREATE INDEX ON :Person(age)")
     graph.awaitIndexesOnline()
 
-    // THEN: old syntax
-    executeSingle("CREATE INDEX FOR (n:Person) ON (n.age)")
+    the[CypherExecutionException] thrownBy {
+      // WHEN: old syntax
+      executeSingle("CREATE INDEX FOR (n:Person) ON (n.age)")
+      // THEN
+    } should have message "An equivalent index already exists, 'Index( 2, 'Index on :Person (age)', GENERAL, :Person(age), native-btree-1.0 )'."
   }
 
-  test("should not fail to create multiple named indexes with same name and schema") {
+  test("should fail to create multiple named indexes with same name and schema") {
     // GIVEN
     executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
     graph.awaitIndexesOnline()
 
-    // THEN
-    executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
+    the[CypherExecutionException] thrownBy {
+      // WHEN
+      executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
+      // THEN
+    } should have message "An equivalent index already exists, 'Index( 1, 'my_index', GENERAL, :Person(name), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple named indexes with different names but same schema") {
@@ -447,40 +462,56 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     properties should be(Seq("since"))
   }
 
-  test("should not fail to create multiple constraints with same schema") {
+  test("should fail to create multiple constraints with same schema") {
     // Node key constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
-    executeSingle("CREATE CONSTRAINT ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
+    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE_EXISTS, :Label1(prop) )'."
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
-    executeSingle("CREATE CONSTRAINT ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
+    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE, :Label2(prop) )'."
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
-    executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
+    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, :Label3(prop) )'."
 
     // Relationship property existence constraint
     executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
-    executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, -[:Type(prop)]- )'."
   }
 
-  test("should not fail to create multiple named constraints with same name and schema") {
+  test("should fail to create multiple named constraints with same name and schema") {
     // Node key constraint
     executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
-    executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
+    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE_EXISTS, :Label1(prop) )'."
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
-    executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
+    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE, :Label2(prop) )'."
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
-    executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
+    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, :Label3(prop) )'."
 
     // Relationship property existence constraint
     executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
-    executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    the[CypherExecutionException] thrownBy {
+      executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
+    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, -[:Type(prop)]- )'."
   }
 
   test("should fail to create multiple named constraints with different name and same schema") {

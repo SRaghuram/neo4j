@@ -719,16 +719,31 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
   }
 
-  test("should not fail on multiple attempts to create a composite index") {
+  test("should fail on multiple attempts to create a composite index") {
     // Given
     executeWith(Configs.All, "CREATE INDEX FOR (n:Person) ON (n.name, n.surname)")
-    executeWith(Configs.All, "CREATE INDEX FOR (n:Person) ON (n.name, n.surname)")
+
+    // When
+    val exception = the[TestFailedException] thrownBy {
+      executeWith(Configs.All, "CREATE INDEX FOR (n:Person) ON (n.name, n.surname)")
+    }
+
+    // Then
+    exception.getCause should have message
+      "An equivalent index already exists, 'Index( 7, 'Index on :Person (name,surname)', GENERAL, :Person(name, surname), native-btree-1.0 )'."
   }
 
-  test("should not fail on multiple attempts to create a named composite index") {
+  test("should fail on multiple attempts to create a named composite index") {
     // Given
     executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
-    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
+
+    // When
+    val exception = the[TestFailedException] thrownBy {
+      executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.surname)")
+    }
+
+    // Then
+    exception.getCause should have message "An equivalent index already exists, 'Index( 7, 'my_index', GENERAL, :Person(name, surname), native-btree-1.0 )'."
   }
 
   test("should fail on multiple attempts to create a named composite index with different name") {

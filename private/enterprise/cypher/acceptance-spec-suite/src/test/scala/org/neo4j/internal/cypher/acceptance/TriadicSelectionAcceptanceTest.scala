@@ -94,7 +94,6 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       """
         |CREATE CONSTRAINT ON (user:User) ASSERT user.neogen_id IS UNIQUE;
         |CREATE CONSTRAINT ON (p1:Post) ASSERT p1.neogen_id IS UNIQUE;
-        |CREATE CONSTRAINT ON (p2:Post) ASSERT p2.neogen_id IS UNIQUE;
       """.stripMargin
 
     val create_model =
