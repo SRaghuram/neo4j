@@ -15,9 +15,11 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.LogManager;
 
 import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EDITION;
@@ -48,6 +50,8 @@ import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TOOL_OWNER
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TRIGGERED_BY;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WARMUP;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WORKLOAD;
+
+import static java.lang.String.format;
 
 public abstract class BaseRunWorkloadCommand implements Runnable
 {
@@ -239,6 +243,16 @@ public abstract class BaseRunWorkloadCommand implements Runnable
     @Override
     public final void run()
     {
+
+        try
+        {
+            LogManager.getLogManager().readConfiguration( BaseRunWorkloadCommand.class.getResourceAsStream( "/bench/logging.properties" ) );
+        }
+        catch ( SecurityException | IOException e )
+        {
+            System.out.println( format( "failed to initialize java.util.logging\n %s", e) );
+        }
+
         Deployment deployment = Deployment.parse( deploymentMode );
         List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
