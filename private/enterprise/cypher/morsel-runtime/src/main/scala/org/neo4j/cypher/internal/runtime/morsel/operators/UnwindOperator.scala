@@ -124,7 +124,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
         invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(listExpression)),
         method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
       setField(canContinue, invoke(loadField(iteratorField), method[java.util.Iterator[_], Boolean]("hasNext"))),
-      loadField(canContinue)
+      constant(true)
       )
   }
 

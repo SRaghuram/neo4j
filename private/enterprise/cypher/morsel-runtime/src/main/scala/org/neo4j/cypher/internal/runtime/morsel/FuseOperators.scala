@@ -300,7 +300,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           case plan@plans.Argument(_) =>
             val newTemplate =
-              new ArgumentOperatorTaskTemplate(acc.template, plan.id, innermostTemplate)(expressionCompiler)
+              new ArgumentOperatorTaskTemplate(acc.template,
+                                               plan.id,
+                                               innermostTemplate,
+                                               physicalPlan.argumentSizes(id))(expressionCompiler)
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
