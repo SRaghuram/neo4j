@@ -5,6 +5,10 @@
  */
 package org.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.discovery.CommercialCluster;
+import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceFactorySelector;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
@@ -12,8 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.common.EnterpriseCluster;
-import org.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -58,8 +60,10 @@ class Resources
         config.populateCoreParams( coreParams );
         config.populateReadReplicaParams( readReplicaParams );
 
-        HazelcastDiscoveryServiceFactory discoveryServiceFactory = new HazelcastDiscoveryServiceFactory();
-        cluster = new EnterpriseCluster( clusterDir, numberOfCores, numberOfEdges, discoveryServiceFactory, coreParams, emptyMap(), readReplicaParams,
+        SslDiscoveryServiceFactory discoveryServiceFactory = new CommercialDiscoveryServiceFactorySelector().select(
+                org.neo4j.kernel.configuration.Config.defaults( coreParams ) );
+
+        cluster = new CommercialCluster( clusterDir, numberOfCores, numberOfEdges, discoveryServiceFactory, coreParams, emptyMap(), readReplicaParams,
                 emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 
