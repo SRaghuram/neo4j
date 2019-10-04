@@ -238,7 +238,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX ON :Person(name)")
       // THEN
-    } should have message "Unable to drop index on :Person(name): No such index :Person(name)."
+    } should have message "Unable to drop index on :Person(name). There is no such index."
   }
 
   test("should get error when trying to drop the same named index twice") {
@@ -252,7 +252,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX my_index")
       // THEN
-    } should have message "Unable to drop index my_index: No such index my_index."
+    } should have message "Unable to drop index called `my_index`. There is no such index."
   }
 
   test("should get error when trying to drop non-existing index") {
@@ -260,7 +260,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX ON :Person(name)")
       // THEN
-    } should have message "Unable to drop index on :Person(name): No such index :Person(name)."
+    } should have message "Unable to drop index on :Person(name). There is no such index."
   }
 
   test("should get error when trying to drop non-existing named index") {
@@ -268,7 +268,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX my_index")
       // THEN
-    } should have message "Unable to drop index my_index: No such index my_index."
+    } should have message "Unable to drop index called `my_index`. There is no such index."
   }
 
   // Create constraint
@@ -488,25 +488,25 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint5 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label1:Label1 ) ASSERT (label1.prop) IS NODE KEY"
+    } should have message "Constraint already exists: Constraint( UNIQUE_EXISTS, :Label1(prop) )"
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint6 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label2:Label2 ) ASSERT (label2.prop) IS UNIQUE"
+    } should have message "Constraint already exists: Constraint( UNIQUE, :Label2(prop) )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint7 ON (n:Label3) ASSERT EXISTS (n.prop)")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label3:Label3 ) ASSERT exists(label3.prop)"
+    } should have message "Constraint already exists: Constraint( EXISTS, :Label3(prop) )"
 
     // Relationship property existence constraint
     executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint8 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
-    } should have message "Constraint already exists: CONSTRAINT ON ()-[ type:Type ]-() ASSERT exists(type.prop)"
+    } should have message "Constraint already exists: Constraint( EXISTS, -[:Type(prop)]- )"
   }
 
   test("should fail to create multiple named constraints with same name") {
@@ -542,7 +542,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label:Label ) ASSERT (label.prop) IS NODE KEY"
+    } should have message "Constraint already exists: Constraint( UNIQUE_EXISTS, :Label(prop) )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -558,7 +558,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label:Label ) ASSERT (label.prop) IS NODE KEY"
+    } should have message "Constraint already exists: Constraint( UNIQUE_EXISTS, :Label(prop) )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -614,7 +614,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label:Label ) ASSERT (label.prop) IS UNIQUE"
+    } should have message "Constraint already exists: Constraint( UNIQUE, :Label(prop) )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -630,7 +630,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    } should have message "Constraint already exists: CONSTRAINT ON ( label:Label ) ASSERT (label.prop) IS UNIQUE"
+    } should have message "Constraint already exists: Constraint( UNIQUE, :Label(prop) )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -1518,51 +1518,51 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP INDEX ON :Label(prop1)")
       // THEN
-    } should have message "Unable to drop index on :Label(prop1): Index belongs to constraint: :Label(prop1)"
+    } should have message "Unable to drop index: Index belongs to constraint: :Label(prop1)"
 
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX mine1")
       // THEN
-    } should have message "Unable to drop index on :Label(prop1): Index belongs to constraint: :Label(prop1)"
+    } should have message "Unable to drop index: Index belongs to constraint: :Label(prop1)"
 
     // Uniqueness constraint (backed by index)
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX ON :Label(prop2)")
       // THEN
-    } should have message "Unable to drop index on :Label(prop2): Index belongs to constraint: :Label(prop2)"
+    } should have message "Unable to drop index: Index belongs to constraint: :Label(prop2)"
 
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX mine2")
       // THEN
-    } should have message "Unable to drop index on :Label(prop2): Index belongs to constraint: :Label(prop2)"
+    } should have message "Unable to drop index: Index belongs to constraint: :Label(prop2)"
 
     // Node property existence constraint
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX ON :Label(prop3)")
       // THEN
-    } should have message "Unable to drop index on :Label(prop3): No such index :Label(prop3)."
+    } should have message "Unable to drop index on :Label(prop3). There is no such index."
 
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX mine3")
       // THEN
-    } should have message "Unable to drop index mine3: No such index mine3."
+    } should have message "Unable to drop index called `mine3`. There is no such index."
 
     // Relationship property existence constraint (close as can get to same schema)
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX ON :Label(prop4)")
       // THEN
-    } should have message "Unable to drop index on :Label(prop4): No such index :Label(prop4)."
+    } should have message "Unable to drop index on :Label(prop4). There is no such index."
 
     the[CypherExecutionException] thrownBy {
       // WHEN
       executeSingle("DROP INDEX mine4")
       // THEN
-    } should have message "Unable to drop index mine4: No such index mine4."
+    } should have message "Unable to drop index called `mine4`. There is no such index."
   }
 }
