@@ -41,6 +41,7 @@ COPY bootstrap-worker.sh /work/bootstrap-worker.sh
 COPY --from=jdk ${JAVA_HOME}/ ${JAVA_HOME}
 COPY --from=profilers /usr/lib/async-profiler/ /usr/lib/async-profiler/
 COPY --from=profilers /usr/lib/flamegraph/ /usr/lib/flamegraph/
+COPY --from=profilers /usr/lib/jfr-flamegraph /usr/lib/jfr-flamegraph
 RUN \
   echo 'tzdata tzdata/Areas select Europe' | debconf-set-selections && \
   echo 'tzdata tzdata/Zones/Europe select Berlin' | debconf-set-selections && \

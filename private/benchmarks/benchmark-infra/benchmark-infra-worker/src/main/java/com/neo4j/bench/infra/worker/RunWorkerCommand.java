@@ -51,7 +51,6 @@ public class RunWorkerCommand extends BaseInfraCommand
             {
                 artifactStorage = AWSS3ArtifactStorage.create( infraParams.awsRegion(), infraParams.awsKey(), infraParams.awsSecret() );
             }
-            artifactStorage.verifyBuildArtifactsExpirationRule( infraParams.artifactBaseUri() );
 
             // download & extract dataset
             Dataset dataset = artifactStorage.downloadDataset( runWorkloadParams.neo4jBranch(), infraParams.storeName() );

@@ -13,22 +13,16 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
-import com.amazonaws.services.s3.model.BucketLifecycleConfiguration.Rule;
-import com.amazonaws.services.s3.model.GetBucketLifecycleConfigurationRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.lifecycle.LifecycleFilter;
-import com.amazonaws.services.s3.model.lifecycle.LifecyclePrefixPredicate;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Workspace;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,10 +33,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Optional;
 
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 import static org.apache.commons.lang3.StringUtils.removeStart;
@@ -51,10 +43,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 {
 
     private static final Logger LOG = LoggerFactory.getLogger( AWSS3ArtifactStorage.class );
-
-    private static final String ARTIFACTS_PREFIX = "artifacts";
-    private static final String RULE_ID = "expire all build artifacts";
-    private static final int EXPIRATION_IN_DAYS = 7;
 
     static final String BENCHMARKING_BUCKET_NAME = "benchmarking.neo4j.com";
 
@@ -163,27 +151,6 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         LOG.info( "downloading dataset {} for version {} from bucket {} at key {}", dataset, neo4jVersion, BENCHMARKING_BUCKET_NAME, key );
         S3Object s3Object = amazonS3.getObject( BENCHMARKING_BUCKET_NAME, key );
         return new S3ObjectDataset( s3Object );
-    }
-
-    public void verifyBuildArtifactsExpirationRule( URI artifactBaseURI )
-    {
-        String bucketName = artifactBaseURI.getAuthority();
-        LOG.debug( "verifying build artifacts expiration rule" );
-        Optional<BucketLifecycleConfiguration> lifecycleConfiguration = Optional.ofNullable( amazonS3.getBucketLifecycleConfiguration(
-                new GetBucketLifecycleConfigurationRequest( bucketName ) ) );
-
-        Rule rule = lifecycleConfiguration
-                .map( BucketLifecycleConfiguration::getRules )
-                .flatMap( rules -> rules.stream().filter( r -> RULE_ID.equals( r.getId() ) ).findFirst() )
-                .orElseGet( () -> new BucketLifecycleConfiguration.Rule().withId( RULE_ID ) );
-
-        // enforce rule update
-        rule.withExpirationInDays( EXPIRATION_IN_DAYS )
-            .withFilter( new LifecycleFilter( new LifecyclePrefixPredicate( ARTIFACTS_PREFIX + "/" ) ) )
-            .withStatus( BucketLifecycleConfiguration.ENABLED );
-
-        BucketLifecycleConfiguration configuration = new BucketLifecycleConfiguration().withRules( asList( rule ) );
-        amazonS3.setBucketLifecycleConfiguration( bucketName, configuration );
     }
 
     private static String getS3Path( String fullPath )
