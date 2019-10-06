@@ -146,13 +146,13 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
   import OperatorCodeGenHelperTemplates._
 
-  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
-  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName())
-  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName(),
+  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
+  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
+  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
                                             if (types.isEmpty && missingTypes.isEmpty) constant(null)
                                             else arrayOf[Int](types.map(constant):_*)
   )
-  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
+  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
                                                       arrayOf[String](missingTypes.map(constant):_*))
 
   override final def scopeId: String = "expandAll" + id.x
@@ -199,7 +199,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       case BOTH => method[RelationshipSelections, RelationshipSelectionCursor, CursorFactory, NodeCursor, Array[Int]]("allCursor")
     }
     val resultBoolean = codeGen.namer.nextVariableName()
-    val fromNode = codeGen.namer.nextVariableName()
+    val fromNode = codeGen.namer.nextVariableName() + "fromNode"
 
     block(
       declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
