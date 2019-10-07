@@ -23,6 +23,7 @@ import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.types.MapAccessor;
 
 import static com.neo4j.bench.common.model.BenchmarkMetrics.extractBenchmarkMetrics;
@@ -57,43 +58,46 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     {
         try ( Session session = driver.session( WRITE ) )
         {
-            Map<String,Object> params = params();
-            StatementResult statementResult = session.run( SUBMIT_TEST_RUN, params );
-
-            if ( statementResult.hasNext() )
+            try ( Transaction tx = session.beginTransaction() )
             {
-                Record record = statementResult.next();
-
+                Map<String,Object> params = params();
+                StatementResult statementResult = tx.run( SUBMIT_TEST_RUN, params );
                 if ( statementResult.hasNext() )
                 {
-                    throw new RuntimeException( "Query returned more than one row!" );
+                    Record record = statementResult.next();
+
+                    if ( statementResult.hasNext() )
+                    {
+                        throw new RuntimeException( "Query returned more than one row!" );
+                    }
+
+                    // [[benchmark,metrics,params]]
+                    List<List<Map<String,Object>>> benchmarkMetricsLists = record.get( "benchmark_metrics" )
+                                                                                 .asList( list -> list.asList( MapAccessor::asMap ) );
+                    List<BenchmarkMetrics> benchmarkMetrics = benchmarkMetricsLists.stream()
+                                                                                   .map( metrics -> extractBenchmarkMetrics( metrics.get( 0 ),
+                                                                                                                             metrics.get( 1 ),
+                                                                                                                             metrics.get( 2 ) ) )
+                                                                                   .collect( toList() );
+                    SubmitTestRunResult result = new SubmitTestRunResult(
+                            new TestRun( record.get( "test_run" ).asMap() ),
+                            benchmarkMetrics );
+
+                    maybeSetNonFatalError( result.benchmarkMetricsList().size() );
+
+                    if ( !report.benchmarkPlans().isEmpty() )
+                    {
+                        PlanTreeSubmitter.execute( tx, report.testRun(), report.benchmarkPlans(), submitTreeWithPlanner );
+                    }
+                    tx.success();
+                    return result;
                 }
-
-                // [[benchmark,metrics,params]]
-                List<List<Map<String,Object>>> benchmarkMetricsLists = record.get( "benchmark_metrics" )
-                                                                             .asList( list -> list.asList( MapAccessor::asMap ) );
-                List<BenchmarkMetrics> benchmarkMetrics = benchmarkMetricsLists.stream()
-                                                                               .map( metrics -> extractBenchmarkMetrics( metrics.get( 0 ),
-                                                                                                                         metrics.get( 1 ),
-                                                                                                                         metrics.get( 2 ) ) )
-                                                                               .collect( toList() );
-                SubmitTestRunResult result = new SubmitTestRunResult(
-                        new TestRun( record.get( "test_run" ).asMap() ),
-                        benchmarkMetrics );
-
-                maybeSetNonFatalError( result.benchmarkMetricsList().size() );
-
-                if ( !report.benchmarkPlans().isEmpty() )
+                else
                 {
-                    PlanTreeSubmitter.execute( session, report.testRun(), report.benchmarkPlans(), submitTreeWithPlanner );
+                    tx.failure();
+                    maybeSetNonFatalError( 0 );
+                    return null;
                 }
-
-                return result;
-            }
-            else
-            {
-                maybeSetNonFatalError( 0 );
-                return null;
             }
         }
     }
