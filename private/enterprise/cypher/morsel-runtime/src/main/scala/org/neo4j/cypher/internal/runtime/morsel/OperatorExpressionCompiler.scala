@@ -240,35 +240,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         load(local)
       )
     } else {
-//      block(
-        // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
-        // This happens for example when we have a continuation where innerLoop = true
-        // It is sub-optimal to check this every time at runtime, so we should come up with a better solution
-        // e.g. to do this initialization only once at the entry-point of each nested fused loop
-        //      or if possible, save the state when we exit with a continuation, and restore it when we come back
-// Remove runtime check to provoke the bug
-//        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
-//          // We need to initialize the local from the execution context
-//          assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-//        ),
-        load(local)
-//      )
+      load(local)
     }
   }
 
   final def getLongAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
     val local = locals.getLocalForLongSlot(offset)
     if (local == null) orElse else {
-      // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
-      // (See full comment in getLongAt above)
-      block(
-// Remove runtime check to provoke the bug
-//        condition(equal(load(local), UNINITIALIZED_LONG_SLOT_VALUE))(
-//          // We need to initialize the local from the execution context
-//          assign(local, orElse),
-//        ),
-        load(local)
-      )
+      load(local)
     }
   }
 
@@ -281,30 +260,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         load(local)
       )
     } else {
-      // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
-      // (See full comment in getLongAt above)
-// Remove runtime check to provoke the bug
-//      block(
-//        condition(isNull(load(local)))(
-//          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-//        ),
-        load(local)
-//      )
+      load(local)
     }
   }
 
   final def getRefAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
     val local = locals.getLocalForRefSlot(offset)
     if (local == null) orElse else {
-      // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
-      // (See full comment in getLongAt above)
-      block(
-// Remove runtime check to provoke the bug
-//        condition(isNull(load(local)))(
-//          assign(local, orElse),
-//        ),
-        load(local)
-      )
+      load(local)
     }
   }
 
@@ -349,16 +312,6 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         initializeFromStoreIR
       } else {
         noop()
-        // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
-        // (See full comment in getLongAt above)
-// Remove runtime check to provoke the bug
-//        condition(isNull(load(local)))(
-//          if (maybeCachedProperty.isDefined) {
-//            initializeFromContextIR
-//          } else {
-//            initializeFromStoreIR
-//          }
-//        )
       }
 
     block(prepareOps, cast[Value](load(local)))
