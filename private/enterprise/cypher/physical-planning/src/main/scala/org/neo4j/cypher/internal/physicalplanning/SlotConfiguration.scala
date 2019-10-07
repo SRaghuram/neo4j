@@ -295,31 +295,45 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     var sortedCached: Seq[(ASTCachedProperty, RefSlot)] = cachedProperties.toSeq.filter(_._2.offset >= skipFirst.nReferences).sortBy(_._2.offset)
     var sortedApplyPlanIds: Seq[(Id, Int)] = applyPlans.toSeq.filter(_._2 >= skipFirst.nLongs).sortBy(_._2)
 
-
-    var i = skipFirst.nReferences
-    while (i < numberOfReferences) {
-      if (sortedRefs.nonEmpty && sortedRefs.head._2.offset == i) {
-        val (variable, slot) = sortedRefs.head
-        onVariable(variable, slot)
-        sortedRefs = sortedRefs.tail
-      } else {
-        onCachedProperty(sortedCached.head._1)
-        sortedCached = sortedCached.tail
-      }
-      i += 1
-    }
-
-    i = skipFirst.nLongs
-    while (i < numberOfLongs) {
-      if (sortedLongs.nonEmpty && sortedLongs.head._2.offset == i) {
-        val (variable, slot) = sortedLongs.head
+    def _onVariable(tuple: (String, Slot)): Unit = {
+      val (variable, slot) = tuple
+      if (slot.isLongSlot) {
         onVariable(variable, slot)
         sortedLongs = sortedLongs.tail
       } else {
-        onApplyPlan(sortedApplyPlanIds.head._1)
-        sortedApplyPlanIds = sortedApplyPlanIds.tail
+        onVariable(variable, slot)
+        sortedRefs = sortedRefs.tail
       }
-      i += 1
+    }
+
+    def _onCached(tuple: (ASTCachedProperty, RefSlot)): Unit = {
+      val (cached, _) = tuple
+      onCachedProperty(cached)
+      sortedCached = sortedCached.tail
+    }
+
+    def _onApplyPlanId(tuple: (Id, Int)): Unit = {
+      val (id, _) = tuple
+      onApplyPlan(id)
+      sortedApplyPlanIds = sortedApplyPlanIds.tail
+    }
+
+    while (sortedRefs.nonEmpty || sortedCached.nonEmpty) {
+      (sortedRefs.headOption, sortedCached.headOption) match {
+        case (Some(ref), None) => _onVariable(ref)
+        case (None, Some(cached)) => _onCached(cached)
+        case (Some(ref), Some(cached)) if ref._2.offset < cached._2.offset => _onVariable(ref)
+        case (Some(ref), Some(cached)) if ref._2.offset > cached._2.offset => _onCached(cached)
+      }
+    }
+
+    while (sortedLongs.nonEmpty || sortedApplyPlanIds.nonEmpty) {
+      (sortedLongs.headOption, sortedApplyPlanIds.headOption) match {
+        case (Some(long), None) => _onVariable(long)
+        case (None, Some(applyPlanId)) => _onApplyPlanId(applyPlanId)
+        case (Some(long), Some(applyPlanId)) if long._2.offset < applyPlanId._2 => _onVariable(long)
+        case (Some(long), Some(applyPlanId)) if long._2.offset > applyPlanId._2 => _onApplyPlanId(applyPlanId)
+      }
     }
   }
 
