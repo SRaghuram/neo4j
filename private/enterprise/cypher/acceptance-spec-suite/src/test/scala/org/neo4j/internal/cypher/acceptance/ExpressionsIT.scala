@@ -35,7 +35,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
 import org.neo4j.exceptions
 import org.neo4j.exceptions.{CypherTypeException, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
-import org.neo4j.graphdb.{Entity, Relationship}
+import org.neo4j.graphdb.{Entity, Node, Relationship}
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction.Type
@@ -3463,18 +3463,23 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       evaluate(compiled, context) should equal(Values.FALSE)
     }
 
-    ignore(s"$time cached $name property existence with tx state deleted value") {
-      val node = entity("hello from disk")
+    test(s"$time cached $name property existence with tx state deleted value") {
+      val testEntity = entity("hello from disk")
       startNewTransaction()
 
-      tx.getNodeById(node.getId).removeProperty("prop")
+      testEntity match {
+        case n: Node => tx.getNodeById(n.getId).removeProperty("prop")
+        case r: Relationship => tx.getRelationshipById(r.getId).removeProperty("prop")
+        case _ => throw new IllegalArgumentException("Unknown entity type:" + entity)
+      }
+
       val pkn = PropertyKeyName("prop")(pos)
       val token = tokenReader(tx, _.propertyKey("prop"))
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
       val context = SlottedExecutionContext(slots)
-      context.setLongAt(0, node.getId)
+      context.setLongAt(0, testEntity.getId)
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
       val compiled = compile(expression, slots)
