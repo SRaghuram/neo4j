@@ -120,6 +120,7 @@ class ExpressionEngineConfigurationTest
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder()
                 .impermanent()
                 .setInternalLogProvider( logProvider )
+                .setConfig( GraphDatabaseSettings.cypher_runtime, GraphDatabaseSettings.CypherRuntime.SLOTTED )
                 .setConfig( GraphDatabaseSettings.cypher_expression_engine, engine )
                 .setConfig( GraphDatabaseSettings.cypher_expression_recompilation_limit, limit )
                 .build();
