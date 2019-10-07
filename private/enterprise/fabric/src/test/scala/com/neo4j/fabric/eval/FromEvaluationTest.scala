@@ -14,7 +14,7 @@ import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
 import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
-import org.neo4j.cypher.internal.v4_0.ast.UseGraph
+import org.neo4j.cypher.internal.v4_0.ast.FromGraph
 import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.TestName
 import org.neo4j.values.AnyValue
@@ -24,7 +24,7 @@ import org.parboiled.scala.ReportingParseRunner
 
 import scala.collection.mutable
 
-class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport with TestName {
+class FromEvaluationTest extends FabricTest with ProcedureRegistryTestSupport with TestName {
 
   private val mega0 = new Graph(0L, URI.create("bolt://mega:1111"), "neo4j", "source_of_all_truth", null)
   private val mega1 = new Graph(1L, URI.create("bolt://mega:2222"), "neo4j", null, null)
@@ -39,28 +39,28 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
   )
 
   "Correctly evaluates:" - {
-    "USE mega.graph0" in { eval() shouldEqual RemoteGraph(mega0) }
-    "USE mega.graph1" in { eval() shouldEqual RemoteGraph(mega1) }
-    "USE mega.graph(0)" in { eval() shouldEqual RemoteGraph(mega0) }
-    "USE mega.graph(1)" in { eval() shouldEqual RemoteGraph(mega1) }
-    "USE mega.graph(const0())" in { eval() shouldEqual RemoteGraph(mega0) }
-    "USE mega.graph(const1())" in { eval() shouldEqual RemoteGraph(mega1) }
-    "USE mega.graph(x)" in { eval("x" -> Values.intValue(0)) shouldEqual RemoteGraph(mega0) }
-    "USE mega.graph(y)" in { eval("y" -> Values.intValue(1)) shouldEqual RemoteGraph(mega1) }
-    "USE mega.source_of_all_truth" in { eval() shouldEqual RemoteGraph(mega0) }
-    "USE mega.mega" in { eval() shouldEqual RemoteGraph(mega2) }
+    "FROM mega.graph0" in { eval() shouldEqual RemoteGraph(mega0) }
+    "FROM mega.graph1" in { eval() shouldEqual RemoteGraph(mega1) }
+    "FROM mega.graph(0)" in { eval() shouldEqual RemoteGraph(mega0) }
+    "FROM mega.graph(1)" in { eval() shouldEqual RemoteGraph(mega1) }
+    "FROM mega.graph(const0())" in { eval() shouldEqual RemoteGraph(mega0) }
+    "FROM mega.graph(const1())" in { eval() shouldEqual RemoteGraph(mega1) }
+    "FROM mega.graph(x)" in { eval("x" -> Values.intValue(0)) shouldEqual RemoteGraph(mega0) }
+    "FROM mega.graph(y)" in { eval("y" -> Values.intValue(1)) shouldEqual RemoteGraph(mega1) }
+    "FROM mega.source_of_all_truth" in { eval() shouldEqual RemoteGraph(mega0) }
+    "FROM mega.mega" in { eval() shouldEqual RemoteGraph(mega2) }
   }
 
   object eval {
 
     private object parse extends Query with Clauses {
-      def apply(use: String): UseGraph =
-        ReportingParseRunner(this.UseGraph).run(use).result.get
+      def apply(from: String): FromGraph =
+        ReportingParseRunner(this.FromGraph).run(from).result.get
     }
 
     private val catalog = Catalog.fromConfig(config)
     private val signatures = new SignatureResolver(() => procedures)
-    private val evaluation = UseEvaluation(catalog, () => procedures, signatures)
+    private val evaluation = FromEvaluation(catalog, () => procedures, signatures)
 
     def queryFromTestName: String =
       testName.split(":", 2).last.trim
@@ -75,15 +75,15 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     ): Catalog.Graph = eval(queryFromTestName, params, context)
 
     def eval(
-      use: String,
+      from: String,
       vars: (String, AnyValue)*
-    ): Catalog.Graph = eval(use, MapValue.EMPTY, mutable.Map(vars: _*))
+    ): Catalog.Graph = eval(from, MapValue.EMPTY, mutable.Map(vars: _*))
 
     def eval(
-      use: String,
+      from: String,
       params: MapValue,
       context: mutable.Map[String, AnyValue]
-    ): Catalog.Graph = evaluation.evaluate(parse(use), params, context)
+    ): Catalog.Graph = evaluation.evaluate(parse(from), params, context)
   }
 
 

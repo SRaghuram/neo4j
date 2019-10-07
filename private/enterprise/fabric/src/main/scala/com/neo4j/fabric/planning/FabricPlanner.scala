@@ -107,14 +107,14 @@ case class FabricPlanner(
       part: ast.QueryPart,
       incoming: Seq[String],
       local: Seq[String],
-      use: Option[ast.UseGraph]
+      from: Option[ast.FromGraph]
     ): Fragment = {
 
       case class State(
         incoming: Seq[String],
         locals: Seq[String],
         imports: Seq[String],
-        use: Option[ast.UseGraph],
+        from: Option[ast.FromGraph],
         fragments: Seq[Fragment] = Seq.empty
       ) {
 
@@ -138,14 +138,14 @@ case class FabricPlanner(
         case sq: ast.SingleQuery =>
           val imports = sq.importColumns
           val parts = partitioned(sq.clauses)
-          val start = State(incoming, local, imports, leadingUse(sq).orElse(use))
+          val start = State(incoming, local, imports, leadingFrom(sq).orElse(from))
           val state = parts.foldLeft(start) {
             case (current, part) => part match {
 
               case Right(clauses) =>
                 val leaf = Leaf(
-                  use = current.use,
-                  clauses = clauses.filterNot(_.isInstanceOf[ast.UseGraph]),
+                  from = current.from,
+                  clauses = clauses.filterNot(_.isInstanceOf[ast.FromGraph]),
                   columns = current.columns.copy(
                     output = produced(clauses.last),
                   )
@@ -157,7 +157,7 @@ case class FabricPlanner(
                   part = sub.part,
                   incoming = current.incoming,
                   local = Seq.empty,
-                  use = current.use
+                  from = current.from
                 )
                 current.append(Fragment.Apply(
                   frag,
@@ -183,8 +183,8 @@ case class FabricPlanner(
           }
 
         case uq: ast.Union =>
-          val lhs = fragment(uq.part, incoming, local, use)
-          val rhs = fragment(uq.query, incoming, local, use)
+          val lhs = fragment(uq.part, incoming, local, from)
+          val rhs = fragment(uq.query, incoming, local, from)
           val distinct = uq match {
             case _: ast.UnionAll      => false
             case _: ast.UnionDistinct => true
@@ -193,19 +193,19 @@ case class FabricPlanner(
       }
     }
 
-    private def leadingUse(sq: ast.SingleQuery): Option[ast.UseGraph] = {
+    private def leadingFrom(sq: ast.SingleQuery): Option[ast.FromGraph] = {
       val clauses = sq.clausesExceptImportWith
-      val (use, rest) = clauses.headOption match {
-        case Some(u: ast.UseGraph) => (Some(u), clauses.tail)
+      val (from, rest) = clauses.headOption match {
+        case Some(f: ast.FromGraph) => (Some(f), clauses.tail)
         case _                      => (None, clauses)
       }
 
       Errors.invalidOnError(
-        rest.filter(_.isInstanceOf[ast.UseGraph])
-          .map(Errors.semantic("USE can only appear at the beginning of a (sub-)query", _))
+        rest.filter(_.isInstanceOf[ast.FromGraph])
+          .map(Errors.semantic("FROM can only appear at the beginning of a (sub-)query", _))
       )
 
-      use
+      from
     }
 
     private def produced(clause: ast.Clause): Seq[String] = clause match {
@@ -281,11 +281,11 @@ case class FabricPlanner(
       case leaf: Fragment.Leaf =>
         val pos = leaf.clauses.head.position
         val query = ast.Query(None, ast.SingleQuery(leaf.clauses)(pos))(pos)
-        val base = leaf.use match {
+        val base = leaf.from match {
 
-          case Some(use) =>
+          case Some(from) =>
             FabricQuery.RemoteQuery(
-              use = use,
+              from = from,
               query = query,
               columns = leaf.columns
             )

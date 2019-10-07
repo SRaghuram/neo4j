@@ -9,7 +9,7 @@ import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.eval.Catalog;
-import com.neo4j.fabric.eval.UseEvaluation;
+import com.neo4j.fabric.eval.FromEvaluation;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
@@ -62,9 +62,9 @@ public class FabricServicesBootstrap
             var planner =
                     serviceBootstrapper.registerService( new FabricPlanner( fabricConfig, cypherConfig, monitors, signatureResolver ), FabricPlanner.class );
             var catalog = Catalog.fromConfig( fabricConfig );
-            var useEvaluation =
-                    serviceBootstrapper.registerService( new UseEvaluation( catalog, proceduresSupplier, signatureResolver ), UseEvaluation.class );
-            var executor = new FabricExecutor( fabricConfig, planner, useEvaluation );
+            var fromEvaluation =
+                    serviceBootstrapper.registerService( new FromEvaluation( catalog, proceduresSupplier, signatureResolver ), FromEvaluation.class );
+            var executor = new FabricExecutor( fabricConfig, planner, fromEvaluation );
             serviceBootstrapper.registerService( executor, FabricExecutor.class );
         }
     }
