@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.txlogs;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
@@ -34,7 +35,7 @@ public abstract class AbstractTransactionLogsBenchmark extends BaseDatabaseBench
     }
 
     @Override
-    protected void afterDatabaseStart()
+    protected void afterDatabaseStart( DataGeneratorConfig config )
     {
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
         LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );

@@ -10,6 +10,7 @@ import java.io.IOException
 import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.common.model.Neo4jConfig
 import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
+import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -31,7 +32,7 @@ abstract class AbstractSecurityBenchmark extends AbstractCypherBenchmark {
     .withSetting(SecuritySettings.authorization_providers, SecuritySettings.NATIVE_REALM_NAME)
     .withSetting(GraphDatabaseSettings.auth_enabled, "true").build();
 
-  override protected def afterDatabaseStart(): Unit = {
+  override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
     val authManager = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[EnterpriseAuthAndUserManager])
 
     try {

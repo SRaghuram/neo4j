@@ -81,7 +81,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     private Long expectedNumberOfRecoveredTransactions;
 
     @Override
-    protected void afterDatabaseStart()
+    protected void afterDatabaseStart( DataGeneratorConfig config )
     {
         GraphDatabaseService db = managedStore.db();
 

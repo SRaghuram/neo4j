@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.procs;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -28,11 +29,11 @@ import static com.neo4j.bench.micro.Main.run;
 public class FunctionCall extends AbstractProceduresBenchmark
 {
     @Override
-    protected void afterDatabaseStart()
+    protected void afterDatabaseStart( DataGeneratorConfig config )
     {
         try
         {
-            super.afterDatabaseStart();
+            super.afterDatabaseStart( config );
             procedures.registerFunction( TestFunctions.class );
             QualifiedName qualifiedName = new QualifiedName( new String[]{"tester"}, "function" );
             UserFunctionHandle handle = procedures.function( qualifiedName );

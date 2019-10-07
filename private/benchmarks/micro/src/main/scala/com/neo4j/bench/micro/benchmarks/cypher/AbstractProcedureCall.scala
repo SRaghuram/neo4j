@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.Plans.{Pos, astVariable}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.spi.procsHelpers.{asCypherType, asCypherValue, asOption}
@@ -23,8 +24,8 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
   /**
     * Called after starting of database
     */
-  override protected def afterDatabaseStart(): Unit = {
-    super.afterDatabaseStart()
+  override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
+    super.afterDatabaseStart(config)
     val resolver = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver
     val procs = resolver.resolveDependency(classOf[GlobalProcedures])
 

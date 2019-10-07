@@ -7,6 +7,7 @@ package com.neo4j.bench.micro.benchmarks.kernel;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.KernelTxBatch;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.RelationshipDefinition;
 
@@ -28,7 +29,7 @@ public abstract class AbstractKernelBenchmark extends BaseDatabaseBenchmark
     }
 
     @Override
-    public void afterDatabaseStart()
+    public void afterDatabaseStart( DataGeneratorConfig config )
     {
         kernel = kernelImplementation().start( (GraphDatabaseAPI) this.db() );
     }

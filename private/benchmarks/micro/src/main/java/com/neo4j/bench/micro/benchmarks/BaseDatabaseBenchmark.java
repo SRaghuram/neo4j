@@ -88,11 +88,12 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
 
         Augmenterizer augmenterizer = augmentDataGeneration();
         managedStore = new ManagedStore( stores );
-        managedStore.prepareDb( group, benchmark, getConfig(), neo4jConfig, augmenterizer, benchmarkParams.getThreads() );
+        DataGeneratorConfig config = getConfig();
+        managedStore.prepareDb( group, benchmark, config, neo4jConfig, augmenterizer, benchmarkParams.getThreads() );
         if ( afterDataGeneration().equals( StartDatabaseInstruction.START_DB ) )
         {
             managedStore.startDb();
-            afterDatabaseStart();
+            afterDatabaseStart( config );
         }
         else
         {
@@ -134,7 +135,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     /**
      * Called after starting of database
      */
-    protected void afterDatabaseStart()
+    protected void afterDatabaseStart( DataGeneratorConfig config )
     {
     }
 

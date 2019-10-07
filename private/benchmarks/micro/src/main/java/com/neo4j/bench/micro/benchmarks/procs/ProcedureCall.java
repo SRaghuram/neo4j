@@ -7,6 +7,7 @@ package com.neo4j.bench.micro.benchmarks.procs;
 
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -41,11 +42,11 @@ public class ProcedureCall extends AbstractProceduresBenchmark
     public long rows;
 
     @Override
-    protected void afterDatabaseStart()
+    protected void afterDatabaseStart( DataGeneratorConfig config )
     {
         try
         {
-            super.afterDatabaseStart();
+            super.afterDatabaseStart( config );
             procedures.registerProcedure( TestProcedure.class );
             QualifiedName qualifiedName = new QualifiedName( new String[]{"tester"}, "procedure" );
             ProcedureHandle handle = procedures.procedure( qualifiedName );

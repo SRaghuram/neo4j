@@ -40,7 +40,8 @@ class CartesianProduct extends AbstractCypherBenchmark {
       .isReusableStore(true)
       .build()
 
-  override protected def afterDatabaseStart(): Unit = {
+  override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
+    super.afterDatabaseStart(config)
     expectedRowCount = rows * rows
   }
 
