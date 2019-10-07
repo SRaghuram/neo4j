@@ -5,10 +5,12 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.Plans.{IdGen, astVariable}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -24,6 +26,20 @@ class AllNodesScan extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var runtime: String = _
 
+  @ParamValues(
+    allowed = Array( "true", "false"),
+    base = Array("false")
+  )
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "white", "black"),
+    base = Array("full")
+  )
+  @Param(Array[String]())
+  var user: String = _
+
   override def description = "All Nodes Scan"
 
   val NODE_COUNT = 1000000
@@ -33,6 +49,8 @@ class AllNodesScan extends AbstractCypherBenchmark {
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .isReusableStore(true)
+      .withNeo4jConfig(Neo4jConfigBuilder.empty()
+                                         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
@@ -64,7 +82,7 @@ class AllNodesScanThreadState {
   @Setup
   def setUp(benchmarkState: AllNodesScan): Unit = {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
-    tx = benchmarkState.beginInternalTransaction()
+    tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
   }
 
   @TearDown

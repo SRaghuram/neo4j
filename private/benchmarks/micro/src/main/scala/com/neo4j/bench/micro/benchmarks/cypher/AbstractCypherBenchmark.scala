@@ -5,10 +5,13 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import java.io.IOException
 import java.util
 import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
+import com.neo4j.bench.micro.data.{DataGeneratorConfig, PropertyDefinition, RelationshipDefinition}
+import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.ir.{ProvidedOrder, SinglePlannerQuery}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -28,13 +31,17 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.{Cardinality, LabelId, RelTypeId, Selectivity}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, EnterpriseRuntimeFactory, ExecutionPlan, LogicalQuery}
 import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.graphdb.Label
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
 import org.neo4j.internal.kernel.api.security.{LoginContext, SecurityContext}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.api.KernelTransaction.Type
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.query.ExecutingQuery
+import org.neo4j.kernel.api.security.AuthToken
+import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.api.KernelStatement
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -50,10 +57,13 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
 import org.openjdk.jmh.infra.Blackhole
 
+import scala.collection.mutable
+
 abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
   private val solveds = new Solveds
   private val cardinalities = new Cardinalities
+  val users: mutable.Map[String, LoginContext] = mutable.Map[String, LoginContext]()
 
   class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
     var count: Int = 0
@@ -72,6 +82,57 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   override def isThreadSafe = false
 
   def getLogicalPlanAndSemanticTable(planContext: PlanContext): (LogicalPlan, SemanticTable, List[String])
+
+  override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
+    val authManager = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[EnterpriseAuthAndUserManager])
+
+    val labels: Array[Label] = config.labels()
+    val nodeProperties: Array[PropertyDefinition] = config.nodeProperties()
+    val relTypes: Array[RelationshipDefinition] = config.outRelationships()
+    val relProperties: Array[PropertyDefinition] = config.relationshipProperties()
+
+    try {
+      // Role with explicit privileges to read everything in the graph
+      systemDb().executeTransactionally("CREATE ROLE WhiteRole")
+      labels.foreach { label =>
+        systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO WhiteRole")
+        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO WhiteRole"))
+      }
+      if (labels.isEmpty) {
+        systemDb().executeTransactionally("GRANT TRAVERSE ON GRAPH * NODES * TO WhiteRole")
+        nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES * TO WhiteRole"))
+        if (nodeProperties.isEmpty) {
+          nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ * ON GRAPH * NODES * TO WhiteRole"))
+        }
+      }
+      relTypes.foreach { relDefinition =>
+        val relType = relDefinition.`type`().name()
+        systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * RELATIONSHIPS $relType TO WhiteRole")
+        relProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * RELATIONSHIPS $relType TO WhiteRole"))
+      }
+
+      // Role that denies unused graph elements
+      systemDb().executeTransactionally("CREATE ROLE BlackRole")
+      systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS BLACK TO BlackRole")
+      systemDb().executeTransactionally("DENY READ {blackProp} ON GRAPH * ELEMENTS BLACK TO BlackRole")
+
+      // User with grants
+      systemDb().executeTransactionally("CREATE USER white SET PASSWORD 'abc123' CHANGE NOT REQUIRED")
+      systemDb().executeTransactionally("GRANT ROLE WhiteRole TO white")
+
+      // User with grants and denies
+      systemDb().executeTransactionally("CREATE USER black SET PASSWORD 'foo' CHANGE NOT REQUIRED")
+      systemDb().executeTransactionally("GRANT ROLE WhiteRole TO black")
+      systemDb().executeTransactionally("GRANT ROLE BlackRole TO black")
+
+      users += ("white" -> authManager.login(AuthToken.newBasicAuthToken("white", "abc123")))
+      users += ("black" -> authManager.login(AuthToken.newBasicAuthToken("black", "foo")))
+      users += ("full" -> LoginContext.AUTH_DISABLED)
+    } catch {
+      case e@(_: IOException | _: InvalidArgumentsException | _: InvalidAuthTokenException) =>
+        throw new RuntimeException(e.getMessage, e)
+    }
+  }
 
   def assertExpectedRowCount(expectedRowCount: Int, visitor: CountSubscriber): Int =
     if (visitor.count != expectedRowCount) {

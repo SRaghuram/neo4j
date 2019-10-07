@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
@@ -12,6 +13,7 @@ import com.neo4j.bench.micro.data.Plans.{astLiteralFor, _}
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
@@ -50,6 +52,20 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var length: Int = _
 
+  @ParamValues(
+    allowed = Array( "true", "false"),
+    base = Array("false")
+  )
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "white", "black"),
+    base = Array("full")
+  )
+  @Param(Array[String]())
+  var user: String = _
+
   override def description = "MATCH p=(a:Label{k1:42})-[:*1..3]->(b) WHERE all(n IN nodes(p) WHERE k2.x=0) RETURN a,b"
 
   private val nodeCount = 100000
@@ -71,6 +87,8 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
     .withSchemaIndexes(new LabelKeyDefinition(label, lookupKey))
     .withOutRelationships(new RelationshipDefinition(relType, degree))
     .isReusableStore(true)
+    .withNeo4jConfig(Neo4jConfigBuilder.empty()
+                                       .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
     .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
@@ -141,7 +159,7 @@ class VarExpandVarExpandWithPredicatesThreadState {
   @Setup
   def setUp(benchmarkState: VarExpandWithPredicates): Unit = {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
-    tx = benchmarkState.beginInternalTransaction()
+    tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
   }
 
   @TearDown

@@ -5,10 +5,12 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.planner.spi.PlanContext
@@ -26,6 +28,20 @@ class Expand extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var runtime: String = _
 
+  @ParamValues(
+    allowed = Array( "true", "false"),
+    base = Array("false")
+  )
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "white", "black"),
+    base = Array("full")
+  )
+  @Param(Array[String]())
+  var user: String = _
+
   override def description = "Expand one step, with many relationship types"
 
   private val NODE_COUNT = 10000
@@ -37,6 +53,8 @@ class Expand extends AbstractCypherBenchmark {
       .withNodeCount(NODE_COUNT)
       .withOutRelationships(RELATIONSHIP_DEFINITIONS: _*)
       .isReusableStore(true)
+      .withNeo4jConfig(Neo4jConfigBuilder.empty()
+                                         .withSetting(GraphDatabaseSettings.auth_enabled, auth.toString).build())
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
@@ -72,7 +90,7 @@ class ExpandThreadState {
   @Setup
   def setUp(benchmarkState: Expand): Unit = {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
-    tx = benchmarkState.beginInternalTransaction()
+    tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
   }
 
   @TearDown
