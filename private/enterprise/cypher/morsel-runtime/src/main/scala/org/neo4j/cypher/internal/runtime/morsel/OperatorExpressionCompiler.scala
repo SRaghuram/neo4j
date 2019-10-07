@@ -26,7 +26,7 @@ object OperatorExpressionCompiler {
   case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration) {
     val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
     val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
-    val cachedProperties: ArrayBuffer[(Int, String)] = ArrayBuffer.empty[(Int, String)] // TODO: FIXME This needs to be a map or we will get duplicates
+    val cachedProperties: Array[String] = new Array[String](slots.numberOfReferences)
 
     def addLocalForLongSlot(offset: Int): String = {
       val local = s"longSlot$offset"
@@ -42,7 +42,7 @@ object OperatorExpressionCompiler {
 
     def addCachedProperty(offset: Int): String = {
       val refslot = addLocalForRefSlot(offset)
-      cachedProperties.append(offset -> refslot)
+      cachedProperties(offset) = refslot
       refslot
     }
 
@@ -56,7 +56,18 @@ object OperatorExpressionCompiler {
     def getAllLocalsForRefSlots: Seq[(Int, String)] =
       getAllLocalsFor(refSlotToLocal)
 
-    def getAllLocalsForCachedProperties: Seq[(Int, String)] = cachedProperties
+    def getAllLocalsForCachedProperties: Seq[(Int, String)] = {
+      var i = 0
+      val locals = new ArrayBuffer[(Int, String)]()
+      while (i < cachedProperties.length) {
+        val cp = cachedProperties(i)
+        if (cp != null) {
+          locals += i -> cp
+        }
+        i += 1
+      }
+      locals
+    }
 
     private def getAllLocalsFor(slotToLocal: Array[String]): Seq[(Int, String)] = {
       val locals = new ArrayBuffer[(Int, String)](slotToLocal.length)
@@ -78,9 +89,8 @@ object OperatorExpressionCompiler {
       other.getAllLocalsForRefSlots.foreach { case (slot, local) =>
         refSlotToLocal(slot) = local
       }
-      // TODO: FIXME Cached properties as map
-      other.getAllLocalsForCachedProperties.foreach { p =>
-        cachedProperties += p
+      other.getAllLocalsForCachedProperties.foreach { case(i, key) =>
+        cachedProperties(i) = key
       }
     }
 
@@ -230,7 +240,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         load(local)
       )
     } else {
-      block(
+//      block(
         // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
         // This happens for example when we have a continuation where innerLoop = true
         // It is sub-optimal to check this every time at runtime, so we should come up with a better solution
@@ -242,7 +252,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 //          assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
 //        ),
         load(local)
-      )
+//      )
     }
   }
 
@@ -274,12 +284,12 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       // Even if the local has been seen before in this method, we cannot be sure that the code path which added the initialization code was taken
       // (See full comment in getLongAt above)
 // Remove runtime check to provoke the bug
-      block(
+//      block(
 //        condition(isNull(load(local)))(
 //          assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
 //        ),
         load(local)
-      )
+//      )
     }
   }
 

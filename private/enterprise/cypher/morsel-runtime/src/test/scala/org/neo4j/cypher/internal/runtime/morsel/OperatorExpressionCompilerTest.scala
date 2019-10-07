@@ -9,11 +9,15 @@ import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{IntermediateRepresentation, Load}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.ast.{SlottedCachedProperty, SlottedCachedPropertyWithoutPropertyToken}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselUnitTest
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompilerTest.matchIR
+import org.neo4j.cypher.internal.v4_0.expressions.{NODE_TYPE, PropertyKeyName}
+import org.neo4j.cypher.internal.v4_0.util.InputPosition.NONE
+import org.neo4j.values.storable.Value
 
 class OperatorExpressionCompilerTest extends MorselUnitTest {
 
@@ -26,6 +30,15 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlots, readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
     expressionCompiler
   }
+
+  val cachedProperties: Array[SlottedCachedProperty] =
+    Array(
+      SlottedCachedPropertyWithoutPropertyToken("a", PropertyKeyName("prop")(NONE), 0, false, "prop", 0, NODE_TYPE),
+      SlottedCachedPropertyWithoutPropertyToken("b", PropertyKeyName("prop")(NONE), 1, false, "prop", 1, NODE_TYPE),
+      SlottedCachedPropertyWithoutPropertyToken("c", PropertyKeyName("prop")(NONE), 2, false, "prop", 2, NODE_TYPE)
+    )
+
+  val getFromStoreIr = print(constant("getFromStore"))
 
   val aSlotConfiguration =
     SlotConfiguration.empty
@@ -69,6 +82,57 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       getSecondTimeIr should matchIR(Load(local))
     }
   }
+
+  test("should map cached ref slot to local - get from input context") {
+    // Given
+    val slots = aSlotConfiguration
+      .newCachedProperty(cachedProperties(0))
+      .newCachedProperty(cachedProperties(1))
+      .newCachedProperty(cachedProperties(2))
+
+    val oec = createOperatorExpressionCompiler(slots)
+
+    0 until 3 foreach { i =>
+      // When
+      val getFirstTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+      val getSecondTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+
+      // Then
+      val local = refSlotLocal(i)
+      oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
+      oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
+      getSecondTimeIr should matchIR(block(noop(), cast[Value](load(local))))
+
+      // Then first time IR should get from input context (negative condition, i.e. not from store and not from local)
+      getFirstTimeIr should not(matchIR(assign(local, getFromStoreIr)))
+      getFirstTimeIr should not(matchIR(block(noop(), cast[Value](load(local)))))
+    }
+  }
+
+  test("should map cached ref slot to local - get from store") {
+    // Given
+    val slots = aSlotConfiguration.copy()
+      .newCachedProperty(cachedProperties(0))
+      .newCachedProperty(cachedProperties(1))
+      .newCachedProperty(cachedProperties(2))
+
+    // Input slot configuration does not have cached properties
+    val oec = createOperatorExpressionCompiler(slots, Some(aSlotConfiguration))
+
+    0 until 3 foreach { i =>
+      // When
+      val getFirstTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+      val getSecondTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+
+      // Then
+      val local = refSlotLocal(i)
+      oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
+      oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
+      getFirstTimeIr should matchIR(block(assign(local, getFromStoreIr), cast[Value](load(local))))
+      getSecondTimeIr should matchIR(block(noop(), cast[Value](load(local))))
+    }
+  }
+
 
   test("should handle isolated scope") {
     // Given
@@ -298,6 +362,92 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // Then getAll... should return locals from all scopes
     oec.getAllLocalsForLongSlots shouldEqual Seq((0, long0), (1, long1), (2, long2))
     oec.getAllLocalsForRefSlots shouldEqual Seq((0, ref0), (1, ref1), (2, ref2))
+  }
+
+  test("should handle merge in nested scopes with cached property") {
+    // Given
+    val slots = aSlotConfiguration.newCachedProperty(cachedProperties(2))
+    val oec = createOperatorExpressionCompiler(slots)
+
+    val long0 = longSlotLocal(0)
+    val ref0 = refSlotLocal(0)
+    val long1 = longSlotLocal(1)
+    val ref1 = refSlotLocal(1)
+    val long2 = longSlotLocal(2)
+    val ref2 = refSlotLocal(2)
+
+    // When
+    oec.getLongAt(0)
+    oec.getRefAt(0)
+
+    // Then getAll... should return locals in root scope
+    oec.getAllLocalsForLongSlots shouldEqual Seq((0, long0))
+    oec.getAllLocalsForRefSlots shouldEqual Seq((0, ref0))
+    oec.getAllLocalsForCachedProperties shouldBe empty
+
+    // When
+    oec.beginScope("scope1")
+
+    // Then should still see locals in parent scope
+    oec.getLongAt(0) should matchIR(Load(long0))
+    oec.getRefAt(0) should matchIR(Load(ref0))
+
+    // When
+    oec.getLongAt(1)
+    oec.getRefAt(1)
+
+    // Then should see locals in scope1
+    oec.getLongAt(1) should matchIR(Load(long1))
+    oec.getRefAt(1) should matchIR(Load(ref1))
+
+    // Then getAll... should _only_ return locals in scope1
+    oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1))
+    oec.getAllLocalsForRefSlots shouldEqual Seq((1, ref1))
+    oec.getAllLocalsForCachedProperties shouldBe empty
+
+    // When
+    oec.beginScope("scope2")
+
+    // Then should still see locals in parent scopes
+    oec.getLongAt(0) should matchIR(Load(long0))
+    oec.getRefAt(0) should matchIR(Load(ref0))
+    oec.getLongAt(1) should matchIR(Load(long1))
+    oec.getRefAt(1) should matchIR(Load(ref1))
+
+    // When
+    oec.getLongAt(2)
+    oec.getCachedPropertyAt(cachedProperties(2), getFromStoreIr)
+
+    // Then should see locals in scope2
+    oec.getLongAt(2) should matchIR(Load(long2))
+    oec.getRefAt(2) should matchIR(Load(ref2))
+
+    // Then getAll... should _only_ return locals in scope2
+    oec.getAllLocalsForLongSlots shouldEqual Seq((2, long2))
+    oec.getAllLocalsForRefSlots shouldEqual Seq((2, ref2))
+    oec.getAllLocalsForCachedProperties shouldEqual Seq((2, ref2))
+
+    // When
+    val continuationState2 = oec.endScope(mergeIntoParentScope = true)
+
+    // Then coninuationState2 should have 3 fields
+    continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
+
+    // Then getAll... should _only_ return locals in scope1 + scope2
+    oec.getAllLocalsForLongSlots shouldEqual Seq((1, long1), (2, long2))
+    oec.getAllLocalsForRefSlots shouldEqual Seq((1, ref1), (2, ref2))
+    oec.getAllLocalsForCachedProperties shouldEqual Seq((2, ref2))
+
+    // When
+    val continuationState1 = oec.endScope(mergeIntoParentScope = true)
+
+    // Then coninuationState1 should have 5 fields
+    continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag
+
+    // Then getAll... should return locals from all scopes
+    oec.getAllLocalsForLongSlots shouldEqual Seq((0, long0), (1, long1), (2, long2))
+    oec.getAllLocalsForRefSlots shouldEqual Seq((0, ref0), (1, ref1), (2, ref2))
+    oec.getAllLocalsForCachedProperties shouldEqual Seq((2, ref2))
   }
 
   private def longSlotLocal(offset: Int): String =
