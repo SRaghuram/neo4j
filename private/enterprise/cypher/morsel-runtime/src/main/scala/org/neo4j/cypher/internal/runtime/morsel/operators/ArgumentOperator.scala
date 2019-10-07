@@ -69,6 +69,8 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
+  override def genInit: IntermediateRepresentation = inner.genInit
+
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(

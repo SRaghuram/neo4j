@@ -284,7 +284,7 @@ trait OperatorTaskTemplate {
     throw new InternalException("Illegal start operator template")
   }
 
-  def genInit: IntermediateRepresentation = noop()
+  def genInit: IntermediateRepresentation
 
   def executionEventField: InstanceField = field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)
 
@@ -428,6 +428,7 @@ object OperatorTaskTemplate {
     override def genCanContinue: Option[IntermediateRepresentation] = None
     override def genCloseCursors: IntermediateRepresentation = noop()
     override def genOutputBuffer: Option[IntermediateRepresentation] = None
+    override def genInit: IntermediateRepresentation = noop()
   }
 }
 
@@ -569,6 +570,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def inner: OperatorTaskTemplate = null
 
   override val id: Id = Id.INVALID_ID
+
+  override def genInit: IntermediateRepresentation = noop()
 
   override def genInitializeProfileEvents: IntermediateRepresentation = noop()
 
