@@ -28,9 +28,8 @@ abstract class ApplyStressTestBase(edition: Edition[EnterpriseRuntimeContext], r
     val runtimeResult = execute(logicalQuery, runtime)
 
     // then
-    val tx = runtimeTestSupport.txHolder.get();
     val expected = for {
-      a <- nodes if tx.getNodeById(a.getId).getProperty("prop").asInstanceOf[Int] <= 20
+      a <- nodes if a.getProperty("prop").asInstanceOf[Int] <= 20
       b <- nodes if b.getId < a.getId
       c <- nodes if c.getId < b.getId
     } yield Array(a, b, c)

@@ -69,9 +69,6 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
   }
 
   def init(): Unit = {
-    nodes = nodePropertyGraph(graphSize, {
-      case i => Map("prop" -> i, "text" -> i.toString, "propWithDuplicates" -> ((i/2) * 2))
-    }, "Label")
     try {
       index("Label", "prop")
       index("Label", "text")
@@ -84,6 +81,9 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
         }
         throw e
     }
+    nodes = nodePropertyGraph(graphSize, {
+      case i => Map("prop" -> i, "text" -> i.toString, "propWithDuplicates" -> ((i/2) * 2))
+    }, "Label")
     val relTuples = (for (i <- nodes.indices) yield {
       Seq(
         (i, (i + 1) % nodes.length, "NEXT"),

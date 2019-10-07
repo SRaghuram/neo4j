@@ -19,6 +19,7 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
   test("should deal with concurrent queries") {
     // given
     val nodes = nodeGraph(10)
+    restartTx()
     val executor = Executors.newFixedThreadPool(8)
     val QUERIES_PER_THREAD = 50
 
@@ -33,7 +34,7 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
         executor.submit(new Callable[Seq[IndexedSeq[Array[AnyValue]]]] {
           override def call(): Seq[IndexedSeq[Array[AnyValue]]] = {
             for (_ <- 0 until QUERIES_PER_THREAD)
-              yield consume(execute(logicalQuery, runtime))
+              yield executeAndConsumeTransactionally(logicalQuery, runtime)
           }
         })
     )
@@ -45,9 +46,7 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
       val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
       resultSet.size should be(QUERIES_PER_THREAD)
       for (result <- resultSet) {
-        inTx( _ =>
-          expected.matches(Array("x"), result) shouldBe true
-        )
+        expected.matches(Array("x"), result) shouldBe true
       }
     }
 

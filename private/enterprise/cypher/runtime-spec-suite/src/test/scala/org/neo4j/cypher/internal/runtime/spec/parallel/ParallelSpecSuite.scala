@@ -41,12 +41,12 @@ class ParallelRuntimeNodeByIdSeekStressTest extends NodeByIdSeekStressTestBase(E
 class ParallelRuntimeNodeByIdSeekNoFusingStressTest extends NodeByIdSeekStressTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
 
 // RELATIONSHIP BY ID SEEK
-class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.FUSING, MORSEL, SIZE_HINT) with TimeLimitedCypherTest
-class MorselDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.NO_FUSING, MORSEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 
-//UNDIRECTED RELATIONSHIP BY ID SEEK
-class MorselUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.FUSING, MORSEL, SIZE_HINT) with TimeLimitedCypherTest
-class MorselUndirectedRelationshipByIdSeekNoFusingTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.NO_FUSING, MORSEL, SIZE_HINT) with TimeLimitedCypherTest
+// UNDIRECTED RELATIONSHIP BY ID SEEK
+class ParallelRuntimeUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
+class ParallelRuntimeUndirectedRelationshipByIdSeekNoFusingTest extends UndirectedRelationshipByIdSeekTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with TimeLimitedCypherTest
 
 // NODE COUNT FROM COUNT STORE
 class ParallelNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
