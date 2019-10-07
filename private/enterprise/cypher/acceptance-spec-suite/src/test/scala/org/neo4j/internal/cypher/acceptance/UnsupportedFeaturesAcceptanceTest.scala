@@ -14,12 +14,7 @@ class UnsupportedFeaturesAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("from graph") {
     val query = "FROM GRAPH foo.bar MATCH (a)-->() RETURN a"
-    failWithError(Configs.All, query, List("The `FROM GRAPH` clause is not available in this implementation of Cypher due to lack of support for FROM graph selector."))
-  }
-
-  test("use graph") {
-    val query = "USE GRAPH foo.bar MATCH (a)-->() RETURN a"
-    failWithError(Configs.All, query, List("The `USE GRAPH` clause is not available in this implementation of Cypher due to lack of support for USE graph selector."))
+    failWithError(Configs.All, query, List("The `FROM GRAPH` clause is not available in this implementation of Cypher due to lack of support for multiple graphs."))
   }
 
   test("return graph") {
