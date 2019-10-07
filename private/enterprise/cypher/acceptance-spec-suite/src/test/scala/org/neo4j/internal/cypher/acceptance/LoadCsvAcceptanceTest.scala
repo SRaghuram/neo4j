@@ -184,14 +184,14 @@ class LoadCsvAcceptanceTest
         writer.println("Baz")
     })
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), filename()")
+    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), file()")
     resourceMonitor.assertClosedAndClear(1)
-    result.toList should equal(List(Map("linecount" -> 3, "linenumber()" -> null, "filename()" -> null)))
+    result.toList should equal(List(Map("linecount" -> 3, "linenumber()" -> null, "file()" -> null)))
   }
 
   test("should return no linenumber or filename without load csv") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "RETURN linenumber(), filename()")
-    result.toList should equal(List(Map("linenumber()" -> null, "filename()" -> null)))
+    val result = executeWith(Configs.InterpretedAndSlotted, "RETURN linenumber(), file()")
+    result.toList should equal(List(Map("linenumber()" -> null, "file()" -> null)))
   }
 
   test("should return correct filename") {
@@ -201,10 +201,10 @@ class LoadCsvAcceptanceTest
     assert(Files.exists(path))
 
     val filePathForQuery = path.normalize().toUri
-    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, filename()")
+    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, file()")
     assertStats(result, nodesCreated = 1, propertiesWritten = 1)
     resourceMonitor.assertClosedAndClear(1)
-    result.toList should equal(List(Map("a.name" -> "foo", "filename()" -> filePathForQuery.getPath)))
+    result.toList should equal(List(Map("a.name" -> "foo", "file()" -> filePathForQuery.getPath)))
   }
 
   test("make sure to release all possible locks/references on input files") {

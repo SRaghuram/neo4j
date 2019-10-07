@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.expressions
 
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.v4_0.expressions.functions.{Filename, Linenumber, Type}
+import org.neo4j.cypher.internal.v4_0.expressions.functions.{File, Linenumber, Type}
 import org.neo4j.exceptions.CantCompileQueryException
 
 object MorselBlacklist {
@@ -22,7 +22,7 @@ object MorselBlacklist {
         case _: ResolvedFunctionInvocation if parallelExecution =>
           _ + "User-defined functions"
 
-        case f: FunctionInvocation if f.function == Linenumber || f.function == Filename =>
+        case f: FunctionInvocation if f.function == Linenumber || f.function == File =>
           _ + (f.functionName.name+"()")
 
         // type() uses thread-unsafe RelationshipEntity.type()
