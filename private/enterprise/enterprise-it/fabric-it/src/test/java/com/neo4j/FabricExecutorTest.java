@@ -404,6 +404,8 @@ class FabricExecutorTest
         ) ).summary();
         tx.success();
 
+        String nl = System.lineSeparator();
+
         assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
 
         assertThat( summary.hasPlan(), is( true ) );
@@ -431,7 +433,7 @@ class FabricExecutorTest
         assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
         Plan c1c0c0 = c1c0.children().get( 0 );
         assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
-        assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "CREATE ()\nRETURN 1 AS y" ) ) );
+        assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( String.join( nl, "CREATE ()", "RETURN 1 AS y" ) ) ) );
         assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
 
         Plan c2 = plan.children().get( 2 );
