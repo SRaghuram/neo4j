@@ -14,8 +14,8 @@ import static org.mockito.Mockito.verify;
 
 class AuthCacheClearingDatabaseEventListenerTest
 {
-    private EnterpriseAuthManager authManager = mock( EnterpriseAuthManager.class );
-    private AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
+    private final EnterpriseAuthManager authManager = mock( EnterpriseAuthManager.class );
+    private final AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
 
     @Test
     void shouldClearCacheOnStandaloneAfterCommit()
@@ -27,7 +27,7 @@ class AuthCacheClearingDatabaseEventListenerTest
     @Test
     void shouldNotClearCacheOnStandaloneBeforeCommit() throws Exception
     {
-        databaseEventListener.beforeCommit( null, null );
+        databaseEventListener.beforeCommit( null, null, null );
         verify( authManager, never() ).clearAuthCache();
     }
 
