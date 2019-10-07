@@ -29,7 +29,7 @@ public class EnterpriseEditionSettings implements LoadableConfig
     public static final String ENTERPRISE_SECURITY_MODULE_ID = "enterprise-security-module";
 
     @Description( "Specified names of id types (comma separated) that should be reused. " +
-                  "Currently only 'node' and 'relationship' types are supported. " )
+                  "Currently only 'node' and 'relationship' types are supported. This feature is available in the Neo4j Enterprise Edition." )
     public static final Setting<List<IdType>> idTypesToReuse = setting(
             "dbms.ids.reuse.types.override", list( ",", optionsIgnoreCase( NODE, RELATIONSHIP ) ),
             String.join( ",", IdType.RELATIONSHIP.name(), IdType.NODE.name() ) );
