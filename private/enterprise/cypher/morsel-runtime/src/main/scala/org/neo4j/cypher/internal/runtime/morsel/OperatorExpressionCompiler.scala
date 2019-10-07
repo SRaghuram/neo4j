@@ -311,7 +311,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
         local = locals.addCachedProperty(offset)
         initializeFromStoreIR
       } else {
-        noop()
+        // Even if the local has been seen before in this method it could have been reset to null at the end of an iteration
+        condition(isNull(load(local)))(
+          if (maybeCachedProperty.isDefined) {
+            initializeFromContextIR
+          } else {
+            initializeFromStoreIR
+          }
+        )
       }
 
     block(prepareOps, cast[Value](load(local)))
