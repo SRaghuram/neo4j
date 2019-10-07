@@ -291,27 +291,39 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     assign(local, value)
   }
 
+  // Testing hooks
+  protected def didInitializeCachedPropertyFromStore(): Unit = {}
+  protected def didInitializeCachedPropertyFromContext(): Unit = {}
+  protected def didLoadLocalCachedProperty(): Unit = {}
+
   override def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
     val offset = property.cachedPropertyOffset
     var local = locals.getLocalForRefSlot(offset)
     val maybeCachedProperty = inputSlotConfiguration.getCachedPropertySlot(property)
 
-    def initializeFromStoreIR = assign(local, getFromStore)
-    def initializeFromContextIR =
+    def initializeFromStoreIR = {
+      assign(local, getFromStore)
+    }
+    def initializeFromContextIR = {
       block(
         assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
         condition(isNull(load(local)))(initializeFromStoreIR)
       )
+    }
 
     val prepareOps =
       if (local == null && maybeCachedProperty.isDefined) {
+        didInitializeCachedPropertyFromContext()
         local = locals.addCachedProperty(offset)
         initializeFromContextIR
       } else if (local == null) {
+        didInitializeCachedPropertyFromStore()
         local = locals.addCachedProperty(offset)
         initializeFromStoreIR
       } else {
-        // Even if the local has been seen before in this method it could have been reset to null at the end of an iteration
+        didLoadLocalCachedProperty()
+        // Even if the local has been seen before in this method it may not be in a code path that have been hit at runtime
+        // in this loop iteration. The cached property variable is also reset to null at the end of each inner loop iteration.
         condition(isNull(load(local)))(
           if (maybeCachedProperty.isDefined) {
             initializeFromContextIR

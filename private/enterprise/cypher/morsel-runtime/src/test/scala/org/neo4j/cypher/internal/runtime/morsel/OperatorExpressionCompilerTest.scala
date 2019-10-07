@@ -5,29 +5,29 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
+import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeGenerationMode, CodeSaver}
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{IntermediateRepresentation, Load}
+import org.neo4j.codegen.api.{Block, IntermediateRepresentation, Load}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.{SlottedCachedProperty, SlottedCachedPropertyWithoutPropertyToken}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselUnitTest
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
 import org.scalatest.matchers.{MatchResult, Matcher}
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompilerTest.matchIR
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompilerTest.{matchBeginsWithIR, matchIR}
 import org.neo4j.cypher.internal.v4_0.expressions.{NODE_TYPE, PropertyKeyName}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition.NONE
 import org.neo4j.values.storable.Value
 
 class OperatorExpressionCompilerTest extends MorselUnitTest {
 
-  def createOperatorExpressionCompiler(slots: SlotConfiguration, maybeInputSlots: Option[SlotConfiguration] = None): OperatorExpressionCompiler = {
+  def createOperatorExpressionCompiler(slots: SlotConfiguration, maybeInputSlots: Option[SlotConfiguration] = None): TestOperatorExpressionCompiler = {
     val inputSlots = maybeInputSlots.getOrElse(slots)
     val readOnly = true
     val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
     val namer = new VariableNamer
 
-    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlots, readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
+    val expressionCompiler = new TestOperatorExpressionCompiler(slots, inputSlots, readOnly, codeGenerationMode, namer)
     expressionCompiler
   }
 
@@ -85,7 +85,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
   test("should map cached ref slot to local - get from input context") {
     // Given
-    val slots = aSlotConfiguration
+    val slots = aSlotConfiguration.copy()
       .newCachedProperty(cachedProperties(0))
       .newCachedProperty(cachedProperties(1))
       .newCachedProperty(cachedProperties(2))
@@ -93,19 +93,29 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     val oec = createOperatorExpressionCompiler(slots)
 
     0 until 3 foreach { i =>
+      oec.resetCounts()
+
       // When
       val getFirstTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+
+      // Then first time IR should get from input context (i.e. not from store and not from local)
+      oec.initCachedPropertyFromContextCount shouldEqual 1
+      oec.initCachedPropertyFromStoreCount shouldEqual 0
+      oec.loadLocalCachedPropertyCount shouldEqual 0
+
+      // When
       val getSecondTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+
+      // Then second time IR should get from local
+      oec.initCachedPropertyFromContextCount shouldEqual 1
+      oec.initCachedPropertyFromStoreCount shouldEqual 0
+      oec.loadLocalCachedPropertyCount shouldEqual 1
 
       // Then
       val local = refSlotLocal(i)
       oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
-      getSecondTimeIr should matchIR(block(noop(), cast[Value](load(local))))
-
-      // Then first time IR should get from input context (negative condition, i.e. not from store and not from local)
-      getFirstTimeIr should not(matchIR(assign(local, getFromStoreIr)))
-      getFirstTimeIr should not(matchIR(block(noop(), cast[Value](load(local)))))
+      getFirstTimeIr should not (matchIR(block(assign(local, getFromStoreIr), cast[Value](load(local)))))
     }
   }
 
@@ -120,19 +130,31 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     val oec = createOperatorExpressionCompiler(slots, Some(aSlotConfiguration))
 
     0 until 3 foreach { i =>
+      oec.resetCounts()
+
       // When
       val getFirstTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+
+      // Then first time IR should get from store (i.e. not from context and not from local)
+      oec.initCachedPropertyFromContextCount shouldEqual 0
+      oec.initCachedPropertyFromStoreCount shouldEqual 1
+      oec.loadLocalCachedPropertyCount shouldEqual 0
+
+      // When
       val getSecondTimeIr = oec.getCachedPropertyAt(cachedProperties(i), getFromStoreIr)
+
+      // Then second time IR should get from local (i.e. not from context and not from store)
+      oec.initCachedPropertyFromContextCount shouldEqual 0
+      oec.initCachedPropertyFromStoreCount shouldEqual 1
+      oec.loadLocalCachedPropertyCount shouldEqual 1
 
       // Then
       val local = refSlotLocal(i)
       oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
       getFirstTimeIr should matchIR(block(assign(local, getFromStoreIr), cast[Value](load(local))))
-      getSecondTimeIr should matchIR(block(noop(), cast[Value](load(local))))
     }
   }
-
 
   test("should handle isolated scope") {
     // Given
@@ -366,7 +388,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
   test("should handle merge in nested scopes with cached property") {
     // Given
-    val slots = aSlotConfiguration.newCachedProperty(cachedProperties(2))
+    val slots = aSlotConfiguration.copy().newCachedProperty(cachedProperties(2))
     val oec = createOperatorExpressionCompiler(slots)
 
     val long0 = longSlotLocal(0)
@@ -459,11 +481,47 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
 object OperatorExpressionCompilerTest {
   def matchIR(ir: IntermediateRepresentation): IrMatcher = IrMatcher(ir)
+  def matchBeginsWithIR(ir: IntermediateRepresentation): BeginsWithIrMatcher = BeginsWithIrMatcher(ir)
+}
+
+class TestOperatorExpressionCompiler(slots: SlotConfiguration, inputSlots: SlotConfiguration, readOnly: Boolean,
+                                     codeGenerationMode: CodeGenerationMode, namer: VariableNamer)
+  extends OperatorExpressionCompiler(slots, inputSlots, readOnly, codeGenerationMode, namer) {
+
+  var initCachedPropertyFromStoreCount = 0
+  var initCachedPropertyFromContextCount = 0
+  var loadLocalCachedPropertyCount = 0
+
+  override protected def didInitializeCachedPropertyFromStore(): Unit =
+    initCachedPropertyFromStoreCount += 1
+  override protected def didInitializeCachedPropertyFromContext(): Unit =
+    initCachedPropertyFromContextCount += 1
+  override protected def didLoadLocalCachedProperty(): Unit =
+    loadLocalCachedPropertyCount += 1
+
+  def resetCounts(): Unit = {
+    initCachedPropertyFromStoreCount = 0
+    initCachedPropertyFromContextCount = 0
+    loadLocalCachedPropertyCount = 0
+  }
 }
 
 case class IrMatcher(expected: IntermediateRepresentation) extends Matcher[IntermediateRepresentation] {
   override def apply(actual: IntermediateRepresentation): MatchResult = {
     val matches = expected == actual
+    val rawFailureMessage = s"Expected a\n  ${expected}\nbut got a\n  ${actual}"
+    MatchResult(matches,
+      rawFailureMessage,
+      rawNegatedFailureMessage = rawFailureMessage)
+  }
+}
+
+case class BeginsWithIrMatcher(expected: IntermediateRepresentation) extends Matcher[IntermediateRepresentation] {
+  override def apply(actual: IntermediateRepresentation): MatchResult = {
+    val matches1 = expected.getClass == actual.getClass
+    val matches2 = matches1 && expected.asInstanceOf[Product].productArity == actual.asInstanceOf[Product].productArity
+    val matches = matches2
+
     val rawFailureMessage = s"Expected a\n  ${expected}\nbut got a\n  ${actual}"
     MatchResult(matches,
       rawFailureMessage,
