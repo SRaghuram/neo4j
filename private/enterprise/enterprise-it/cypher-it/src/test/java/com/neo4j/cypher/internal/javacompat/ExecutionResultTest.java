@@ -512,6 +512,20 @@ class ExecutionResultTest
         }
     }
 
+    @Test
+    void should()
+    {
+        // Given
+        createNode();
+
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Then
+            transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ).accept( row -> true );
+            transaction.commit();
+        }
+    }
+
     private void createNode()
     {
         try ( Transaction tx = db.beginTx() )

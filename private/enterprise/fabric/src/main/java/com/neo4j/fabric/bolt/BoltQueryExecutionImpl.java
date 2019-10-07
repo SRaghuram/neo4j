@@ -19,6 +19,7 @@ import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryExecutionType;
+import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
@@ -166,6 +167,18 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         public boolean await()
         {
             return hasMore;
+        }
+
+        @Override
+        public boolean isVisitable()
+        {
+            return false;
+        }
+
+        @Override
+        public <VisitationException extends Exception> void accept( Result.ResultVisitor<VisitationException> visitor )
+        {
+            throw new IllegalStateException( "Results are not visitable" );
         }
     }
 }
