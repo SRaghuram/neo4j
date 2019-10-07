@@ -11,7 +11,6 @@ import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, PropertyDefinition, RelationshipDefinition}
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.ir.{ProvidedOrder, SinglePlannerQuery}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -40,8 +39,8 @@ import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.query.ExecutingQuery
-import org.neo4j.kernel.api.security.AuthToken
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException
+import org.neo4j.kernel.api.security.{AuthManager, AuthToken}
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.api.KernelStatement
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -84,7 +83,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   def getLogicalPlanAndSemanticTable(planContext: PlanContext): (LogicalPlan, SemanticTable, List[String])
 
   override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
-    val authManager = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[EnterpriseAuthAndUserManager])
+    val authManager = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver.resolveDependency(classOf[AuthManager])
 
     val labels: Array[Label] = config.labels()
     val nodeProperties: Array[PropertyDefinition] = config.nodeProperties()
