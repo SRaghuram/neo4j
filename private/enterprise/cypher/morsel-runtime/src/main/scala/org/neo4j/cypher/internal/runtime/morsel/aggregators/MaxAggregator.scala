@@ -18,40 +18,44 @@ import org.neo4j.values.{AnyValue, AnyValues}
 case object MaxAggregator extends Aggregator {
 
   override def newUpdater: Updater = new MaxUpdater
+
   override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new MaxStandardReducer
+
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
 
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =
-    (max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0
-}
+    ((max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0) && !(value eq Values.NO_VALUE)
 
-class MaxUpdater() extends MaxUpdaterBase
-abstract class MaxUpdaterBase extends Updater {
-  private[aggregators] var max: AnyValue = Values.NO_VALUE
-  override def update(value: AnyValue): Unit =
-    if (!(value eq Values.NO_VALUE)) {
-      if (MaxAggregator.shouldUpdate(max, value))
-        max = value
-    }
-}
+  class MaxUpdater() extends MaxUpdaterBase
 
-class MaxStandardReducer() extends MaxUpdaterBase with Reducer {
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: MaxUpdater => update(u.max)
-    }
+  abstract class MaxUpdaterBase extends Updater {
+    private[aggregators] var max: AnyValue = Values.NO_VALUE
 
-  override def result: AnyValue = max
-}
+    override def update(value: AnyValue): Unit =
+      if (!(value eq Values.NO_VALUE)) {
+        if (MaxAggregator.shouldUpdate(max, value))
+          max = value
+      }
+  }
 
-class MaxConcurrentReducer() extends Reducer {
-  private val max = new AtomicReference[AnyValue](Values.NO_VALUE)
+  class MaxStandardReducer() extends MaxUpdaterBase with Reducer {
+    override def update(updater: Updater): Unit =
+      updater match {
+        case u: MaxUpdater => update(u.max)
+      }
 
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: MaxUpdater =>
-        max.updateAndGet(oldMax => if (MaxAggregator.shouldUpdate(oldMax, u.max)) u.max else oldMax)
-    }
+    override def result: AnyValue = max
+  }
 
-  override def result: AnyValue = max.get
+  class MaxConcurrentReducer() extends Reducer {
+    private val max = new AtomicReference[AnyValue](Values.NO_VALUE)
+
+    override def update(updater: Updater): Unit =
+      updater match {
+        case u: MaxUpdater =>
+          max.updateAndGet(oldMax => if (MaxAggregator.shouldUpdate(oldMax, u.max)) u.max else oldMax)
+      }
+
+    override def result: AnyValue = max.get
+  }
 }
