@@ -47,6 +47,6 @@ public class CommercialCoreClusterMember extends CoreClusterMember
     public void start()
     {
         database = new CommercialCoreGraphDatabase( databasesDirectory(), config(),
-                GraphDatabaseDependencies.newDependencies(), discoveryServiceFactory );
+                GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
     }
 }

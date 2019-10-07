@@ -57,7 +57,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     protected CoreGraphDatabase database;
     private final Config memberConfig;
     private final ThreadGroup threadGroup;
-    private final Monitors monitors = new Monitors();
+    protected final Monitors monitors = new Monitors();
     private final String dbName;
     private final File databasesDirectory;
 
