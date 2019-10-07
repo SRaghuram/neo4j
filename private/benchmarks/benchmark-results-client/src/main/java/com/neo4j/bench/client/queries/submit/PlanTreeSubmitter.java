@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Stack;
 
 import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
 
@@ -32,57 +31,50 @@ public class PlanTreeSubmitter
     private static final String SUBMIT_PLAN_TREE = Resources.fileToString( "/queries/write/submit_plan_tree.cypher" );
     private static final String ATTACH_PLAN_TO_TEST_RUN = Resources.fileToString( "/queries/write/attach_plan_to_test_run.cypher" );
 
-    public static void execute( Session session, TestRun testRun, List<BenchmarkPlan> benchmarkPlans, Planner planner )
+    public static void execute( Transaction tx, TestRun testRun, List<BenchmarkPlan> benchmarkPlans, Planner planner )
     {
         List<BenchmarkPlan> collisionBenchmarkPlans = new ArrayList<>();
         for ( BenchmarkPlan benchmarkPlan : benchmarkPlans )
         {
             Plan plan = benchmarkPlan.plan();
-            try ( Transaction tx = session.beginTransaction() )
+            Map<String,Object> params = new HashMap<>();
+            params.put( "plan_description", plan.planTree().asciiPlanDescription() );
+            params.put( "plan_description_hash", plan.planTree().hashedPlanDescription() );
+            StatementResult statementResult = tx.run( SUBMIT_PLAN_TREE, params );
+            Record record = statementResult.next();
+            String storedPlanTreeDescription = record
+                    .get( "planTree" ).asNode()
+                    .get( PLAN_DESCRIPTION )
+                    .asString();
+            int planTreeNodesCreated = statementResult.consume().counters().nodesCreated();
+            switch ( planTreeNodesCreated )
             {
-                Map<String,Object> params = new HashMap<>();
-                params.put( "plan_description", plan.planTree().asciiPlanDescription() );
-                params.put( "plan_description_hash", plan.planTree().hashedPlanDescription() );
-                StatementResult statementResult = tx.run( SUBMIT_PLAN_TREE, params );
-                Record record = statementResult.next();
-                String storedPlanTreeDescription = record
-                        .get( "planTree" ).asNode()
-                        .get( PLAN_DESCRIPTION )
-                        .asString();
-                int planTreeNodesCreated = statementResult.consume().counters().nodesCreated();
-                switch ( planTreeNodesCreated )
+            case 0:
+                // a plan tree with the same hash already exists
+                if ( !storedPlanTreeDescription.equals( plan.planTree().asciiPlanDescription() ) )
                 {
-                case 0:
-                    // a plan tree with the same hash already exists
-                    if ( !storedPlanTreeDescription.equals( plan.planTree().asciiPlanDescription() ) )
-                    {
-                        // stored description does not match submitted description, possible hash collision
-                        collisionBenchmarkPlans.add( benchmarkPlan );
-                    }
-                    break;
-                case 1:
-                    // plan tree root was created, now remainder of tree (operators) must be attached to root
-                    StringBuilder sb = new StringBuilder()
-                            .append( "MATCH (planTree:PlanTree)\n" )
-                            .append( "WHERE planTree.description_hash=$plan_description_hash AND \n" )
-                            .append( "      planTree.description=$plan_description\n" )
-                            .append( "CREATE (planTree)-[:HAS_OPERATORS]->" )
-                            .append( toTreePattern( plan.planTree(), params ) );
-                    tx.run( format( "CYPHER planner=%s %s", planner.value(), sb.toString() ), params );
-                    break;
-                default:
-                    throw new RuntimeException(
-                            format( "Submit plan tree query created multiple nodes\n" +
-                                    " * nodes created: %s\n" +
-                                    " * plan hash:     %s",
-                                    planTreeNodesCreated,
-                                    plan.planTree().hashedPlanDescription() ) );
+                    // stored description does not match submitted description, possible hash collision
+                    collisionBenchmarkPlans.add( benchmarkPlan );
                 }
-                tx.success();
-            }
-            catch ( Exception e )
-            {
-                throw new RuntimeException( "Error writing plan to store", e );
+                break;
+            case 1:
+                // plan tree root was created, now remainder of tree (operators) must be attached to root
+                StringBuilder sb = new StringBuilder()
+                        .append( "MATCH (planTree:PlanTree)\n" )
+                        .append( "WHERE planTree.description_hash=$plan_description_hash AND \n" )
+                        .append( "      planTree.description=$plan_description\n" )
+                        .append( "CREATE (planTree)-[:HAS_OPERATORS]->" )
+                        .append( toTreePattern( plan.planTree(), params ) );
+                tx.run( format( "CYPHER planner=%s %s", planner.value(), sb.toString() ), params );
+                break;
+            default:
+                tx.failure();
+                throw new RuntimeException(
+                        format( "Submit plan tree query created multiple nodes\n" +
+                                " * nodes created: %s\n" +
+                                " * plan hash:     %s",
+                                planTreeNodesCreated,
+                                plan.planTree().hashedPlanDescription() ) );
             }
         }
 
@@ -94,27 +86,18 @@ public class PlanTreeSubmitter
                 // their plan tree was never created, so there is nothing to connect with
                 continue;
             }
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                Map<String,Object> params = new HashMap<>();
-                params.put( "test_run_id", testRun.id() );
-                params.put( "benchmark_name", benchmarkPlan.benchmark().name() );
-                params.put( "benchmark_group_name", benchmarkPlan.benchmarkGroup().name() );
-                params.put( "plan", benchmarkPlan.plan().asMap() );
-                params.put( "compilation_metrics", benchmarkPlan.plan().planCompilationMetrics().asMap() );
-                params.put( "plan_description_hash", benchmarkPlan.plan().planTree().hashedPlanDescription() );
-                tx.run( ATTACH_PLAN_TO_TEST_RUN, params );
-                tx.success();
-            }
-            catch ( Exception e )
-            {
-                e.printStackTrace();
-                throw new RuntimeException( "Error writing plan to store", e );
-            }
+            Map<String,Object> params = new HashMap<>();
+            params.put( "test_run_id", testRun.id() );
+            params.put( "benchmark_name", benchmarkPlan.benchmark().name() );
+            params.put( "benchmark_group_name", benchmarkPlan.benchmarkGroup().name() );
+            params.put( "plan", benchmarkPlan.plan().asMap() );
+            params.put( "compilation_metrics", benchmarkPlan.plan().planCompilationMetrics().asMap() );
+            params.put( "plan_description_hash", benchmarkPlan.plan().planTree().hashedPlanDescription() );
+            tx.run( ATTACH_PLAN_TO_TEST_RUN, params );
         }
-
         if ( !collisionBenchmarkPlans.isEmpty() )
         {
+            tx.failure();
             throw new RuntimeException( toCollisionsErrorMessage( collisionBenchmarkPlans ) );
         }
     }
