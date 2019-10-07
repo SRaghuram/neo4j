@@ -969,6 +969,28 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     result.columnAs[Node]("f").toList should equal(List(node))
   }
 
+  test("should accept hint and use index on correct node") {
+    // Given
+    graph.createIndex("Object", "name")
+    createLabeledNode(Map("name" -> "a"), "Object")
+
+    val query =
+      """
+        |MATCH (o1:Object)
+        |MATCH (o2:Object)
+        |USING INDEX o2:Object(name)
+        |WHERE o2.name = o1.name
+        |RETURN o1.name
+        |""".stripMargin
+
+    // When
+    val result = executeWith(Configs.All, query)
+
+    // Then
+    result.executionPlanDescription() should includeSomewhere.aPlan("NodeIndexSeek").containingVariables("o2").containingArgument(":Object(name)")
+    result.toComparableResult should be(Seq(Map("o1.name" -> "a")))
+  }
+
   test("should handle join hint solved multiple times") {
     val initQuery = "CREATE (a:Node)-[:R]->(b:Node)-[:R]->(c:Node), (d:Node)-[:R]->(b)-[:R]->(e:Node)"
     graph.withTx( tx => tx.execute(initQuery))
