@@ -55,8 +55,8 @@ public class CreateDeleteLabels extends AbstractKernelBenchmark
     public String CreateDeleteLabels_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String CreateDeleteLabels_txMemory;
 

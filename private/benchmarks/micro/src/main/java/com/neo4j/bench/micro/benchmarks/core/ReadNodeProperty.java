@@ -67,8 +67,8 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
     public String ReadNodeProperty_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String ReadNodeProperty_txMemory;
 
