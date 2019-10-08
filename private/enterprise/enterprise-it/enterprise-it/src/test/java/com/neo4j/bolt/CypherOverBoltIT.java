@@ -282,6 +282,50 @@ public class CypherOverBoltIT
         }
     }
 
+    @Test
+    public void shouldFinishReadWriteQueryOnCancel()
+    {
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            String query = "UNWIND range(1, 2000) AS i CREATE (n) RETURN n";
+            StatementResult result = session.run( query );
+
+            result.consume(); // Without getting the result
+        }
+        // Open a new session and assert that 10 nodes got created
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            String query = "MATCH (n) RETURN count(n) AS c";
+            StatementResult result = session.run( query );
+
+            assertEquals( 2000, result.single().get( "c" ).asInt() );
+        }
+    }
+
+    @Test
+    public void shouldFinishWriteQueryOnCancel()
+    {
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            String query = "UNWIND range(1, 2000) AS i CREATE (n)";
+            StatementResult result = session.run( query );
+
+            result.consume(); // Without getting the result
+        }
+        // Open a new session and assert that 10 nodes got created
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            String query = "MATCH (n) RETURN count(n) AS c";
+            StatementResult result = session.run( query );
+
+            assertEquals( 2000, result.single().get( "c" ).asInt() );
+        }
+    }
+
     private URL prepareTestImportFile( int lines ) throws IOException
     {
         File tempFile = File.createTempFile( "testImport", ".csv" );
