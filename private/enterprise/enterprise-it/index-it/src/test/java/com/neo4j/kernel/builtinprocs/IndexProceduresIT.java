@@ -79,7 +79,7 @@ class IndexProceduresIT
         // Given no indexes initially
         try ( Transaction tx = db.beginTx() )
         {
-            final Iterator<IndexDefinition> indexes = db.schema().getIndexes().iterator();
+            final Iterator<IndexDefinition> indexes = tx.schema().getIndexes().iterator();
             assertFalse( indexes.hasNext() );
             tx.commit();
         }
@@ -95,7 +95,7 @@ class IndexProceduresIT
         // Then we should be able to find the index by that name and no other indexes should exist.
         try ( Transaction tx = db.beginTx() )
         {
-            final List<IndexDefinition> indexes = Iterables.asList( db.schema().getIndexes() );
+            final List<IndexDefinition> indexes = Iterables.asList( tx.schema().getIndexes() );
             assertEquals( 1, indexes.size() );
             final IndexDefinition index = indexes.get( 0 );
             if ( indexName != null && !indexName.isEmpty() )
@@ -112,7 +112,7 @@ class IndexProceduresIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
+            tx.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
             tx.commit();
         }
     }
