@@ -1801,7 +1801,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   case class haveIndexes(expectedIndexes: String*) extends Matcher[GraphDatabaseQueryService] {
     def apply(graph: GraphDatabaseQueryService): MatchResult = {
       graph.withTx( tx => {
-        val indexNames = tx.schema().getIndexes.asScala.toList.map(i => s":${i.getLabel}(${i.getPropertyKeys.asScala.toList.mkString(",")})")
+        val indexNames = tx.schema().getIndexes.asScala.toList.map(
+          i => s":${i.getLabels.asScala.toList.mkString(",")}(${i.getPropertyKeys.asScala.toList.mkString(",")})")
         val result = expectedIndexes.forall(i => indexNames.contains(i.toString))
         MatchResult(
           result,
