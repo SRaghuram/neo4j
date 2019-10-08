@@ -10,9 +10,9 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
@@ -22,7 +22,8 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
-import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.memberIDs;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
@@ -39,13 +40,12 @@ class ConnectRandomlyToServerGroupStrategyTest
         // given
         var targetServerGroup = List.of( "target_server_group" );
         Config configWithTargetServerGroup = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, targetServerGroup );
-        MemberId[] targetGroupMemberIds = memberIDs( 10 );
-        TopologyService topologyService =
-                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( targetServerGroup, targetGroupMemberIds,
-                        Collections.singletonList( "your_server_group" ) );
+        Set<MemberId> targetGroupMemberIds = memberIds( 0, 10 );
+        TopologyService topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( targetServerGroup, targetGroupMemberIds,
+                        List.of( "your_server_group" ) );
 
         ConnectRandomlyToServerGroupStrategy strategy = new ConnectRandomlyToServerGroupStrategy();
-        strategy.inject( topologyService, configWithTargetServerGroup, NullLogProvider.getInstance(), targetGroupMemberIds[0] );
+        strategy.inject( topologyService, configWithTargetServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
 
         // when
         Optional<MemberId> result = strategy.upstreamMemberForDatabase( DATABASE_ID );

@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
@@ -24,14 +25,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
@@ -44,6 +44,7 @@ import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
 
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.server.rest.causalclustering.ReadReplicaStatusTest.responseAsMap;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -61,6 +62,7 @@ class CoreStatusTest
     private CausalClusteringStatus status;
 
     private final Dependencies dependencyResolver = new Dependencies();
+    private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final FakeClock clock = new FakeClock();
 
@@ -73,10 +75,10 @@ class CoreStatusTest
     private CommandIndexTracker commandIndexTracker;
     private ThroughputMonitor throughputMonitor;
 
-    private final MemberId myself = new MemberId( new UUID( 0x1234, 0x5678 ) );
-    private final MemberId core2 = new MemberId( UUID.randomUUID() );
-    private final MemberId core3 = new MemberId( UUID.randomUUID() );
-    private final MemberId replica = new MemberId( UUID.randomUUID() );
+    private final MemberId myself = memberId( 0 );
+    private final MemberId core2 = memberId( 1 );
+    private final MemberId core3 = memberId( 2 );
+    private final MemberId replica = memberId( 3 );
 
     @BeforeEach
     void beforeEach() throws Exception
@@ -86,6 +88,7 @@ class CoreStatusTest
         var dbService = mock( DatabaseService.class );
         var databaseFacade = mock( GraphDatabaseFacade.class );
         when( databaseFacade.databaseName() ).thenReturn( databaseName );
+        when( databaseFacade.databaseId() ).thenReturn( idRepository.defaultDatabase() );
         when( databaseFacade.databaseInfo() ).thenReturn( DatabaseInfo.CORE );
         when( databaseFacade.getDependencyResolver() ).thenReturn( dependencyResolver );
         when( dbService.getDatabase( databaseName ) ).thenReturn( databaseFacade );
@@ -96,7 +99,7 @@ class CoreStatusTest
                 new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
 
         topologyService = dependencyResolver.satisfyDependency(
-                new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );
+                new FakeTopologyService( Set.of( myself, core2, core3 ), Set.of( replica ), myself, Set.of( idRepository.defaultDatabase() ) ) );
 
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
@@ -209,7 +212,7 @@ class CoreStatusTest
     void notParticipatingInRaftGroupWhenNotInVoterSet() throws IOException
     {
         // given not in voting set
-        topologyService.replaceWithRole( core2, RoleInfo.LEADER );
+        topologyService.setRole( core2, RoleInfo.LEADER );
         when( raftMembershipManager.votingMembers() ).thenReturn( new HashSet<>( Arrays.asList( core2, core3 ) ) );
 
         // when
@@ -224,7 +227,7 @@ class CoreStatusTest
     void notParticipatingInRaftGroupWhenLeaderUnknown() throws IOException
     {
         // given leader is unknown
-        topologyService.replaceWithRole( null, RoleInfo.LEADER );
+        topologyService.setRole( null, RoleInfo.LEADER );
 
         // when
         var description = status.description();
@@ -252,7 +255,7 @@ class CoreStatusTest
     void leaderNullWhenUnknown() throws IOException
     {
         // given no leader
-        topologyService.replaceWithRole( null, RoleInfo.LEADER );
+        topologyService.setRole( null, RoleInfo.LEADER );
 
         // when
         var description = status.description();

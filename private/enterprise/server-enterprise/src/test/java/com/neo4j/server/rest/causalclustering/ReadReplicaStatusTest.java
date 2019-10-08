@@ -8,6 +8,7 @@ package com.neo4j.server.rest.causalclustering;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
@@ -44,6 +46,8 @@ import org.neo4j.server.rest.repr.formats.JsonFormat;
 import org.neo4j.time.FakeClock;
 import org.neo4j.time.SystemNanoClock;
 
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
+import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -64,7 +68,10 @@ class ReadReplicaStatusTest
     private Health databaseHealth;
     private CommandIndexTracker commandIndexTracker;
 
-    private final MemberId myself = new MemberId( UUID.randomUUID() );
+    private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
+    private final Set<MemberId> cores = memberIds( 0,3 );
+    private final Set<MemberId> replicas = memberIds( 3, 5 );
+    private final MemberId myself = memberId( 3 );
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final SystemNanoClock clock = new FakeClock();
 
@@ -76,9 +83,10 @@ class ReadReplicaStatusTest
         var dbService = mock( DatabaseService.class );
         var db = mock( GraphDatabaseFacade.class );
         when( db.databaseName() ).thenReturn( databaseName );
+        when( db.databaseId() ).thenReturn( idRepository.defaultDatabase() );
         when( db.databaseInfo() ).thenReturn( DatabaseInfo.READ_REPLICA );
         when( dbService.getDatabase( databaseName ) ).thenReturn( db );
-        topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
+        topologyService = new FakeTopologyService( cores, replicas, myself, Set.of( idRepository.defaultDatabase() ) );
         dependencyResolver.satisfyDependencies( topologyService );
         var jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         dependencyResolver.satisfyDependency( jobScheduler );
@@ -175,6 +183,7 @@ class ReadReplicaStatusTest
     @Test
     void leaderIsNullWhenUnknown() throws IOException
     {
+        topologyService.setRole( null, RoleInfo.LEADER );
         var description = status.description();
         assertNull( responseAsMap( description ).get( "leader" ) );
 
@@ -183,7 +192,7 @@ class ReadReplicaStatusTest
                 .stream()
                 .findFirst()
                 .orElseThrow( () -> new IllegalStateException( "No cores in topology" ) );
-        topologyService.replaceWithRole( selectedLead, RoleInfo.LEADER );
+        topologyService.setRole( selectedLead, RoleInfo.LEADER );
         description = status.description();
         assertEquals( selectedLead.getUuid().toString(), responseAsMap( description ).get( "leader" ) );
     }
