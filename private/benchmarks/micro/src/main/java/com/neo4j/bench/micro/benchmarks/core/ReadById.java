@@ -44,8 +44,8 @@ public class ReadById extends AbstractCoreBenchmark
     public String ReadById_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String ReadById_txMemory;
 

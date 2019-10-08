@@ -109,8 +109,8 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
     public String CreateDeleteNodeProperties_type;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String CreateDeleteNodeProperties_txMemory;
 

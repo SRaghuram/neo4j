@@ -43,8 +43,8 @@ public class CreateNodes extends AbstractCoreBenchmark
     public String CreateNodes_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String CreateNodes_txMemory;
 
