@@ -20,6 +20,7 @@ dbs=(
  "db_sf010_p064_regular_utc_${old_neo4j_version}ce;db_sf010_p064_regular_utc_${new_neo4j_version}ce;neo4j_sf010.conf"
  "db_sf100_p064_dense1_utc_day_${old_neo4j_version}ce;db_sf100_p064_dense1_utc_day_${new_neo4j_version}ce;neo4j_sf100.conf"
  "db_sf100_p064_dense1_utc_day_${old_neo4j_version}ee;db_sf100_p064_dense1_utc_day_${new_neo4j_version}ee;neo4j_sf100_ee.conf"
+ "db_sf100_p064_regular_utc_${old_neo4j_version}ce;db_sf100_p064_regular_utc_${new_neo4j_version}ce;neo4j_sf100.conf"
 )
 
 working_dir=$(pwd)
