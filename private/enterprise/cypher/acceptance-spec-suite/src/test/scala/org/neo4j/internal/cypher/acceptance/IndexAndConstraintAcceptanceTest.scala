@@ -1045,7 +1045,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT my_constraint")
       // THEN
-    } should have message "Unable to drop constraint my_constraint: No such constraint my_constraint."
+    } should have message "Unable to drop constraint `my_constraint`: No such constraint my_constraint."
   }
 
   test("should get error when trying to drop non-existing constraint") {
@@ -1061,7 +1061,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT my_constraint")
       // THEN
-    } should have message "Unable to drop constraint my_constraint: No such constraint my_constraint."
+    } should have message "Unable to drop constraint `my_constraint`: No such constraint my_constraint."
   }
 
   test("should be able to drop correct (node key) constraint by schema when overlapping") {
@@ -1533,7 +1533,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("DROP CONSTRAINT my_index")
       // THEN
-    } should have message "Unable to drop constraint my_index: No such constraint my_index."
+    } should have message "Unable to drop constraint `my_index`: No such constraint my_index."
   }
 
   test("should fail when dropping index when only constraint exists") {
