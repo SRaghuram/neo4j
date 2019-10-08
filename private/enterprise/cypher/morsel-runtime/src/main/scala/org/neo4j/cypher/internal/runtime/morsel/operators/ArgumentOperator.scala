@@ -19,6 +19,8 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
+import scala.collection.mutable.ArrayBuffer
+
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
@@ -75,9 +77,25 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
-          if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-            invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                             loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+          if (argumentSize.nLongs > 0 || argumentSize.nReferences > 0) {
+            if (innermost.shouldWriteToContext) {
+              invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+                loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
+            } else {
+              // We are not writing to output context so we need to load argument slots into local variables for correct output
+              val ops = new ArrayBuffer[IntermediateRepresentation]
+              var i = 0
+              while (i < argumentSize.nLongs) {
+                ops += codeGen.getLongAt(i)
+                i += 1
+              }
+              i = 0
+              while (i < argumentSize.nReferences) {
+                ops += codeGen.getRefAt(i)
+                i += 1
+              }
+              block(ops: _*)
+            }
           } else {
             noop()
           },
