@@ -24,7 +24,7 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularComma
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 

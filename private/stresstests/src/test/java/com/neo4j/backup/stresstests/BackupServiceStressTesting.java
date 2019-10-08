@@ -7,7 +7,7 @@ package com.neo4j.backup.stresstests;
 
 import com.neo4j.causalclustering.stresstests.Config;
 import com.neo4j.causalclustering.stresstests.Control;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.helper.Workload;
 import org.junit.jupiter.api.Test;
 

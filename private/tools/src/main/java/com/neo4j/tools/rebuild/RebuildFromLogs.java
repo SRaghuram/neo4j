@@ -5,7 +5,7 @@
  */
 package com.neo4j.tools.rebuild;
 
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;

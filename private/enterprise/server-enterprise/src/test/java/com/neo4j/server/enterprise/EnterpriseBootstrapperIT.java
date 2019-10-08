@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.lang3.ArrayUtils;

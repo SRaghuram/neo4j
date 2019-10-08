@@ -5,6 +5,7 @@
  */
 package com.neo4j.enterprise.edition.factory;
 
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;

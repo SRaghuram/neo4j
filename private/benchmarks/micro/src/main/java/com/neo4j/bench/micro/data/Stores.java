@@ -13,7 +13,7 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

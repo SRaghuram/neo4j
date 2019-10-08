@@ -12,7 +12,7 @@ import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;

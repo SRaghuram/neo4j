@@ -6,7 +6,7 @@
 package com.neo4j.common.util;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.nio.file.Path;
 

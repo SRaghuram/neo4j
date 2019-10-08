@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.imports;
 
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.File;
 import java.nio.file.Path;

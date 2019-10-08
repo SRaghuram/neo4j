@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

@@ -11,7 +11,7 @@ import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
-import com.neo4j.enterprise.edition.factory.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.IOException;
 import java.nio.file.Path;
