@@ -51,10 +51,10 @@ class WorkloadTest
                 {
                     if ( query.warmupQueryString().isPresent() )
                     {
-                        assertFalse( query.warmupQueryString().get().isPeriodicCommit() ,
-                                     errMsg( "Warmup query not allowed to do PERIODIC COMMIT", workload, query ));
-                        assertTrue( query.queryString().isPeriodicCommit() ,
-                                    errMsg( "Only PERIODIC COMMIT queries should have warmup query", workload, query ));
+                        assertFalse( query.warmupQueryString().get().isPeriodicCommit(),
+                                     errMsg( "Warmup query not allowed to do PERIODIC COMMIT", workload, query ) );
+                        assertTrue( query.queryString().isPeriodicCommit(),
+                                    errMsg( "Only PERIODIC COMMIT queries should have warmup query", workload, query ) );
                     }
                 }
             }
@@ -64,9 +64,9 @@ class WorkloadTest
     @Test
     // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
     //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
-    public void shouldAlwaysMarkMutatingQueriesAsMutating() throws IOException
+    void shouldAlwaysMarkMutatingQueriesAsMutating() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
@@ -91,9 +91,9 @@ class WorkloadTest
     @Test
     // NOTE: test is a bit weak because, e.g., a query may contain some mutating clause name in a string, which is totally valid.
     //       that is not the case for any query existing at this time, however, and having this sanity may protect us from quietly doing dumb things in future.
-    public void shouldNeverHaveMutatingWarmupQueries() throws IOException
+    void shouldNeverHaveMutatingWarmupQueries() throws IOException
     {
-        try ( Resources resources = new Resources( temporaryFolder.newFolder().toPath() ) )
+        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
@@ -103,16 +103,16 @@ class WorkloadTest
                     if ( null != warmupQuery )
                     {
                         String cypherString = warmupQuery.value();
-                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'SET'", workload, query ),
-                                     cypherString.contains( "SET " ) );
-                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'REMOVE'", workload, query ),
-                                     cypherString.contains( "REMOVE " ) );
-                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'CREATE'", workload, query ),
-                                     cypherString.contains( "CREATE " ) );
-                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'DELETE'", workload, query ),
-                                     cypherString.contains( "DELETE " ) );
-                        assertFalse( errMsg( "Warmup query not allowed to mutate but contains 'MERGE'", workload, query ),
-                                     cypherString.contains( "MERGE " ) );
+                        assertFalse( cypherString.contains( "SET " ),
+                                     errMsg( "Warmup query not allowed to mutate but contains 'SET'", workload, query ) );
+                        assertFalse( cypherString.contains( "REMOVE " ),
+                                     errMsg( "Warmup query not allowed to mutate but contains 'REMOVE'", workload, query ) );
+                        assertFalse( cypherString.contains( "CREATE " ),
+                                     errMsg( "Warmup query not allowed to mutate but contains 'CREATE'", workload, query ) );
+                        assertFalse( cypherString.contains( "DELETE " ),
+                                     errMsg( "Warmup query not allowed to mutate but contains 'DELETE'", workload, query ) );
+                        assertFalse( cypherString.contains( "MERGE " ),
+                                     errMsg( "Warmup query not allowed to mutate but contains 'MERGE'", workload, query ) );
                     }
                 }
             }
