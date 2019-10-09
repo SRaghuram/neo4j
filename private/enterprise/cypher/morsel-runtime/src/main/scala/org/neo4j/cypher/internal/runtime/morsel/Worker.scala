@@ -103,7 +103,9 @@ class Worker(val workerId: Int,
           } catch {
             case t2:Throwable =>
               // Cleaning up also failed
-              throwable.addSuppressed(t2)
+              if (throwable != t2) {
+                throwable.addSuppressed(t2)
+              }
               // We would actually want a hard shutdown here
               throwable.printStackTrace()
           }

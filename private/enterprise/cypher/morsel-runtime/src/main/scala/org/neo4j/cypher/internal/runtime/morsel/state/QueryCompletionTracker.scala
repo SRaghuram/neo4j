@@ -166,7 +166,9 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     if (this.throwable == null) {
       this.throwable = throwable
     } else {
-      this.throwable.addSuppressed(throwable)
+      if (this.throwable != throwable) {
+        this.throwable.addSuppressed(throwable)
+      }
     }
   }
 
