@@ -76,7 +76,6 @@
         	<groupId>com.github.chewiebug</groupId>
         	<artifactId>gcviewer</artifactId>
         	<version>1.36-SNAPSHOT</version>
-            <classifier>benchmarking</classifier>
         </dependency>
 
         <dependency>
