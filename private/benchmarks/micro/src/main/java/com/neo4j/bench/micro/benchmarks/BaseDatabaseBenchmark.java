@@ -98,7 +98,7 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     }
 
     @Override
-    protected void onTearDown() throws Exception
+    protected final void onTearDown() throws Exception
     {
         managedStore.tearDownDb();
         benchmarkTearDown();

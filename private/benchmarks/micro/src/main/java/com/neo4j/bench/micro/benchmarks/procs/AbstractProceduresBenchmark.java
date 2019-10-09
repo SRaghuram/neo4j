@@ -18,7 +18,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.values.ValueMapper;
 
 @State( Scope.Benchmark )
 public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
@@ -40,10 +39,9 @@ public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
     }
 
     @Override
-    protected void onTearDown() throws Exception
+    protected void benchmarkTearDown()
     {
         transaction.close();
-        super.onTearDown();
     }
 
     @Override
