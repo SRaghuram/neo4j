@@ -49,7 +49,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.NOD
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_NODES;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_RELS;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.array;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asCypherStringsList;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -179,8 +179,8 @@ class FulltextIndexBackupIT
         }
         try ( Transaction tx = db.beginTx() )
         {
-            tx.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP ) ) ).close();
-            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX, asCypherStringsList( LABEL.name() ), asCypherStringsList( PROP ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, asCypherStringsList( REL.name() ), asCypherStringsList( PROP ) ) ).close();
             tx.commit();
         }
         awaitPopulation( db );

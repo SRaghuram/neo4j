@@ -63,9 +63,9 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUE
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.QUERY_RELS;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE_WITH_CONFIG;
-import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.array;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigMap;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigString;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asCypherStringsList;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asProcedureConfigMap;
 import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
@@ -123,10 +123,16 @@ class FulltextIndexCausalClusterIT
         } );
         cluster.coreTx( ( db, tx ) ->
         {
-            tx.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
-            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
-            tx.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
-            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX, asCypherStringsList( LABEL.name() ), asCypherStringsList( PROP, PROP2 ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, asCypherStringsList( REL.name() ), asCypherStringsList( PROP ) ) ).close();
+            tx
+                    .execute( format( NODE_CREATE, NODE_INDEX_EC, asCypherStringsList( LABEL.name() ),
+                            asCypherStringsList( PROP, PROP2, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) )
+                    .close();
+            tx
+                    .execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, asCypherStringsList( REL.name() ),
+                            asCypherStringsList( PROP, EC_PROP ) + EVENTUALLY_CONSISTENT_SETTING ) )
+                    .close();
             tx.commit();
         } );
 
@@ -147,10 +153,10 @@ class FulltextIndexCausalClusterIT
     {
         cluster.coreTx( ( db, tx ) ->
         {
-            tx.execute( format( NODE_CREATE, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ) ) ).close();
-            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, array( REL.name() ), array( PROP ) ) ).close();
-            tx.execute( format( NODE_CREATE, NODE_INDEX_EC, array( LABEL.name() ), array( PROP, PROP2, EC_PROP ) ) ).close();
-            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, array( REL.name() ), array( PROP, EC_PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX, asCypherStringsList( LABEL.name() ), asCypherStringsList( PROP, PROP2 ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX, asCypherStringsList( REL.name() ), asCypherStringsList( PROP ) ) ).close();
+            tx.execute( format( NODE_CREATE, NODE_INDEX_EC, asCypherStringsList( LABEL.name() ), asCypherStringsList( PROP, PROP2, EC_PROP ) ) ).close();
+            tx.execute( format( RELATIONSHIP_CREATE, REL_INDEX_EC, asCypherStringsList( REL.name() ), asCypherStringsList( PROP, EC_PROP ) ) ).close();
             tx.commit();
         } );
 
@@ -197,8 +203,14 @@ class FulltextIndexCausalClusterIT
         {
             String nodeString = asConfigString( asProcedureConfigMap( analyserNodeIndex, eventuallyConsistentNodeIndex ) );
             String relString = asConfigString( asProcedureConfigMap( analyzerRelIndex, eventuallyConsistentRelIndex ) );
-            tx.execute( format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, array( LABEL.name() ), array( PROP, PROP2 ), nodeString ) ).close();
-            tx.execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, array( REL.name() ), array( PROP, PROP2 ), relString ) ).close();
+            tx
+                    .execute(
+                            format( NODE_CREATE_WITH_CONFIG, NODE_INDEX, asCypherStringsList( LABEL.name() ), asCypherStringsList( PROP, PROP2 ), nodeString ) )
+                    .close();
+            tx
+                    .execute( format( RELATIONSHIP_CREATE_WITH_CONFIG, REL_INDEX, asCypherStringsList( REL.name() ), asCypherStringsList( PROP, PROP2 ),
+                            relString ) )
+                    .close();
             tx.commit();
         } );
 
