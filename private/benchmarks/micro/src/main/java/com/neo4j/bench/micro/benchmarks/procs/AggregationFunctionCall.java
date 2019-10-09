@@ -54,7 +54,7 @@ public class AggregationFunctionCall extends AbstractProceduresBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public AnyValue testAggregation() throws ProcedureException
     {
-        UserAggregator aggregator = procedures.createAggregationFunction( context, token );
+        UserAggregator aggregator = procedures.createAggregationFunction( null, token );
         for ( long i = 0; i < AggregationFunctionCall_rows; i++ )
         {
             aggregator.update( new AnyValue[]{longValue( i )} );

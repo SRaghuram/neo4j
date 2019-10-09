@@ -49,7 +49,7 @@ public class FunctionCall extends AbstractProceduresBenchmark
     public AnyValue testFunction( RNGState rngState ) throws ProcedureException
     {
         return procedures.callFunction(
-                context,
+                null,
                 token,
                 new AnyValue[]{Values.longValue( rngState.rng.nextLong() )} );
     }

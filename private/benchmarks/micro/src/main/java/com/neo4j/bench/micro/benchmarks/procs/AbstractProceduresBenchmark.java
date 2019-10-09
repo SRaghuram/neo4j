@@ -25,23 +25,13 @@ public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
     static final ResourceTracker DUMMY_TRACKER = new DummyResourceTracker();
     GlobalProcedures procedures;
     int token;
-    Context context;
-    Transaction transaction;
+    DependencyResolver dependencyResolver;
 
     @Override
     protected void afterDatabaseStart()
     {
-        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
+        dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
         procedures = dependencyResolver.resolveDependency( GlobalProcedures.class );
-        transaction = db().beginTx();
-        context = BasicContext.buildContext( dependencyResolver,
-                                             new DefaultValueMapper( (InternalTransaction) transaction ) ).context();
-    }
-
-    @Override
-    protected void benchmarkTearDown()
-    {
-        transaction.close();
     }
 
     @Override
