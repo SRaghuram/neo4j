@@ -5,8 +5,10 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, Argument, Ascending, Limit, NodeByLabelScan, NodeHashJoin, Optional, ProduceResult, Sort}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher._
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 class PipelineBuilderTest extends CypherFunSuite {
@@ -133,6 +135,32 @@ class PipelineBuilderTest extends CypherFunSuite {
 
       start(graph).applyBuffer(2).reducerOnRHS(0, 2, argumentSlotOffset)
       start(graph).morselBuffer(3).reducer(0)
+    }
+  }
+
+  test("should plan cartesian product") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n", "m")
+      .cartesianProduct().withBreak()
+      .|.nodeByLabelScan("m", "M").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
+        .delegateToMorselBuffer(1)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .attachBuffer(2, slots = SlotConfiguration.empty.newArgument(Id(1)).newLong("m", nullable = false, CTNode))
+        .delegateToApplyBuffer(3, 0)
+        .delegateToMorselBuffer(4)
+        .pipeline(1, Seq(classOf[NodeByLabelScan]))
+        .rightOfJoinBuffer(5, 0, 0, 1)
+        .pipeline(2, Seq(classOf[CartesianProduct], classOf[ProduceResult]), serial = true)
+        .end
+
+      start(graph).applyBuffer(3).reducerOnRHS(0, 1, 0)
+      start(graph).applyBuffer(3).reducerOnRHS(1, 1, 0)
+      start(graph).morselBuffer(4).reducer(1)
     }
   }
 }

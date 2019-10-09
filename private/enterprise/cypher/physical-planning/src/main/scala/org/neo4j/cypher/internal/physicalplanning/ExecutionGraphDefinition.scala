@@ -93,7 +93,9 @@ case class BufferDefinition(id: BufferId,
   override def hashCode(): Int = asTuple.hashCode()
 
   private def asTuple: (BufferId, Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], BufferVariant) =
-    (id, reducers, workCancellers, downstreamStates, variant)
+    (id, reducers.toList, workCancellers.toList, downstreamStates.toList, variant)
+
+  override def toString: String = s"BufferDefinition${asTuple}"
 }
 
 /**
@@ -137,7 +139,9 @@ case class ApplyBufferVariant(argumentSlotOffset: Int,
   override def hashCode(): Int = asTuple.hashCode()
 
   private def asTuple: (Int, Seq[ArgumentStateMapId], Seq[BufferId]) =
-    (argumentSlotOffset, reducersOnRHSReversed, delegates)
+    (argumentSlotOffset, reducersOnRHSReversed.toList, delegates.toList)
+
+  override def toString: String = s"ApplyBufferVariant${asTuple}"
 }
 
 case class AttachBufferVariant(applyBuffer: BufferDefinition,

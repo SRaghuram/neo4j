@@ -120,13 +120,13 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   abstract class BufferSequence(bufferDefinition: BufferDefinition) {
     def reducer(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.withReducers(bufferDefinition.reducers :+ asd.id))
+      buffers(bufferDefinition.id.x) = bufferDefinition.withReducers(bufferDefinition.reducers :+ asd.id)
       ExecutionGraphDefinitionMatcher.this
     }
 
     def canceller(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.withWorkCancellers(bufferDefinition.workCancellers :+ asd.id))
+      buffers(bufferDefinition.id.x) = bufferDefinition.withWorkCancellers(bufferDefinition.workCancellers :+ asd.id)
       ExecutionGraphDefinitionMatcher.this
     }
   }
@@ -143,15 +143,49 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
                                          NO_ARGUMENT_STATE_MAPS,
                                          NO_ARGUMENT_STATE_MAPS,
                                          RegularBufferVariant)(SlotConfiguration.empty))
-      buffers(bufferDefinition.id.x) = bufferDefinition.copy(variant = variant.copy(delegates = variant.delegates :+ bd.id))(SlotConfiguration.empty)
+      val updatedApplyBuffer = bufferDefinition.copy(variant = variant.copy(delegates = variant.delegates :+ bd.id))(SlotConfiguration.empty)
+      buffers(bufferDefinition.id.x) = updatedApplyBuffer
+
+      updateAttachBuffers(updatedApplyBuffer)
 
       new MorselBufferSequence(bd)
     }
 
     def reducerOnRHS(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers.put(bufferDefinition.id.x, bufferDefinition.copy(variant = variant.copy(reducersOnRHSReversed = asd.id +: variant.reducersOnRHSReversed))(SlotConfiguration.empty))
+      val updatedApplyBuffer = bufferDefinition.copy(variant = variant.copy(reducersOnRHSReversed = asd.id +: variant.reducersOnRHSReversed))(SlotConfiguration.empty)
+      buffers(bufferDefinition.id.x) = updatedApplyBuffer
+
+      updateAttachBuffers(updatedApplyBuffer)
+
       ExecutionGraphDefinitionMatcher.this
+    }
+
+    private def updateAttachBuffers(updatedApplyBuffer: BufferDefinition) = {
+      buffers.transform {
+        case (_, bd@BufferDefinition(_, _, _, _, atv@AttachBufferVariant(`bufferDefinition`, _, _, _))) =>
+          bd.copy(variant = atv.copy(applyBuffer = updatedApplyBuffer))(SlotConfiguration.empty)
+        case (_, x) => x
+      }
+    }
+  }
+
+  class AttachBufferSequence(bufferDefinition: BufferDefinition) extends BufferSequence(bufferDefinition) {
+
+    private val variant = bufferDefinition.variant.asInstanceOf[AttachBufferVariant]
+
+    def delegateToApplyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
+      val bd = buffers.getOrElseUpdate(id,
+        BufferDefinition(
+          BufferId(id),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          ApplyBufferVariant(argumentSlotOffset, NO_ARGUMENT_STATE_MAPS, NO_BUFFERS))(SlotConfiguration.empty))
+
+      buffers(bufferDefinition.id.x) = bufferDefinition.copy(variant = variant.copy(applyBuffer = bd))(SlotConfiguration.empty)
+
+      new ApplyBufferSequence(bd)
     }
   }
 
@@ -196,6 +230,21 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new OptionalBufferSequence(bd)
+    }
+
+    def attachBuffer(id: Int, argumentSlotOffset: Int = -1, slots: SlotConfiguration = SlotConfiguration.empty) : AttachBufferSequence = {
+      val bd = buffers.getOrElseUpdate(id,
+        BufferDefinition(
+          BufferId(id),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          AttachBufferVariant(null, slots, argumentSlotOffset, SlotConfiguration.Size.zero)
+        )(SlotConfiguration.empty)
+      )
+      val out = MorselBufferOutput(BufferId(id))
+      pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
+      new AttachBufferSequence(bd)
     }
 
     def applyBuffer(id: Int, argumentSlotOffset: Int = -1): ApplyBufferSequence = {
