@@ -28,7 +28,7 @@ public class FabricConfig
     private final boolean enabled;
     private final Database database;
     private final List<SocketAddress> fabricServers;
-    private final long routingTtl;
+    private final Duration routingTtl;
     private final Duration transactionTimeout;
     private final GlobalDriverConfig globalDriverConfig;
     private final DataStream dataStream;
@@ -37,7 +37,7 @@ public class FabricConfig
             boolean enabled,
             Database database,
             List<SocketAddress> fabricServers,
-            long routingTtl,
+            Duration routingTtl,
             Duration transactionTimeout,
             GlobalDriverConfig globalDriverConfig,
             DataStream dataStream )
@@ -61,7 +61,7 @@ public class FabricConfig
         return fabricServers;
     }
 
-    public long getRoutingTtl()
+    public Duration getRoutingTtl()
     {
         return routingTtl;
     }
@@ -129,7 +129,7 @@ public class FabricConfig
 
         if ( database.isEmpty() )
         {
-            return new FabricConfig( false, null, null, -1, null, null, null );
+            return new FabricConfig( false, null, null, null, null, null, null );
         }
 
         var serverAddresses = config.get( FabricSettings.fabricServersSetting );
@@ -142,9 +142,8 @@ public class FabricConfig
         var driverConfig = new DriverConfig( config.get( FabricSettings.driverLoggingLevel ), config.get( FabricSettings.driverLogLeakedSessions ),
                 config.get(FabricSettings.driverMaxConnectionPoolSize), config.get(FabricSettings.driverIdleTimeBeforeConnectionTest),
                 config.get(FabricSettings.driverMaxConnectionLifetime), config.get(FabricSettings.driverConnectionAcquisitionTimeout),
-                config.get(FabricSettings.driverEncrypted), config.get(FabricSettings.driverTrustStrategy),
-                config.get(FabricSettings.driverLoadBalancingStrategy), config.get(FabricSettings.driverConnectTimeout),
-                config.get(FabricSettings.driverRetryMaxTime), config.get(FabricSettings.driverMetricsEnabled), config.get( FabricSettings.driverApi ) );
+                config.get(FabricSettings.driverEncrypted), config.get(FabricSettings.driverTrustStrategy), config.get(FabricSettings.driverConnectTimeout),
+                config.get( FabricSettings.driverApi ) );
 
         var remoteGraphDriver = new GlobalDriverConfig( driverIdleTimeout, driverIdleCheckInterval, driverEventLoopCount, driverConfig );
 
@@ -173,9 +172,8 @@ public class FabricConfig
             var driverConfig = new DriverConfig( config.get( graphSetting.driverLoggingLevel ), config.get( graphSetting.driverLogLeakedSessions ),
                     config.get(graphSetting.driverMaxConnectionPoolSize), config.get(graphSetting.driverIdleTimeBeforeConnectionTest),
                     config.get(graphSetting.driverMaxConnectionLifetime), config.get(graphSetting.driverConnectionAcquisitionTimeout),
-                    config.get(graphSetting.driverEncrypted), config.get(graphSetting.driverTrustStrategy),
-                    config.get(graphSetting.driverLoadBalancingStrategy), config.get(graphSetting.driverConnectTimeout),
-                    config.get( graphSetting.driverRetryMaxTime ), config.get( graphSetting.driverMetricsEnabled ), config.get( graphSetting.driverApi ) );
+                    config.get(graphSetting.driverEncrypted), config.get(graphSetting.driverTrustStrategy), config.get(graphSetting.driverConnectTimeout),
+                    config.get( graphSetting.driverApi ) );
             return new Graph( graphId, config.get( graphSetting.uri ), config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
         } ).collect( Collectors.toSet() );
 
@@ -311,16 +309,12 @@ public class FabricConfig
         private final Duration connectionAcquisitionTimeout;
         private final Boolean encrypted;
         private final FabricSettings.DriverTrustStrategy trustStrategy;
-        private final FabricSettings.DriverLoadBalancingStrategy loadBalancingStrategy;
         private final Duration connectTimeout;
-        private final Duration retryMaxTime;
-        private final Boolean metricsEnabled;
         private final FabricSettings.DriverApi driverApi;
 
         public DriverConfig( Level loggingLevel, Boolean logLeakedSessions, Integer maxConnectionPoolSize, Duration idleTimeBeforeConnectionTest,
                 Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Boolean encrypted, FabricSettings.DriverTrustStrategy trustStrategy,
-                FabricSettings.DriverLoadBalancingStrategy loadBalancingStrategy, Duration connectTimeout, Duration retryMaxTime, Boolean metricsEnabled,
-                FabricSettings.DriverApi driverApi )
+                Duration connectTimeout, FabricSettings.DriverApi driverApi )
         {
             this.loggingLevel = loggingLevel;
             this.logLeakedSessions = logLeakedSessions;
@@ -330,10 +324,7 @@ public class FabricConfig
             this.connectionAcquisitionTimeout = connectionAcquisitionTimeout;
             this.encrypted = encrypted;
             this.trustStrategy = trustStrategy;
-            this.loadBalancingStrategy = loadBalancingStrategy;
             this.connectTimeout = connectTimeout;
-            this.retryMaxTime = retryMaxTime;
-            this.metricsEnabled = metricsEnabled;
             this.driverApi = driverApi;
         }
 
@@ -377,24 +368,9 @@ public class FabricConfig
             return trustStrategy;
         }
 
-        public FabricSettings.DriverLoadBalancingStrategy getLoadBalancingStrategy()
-        {
-            return loadBalancingStrategy;
-        }
-
         public Duration getConnectTimeout()
         {
             return connectTimeout;
-        }
-
-        public Duration getRetryMaxTime()
-        {
-            return retryMaxTime;
-        }
-
-        public Boolean getMetricsEnabled()
-        {
-            return metricsEnabled;
         }
 
         public FabricSettings.DriverApi getDriverApi()

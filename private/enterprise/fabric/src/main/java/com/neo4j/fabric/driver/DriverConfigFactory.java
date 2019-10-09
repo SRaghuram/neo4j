@@ -37,22 +37,9 @@ class DriverConfigFactory
         var builder = Config.builder();
 
         var logLeakedSessions = getProperty( graph, FabricConfig.DriverConfig::getLogLeakedSessions );
-        if ( logLeakedSessions != null && logLeakedSessions )
+        if ( logLeakedSessions )
         {
             builder.withLeakedSessionsLogging();
-        }
-
-        var metricsEnabled = getProperty( graph, FabricConfig.DriverConfig::getMetricsEnabled );
-        if ( metricsEnabled != null )
-        {
-            if ( metricsEnabled )
-            {
-                builder.withDriverMetrics();
-            }
-            else
-            {
-                builder.withoutDriverMetrics();
-            }
         }
 
         var encrypted = getProperty( graph, FabricConfig.DriverConfig::getEncrypted );
@@ -98,26 +85,13 @@ class DriverConfigFactory
             builder.withConnectionTimeout( connectTimeout.toMillis(), MILLISECONDS );
         }
 
-        var retryMaxTime = getProperty( graph, FabricConfig.DriverConfig::getRetryMaxTime );
-        if ( retryMaxTime != null )
-        {
-            builder.withMaxTransactionRetryTime( retryMaxTime.toMillis(), MILLISECONDS );
-        }
-
-        var loadBalancingStrategy = getLoadBalancingStrategy( graph );
-        if ( loadBalancingStrategy != null )
-        {
-            builder.withLoadBalancingStrategy( loadBalancingStrategy );
-        }
-
         var maxConnectionPoolSize = getProperty( graph, FabricConfig.DriverConfig::getMaxConnectionPoolSize );
         if ( maxConnectionPoolSize != null )
         {
             builder.withMaxConnectionPoolSize( maxConnectionPoolSize );
         }
 
-        return builder.withLogging( Logging.javaUtilLogging( getLoggingLevel( graph ) ) )
-                .build();
+        return builder.withLogging( Logging.javaUtilLogging( getLoggingLevel( graph ) ) ).build();
     }
 
     <T> T getProperty( FabricConfig.Graph graph, Function<FabricConfig.DriverConfig,T> extractor )
@@ -180,25 +154,6 @@ class DriverConfigFactory
             return Config.TrustStrategy.trustAllCertificates();
         default:
             throw new IllegalArgumentException( "Unexpected trust strategy: " + trustStrategy );
-        }
-    }
-
-    private Config.LoadBalancingStrategy getLoadBalancingStrategy( FabricConfig.Graph graph )
-    {
-        var loadBalancingStrategy = getProperty( graph, FabricConfig.DriverConfig::getLoadBalancingStrategy );
-        if ( loadBalancingStrategy == null )
-        {
-            return null;
-        }
-
-        switch ( loadBalancingStrategy )
-        {
-        case ROUND_ROBIN:
-            return Config.LoadBalancingStrategy.ROUND_ROBIN;
-        case LEAST_CONNECTED:
-            return Config.LoadBalancingStrategy.LEAST_CONNECTED;
-        default:
-            throw new IllegalArgumentException( "Unexpected load balancing strategy: " + loadBalancingStrategy );
         }
     }
 }

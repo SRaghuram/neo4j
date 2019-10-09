@@ -528,6 +528,6 @@ class TransactionTest
 
     private static FabricConfig.DriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null, null, null, null );
+        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null );
     }
 }

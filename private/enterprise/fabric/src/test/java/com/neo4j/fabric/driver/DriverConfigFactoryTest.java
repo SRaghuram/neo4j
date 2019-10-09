@@ -41,8 +41,6 @@ class DriverConfigFactoryTest
         properties.put( "fabric.driver.connection.encrypted", "true" );
 
         properties.put( "fabric.driver.trust_strategy", "TRUST_SYSTEM_CA_SIGNED_CERTIFICATES" );
-        properties.put( "fabric.driver.load_balancing_strategy", "LEAST_CONNECTED" );
-        properties.put( "fabric.driver.retry_timeout", "39s" );
 
         properties.put( "fabric.graph.0.uri", "bolt://mega:1111" );
 
@@ -55,11 +53,7 @@ class DriverConfigFactoryTest
         properties.put( "fabric.graph.0.driver.connection.max_lifetime", "29m" );
         properties.put( "fabric.graph.0.driver.connection.connect_timeout", "9s" );
         properties.put( "fabric.graph.0.driver.connection.encrypted", "false" );
-
         properties.put( "fabric.graph.0.driver.trust_strategy", "TRUST_ALL_CERTIFICATES" );
-        properties.put( "fabric.graph.0.driver.load_balancing_strategy", "ROUND_ROBIN" );
-
-        properties.put( "fabric.graph.0.retry_timeout", "49s" );
 
         // graph driver with nothing overloaded
         properties.put( "fabric.graph.1.uri", "bolt://mega:2222" );
@@ -85,7 +79,6 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 17 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertFalse( graph0DriverConfig.encrypted() );
         assertEquals( TRUST_ALL_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
-        assertEquals( ROUND_ROBIN, graph0DriverConfig.loadBalancingStrategy() );
         assertEquals( Duration.ofSeconds( 9 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
 
         var graph1DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 1 ) );
@@ -98,7 +91,6 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 7 ).toMillis(), graph1DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertTrue( graph1DriverConfig.encrypted() );
         assertEquals( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, graph1DriverConfig.trustStrategy().strategy() );
-        assertEquals( LEAST_CONNECTED, graph1DriverConfig.loadBalancingStrategy() );
         assertEquals( Duration.ofSeconds( 3 ).toMillis(), graph1DriverConfig.connectionTimeoutMillis() );
 
         var graph2DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 2 ) );
@@ -120,19 +112,17 @@ class DriverConfigFactoryTest
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config );
 
-        var defaultConfig = org.neo4j.driver.Config.defaultConfig();
         var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
 
-        assertEquals( defaultConfig.logging().getLog( "" ).isDebugEnabled() , graph0DriverConfig.logging().getLog( "" ).isDebugEnabled() );
-        assertEquals( defaultConfig.logLeakedSessions(), graph0DriverConfig.logLeakedSessions() );
-        assertEquals( defaultConfig.maxConnectionPoolSize(), graph0DriverConfig.maxConnectionPoolSize() );
-        assertEquals( defaultConfig.idleTimeBeforeConnectionTest(), graph0DriverConfig.idleTimeBeforeConnectionTest() );
-        assertEquals( defaultConfig.maxConnectionLifetimeMillis(), graph0DriverConfig.maxConnectionLifetimeMillis() );
-        assertEquals( defaultConfig.connectionAcquisitionTimeoutMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
-        assertEquals( defaultConfig.encrypted(), graph0DriverConfig.encrypted() );
-        assertEquals( defaultConfig.trustStrategy().strategy(), graph0DriverConfig.trustStrategy().strategy() );
-        assertEquals( defaultConfig.loadBalancingStrategy(), graph0DriverConfig.loadBalancingStrategy() );
-        assertEquals( defaultConfig.connectionTimeoutMillis(), graph0DriverConfig.connectionTimeoutMillis() );
+        assertFalse( graph0DriverConfig.logging().getLog( "" ).isDebugEnabled() );
+        assertFalse( graph0DriverConfig.logLeakedSessions() );
+        assertEquals( Integer.MAX_VALUE, graph0DriverConfig.maxConnectionPoolSize() );
+        assertTrue( graph0DriverConfig.idleTimeBeforeConnectionTest() < 0);
+        assertEquals( Duration.ofHours( 1 ).toMillis(), graph0DriverConfig.maxConnectionLifetimeMillis() );
+        assertEquals( Duration.ofMinutes( 1 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
+        assertEquals( true, graph0DriverConfig.encrypted() );
+        assertEquals( TRUST_ALL_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
+        assertEquals( Duration.ofSeconds( 5 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
     }
 
     private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )

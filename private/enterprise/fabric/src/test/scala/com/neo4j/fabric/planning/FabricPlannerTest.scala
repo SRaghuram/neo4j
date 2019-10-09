@@ -38,7 +38,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   private val config = new FabricConfig(
     true,
     new Database("mega", util.Set.of(shardFoo0, shardFoo1, shardBar0)),
-    util.List.of(), 0L, Duration.ZERO, new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 1, null), new FabricConfig.DataStream(300, 1000, 50)
+    util.List.of(), Duration.ZERO, Duration.ZERO, new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 1, null), new FabricConfig.DataStream(300, 1000, 50)
   )
   private val params = MapValue.EMPTY
   private val monitors = new Monitors
