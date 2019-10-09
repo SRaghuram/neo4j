@@ -62,10 +62,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.chewiebug</groupId>
-            <artifactId>gcviewer</artifactId>
-            <version>1.36-SNAPSHOT</version>
-            <classifier>benchmarking</classifier>
+        	<groupId>com.github.chewiebug</groupId>
+        	<artifactId>gcviewer</artifactId>
+        	<version>1.36-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
