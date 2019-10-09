@@ -103,4 +103,19 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val r = executeWith(Configs.InterpretedAndSlotted - Configs.Cost2_3, q)
     r.toList should equal(List(Map("name" -> "Smoke")))
   }
+
+  test("should not choke on cached properties followed by distinct and properties set") {
+    // Given
+    graph.createIndex("L", "prop")
+    createLabeledNode(Map("prop" -> 42, "other" -> 43), "L")
+
+    // When
+    val result = executeWith(Configs.UpdateConf,
+                             """MATCH (n:L) WHERE n.prop=42
+                               |WITH DISTINCT n.prop + 3 AS w
+                               |MERGE (m:M) ON CREATE SET m.prop=1337 ON MATCH SET m.prop=13337""".stripMargin)
+
+    // Then
+    assertStats(result, nodesCreated = 1, labelsAdded = 1, propertiesWritten = 1)
+  }
 }
