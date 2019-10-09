@@ -505,7 +505,7 @@ class TransactionGuardIT
 
     private IdContextFactory createIdContextFactory( FileSystemAbstraction fileSystem )
     {
-        return IdContextFactoryBuilder.of( JobSchedulerFactory.createScheduler() )
+        return IdContextFactoryBuilder.of( fileSystem, JobSchedulerFactory.createScheduler(), Config.defaults() )
                 .withIdGenerationFactoryProvider(
                         any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate() ) ) )
                 .build();

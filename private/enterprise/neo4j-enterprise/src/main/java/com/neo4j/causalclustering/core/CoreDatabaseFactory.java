@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
@@ -77,6 +76,7 @@ import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -96,10 +96,8 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
-import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -135,6 +133,7 @@ import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
+import static org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder.defaultIdGeneratorFactoryProvider;
 
 class CoreDatabaseFactory
 {
@@ -414,9 +413,9 @@ class CoreDatabaseFactory
 
     private DatabaseIdContext createIdContext( DatabaseId databaseId )
     {
-        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = id -> createIdGeneratorFactory();
+        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider = defaultIdGeneratorFactoryProvider( fileSystem, config );
         IdContextFactory idContextFactory = IdContextFactoryBuilder
-                .of( jobScheduler )
+                .of( fileSystem, jobScheduler, config )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
                 .withFactoryWrapper( generator -> generator )
                 .build();
@@ -429,11 +428,6 @@ class CoreDatabaseFactory
         StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createBarrierTokenStorage(
                 databaseId.name(), life, databaseLogProvider );
         return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage, () -> resolvers.idGeneratorFactory().get().clearCache() );
-    }
-
-    private IdGeneratorFactory createIdGeneratorFactory()
-    {
-        return new DefaultIdGeneratorFactory( fileSystem, RecoveryCleanupWorkCollector.immediate() );
     }
 
     private Locks createLockManager( final Config config, Clock clock )
