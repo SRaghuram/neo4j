@@ -7,6 +7,7 @@ package com.neo4j.bench.macro.database;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.PlanOperator;
 import com.neo4j.bench.common.options.Edition;
@@ -58,6 +59,7 @@ public class PlannerDescriptionIT
             {
                 System.out.println( "Verifying plan extraction on workload: " + workload.name() );
                 Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+                Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
                 try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
                                                                        temporaryFolder.newFolder().toPath(), /* store */
                                                                        neo4jConfigFile ) )
