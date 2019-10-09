@@ -293,7 +293,7 @@ public class CypherOverBoltIT
 
             result.consume(); // Without getting the result
         }
-        // Open a new session and assert that 10 nodes got created
+        // Open a new session and assert that 2000 nodes got created
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
               Session session = driver.session() )
         {
@@ -315,7 +315,7 @@ public class CypherOverBoltIT
 
             result.consume(); // Without getting the result
         }
-        // Open a new session and assert that 10 nodes got created
+        // Open a new session and assert that 2000 nodes got created
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
               Session session = driver.session() )
         {
