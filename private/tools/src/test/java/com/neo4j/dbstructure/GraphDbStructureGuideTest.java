@@ -227,7 +227,7 @@ class GraphDbStructureGuideTest
     {
         KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
-        return ktx.schemaWrite().indexCreate( SchemaDescriptor.forLabel( labelId, pkId ) );
+        return ktx.schemaWrite().indexCreate( SchemaDescriptor.forLabel( labelId, pkId ), null );
 
     }
 
