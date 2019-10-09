@@ -10,10 +10,13 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.BasicContext;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.ValueMapper;
 
@@ -24,14 +27,23 @@ public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
     GlobalProcedures procedures;
     int token;
     Context context;
+    Transaction transaction;
 
     @Override
     protected void afterDatabaseStart()
     {
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
         procedures = dependencyResolver.resolveDependency( GlobalProcedures.class );
+        transaction = db().beginTx();
         context = BasicContext.buildContext( dependencyResolver,
-                                             dependencyResolver.resolveDependency( ValueMapper.class ) ).context();
+                                             new DefaultValueMapper( (InternalTransaction) transaction ) ).context();
+    }
+
+    @Override
+    protected void onTearDown() throws Exception
+    {
+        transaction.close();
+        super.onTearDown();
     }
 
     @Override
