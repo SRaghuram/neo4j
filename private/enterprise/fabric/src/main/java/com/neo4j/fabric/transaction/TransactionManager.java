@@ -48,7 +48,7 @@ public class TransactionManager extends LifecycleAdapter
     @Override
     public void stop()
     {
-        openTransactions.forEach( t -> t.rollback( false ) );
+        openTransactions.forEach( FabricTransactionImpl::doRollback );
     }
 
     void removeTransaction( FabricTransactionImpl transaction )

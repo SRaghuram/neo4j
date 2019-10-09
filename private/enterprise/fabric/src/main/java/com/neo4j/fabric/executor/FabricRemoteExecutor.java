@@ -12,23 +12,16 @@ import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.planner.api.Plan.QueryTask.QueryMode;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 import org.neo4j.bolt.runtime.AccessMode;
 
 import org.neo4j.values.virtual.MapValue;
-
-import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionCommitFailed;
-import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionRollbackFailed;
 
 public class FabricRemoteExecutor
 {
@@ -47,115 +40,90 @@ public class FabricRemoteExecutor
     public class FabricRemoteTransaction
     {
         private final FabricTransactionInfo transactionInfo;
-        private final Set<PooledDriver> usedDrivers = new HashSet<>();
-        private final Map<FabricConfig.Graph,Mono<FabricDriverTransaction>> openTransactions = new HashMap<>();
+        private final Map<FabricConfig.Graph,PooledDriver> usedDrivers = new HashMap<>();
         private FabricConfig.Graph writingTo;
+        private Mono<FabricDriverTransaction> writeTransaction;
 
         private FabricRemoteTransaction( FabricTransactionInfo transactionInfo )
         {
             this.transactionInfo = transactionInfo;
         }
 
-        Mono<StatementResult> run( FabricConfig.Graph location, String query, QueryMode mode, MapValue params )
+        public Mono<StatementResult> run( FabricConfig.Graph location, String query, QueryMode mode, MapValue params )
         {
-            return getDriverTransaction( location, mode )
-                    .map( rxTransaction -> rxTransaction.run( query, params ) );
-        }
-
-        private PooledDriver getDriver( FabricConfig.Graph location )
-        {
-            PooledDriver poolDriver = driverPool.getDriver( location, transactionInfo.getLoginContext().subject() );
-            usedDrivers.add( poolDriver );
-            return poolDriver;
-        }
-
-        private Mono<FabricDriverTransaction> getDriverTransaction( FabricConfig.Graph location, QueryMode queryMode )
-        {
-            if ( transactionInfo.getAccessMode() == AccessMode.READ )
+            if ( location.equals( writingTo ) )
             {
-                return getTransaction( location, AccessMode.READ );
+                return runInWriteTransaction( query, params );
             }
 
-            if ( queryMode == QueryMode.CAN_READ_ONLY )
+            var accessMode = getAccessMode( mode );
+
+            if ( accessMode == AccessMode.READ )
             {
-                return getTransaction( location, AccessMode.WRITE );
+                return runInAutoCommitReadTransaction( location, query, params );
             }
 
-            if ( writingTo == null || writingTo.equals( location ) )
+            if ( writingTo != null && !writingTo.equals( location ) )
             {
-                writingTo = location;
-                return getTransaction( location, AccessMode.WRITE );
+                throw multipleWriteError( location, writingTo );
             }
 
-            throw multipleWriteError( location, writingTo );
-        }
-
-        private Mono<FabricDriverTransaction> getTransaction( FabricConfig.Graph location, AccessMode accessMode )
-        {
-            return openTransactions.computeIfAbsent( location, l ->
-            {
-                var driver = getDriver( l );
-                return driver.beginTransaction( l, accessMode, transactionInfo );
-            } );
+            beginWriteTransaction( location );
+            return runInWriteTransaction( query, params );
         }
 
         public Mono<Void> commit()
         {
-            List<RuntimeException> errors = new ArrayList<>();
-
-            return Flux.concat( openTransactions.values() )
-                    .flatMap( tx ->  tx.commit() .onErrorResume( t ->
-                    {
-                        errors.add( new FabricException( TransactionCommitFailed, "Failed to commit remote transaction", t ) );
-                        return Mono.empty();
-                    } ) )
-                    .then()
-                    .thenMany( Flux.fromIterable( errors ) )
-                    .concatWith( releaseTransactionResources() )
-                    .collectList()
-                    .flatMap( this::handleErrors );
+            return endTransaction( FabricDriverTransaction::commit );
         }
 
         public Mono<Void> rollback()
         {
-            List<RuntimeException> errors = new ArrayList<>();
-
-            List<Mono<FabricDriverTransaction>> transactions = openTransactions.values().stream()
-                    .map( txMono -> txMono.onErrorResume( error -> Mono.empty() ) )
-                    .collect( Collectors.toList() );
-
-            return Flux.concat( transactions )
-                    .flatMap( tx -> tx.rollback().onErrorResume( t ->
-                    {
-                        errors.add( new FabricException( TransactionRollbackFailed, "Failed to rollback remote transaction", t ) );
-                        return Mono.empty();
-                    } ) )
-                    .then()
-                    .thenMany( Flux.fromIterable( errors ) )
-                    .concatWith( releaseTransactionResources() )
-                    .collectList()
-                    .flatMap( this::handleErrors );
+            return endTransaction( FabricDriverTransaction::rollback );
         }
 
-        private Flux<RuntimeException> releaseTransactionResources()
+        private Mono<Void> endTransaction( Function<FabricDriverTransaction,Mono<Void>> operation )
         {
-            usedDrivers.forEach( PooledDriver::release );
-            return Flux.empty();
-        }
-
-        private Mono<Void> handleErrors( List<RuntimeException> errors )
-        {
-            if ( errors.isEmpty() )
+            if ( writeTransaction == null )
             {
+                releaseTransactionResources();
                 return Mono.empty();
             }
+            return writeTransaction.flatMap( operation ).doFinally( signal -> releaseTransactionResources() );
+        }
 
-            if ( errors.size() == 1 )
+        private void beginWriteTransaction( FabricConfig.Graph location )
+        {
+            writingTo = location;
+            var driver = getDriver( location );
+            writeTransaction = driver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() );
+        }
+
+        private Mono<StatementResult> runInAutoCommitReadTransaction( FabricConfig.Graph location, String query, MapValue params )
+        {
+            var driver = getDriver( location );
+            var autoCommitStatementResult = driver.run( query, params, location, AccessMode.READ, transactionInfo, List.of() );
+            return Mono.just( autoCommitStatementResult );
+        }
+
+        private Mono<StatementResult> runInWriteTransaction( String query, MapValue params )
+        {
+            return writeTransaction.map( rxTransaction -> rxTransaction.run( query, params ) );
+        }
+
+        private AccessMode getAccessMode( QueryMode queryMode )
+        {
+            if ( transactionInfo.getAccessMode() == AccessMode.READ || queryMode == QueryMode.CAN_READ_ONLY )
             {
-                return Mono.error( errors.get( 0 ) );
+                return AccessMode.READ;
             }
 
-            return Mono.error( new FabricMultiException( errors ) );
+            return AccessMode.WRITE;
+        }
+
+        private PooledDriver getDriver( FabricConfig.Graph location )
+        {
+            return usedDrivers.computeIfAbsent( location, l -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
         }
 
         private UnsupportedOperationException multipleWriteError( FabricConfig.Graph attempt, FabricConfig.Graph writingTo )
@@ -163,6 +131,11 @@ public class FabricRemoteExecutor
             return new UnsupportedOperationException( String.format( "Multi-shard writes not allowed. Attempted write to %s, currently writing to %s",
                     attempt,
                     writingTo ) );
+        }
+
+        private void releaseTransactionResources()
+        {
+            usedDrivers.values().forEach( PooledDriver::release );
         }
     }
 }

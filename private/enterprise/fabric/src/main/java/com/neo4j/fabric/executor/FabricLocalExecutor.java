@@ -7,22 +7,23 @@ package com.neo4j.fabric.executor;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
-import com.neo4j.fabric.stream.InputDataStreamImpl;
-import com.neo4j.fabric.stream.Rx2SyncStream;
+import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.StatementResults;
+import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
+import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
-import org.neo4j.cypher.internal.runtime.InputDataStream;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.GraphDatabaseQueryService;
@@ -33,9 +34,6 @@ import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory;
-import org.neo4j.kernel.impl.query.QueryExecution;
-import org.neo4j.kernel.impl.query.QuerySubscriber;
-import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.values.virtual.MapValue;
 
 public class FabricLocalExecutor
@@ -51,50 +49,7 @@ public class FabricLocalExecutor
 
     public FabricLocalTransaction begin( FabricTransactionInfo transactionInfo )
     {
-        String databaseName = transactionInfo.getDatabaseName();
-        GraphDatabaseFacade databaseFacade;
-        try
-        {
-            databaseFacade = dbms.getDatabase( databaseName );
-        }
-        catch ( UnavailableException e )
-        {
-            throw new FabricException( Status.General.DatabaseUnavailable, e );
-        }
-
-        var dependencyResolver = databaseFacade.getDependencyResolver();
-        var executionEngine = dependencyResolver.resolveDependency( ExecutionEngine.class );
-
-        var internalTransaction = beginInternalTransaction( databaseFacade, transactionInfo );
-        var kernelTransaction = internalTransaction.kernelTransaction();
-
-        var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
-        var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
-
-        return new FabricLocalTransaction( executionEngine, transactionalContextFactory, kernelTransaction, internalTransaction );
-    }
-
-    private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
-    {
-        InternalTransaction internalTransaction;
-        KernelTransaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
-        FabricLocalLoginContext loginContext = new FabricLocalLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext() );
-        if ( transactionInfo.getTxTimeout() == null )
-        {
-            internalTransaction = databaseFacade.beginTransaction( kernelTransactionType, loginContext, transactionInfo.getClientConnectionInfo() );
-        }
-        else
-        {
-            internalTransaction = databaseFacade.beginTransaction( kernelTransactionType, loginContext, transactionInfo.getClientConnectionInfo(),
-                    transactionInfo.getTxTimeout().toMillis(), TimeUnit.MILLISECONDS );
-        }
-
-        if ( transactionInfo.getTxMetadata() != null )
-        {
-            internalTransaction.setMetaData( transactionInfo.getTxMetadata() );
-        }
-
-        return internalTransaction;
+        return new FabricLocalTransaction( transactionInfo );
     }
 
     private KernelTransaction.Type getKernelTransactionType( FabricTransactionInfo fabricTransactionInfo )
@@ -109,70 +64,102 @@ public class FabricLocalExecutor
 
     public class FabricLocalTransaction
     {
-        private final ExecutionEngine queryExecutionEngine;
-        private final TransactionalContextFactory transactionalContextFactory;
-        private final KernelTransaction kernelTransaction;
-        private final InternalTransaction internalTransaction;
+        private final FabricTransactionInfo transactionInfo;
+        private final Set<SingleStatementKernelTransaction> kernelTransactions = Collections.newSetFromMap( new ConcurrentHashMap<>() );
 
-        FabricLocalTransaction( ExecutionEngine queryExecutionEngine,
-                TransactionalContextFactory transactionalContextFactory, KernelTransaction kernelTransaction,
-                InternalTransaction internalTransaction )
+        FabricLocalTransaction( FabricTransactionInfo transactionInfo )
         {
-            this.queryExecutionEngine = queryExecutionEngine;
-            this.transactionalContextFactory = transactionalContextFactory;
-            this.kernelTransaction = kernelTransaction;
-            this.internalTransaction = internalTransaction;
+            this.transactionInfo = transactionInfo;
         }
 
         public StatementResult run( FullyParsedQuery query, MapValue params, StatementResult input )
         {
+            var kernelTransaction = beginKernelTransaction();
+            kernelTransactions.add( kernelTransaction );
 
-            return StatementResults.create( subscriber -> execute( query, params, convert( input ), subscriber ) );
-        }
-
-        private QueryExecution execute( FullyParsedQuery query, MapValue params, InputDataStream input, QuerySubscriber subscriber )
-        {
             try
             {
-                var currentExecutionContext = transactionalContextFactory.newContext( internalTransaction, "", params );
-                return queryExecutionEngine.executeQuery( query, params, currentExecutionContext, true, input, subscriber );
-            }
-            catch ( Exception e )
-            {
-                throw new FabricException( Status.Statement.ExecutionFailed, e );
-            }
-        }
+                var result = kernelTransaction.run( query, params, input );
 
-        private InputDataStream convert( StatementResult input )
-        {
-            return new InputDataStreamImpl(
-                    new Rx2SyncStream(
-                            input,
-                            config.getDataStream().getBufferLowWatermark(),
-                            config.getDataStream().getBufferSize(),
-                            config.getDataStream().getSyncBatchSize() )
-            );
-        }
-
-        public void commit() throws TransactionFailureException
-        {
-            if ( kernelTransaction.isOpen() )
-            {
-                kernelTransaction.commit();
+                return new ResultInterceptor( result, () ->
+                {
+                    kernelTransaction.commit();
+                    kernelTransactions.remove( kernelTransaction );
+                }, () ->
+                {
+                    kernelTransaction.rollback();
+                    kernelTransactions.remove( kernelTransaction );
+                } );
             }
-        }
-
-        public void rollback() throws TransactionFailureException
-        {
-            if ( kernelTransaction.isOpen() )
+            catch ( RuntimeException e )
             {
                 kernelTransaction.rollback();
+                kernelTransactions.remove( kernelTransaction );
+                throw e;
             }
+        }
+
+        public void commit()
+        {
+            kernelTransactions.forEach( SingleStatementKernelTransaction::commit );
+        }
+
+        public void rollback()
+        {
+            kernelTransactions.forEach( SingleStatementKernelTransaction::rollback );
         }
 
         public void markForTermination( Status reason )
         {
-            kernelTransaction.markForTermination( reason );
+            kernelTransactions.forEach( tx -> tx.markForTermination( reason ) );
+        }
+
+        private SingleStatementKernelTransaction beginKernelTransaction()
+        {
+            String databaseName = transactionInfo.getDatabaseName();
+            GraphDatabaseFacade databaseFacade;
+            try
+            {
+                databaseFacade = dbms.getDatabase( databaseName );
+            }
+            catch ( UnavailableException e )
+            {
+                throw new FabricException( Status.General.DatabaseUnavailable, e );
+            }
+
+            var dependencyResolver = databaseFacade.getDependencyResolver();
+            var executionEngine = dependencyResolver.resolveDependency( ExecutionEngine.class );
+
+            var internalTransaction = beginInternalTransaction( databaseFacade, transactionInfo );
+            var kernelTransaction = internalTransaction.kernelTransaction();
+
+            var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
+            var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
+
+            return new SingleStatementKernelTransaction( executionEngine, transactionalContextFactory, kernelTransaction, internalTransaction, config );
+        }
+
+        private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
+        {
+            InternalTransaction internalTransaction;
+            KernelTransaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
+            FabricLocalLoginContext loginContext = new FabricLocalLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext() );
+            if ( transactionInfo.getTxTimeout() == null )
+            {
+                internalTransaction = databaseFacade.beginTransaction( kernelTransactionType, loginContext, transactionInfo.getClientConnectionInfo() );
+            }
+            else
+            {
+                internalTransaction = databaseFacade.beginTransaction( kernelTransactionType, loginContext, transactionInfo.getClientConnectionInfo(),
+                        transactionInfo.getTxTimeout().toMillis(), TimeUnit.MILLISECONDS );
+            }
+
+            if ( transactionInfo.getTxMetadata() != null )
+            {
+                internalTransaction.setMetaData( transactionInfo.getTxMetadata() );
+            }
+
+            return internalTransaction;
         }
     }
 
@@ -203,6 +190,38 @@ public class FabricLocalExecutor
             var originalSecurityContext = inner.authorize( idLookup, dbName );
             var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.READ );
             return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), action -> false );
+        }
+    }
+
+    private static class ResultInterceptor implements StatementResult
+    {
+        private final StatementResult wrappedResult;
+        private final Runnable commit;
+        private final Runnable rollback;
+
+        ResultInterceptor( StatementResult wrappedResult, Runnable commit, Runnable rollback )
+        {
+            this.wrappedResult = wrappedResult;
+            this.commit = commit;
+            this.rollback = rollback;
+        }
+
+        @Override
+        public Flux<String> columns()
+        {
+            return wrappedResult.columns().doOnError( error -> rollback.run() );
+        }
+
+        @Override
+        public Flux<Record> records()
+        {
+            return wrappedResult.records().doOnError( error -> rollback.run() ).doOnComplete( commit ).doOnCancel( rollback );
+        }
+
+        @Override
+        public Mono<Summary> summary()
+        {
+            return wrappedResult.summary();
         }
     }
 }

@@ -9,13 +9,17 @@ import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.values.virtual.MapValue;
 
 public abstract class PooledDriver
 {
@@ -35,7 +39,11 @@ public abstract class PooledDriver
         releaseCallback.accept( this );
     }
 
-    public abstract Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo );
+    public abstract AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
+            FabricTransactionInfo transactionInfo, List<String> bookmarks );
+
+    public abstract Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
+            List<String> bookmarks );
 
     AtomicInteger getReferenceCounter()
     {
@@ -67,6 +75,16 @@ public abstract class PooledDriver
         }
 
         return builder.build();
+    }
+
+    protected TransactionConfig getTransactionConfig( FabricTransactionInfo transactionInfo )
+    {
+        if ( transactionInfo.getTxTimeout().equals( Duration.ZERO ) )
+        {
+            return TransactionConfig.empty();
+        }
+
+        return TransactionConfig.builder().withTimeout( transactionInfo.getTxTimeout() ).build();
     }
 
     private org.neo4j.driver.AccessMode translateAccessMode( AccessMode accessMode )

@@ -58,7 +58,7 @@ class AsyncPooledDriverTest
     void setUp()
     {
         when( driver.asyncSession( any() ) ).thenReturn( session );
-        when( session.beginTransactionAsync() ).thenReturn( CompletableFuture.completedFuture( asyncTransaction ) );
+        when( session.beginTransactionAsync( any() ) ).thenReturn( CompletableFuture.completedFuture( asyncTransaction ) );
 
         when( asyncTransaction.commitAsync() ).thenReturn( CompletableFuture.completedFuture( null ) );
         when( asyncTransaction.rollbackAsync() ).thenReturn( CompletableFuture.completedFuture( null ) );
@@ -71,7 +71,7 @@ class AsyncPooledDriverTest
         var cursor = new TestStatementResultCursor( List.of( "a", "b" ), List.of( createDriverRecord( "a1", "b1" ) ) );
         when( asyncTransaction.runAsync( any(), anyMap() ) ).thenReturn( CompletableFuture.completedFuture( cursor ) );
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
         var columns = statementResult.columns().collectList().block();
 
@@ -92,7 +92,7 @@ class AsyncPooledDriverTest
         var cursor = new TestStatementResultCursor( List.of( "a", "b" ), List.of() );
         when( asyncTransaction.runAsync( any(), anyMap() ) ).thenReturn( CompletableFuture.completedFuture( cursor ) );
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
         var columns = statementResult.columns().collectList().block();
 
@@ -128,7 +128,7 @@ class AsyncPooledDriverTest
         ) );
         when( asyncTransaction.runAsync( any(), anyMap() ) ).thenReturn( CompletableFuture.completedFuture( cursor ) );
 
-        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo ).block();
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
         var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
 
         var records = statementResult.records().limitRate( batchSize ).collectList().block();

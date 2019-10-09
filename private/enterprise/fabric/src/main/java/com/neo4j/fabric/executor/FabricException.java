@@ -23,6 +23,12 @@ public class FabricException extends RuntimeException implements Status.HasStatu
         this.statusCode = statusCode;
     }
 
+    public FabricException( Status statusCode, String message, Throwable cause )
+    {
+        super( message, cause );
+        this.statusCode = statusCode;
+    }
+
     @Override
     public Status status()
     {

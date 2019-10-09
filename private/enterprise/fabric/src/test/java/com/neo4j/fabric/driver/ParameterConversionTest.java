@@ -64,7 +64,7 @@ class ParameterConversionTest
         when( tx.commit() ).thenReturn( Mono.empty() );
         when( tx.rollback() ).thenReturn( Mono.empty() );
 
-        when( mockDriverSession.beginTransaction() ).thenReturn( Mono.just( tx ) );
+        when( mockDriverSession.beginTransaction( any() ) ).thenReturn( Mono.just( tx ) );
         when( mockDriverSession.close() ).thenReturn( Mono.empty() );
         when( databaseDriver.rxSession( any() ) ).thenReturn( mockDriverSession );
     }
@@ -293,7 +293,7 @@ class ParameterConversionTest
         var transactionIfo = mock( FabricTransactionInfo.class );
         when( transactionIfo.getTxTimeout() ).thenReturn( Duration.ZERO );
 
-        var tx = pooledDriver.beginTransaction( location, null, transactionIfo ).block();
+        var tx = pooledDriver.beginTransaction( location, null, transactionIfo, List.of() ).block();
         var converter = new RecordConverter();
         var driverValue = Values.value( params );
         var serverValue = (MapValue) converter.convertValue( driverValue );

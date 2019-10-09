@@ -6,8 +6,8 @@
 package com.neo4j;
 
 import com.neo4j.utils.CustomFunctions;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -32,11 +32,11 @@ import static org.hamcrest.Matchers.equalTo;
 
 class BoltLocalResultStreamTest
 {
-    private Driver clientDriver;
-    private TestServer testServer;
+    private static Driver clientDriver;
+    private static TestServer testServer;
 
-    @BeforeEach
-    void setUp() throws KernelException
+    @BeforeAll
+    static void setUp() throws KernelException
     {
 
         PortUtils.Ports ports = PortUtils.findFreePorts();
@@ -66,11 +66,11 @@ class BoltLocalResultStreamTest
                         .build() );
     }
 
-    @AfterEach
-    void tearDown()
+    @AfterAll
+    static void tearDown()
     {
         testServer.stop();
-        clientDriver.close();
+        clientDriver.closeAsync();
     }
 
     @Test

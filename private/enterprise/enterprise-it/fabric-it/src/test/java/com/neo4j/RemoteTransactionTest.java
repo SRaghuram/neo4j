@@ -6,6 +6,7 @@
 package com.neo4j;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -41,7 +41,6 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.kernel.GraphDatabaseQueryService;
-import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -64,11 +63,10 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class TransactionTest
+class RemoteTransactionTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
-    private static KernelTransaction kernelTransaction;
     private static final DriverPool driverPool = mock( DriverPool.class );
     private static final PooledDriver shard1Driver = mock( PooledDriver.class );
     private static final PooledDriver shard2Driver = mock( PooledDriver.class );
@@ -135,7 +133,6 @@ class TransactionTest
         mockShardDriver( shard1Driver, Mono.just( tx1 ) );
         mockShardDriver( shard2Driver, Mono.just( tx2 ) );
         mockShardDriver( shard3Driver, Mono.just( tx3 ) );
-        mockKernelTransaction();
     }
 
     private static void mockDriverPool( FabricConfig.Graph graph, PooledDriver pooledDriver )
@@ -159,9 +156,6 @@ class TransactionTest
         InternalTransaction internalTransaction = mock( InternalTransaction.class );
         when( graphDatabaseFacade.beginTransaction( any(), any(), any(), anyLong(), any() ) ).thenReturn( internalTransaction );
 
-        kernelTransaction = mock( KernelTransaction.class );
-        when( internalTransaction.kernelTransaction() ).thenReturn( kernelTransaction );
-
         DependencyResolver dr = mock( DependencyResolver.class );
         when( graphDatabaseFacade.getDependencyResolver() ).thenReturn( dr );
 
@@ -172,16 +166,23 @@ class TransactionTest
 
     }
 
-    private void mockKernelTransaction()
-    {
-        Mockito.reset( kernelTransaction );
-        when( kernelTransaction.isOpen() ).thenReturn( true );
-    }
-
     private void mockShardDriver( PooledDriver shardDriver, Mono<FabricDriverTransaction> transaction )
     {
         reset( shardDriver );
-        when( shardDriver.beginTransaction( any(), any(), any() ) ).thenReturn( transaction );
+        when( shardDriver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( transaction );
+
+        var result = mock( AutoCommitStatementResult.class );
+        when( result.columns() ).thenReturn( Flux.fromIterable(List.of( "a", "b" )) );
+        when( result.records() ).thenReturn( Flux.empty() );
+        when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
+
+        when( shardDriver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
+
+        doAnswer( invocationOnMock ->
+        {
+            latch.countDown();
+            return Mono.empty();
+        } ).when( shardDriver ).release();
     }
 
     private FabricDriverTransaction mockTransactionWithDefaultResult()
@@ -194,101 +195,90 @@ class TransactionTest
 
         when( tx.run( any(), any() ) ).thenReturn( result );
 
-        doAnswer( invocationOnMock ->
-        {
-            latch.countDown();
-            return Mono.empty();
-        } ).when( tx ).commit();
-
-        doAnswer( invocationOnMock ->
-        {
-            latch.countDown();
-            return Mono.empty();
-        } ).when( tx ).rollback();
+        when( tx.commit() ).thenReturn( Mono.empty() );
+        when( tx.rollback() ).thenReturn( Mono.empty() );
 
         return tx;
     }
 
     @Test
-    void testCommit() throws Exception
+    void testCommit()
     {
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
                 tx.success();
             }
         }
 
-        verifyCommitted( tx1, tx2 );
+        waitForDriverRelease( 2 );
+        verifyCommitted( tx1 );
         verifyDriverReturned(shard1Driver, shard2Driver);
-        verifyCommitted( kernelTransaction );
     }
 
     @Test
-    void testRollback() throws Exception
+    void testRollback()
     {
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
                 tx.failure();
             }
         }
 
-        waitForCommitOrRollback(2);
-        verifyRolledBack( tx1, tx2 );
+        waitForDriverRelease( 2 );
+        verifyRolledBack( tx1 );
         verifyDriverReturned(shard1Driver, shard2Driver);
-        verifyRolledBack( kernelTransaction );
     }
 
     @Test
     void testShardTxBeginFailure()
     {
 
-        mockShardDriver( shard3Driver, Mono.error( new IllegalStateException( "Begin failed on shard 3" ) ) );
+        mockShardDriver( shard1Driver, Mono.error( new IllegalStateException( "Begin failed on shard 1" ) ) );
 
         try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                readFromShard2( tx );
+                readFromShard3( tx );
+                writeToShard1( tx );
                 fail( "Exception expected" );
             }
         }
         catch ( DatabaseException e )
         {
             assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-            assertThat( e.getMessage(), containsString( "Begin failed on shard 3" ) );
+            assertThat( e.getMessage(), containsString( "Begin failed on shard 1" ) );
         }
         catch ( Exception e )
         {
             fail( "Unexpected exception", e );
         }
 
-        waitForCommitOrRollback(2);
-        verifyRolledBack( tx1, tx2 );
+        waitForDriverRelease( 3 );
         verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
     }
 
     @Test
-    void testShardTxCommitFailure() throws Exception
+    void testShardTxCommitFailure()
     {
-        when( tx2.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 2" ) ) );
+        when( tx1.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 1" ) ) );
 
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build()  ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
+                readFromShard3( tx );
                 tx.success();
             }
             fail( "Exception expected" );
@@ -303,23 +293,23 @@ class TransactionTest
             fail( "Unexpected exception", e );
         }
 
-        verifyCommitted( tx1, tx2, tx3 );
+        waitForDriverRelease( 3 );
+        verifyCommitted( tx1 );
         verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
-        verifyCommitted( kernelTransaction );
     }
 
     @Test
-    void testShardTxRollbackFailure() throws Exception
+    void testShardTxRollbackFailure()
     {
-        when( tx2.rollback() ).thenReturn( Mono.error( new IllegalStateException( "Rollback failed on shard 2" ) ) );
+        when( tx1.rollback() ).thenReturn( Mono.error( new IllegalStateException( "Rollback failed on shard 1" ) ) );
 
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
+                readFromShard3( tx );
                 tx.failure();
             }
             fail( "Exception expected" );
@@ -334,112 +324,112 @@ class TransactionTest
             fail( "Unexpected exception", e );
         }
 
-        waitForCommitOrRollback(3);
-        verifyRolledBack( tx1, tx2, tx3 );
+        waitForDriverRelease( 3 );
+        verifyRolledBack( tx1 );
         verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
-        verifyRolledBack( kernelTransaction );
     }
 
     @Test
-    void testShardRunFailure() throws Exception
+    void testShardRunFailure()
     {
-        when( tx3.run( any(), any() ) ).thenThrow( new IllegalStateException( "Query on shard 3 failed" ) );
+        when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenThrow( new IllegalStateException( "Query on shard 3 failed" ) );
 
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
+                try
+                {
+                    readFromShard3( tx );
+                    fail( "Exception expected" );
+                }
+                catch ( DatabaseException e )
+                {
+                    assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
+                    assertThat( e.getMessage(), containsString( "Query on shard 3 failed" ) );
+                }
+                catch ( Exception e )
+                {
+                    fail( "Unexpected exception", e );
+                }
                 tx.success();
             }
-            fail( "Exception expected" );
-        }
-        catch ( DatabaseException e )
-        {
-            assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-            assertThat( e.getMessage(), containsString( "Query on shard 3 failed" ) );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception", e );
         }
 
-        waitForCommitOrRollback(3);
-        verifyRolledBack( tx1, tx2, tx3 );
+        waitForDriverRelease( 3 );
+        verifyRolledBack( tx1 );
         verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
-        verifyRolledBack( kernelTransaction );
     }
 
     @Test
-    void testShardResultStreamFailure() throws Exception
+    void testShardResultStreamFailure()
     {
-        StatementResult result = mock( StatementResult.class );
+        var result = mock( AutoCommitStatementResult.class );
         when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( result.records() ).thenReturn( Flux.error( new IllegalStateException( "Result stream from shard 3 failed" ) ) );
 
-        when( tx3.run( any(), any() ) ).thenReturn( result );
+        when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
 
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
+                try
+                {
+                    readFromShard3( tx );
+                    fail( "Exception expected" );
+                }
+                catch ( DatabaseException e )
+                {
+                    assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
+                    assertThat( e.getMessage(), containsString( "Result stream from shard 3 failed" ) );
+                }
+                catch ( Exception e )
+                {
+                    fail( "Unexpected exception", e );
+                }
                 tx.success();
             }
-            fail( "Exception expected" );
-        }
-        catch ( DatabaseException e )
-        {
-            assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-            assertThat( e.getMessage(), containsString( "Result stream from shard 3 failed" ) );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception", e );
         }
 
-        waitForCommitOrRollback(3);
-        verifyRolledBack( tx1, tx2, tx3 );
+        waitForDriverRelease(3);
+        verifyRolledBack( tx1 );
         verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
-        verifyRolledBack( kernelTransaction );
     }
 
     @Test
-    void testReset() throws Exception
+    void testReset()
     {
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
                 session.reset();
 
-                verifyRolledBack( tx1, tx2, tx3 );
-                verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
-                verifyRolledBack( kernelTransaction );
+                verifyRolledBack( tx1 );
+                verifyDriverReturned(shard1Driver, shard2Driver );
             }
         }
     }
 
     @Test
-    void testTimeout() throws Exception
+    void testTimeout()
     {
         ArgumentCaptor<Runnable> timeoutCallback = ArgumentCaptor.forClass( Runnable.class );
         when( jobScheduler.schedule( any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );
 
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = openSession() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                queryShard1( tx );
-                queryShard2( tx );
-                queryShard3( tx );
+                writeToShard1( tx );
+                readFromShard2( tx );
 
                 timeoutCallback.getValue().run();
 
@@ -458,52 +448,33 @@ class TransactionTest
             fail( "Unexpected exception", e );
         }
 
-        verifyRolledBack( tx1, tx2, tx3 );
-        verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
-        verifyRolledBack( kernelTransaction );
+        verifyRolledBack( tx1 );
+        verifyDriverReturned(shard1Driver, shard2Driver );
     }
 
-    private void verifyCommitted( FabricDriverTransaction... transactions )
+    private void verifyCommitted( FabricDriverTransaction tx )
     {
-        Arrays.stream( transactions ).forEach( tx ->
-        {
-            verify( tx ).commit();
-            verify( tx, never() ).rollback();
-        } );
+        verify( tx ).commit();
+        verify( tx, never() ).rollback();
     }
 
-    private void verifyRolledBack( FabricDriverTransaction... transactions )
+    private void verifyRolledBack( FabricDriverTransaction tx )
     {
-        Arrays.stream( transactions ).forEach( tx ->
-        {
-            verify( tx ).rollback();
-            verify( tx, never() ).commit();
-        } );
+        verify( tx ).rollback();
+        verify( tx, never() ).commit();
     }
 
-    private void verifyCommitted( KernelTransaction kernelTransaction ) throws Exception
+    private void writeToShard1( Transaction tx )
     {
-        verify( kernelTransaction ).commit();
-        verify( kernelTransaction, never() ).rollback();
+        tx.run( "USE mega.graph1 CREATE(n) RETURN n" ).consume();
     }
 
-    private void verifyRolledBack( KernelTransaction kernelTransaction ) throws Exception
-    {
-        verify( kernelTransaction ).rollback();
-        verify( kernelTransaction, never() ).commit();
-    }
-
-    private void queryShard1( Transaction tx )
-    {
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-    }
-
-    private void queryShard2( Transaction tx )
+    private void readFromShard2( Transaction tx )
     {
         tx.run( "USE mega.graph2 MATCH (n) RETURN n" ).consume();
     }
 
-    private void queryShard3( Transaction tx )
+    private void readFromShard3( Transaction tx )
     {
         tx.run( "USE mega.graph3 MATCH (n) RETURN n" ).consume();
     }
@@ -513,7 +484,7 @@ class TransactionTest
         Arrays.asList( driver ).forEach( d -> verify( d ).release() );
     }
 
-    private void waitForCommitOrRollback( int count )
+    private void waitForDriverRelease( int count )
     {
         IntStream.range( count, 3 ).forEach( i -> latch.countDown() );
         try
@@ -529,5 +500,10 @@ class TransactionTest
     private static FabricConfig.DriverConfig emptyDriverConfig()
     {
         return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null );
+    }
+
+    private Session openSession()
+    {
+        return clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() );
     }
 }

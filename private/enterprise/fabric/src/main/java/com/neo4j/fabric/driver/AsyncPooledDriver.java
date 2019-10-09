@@ -6,18 +6,23 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.stream.Record;
+import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
+import org.neo4j.driver.async.StatementResultCursor;
+import org.neo4j.values.virtual.MapValue;
 
 public class AsyncPooledDriver extends PooledDriver
 {
@@ -31,7 +36,24 @@ public class AsyncPooledDriver extends PooledDriver
     }
 
     @Override
-    public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo )
+    public AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
+            FabricTransactionInfo transactionInfo, List<String> bookmarks )
+    {
+        var sessionConfig = createSessionConfig( location, accessMode );
+        var session = driver.asyncSession( sessionConfig );
+
+        var parameterConverter = new ParameterConverter();
+        var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );
+
+        var transactionConfig = getTransactionConfig( transactionInfo );
+
+        var statementCursor = Mono.fromFuture( session.runAsync( query, paramMap, transactionConfig ).toCompletableFuture() );
+        return new StatementResultImpl( session, statementCursor, location.getId() );
+    }
+
+    @Override
+    public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
+            List<String> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode );
         var session = driver.asyncSession( sessionConfig );
@@ -43,11 +65,47 @@ public class AsyncPooledDriver extends PooledDriver
 
     private CompletionStage<AsyncTransaction> getDriverTransaction( AsyncSession session, FabricTransactionInfo transactionInfo )
     {
-        if ( transactionInfo.getTxTimeout().equals( Duration.ZERO ) )
+        var transactionConfig = getTransactionConfig( transactionInfo );
+        return session.beginTransactionAsync( transactionConfig );
+    }
+
+    private static class StatementResultImpl implements AutoCommitStatementResult
+    {
+
+        private final AsyncSession session;
+        private final Mono<StatementResultCursor> statementResultCursor;
+        private final RecordConverter recordConverter;
+
+        StatementResultImpl( AsyncSession session, Mono<StatementResultCursor> statementResultCursor, long sourceTag )
         {
-            return session.beginTransactionAsync();
+            this.session = session;
+            this.statementResultCursor = statementResultCursor;
+            this.recordConverter = new RecordConverter( sourceTag );
         }
 
-        return session.beginTransactionAsync( TransactionConfig.builder().withTimeout( transactionInfo.getTxTimeout() ).build() );
+        @Override
+        public Flux<String> columns()
+        {
+            return statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable );
+        }
+
+        @Override
+        public Flux<Record> records()
+        {
+            return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) )
+                    .doFinally( signalType -> session.closeAsync() );
+        }
+
+        @Override
+        public Mono<Summary> summary()
+        {
+            return Mono.empty();
+        }
+
+        @Override
+        public String getBookmark()
+        {
+            return session.lastBookmark();
+        }
     }
 }

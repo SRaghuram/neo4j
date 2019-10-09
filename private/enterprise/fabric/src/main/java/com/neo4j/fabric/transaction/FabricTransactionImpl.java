@@ -12,8 +12,6 @@ import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.stream.StatementResult;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -112,7 +110,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         {
             // the exception with stack trace will be logged by Bolt's ErrorReporter
             userLog.error( "Query execution in transaction %d failed", id );
-            rollback( false );
+            doRollback();
             throw transform( Status.Statement.ExecutionFailed, e );
         }
     }
@@ -129,8 +127,6 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         internalLog.debug( "Committing transaction %d", id );
         cancelTimeout();
 
-        List<Exception> errors = new ArrayList<>( 2 );
-
         try
         {
             if ( localTransaction != null )
@@ -140,9 +136,8 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
         catch ( Exception e )
         {
-            // the exception with stack trace will be logged by Bolt's ErrorReporter
-            userLog.error( "Local transaction %d commit failed", id );
-            errors.add( e );
+            // failure to commit a local transaction is just logged and not reported to the user
+            userLog.error( String.format( "Local transaction %d commit failed", id ), e );
         }
 
         try
@@ -155,21 +150,15 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         catch ( Exception e )
         {
             // the exception with stack trace will be logged by Bolt's ErrorReporter
-            userLog.error( "Remote transaction %d commit failed", id );
-            errors.add( e );
-        }
-
-        transactionManager.removeTransaction( this );
-
-        if ( errors.isEmpty() )
-        {
-            internalLog.debug( "Transaction %d committed", id );
-        }
-        else
-        {
             userLog.error( "Transaction %d commit failed", id );
-            throw transform( Status.Transaction.TransactionCommitFailed, errors.get( 0 ) );
+            throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit remote transaction", e );
         }
+        finally
+        {
+            transactionManager.removeTransaction( this );
+        }
+
+        internalLog.debug( "Transaction %d committed", id );
     }
 
     public void rollback()
@@ -180,7 +169,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
             return;
         }
 
-        rollback( true );
+        doRollback();
     }
 
     @Override
@@ -190,7 +179,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         terminationStatus = reason;
 
         localTransaction.markForTermination( reason );
-        rollback( true );
+        doRollback();
     }
 
     @Override
@@ -199,7 +188,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         return Optional.empty();
     }
 
-    void rollback( boolean throwOnFailure )
+    void doRollback()
     {
         // the transaction has already been rolled back as part of the failure clean up
         if ( terminated )
@@ -211,8 +200,6 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         internalLog.debug( "Rolling back transaction %d", id );
         cancelTimeout();
 
-        List<Exception> errors = new ArrayList<>( 2 );
-
         try
         {
             if ( localTransaction != null )
@@ -222,9 +209,8 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
         catch ( Exception e )
         {
-            // the exception with stack trace will be logged by Bolt's ErrorReporter
-            userLog.error( "Local transaction %d rollback failed", id );
-            errors.add( e );
+            // failure to rollback a local transaction is just logged and not reported to the user
+            userLog.error( String.format( "Local transaction %d rollback failed", id ), e );
         }
 
         try
@@ -237,24 +223,15 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         catch ( Exception e )
         {
             // the exception with stack trace will be logged by Bolt's ErrorReporter
-            userLog.error( "Remote transaction %d rollback failed", id );
-            errors.add( e );
-        }
-
-        transactionManager.removeTransaction( this );
-
-        if ( errors.isEmpty() )
-        {
-            internalLog.debug( "Transaction %d rolled back", id );
-        }
-        else
-        {
             userLog.error( "Transaction %d rollback failed", id );
-            if ( throwOnFailure )
-            {
-                throw transform( Status.Transaction.TransactionRollbackFailed, errors.get( 0 ) );
-            }
+            throw new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback remote transaction", e );
         }
+        finally
+        {
+            transactionManager.removeTransaction( this );
+        }
+
+        internalLog.debug( "Transaction %d rolled back", id );
     }
 
     private RuntimeException transform( Status defaultStatus, Throwable t )
@@ -299,7 +276,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
 
         userLog.info( "Terminating transaction %d because of timeout", id );
         terminationStatus = Status.Transaction.TransactionTimedOut;
-        rollback( true );
+        doRollback();
     }
 
     private void cancelTimeout()

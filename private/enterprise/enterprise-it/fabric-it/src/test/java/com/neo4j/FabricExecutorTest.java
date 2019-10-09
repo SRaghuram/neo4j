@@ -5,13 +5,15 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.PartialSummary;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -29,6 +31,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.Notification;
@@ -47,19 +50,19 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 class FabricExecutorTest
 {
 
-    private final PortUtils.Ports ports = PortUtils.findFreePorts();
+    private static final PortUtils.Ports ports = PortUtils.findFreePorts();
 
-    private final Map<String,String> configProperties = Map.of(
+    private static final Map<String, String> configProperties = Map.of(
             "fabric.database.name", "mega",
             "fabric.graph.0.uri", "bolt://localhost:1111",
             "fabric.graph.1.uri", "bolt://localhost:2222",
@@ -68,55 +71,24 @@ class FabricExecutorTest
             "dbms.connector.bolt.enabled", "true"
     );
 
-    private final Config config = Config.newBuilder()
-            .setRaw( configProperties )
+    private static final Config config = Config.newBuilder()
+            .setRaw(configProperties)
             .build();
 
-    private TestServer testServer;
-    private Driver clientDriver;
+    private static TestServer testServer;
+    private static Driver clientDriver;
+    private static DriverPool driverPool = mock( DriverPool.class );
+
     private ArgumentCaptor<org.neo4j.bolt.runtime.AccessMode> accessModeArgument = ArgumentCaptor.forClass( org.neo4j.bolt.runtime.AccessMode.class );
-    private StatementResult graph0Result;
-    private StatementResult graph1Result;
+    private static final AutoCommitStatementResult graph0Result = mock( AutoCommitStatementResult.class );
+    private static final AutoCommitStatementResult graph1Result = mock( AutoCommitStatementResult.class );
 
-    StatementResult createMockResult()
-    {
-        StatementResult mockStatementResult = mock( StatementResult.class );
-        when( mockStatementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
-        when( mockStatementResult.records() ).thenReturn( Flux.empty() );
-        when( mockStatementResult.summary() ).thenReturn( Mono.empty() );
-        return mockStatementResult;
-    }
-
-    PooledDriver createMockDriver( StatementResult mockStatementResult )
-    {
-        PooledDriver mockDriver = mock( PooledDriver.class );
-
-        FabricDriverTransaction tx = mock( FabricDriverTransaction.class );
-
-        when( tx.run( any(), any() ) ).thenReturn( mockStatementResult );
-        when( tx.commit() ).thenReturn( Mono.empty() );
-        when( tx.rollback() ).thenReturn( Mono.empty() );
-
-        when( mockDriver.beginTransaction( any(), accessModeArgument.capture(), any() ) ).thenReturn( Mono.just( tx ) );
-        return mockDriver;
-    }
-
-    DriverPool createMockDriverPool( PooledDriver graph0, PooledDriver graph1 )
-    {
-        DriverPool pool = mock( DriverPool.class );
-        doReturn( graph0 ).when( pool ).getDriver( argThat( g -> g.getId() == 0 ), any() );
-        doReturn( graph1 ).when( pool ).getDriver( argThat( g -> g.getId() == 1 ), any() );
-        return pool;
-    }
-
-    @BeforeEach
-    void setUp()
+    @BeforeAll
+    static void setUp()
     {
         testServer = new TestServer( config );
-        graph0Result = createMockResult();
-        graph1Result = createMockResult();
 
-        testServer.addMocks( createMockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) ) );
+        testServer.addMocks( driverPool  );
         testServer.start();
 
         clientDriver = GraphDatabase.driver(
@@ -128,11 +100,51 @@ class FabricExecutorTest
                         .build() );
     }
 
-    @AfterEach
-    void tearDown()
+    @AfterAll
+    static void afterAll()
     {
         testServer.stop();
-        clientDriver.close();
+        clientDriver.closeAsync();
+    }
+
+    @BeforeEach
+    void beforeEach()
+    {
+        mockResult( graph0Result );
+        mockResult( graph1Result );
+
+        mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
+    }
+
+    private static void mockResult( StatementResult statementResult )
+    {
+        reset( statementResult );
+        when( statementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
+        when( statementResult.records() ).thenReturn( Flux.empty() );
+        when( statementResult.summary() ).thenReturn( Mono.empty() );
+    }
+
+    private void mockDriverPool( PooledDriver graph0, PooledDriver graph1 )
+    {
+        reset( driverPool );
+        doReturn( graph0 ).when( driverPool ).getDriver( argThat( g -> g.getId() == 0 ), any() );
+        doReturn( graph1 ).when( driverPool ).getDriver( argThat( g -> g.getId() == 1 ), any() );
+    }
+
+    private PooledDriver createMockDriver( AutoCommitStatementResult mockStatementResult  )
+    {
+        PooledDriver mockDriver = mock( PooledDriver.class );
+
+        FabricDriverTransaction tx = mock( FabricDriverTransaction.class );
+
+        when( tx.run( any(), any() ) ).thenReturn( mockStatementResult );
+        when( tx.commit() ).thenReturn( Mono.empty() );
+        when( tx.rollback() ).thenReturn( Mono.empty() );
+
+        when( mockDriver.beginTransaction(any(), accessModeArgument.capture(), any(), any() )).thenReturn( Mono.just( tx ) );
+
+        when( mockDriver.run( any(), any(), any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( mockStatementResult );
+        return mockDriver;
     }
 
     private Transaction transaction( String database, AccessMode mode )
@@ -143,135 +155,147 @@ class FabricExecutorTest
     @Test
     void testReadInReadSession()
     {
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+        }
 
-        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
     @Test
     void testReadInWriteSession()
     {
-        Transaction tx = transaction( "mega", AccessMode.WRITE );
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.WRITE ) )
+        {
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+        }
 
-        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.WRITE );
+        verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
     @Test
     void testWriteInReadSession()
     {
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+        }
 
-        verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
     @Test
     void testWriteInWriteSession()
     {
-        Transaction tx = transaction( "mega", AccessMode.WRITE );
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+        try ( var tx = transaction( "mega", AccessMode.WRITE ) )
+        {
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
 
-        verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
+            verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
+            verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
 
-        assertThrows( DatabaseException.class,
-                () -> tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume()
-        );
+            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume() );
+        }
     }
 
     @Test
     void testMixedInReadSession()
     {
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume();
+        }
 
-        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 12, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
     @Test
     void testMixedInWriteSession()
     {
-        Transaction tx = transaction( "mega", AccessMode.WRITE );
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-        tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+        try ( var tx = transaction( "mega", AccessMode.WRITE ) )
+        {
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
 
-        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.WRITE );
+            verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
+            verifySessionConfig( 6, org.neo4j.bolt.runtime.AccessMode.READ );
 
-        assertThrows( DatabaseException.class,
-                () -> tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume()
-        );
+            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume() );
+        }
     }
 
     @Test
     void testLocalReturnQuery()
     {
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        List<Record> list = tx.run( String.join( "\n",
-                "RETURN 1 AS x"
-        ) ).list();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            List<Record> list = tx.run( String.join( "\n", "RETURN 1 AS x" ) ).list();
 
-        assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
+            assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
+        }
     }
 
     @Test
     void testLocalFlatCompositeQuery()
     {
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        List<Record> list = tx.run( String.join( "\n",
-                "UNWIND [1, 2] AS x",
-                "CALL { RETURN 'y' AS y }",
-                "CALL { UNWIND [8, 9] AS z RETURN z }",
-                "RETURN x, y, z ORDER BY x, y, z"
-        ) ).list();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            List<Record> list = tx.run( String.join( "\n",
+                    "UNWIND [1, 2] AS x",
+                    "CALL { RETURN 'y' AS y }",
+                    "CALL { UNWIND [8, 9] AS z RETURN z }",
+                    "RETURN x, y, z ORDER BY x, y, z"
+            ) ).list();
+            tx.success();
 
-        assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
-        assertEquals( list.get( 0 ).get( "y" ).asString(), "y" );
-        assertEquals( list.get( 0 ).get( "z" ).asLong(), 8 );
+            assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
+            assertEquals( list.get( 0 ).get( "y" ).asString(), "y" );
+            assertEquals( list.get( 0 ).get( "z" ).asLong(), 8 );
 
-        assertEquals( list.get( 1 ).get( "x" ).asLong(), 1 );
-        assertEquals( list.get( 1 ).get( "y" ).asString(), "y" );
-        assertEquals( list.get( 1 ).get( "z" ).asLong(), 9 );
+            assertEquals( list.get( 1 ).get( "x" ).asLong(), 1 );
+            assertEquals( list.get( 1 ).get( "y" ).asString(), "y" );
+            assertEquals( list.get( 1 ).get( "z" ).asLong(), 9 );
 
-        assertEquals( list.get( 2 ).get( "x" ).asLong(), 2 );
-        assertEquals( list.get( 2 ).get( "y" ).asString(), "y" );
-        assertEquals( list.get( 2 ).get( "z" ).asLong(), 8 );
+            assertEquals( list.get( 2 ).get( "x" ).asLong(), 2 );
+            assertEquals( list.get( 2 ).get( "y" ).asString(), "y" );
+            assertEquals( list.get( 2 ).get( "z" ).asLong(), 8 );
 
-        assertEquals( list.get( 3 ).get( "x" ).asLong(), 2 );
-        assertEquals( list.get( 3 ).get( "y" ).asString(), "y" );
-        assertEquals( list.get( 3 ).get( "z" ).asLong(), 9 );
+            assertEquals( list.get( 3 ).get( "x" ).asLong(), 2 );
+            assertEquals( list.get( 3 ).get( "y" ).asString(), "y" );
+            assertEquals( list.get( 3 ).get( "z" ).asLong(), 9 );
+        }
     }
 
     @Test
@@ -285,25 +309,26 @@ class FabricExecutorTest
                 recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        List<Record> list = tx.run( String.join( "\n",
-                "UNWIND [0, 1] AS s",
-                "CALL { USE mega.graph(s) RETURN '' AS y }",
-                "RETURN s, y ORDER BY s, y"
-        ) ).list();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            List<Record> list = tx.run( String.join( "\n",
+                    "UNWIND [0, 1] AS s",
+                    "CALL { USE mega.graph(s) RETURN '' AS y }",
+                    "RETURN s, y ORDER BY s, y"
+            ) ).list();
 
-        assertEquals( list.get( 0 ).get( "s" ).asLong(), 0 );
-        assertEquals( list.get( 0 ).get( "y" ).asString(), "a" );
+            assertEquals( list.get( 0 ).get( "s" ).asLong(), 0 );
+            assertEquals( list.get( 0 ).get( "y" ).asString(), "a" );
 
-        assertEquals( list.get( 1 ).get( "s" ).asLong(), 0 );
-        assertEquals( list.get( 1 ).get( "y" ).asString(), "b" );
+            assertEquals( list.get( 1 ).get( "s" ).asLong(), 0 );
+            assertEquals( list.get( 1 ).get( "y" ).asString(), "b" );
 
-        assertEquals( list.get( 2 ).get( "s" ).asLong(), 1 );
-        assertEquals( list.get( 2 ).get( "y" ).asString(), "k" );
+            assertEquals( list.get( 2 ).get( "s" ).asLong(), 1 );
+            assertEquals( list.get( 2 ).get( "y" ).asString(), "k" );
 
-        assertEquals( list.get( 3 ).get( "s" ).asLong(), 1 );
-        assertEquals( list.get( 3 ).get( "y" ).asString(), "l" );
+            assertEquals( list.get( 3 ).get( "s" ).asLong(), 1 );
+            assertEquals( list.get( 3 ).get( "y" ).asString(), "l" );
+        }
     }
 
     @Test
@@ -355,34 +380,37 @@ class FabricExecutorTest
                 List.of( NotificationCode.RUNTIME_UNSUPPORTED.notification( new InputPosition( 1, 1, 1 ) ) )
         ) ) );
 
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        ResultSummary summary = tx.run( String.join( "\n",
-                "CALL { USE mega.graph(0) RETURN 1 AS x }",
-                "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
-                "RETURN 1"
-        ) ).summary();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            ResultSummary summary =
+                    tx.run( String.join( "\n",
+                            "CALL { USE mega.graph(0) RETURN 1 AS x }",
+                            "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
+                            "RETURN 1"
+                    ) ).summary();
+            tx.success();
 
-        assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
+            assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
 
-        assertThat( summary.hasPlan(), is( false ) );
-        assertThat( summary.hasProfile(), is( false ) );
+            assertThat( summary.hasPlan(), is( false ) );
+            assertThat( summary.hasProfile(), is( false ) );
 
-        assertThat( summary.counters().nodesCreated(), is( 3 ) );
-        assertThat( summary.counters().nodesDeleted(), is( 3 ) );
-        assertThat( summary.counters().relationshipsCreated(), is( 3 ) );
-        assertThat( summary.counters().relationshipsDeleted(), is( 3 ) );
-        assertThat( summary.counters().propertiesSet(), is( 3 ) );
-        assertThat( summary.counters().labelsAdded(), is( 3 ) );
-        assertThat( summary.counters().labelsRemoved(), is( 3 ) );
-        assertThat( summary.counters().indexesAdded(), is( 3 ) );
-        assertThat( summary.counters().indexesRemoved(), is( 3 ) );
-        assertThat( summary.counters().constraintsAdded(), is( 3 ) );
-        assertThat( summary.counters().constraintsRemoved(), is( 3 ) );
-        assertThat( summary.counters().containsUpdates(), is( true ) );
+            assertThat( summary.counters().nodesCreated(), is( 3 ) );
+            assertThat( summary.counters().nodesDeleted(), is( 3 ) );
+            assertThat( summary.counters().relationshipsCreated(), is( 3 ) );
+            assertThat( summary.counters().relationshipsDeleted(), is( 3 ) );
+            assertThat( summary.counters().propertiesSet(), is( 3 ) );
+            assertThat( summary.counters().labelsAdded(), is( 3 ) );
+            assertThat( summary.counters().labelsRemoved(), is( 3 ) );
+            assertThat( summary.counters().indexesAdded(), is( 3 ) );
+            assertThat( summary.counters().indexesRemoved(), is( 3 ) );
+            assertThat( summary.counters().constraintsAdded(), is( 3 ) );
+            assertThat( summary.counters().constraintsRemoved(), is( 3 ) );
+            assertThat( summary.counters().containsUpdates(), is( true ) );
 
-        var codes = summary.notifications().stream().map( Notification::code ).collect( Collectors.toList() );
-        assertThat( codes, containsInAnyOrder( codeOf( NotificationCode.DEPRECATED_PROCEDURE ), codeOf( NotificationCode.RUNTIME_UNSUPPORTED ) ) );
+            var codes = summary.notifications().stream().map( Notification::code ).collect( Collectors.toList() );
+            assertThat( codes, containsInAnyOrder( codeOf( NotificationCode.DEPRECATED_PROCEDURE ), codeOf( NotificationCode.RUNTIME_UNSUPPORTED ) ) );
+        }
     }
 
     @Test
@@ -395,53 +423,56 @@ class FabricExecutorTest
         when( graph1Result.summary() ).thenReturn( null );
         when( graph1Result.records() ).thenReturn( null );
 
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        ResultSummary summary = tx.run( String.join( "\n",
-                "EXPLAIN",
-                "CALL { USE mega.graph(0) RETURN 1 AS x }",
-                "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
-                "RETURN y, x"
-        ) ).summary();
-        tx.success();
+        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        {
+            ResultSummary summary =
+                    tx.run( String.join( "\n",
+                            "EXPLAIN",
+                            "CALL { USE mega.graph(0) RETURN 1 AS x }",
+                            "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
+                            "RETURN y, x"
+                    ) ).summary();
+            tx.success();
 
-        String nl = System.lineSeparator();
+            String nl = System.lineSeparator();
 
-        assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
+            assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
 
-        assertThat( summary.hasPlan(), is( true ) );
-        Plan plan = summary.plan();
-        assertThat( plan.operatorType(), is( "ChainedQuery" ) );
-        assertThat( plan.identifiers(), contains( "y", "x" ) );
-        assertThat( plan.children().size(), is( 3 ) );
+            assertThat( summary.hasPlan(), is( true ) );
+            Plan plan = summary.plan();
+            assertThat( plan.operatorType(), is( "ChainedQuery" ) );
+            assertThat( plan.identifiers(), contains( "y", "x" ) );
+            assertThat( plan.children().size(), is( 3 ) );
 
-        Plan c0 = plan.children().get( 0 );
-        assertThat( c0.operatorType(), is( "Apply" ) );
-        assertThat( c0.identifiers(), containsInAnyOrder( "x" ) );
-        Plan c0c0 = c0.children().get( 0 );
-        assertThat( c0c0.operatorType(), is( "Direct" ) );
-        assertThat( c0c0.identifiers(), containsInAnyOrder( "x" ) );
-        Plan c0c0c0 = c0c0.children().get( 0 );
-        assertThat( c0c0c0.operatorType(), is( "RemoteQuery" ) );
-        assertThat( c0c0c0.identifiers(), containsInAnyOrder( "x" ) );
-        assertThat( c0c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "RETURN 1 AS x" ) ) );
+            Plan c0 = plan.children().get( 0 );
+            assertThat( c0.operatorType(), is( "Apply" ) );
+            assertThat( c0.identifiers(), containsInAnyOrder( "x" ) );
+            Plan c0c0 = c0.children().get( 0 );
+            assertThat( c0c0.operatorType(), is( "Direct" ) );
+            assertThat( c0c0.identifiers(), containsInAnyOrder( "x" ) );
+            Plan c0c0c0 = c0c0.children().get( 0 );
+            assertThat( c0c0c0.operatorType(), is( "RemoteQuery" ) );
+            assertThat( c0c0c0.identifiers(), containsInAnyOrder( "x" ) );
+            assertThat( c0c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "RETURN 1 AS x" ) ) );
 
-        Plan c1 = plan.children().get( 1 );
-        assertThat( c1.operatorType(), is( "Apply" ) );
-        assertThat( c1.identifiers(), containsInAnyOrder( "x", "y" ) );
-        Plan c1c0 = c1.children().get( 0 );
-        assertThat( c1c0.operatorType(), is( "Direct" ) );
-        assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
-        Plan c1c0c0 = c1c0.children().get( 0 );
-        assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
-        assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( String.join( nl, "CREATE ()", "RETURN 1 AS y" ) ) ) );
-        assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
+            Plan c1 = plan.children().get( 1 );
+            assertThat( c1.operatorType(), is( "Apply" ) );
+            assertThat( c1.identifiers(), containsInAnyOrder( "x", "y" ) );
+            Plan c1c0 = c1.children().get( 0 );
+            assertThat( c1c0.operatorType(), is( "Direct" ) );
+            assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
+            Plan c1c0c0 = c1c0.children().get( 0 );
+            assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
+            assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( String.join( nl, "CREATE ()", "RETURN 1 AS y" ) ) ) );
+            assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
 
-        Plan c2 = plan.children().get( 2 );
-        assertThat( c2.operatorType(), is( "Direct" ) );
-        assertThat( c2.identifiers(), containsInAnyOrder( "x", "y" ) );
-        Plan c2c0 = c2.children().get( 0 );
-        assertThat( c2c0.operatorType(), is( "LocalQuery" ) );
-        assertThat( c2c0.identifiers(), containsInAnyOrder( "x", "y" ) );
+            Plan c2 = plan.children().get( 2 );
+            assertThat( c2.operatorType(), is( "Direct" ) );
+            assertThat( c2.identifiers(), containsInAnyOrder( "x", "y" ) );
+            Plan c2c0 = c2.children().get( 0 );
+            assertThat( c2c0.operatorType(), is( "LocalQuery" ) );
+            assertThat( c2c0.identifiers(), containsInAnyOrder( "x", "y" ) );
+        }
     }
 
     private String codeOf( NotificationCode notificationCode )
@@ -462,8 +493,6 @@ class FabricExecutorTest
     private void verifySessionConfig( int times, org.neo4j.bolt.runtime.AccessMode accessMode )
     {
         var allValues = accessModeArgument.getAllValues();
-
-        assertEquals( times, allValues.size() );
-        assertTrue( allValues.stream().allMatch( ac -> ac.equals( accessMode ) ) );
+        assertEquals( times, allValues.stream().filter( ac -> ac.equals( accessMode ) ).count() );
     }
 }
