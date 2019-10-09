@@ -36,7 +36,6 @@ import org.neo4j.bolt.runtime.BoltConnectionFatality;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachine;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachineFactory;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
-import org.neo4j.bolt.v4.messaging.PullMessage;
 import org.neo4j.bolt.v4.messaging.RunMessage;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -46,13 +45,13 @@ import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.bench.micro.Main.run;
+import static com.neo4j.bench.micro.benchmarks.bolt.BoltPropertySerialization.META_MSG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 @BenchmarkEnabled( true )
@@ -180,7 +179,7 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
         {
             handler.reset();
             machine.process( new RunMessage( prefix + query, param ), handler );
-            machine.process( new PullMessage( asMapValue( map( "n", -1L ) ) ), handler );
+            machine.process( META_MSG, handler );
             return handler.result();
         }
     }

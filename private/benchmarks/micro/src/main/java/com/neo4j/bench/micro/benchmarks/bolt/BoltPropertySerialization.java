@@ -30,6 +30,8 @@ import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.bolt.v4.messaging.PullMessage;
 import org.neo4j.bolt.v4.messaging.RunMessage;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -49,12 +51,16 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
+import static org.neo4j.values.storable.Values.longValue;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( TimeUnit.MICROSECONDS )
 public class BoltPropertySerialization extends AbstractBoltBenchmark
 {
+    private static final MapValue DEFAULT_META_VALUE =
+            VirtualValues.map( new String[]{"n"}, new AnyValue[]{longValue( -1L )} );
+    static final PullMessage META_MSG = pullMessage();
+
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG, POINT,
@@ -139,7 +145,7 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
         {
             handler.reset();
             machine.process( new RunMessage( query, VirtualValues.EMPTY_MAP ), handler );
-            machine.process( new PullMessage( asMapValue( map( "n", -1L ) ) ), handler );
+            machine.process( META_MSG, handler );
             return handler.result();
         }
     }
@@ -154,5 +160,17 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
     public static void main( String... methods ) throws Exception
     {
         run( BoltPropertySerialization.class, methods );
+    }
+
+    private static PullMessage pullMessage()
+    {
+        try
+        {
+            return new PullMessage( DEFAULT_META_VALUE );
+        }
+        catch ( BoltIOException e )
+        {
+            throw new AssertionError( "failed to intitalize" );
+        }
     }
 }
