@@ -30,7 +30,6 @@ public class CommercialInProcessServerBuilder extends EnterpriseInProcessServerB
     @Override
     protected AbstractNeoServer createNeoServer( GraphFactory graphFactory, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
         return new CommercialNeoServer( config, graphFactory, dependencies );
     }
 
