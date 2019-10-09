@@ -16,15 +16,16 @@ class WorkerTest extends CypherFunSuite {
   test("should not reset sleeper when no queries") {
 
     val ATTEMPTS = 100
-    val countDown = new CountDown[ExecutingQuery](ATTEMPTS, mockExecutingQuery)
+    val schedulingPolicy: QuerySchedulingPolicy = (_: QueryResources) => SchedulingResult(null, someTaskWasFilteredOut = false)
+    val countDown = new CountDown[ExecutingQuery](ATTEMPTS, mockExecutingQuery(schedulingPolicy))
     val queryManager: QueryManager =
       new QueryManager {
         override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = countDown.next()
       }
-    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => SchedulingResult(null, someTaskWasFilteredOut = false)
+
     val sleeper = mock[Sleeper]
 
-    val worker = new Worker(1, queryManager, schedulingPolicy, sleeper)
+    val worker = new Worker(1, queryManager, sleeper)
     countDown.worker = worker
     worker.run()
 
@@ -34,16 +35,16 @@ class WorkerTest extends CypherFunSuite {
 
   test("should not reset sleeper when query has with no work") {
     val ATTEMPTS = 100
+    val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
+    val schedulingPolicy: QuerySchedulingPolicy = (_: QueryResources) => SchedulingResult(countDown.next(), someTaskWasFilteredOut = false)
     val queryManager: QueryManager =
       new QueryManager {
-        override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = mockExecutingQuery
+        override def nextQueryToWorkOn(workerId: Int): ExecutingQuery = mockExecutingQuery(schedulingPolicy)
       }
 
-    val countDown = new CountDown[PipelineTask](ATTEMPTS, null)
-    val schedulingPolicy: SchedulingPolicy = (_: ExecutingQuery, _: QueryResources) => SchedulingResult(countDown.next(), someTaskWasFilteredOut = false)
 
     val sleeper = mock[Sleeper]
-    val worker = new Worker(1, queryManager, schedulingPolicy,  sleeper)
+    val worker = new Worker(1, queryManager, sleeper)
     countDown.worker = worker
     worker.run()
 
@@ -55,18 +56,20 @@ class WorkerTest extends CypherFunSuite {
     val cause = new Exception
     val originalMorsel = mock[MorselExecutionContext]
     val input = mock[MorselParallelizer]
-    when(input.originalForClosing).thenReturn(originalMorsel)
-    val query = mock[ExecutingQuery]
-    val executionState = mock[ExecutionState]
-    when(query.executionState).thenReturn(executionState)
     val pipeline = mock[ExecutablePipeline]
-    val resources = mock[QueryResources]
+    when(input.originalForClosing).thenReturn(originalMorsel)
 
-    val schedulingPolicy: SchedulingPolicy =
-      (_: ExecutingQuery, _: QueryResources) =>
+    val schedulingPolicy: QuerySchedulingPolicy =
+      (_: QueryResources) =>
         throw NextTaskException(pipeline, SchedulingInputException(input, cause))
 
-    val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
+    val query = mockExecutingQuery(schedulingPolicy)
+    val executionState = mock[ExecutionState]
+    when(query.executionState).thenReturn(executionState)
+    val resources = mock[QueryResources]
+
+
+    val worker = new Worker(1, mock[QueryManager], mock[Sleeper])
     worker.scheduleNextTask(query, resources) shouldBe SchedulingResult(null, someTaskWasFilteredOut = true)
 
     verify(input).originalForClosing
@@ -80,17 +83,19 @@ class WorkerTest extends CypherFunSuite {
     val originalMorsel = mock[MorselExecutionContext]
     val input = mock[MorselParallelizer]
     when(input.originalForClosing).thenReturn(originalMorsel)
-    val query = mock[ExecutingQuery]
-    val executionState = mock[ExecutionState]
-    when(query.executionState).thenReturn(executionState)
     val pipeline = mock[ExecutablePipeline]
-    val resources = mock[QueryResources]
 
-    val schedulingPolicy: SchedulingPolicy =
-      (_: ExecutingQuery, _: QueryResources) =>
+    val schedulingPolicy: QuerySchedulingPolicy =
+      (_: QueryResources) =>
         throw NextTaskException(pipeline, SchedulingInputException(input, cause))
 
-    val worker = new Worker(1, mock[QueryManager], schedulingPolicy, mock[Sleeper])
+    val query = mockExecutingQuery(schedulingPolicy)
+    val executionState = mock[ExecutionState]
+    when(query.executionState).thenReturn(executionState)
+    val resources = mock[QueryResources]
+
+
+    val worker = new Worker(1, mock[QueryManager], mock[Sleeper])
     worker.scheduleNextTask(query, resources) shouldBe SchedulingResult(null, someTaskWasFilteredOut = true)
 
     verify(input).originalForClosing
@@ -111,11 +116,12 @@ class WorkerTest extends CypherFunSuite {
     }
   }
 
-  private def mockExecutingQuery = {
+  private def mockExecutingQuery(qsp: QuerySchedulingPolicy) = {
     val executingQuery = mock[ExecutingQuery]
     val provider = mock[WorkerResourceProvider]
     when(executingQuery.workerResourceProvider).thenReturn(provider)
     when(provider.resourcesForWorker(anyInt())).thenReturn(null)
+    when(executingQuery.querySchedulingPolicy).thenReturn(qsp)
 
     executingQuery
   }

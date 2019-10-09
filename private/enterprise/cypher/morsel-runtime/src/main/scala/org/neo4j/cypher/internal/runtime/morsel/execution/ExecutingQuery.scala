@@ -15,7 +15,11 @@ class ExecutingQuery(val executionState: ExecutionState,
                      val queryState: QueryState,
                      val queryExecutionTracer: QueryExecutionTracer,
                      val workersQueryProfiler: WorkersQueryProfiler,
-                     val workerResourceProvider: WorkerResourceProvider) extends QuerySubscription {
+                     val workerResourceProvider: WorkerResourceProvider,
+                     schedulingPolicy: SchedulingPolicy) extends QuerySubscription {
+
+  val querySchedulingPolicy: QuerySchedulingPolicy = schedulingPolicy.querySchedulingPolicy(this)
+
   protected val flowControl: FlowControl = queryState.flowControl
 
   override def request(numberOfRecords: Long): Unit = {

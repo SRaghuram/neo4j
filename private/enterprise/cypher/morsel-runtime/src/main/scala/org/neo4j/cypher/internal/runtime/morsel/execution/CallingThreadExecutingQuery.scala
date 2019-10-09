@@ -18,8 +18,9 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
                                   queryExecutionTracer: QueryExecutionTracer,
                                   workersQueryProfiler: WorkersQueryProfiler,
                                   worker: Worker,
-                                  workerResourceProvider: WorkerResourceProvider)
-  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider)
+                                  workerResourceProvider: WorkerResourceProvider,
+                                  schedulingPolicy: SchedulingPolicy)
+  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider, schedulingPolicy)
   with QuerySubscription {
 
   private val workerResources = workerResourceProvider.resourcesForWorker(worker.workerId)

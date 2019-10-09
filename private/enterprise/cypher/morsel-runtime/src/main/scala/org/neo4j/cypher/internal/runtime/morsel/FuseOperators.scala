@@ -91,6 +91,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
     val middleOperators = operatorFactory.createMiddleOperators(unhandledMiddlePlans, headOperator)
     (ExecutablePipeline(p.id,
+                        p.lhs,
+                        p.rhs,
                         headOperator,
                         middleOperators,
                         p.serial,

@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**
   * A single task
@@ -38,7 +38,8 @@ trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
 
 /**
  * Result from scheduling something
- * @param task a task or `null`
+ *
+ * @param task                   a task or `null`
  * @param someTaskWasFilteredOut `true` if some task was filtered out, `false` otherwise.
  * @tparam T the type of task
  */

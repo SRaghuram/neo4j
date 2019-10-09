@@ -90,7 +90,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                             queryState,
                                             tracer,
                                             workersProfiler,
-                                            workerResourceProvider)
+                                            workerResourceProvider,
+                                            LazyScheduling)
 
     queryContext.transactionalContext.transaction.freezeLocks()
 

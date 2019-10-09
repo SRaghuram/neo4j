@@ -20,6 +20,8 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
+                              lhs: PipelineId,
+                              rhs: PipelineId,
                               start: Operator,
                               middleOperators: Array[MiddleOperator],
                               serial: Boolean,

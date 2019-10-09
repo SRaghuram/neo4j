@@ -15,14 +15,13 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 
 /**
   * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
-  * next [[ExecutingQuery]] to work on. Then asks [[SchedulingPolicy]] for a suitable
+  * next [[ExecutingQuery]] to work on. Then asks [[QuerySchedulingPolicy]] for a suitable
   * task to perform on that query.
   *
   * A worker has it's own [[QueryResources]] which it will use to execute tasks.
   */
 class Worker(val workerId: Int,
              queryManager: QueryManager,
-             val schedulingPolicy: SchedulingPolicy,
              val sleeper: Sleeper) extends Runnable {
 
   @volatile
@@ -140,7 +139,7 @@ class Worker(val workerId: Int,
   // protected to allow unit-testing
   protected[morsel] def scheduleNextTask(executingQuery: ExecutingQuery, resources: QueryResources): SchedulingResult[Task[QueryResources]] = {
     try {
-      schedulingPolicy.nextTask(executingQuery, resources)
+      executingQuery.querySchedulingPolicy.nextTask(resources)
     } catch {
       // Failure in nextTask of a pipeline, after taking Morsel
       case NextTaskException(pipeline, SchedulingInputException(morsel: MorselParallelizer, cause)) =>

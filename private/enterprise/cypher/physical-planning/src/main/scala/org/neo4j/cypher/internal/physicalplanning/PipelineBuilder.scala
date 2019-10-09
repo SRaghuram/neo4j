@@ -31,6 +31,8 @@ object PipelineBuilder {
   private def mapPipeline(pipeline: PipelineDefinitionBuild): PipelineDefinition = {
     PipelineDefinition(
       pipeline.id,
+      pipeline.lhs,
+      pipeline.rhs,
       pipeline.headPlan,
       pipeline.fusedPlans,
       mapBuffer(pipeline.inputBuffer),

@@ -85,7 +85,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)
       }
 
-    val worker = new Worker(0, null, LazyScheduling, Sleeper.noSleep)
+    val worker = new Worker(0, null, Sleeper.noSleep)
     val workerResourceProvider = new WorkerResourceProvider(1, () => resources)
     val executingQuery = new CallingThreadExecutingQuery(executionState,
                                                          queryContext,
@@ -93,7 +93,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                                          tracer,
                                                          workersProfiler,
                                                          worker,
-                                                         workerResourceProvider)
+                                                         workerResourceProvider,
+                                                         LazyScheduling)
     ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
 }

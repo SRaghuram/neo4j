@@ -45,7 +45,7 @@ class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) exte
 
   private val _workers: Array[Worker] =
     (for (workerId <- 0 until numberOfWorkers) yield {
-      new Worker(workerId, queryManager, LazyScheduling,  Sleeper.concurrentSleeper(workerId))
+      new Worker(workerId, queryManager, Sleeper.concurrentSleeper(workerId))
     }).toArray
 
   override def workers: Seq[Worker] = _workers

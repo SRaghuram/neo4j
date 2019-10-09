@@ -5,33 +5,77 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
-import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.{SchedulingResult, Task}
+import java.util
 
-/**
-  * Policy which selects the next task for execute for a given executing query.
-  */
+import org.eclipse.collections.impl.factory.primitive.IntStacks
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.{PipelineState, SchedulingResult, Task}
+
 trait SchedulingPolicy {
-  def nextTask(executingQuery: ExecutingQuery,
-               queryResources: QueryResources): SchedulingResult[Task[QueryResources]]
+  /**
+   * Return a QuerySchedulingPolicy for the given query
+   */
+  def querySchedulingPolicy(executingQuery: ExecutingQuery): QuerySchedulingPolicy
 }
 
-object LazyScheduling extends SchedulingPolicy {
+/**
+  * Policy which selects the next task to execute for a given executing query.
+  */
+trait QuerySchedulingPolicy {
+  /**
+   * Return the next task (together with the information if some task was cancelled), if there was any work to be done.
+   * @param queryResources the query resources
+   */
+  def nextTask(queryResources: QueryResources): SchedulingResult[Task[QueryResources]]
+}
 
-  def nextTask(executingQuery: ExecutingQuery,
-               queryResources: QueryResources): SchedulingResult[Task[QueryResources]] = {
+class LazyQueryScheduling(executingQuery: ExecutingQuery) extends QuerySchedulingPolicy {
 
-    // TODO this schedules RHS of hash join first. Not so good.
-    val pipelineStates = executingQuery.executionState.pipelineStates
+  // Initialize the pipeline states in the correct order for this scheduling policy
+  private def initPipelineStatesInLHSDepthFirstOrder: Array[PipelineState] = {
+    val pipelineStatesInExecutionOrder = executingQuery.executionState.pipelineStates
+    val result = new Array[PipelineState](pipelineStatesInExecutionOrder.length)
+
+    val stack =  IntStacks.mutable.empty()
+    val visited = new util.BitSet(pipelineStatesInExecutionOrder.length)
+    var i = 0
+
+    stack.push(pipelineStatesInExecutionOrder.length - 1)
+
+    while (stack.notEmpty()) {
+      val pipelineId = stack.pop()
+      if(!visited.get(pipelineId)) {
+        val pipelineState = pipelineStatesInExecutionOrder(pipelineId)
+
+        result(i) = pipelineState
+        i += 1
+
+        visited.set(pipelineId)
+        if (pipelineState.pipeline.rhs != NO_PIPELINE) {
+          stack.push(pipelineState.pipeline.rhs.x)
+        }
+        if (pipelineState.pipeline.lhs != NO_PIPELINE) {
+          stack.push(pipelineState.pipeline.lhs.x)
+        }
+      }
+    }
+
+    result
+  }
+
+  private[execution] val pipelineStates = initPipelineStatesInLHSDepthFirstOrder
+
+  def nextTask(queryResources: QueryResources): SchedulingResult[Task[QueryResources]] = {
 
     val cleanUpTask = executingQuery.executionState.cleanUpTask()
     if (cleanUpTask != null) {
       return SchedulingResult(cleanUpTask, someTaskWasFilteredOut = false)
     }
 
-    var i = pipelineStates.length - 1
+    var i = 0
     var someTaskWasFilteredOut = false
-    while (i >= 0) {
+    while (i < pipelineStates.length) {
       val pipelineState = pipelineStates(i)
       DebugSupport.SCHEDULING.log("[nextTask] probe pipeline (%s)", pipelineState.pipeline)
       val schedulingResult = pipelineState.nextTask(executingQuery.queryContext, executingQuery.queryState, queryResources)
@@ -41,8 +85,14 @@ object LazyScheduling extends SchedulingPolicy {
       } else if (schedulingResult.someTaskWasFilteredOut) {
         someTaskWasFilteredOut = true
       }
-      i -= 1
+      i += 1
     }
     SchedulingResult(null, someTaskWasFilteredOut)
+  }
+}
+
+object LazyScheduling extends SchedulingPolicy {
+  def querySchedulingPolicy(executingQuery: ExecutingQuery): QuerySchedulingPolicy = {
+    new LazyQueryScheduling(executingQuery)
   }
 }

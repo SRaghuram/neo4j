@@ -26,6 +26,8 @@ object PipelineTreeBuilder {
     */
   class PipelineDefinitionBuild(val id: PipelineId,
                                 val headPlan: LogicalPlan) {
+    var lhs: PipelineId = NO_PIPELINE
+    var rhs: PipelineId = NO_PIPELINE
     var inputBuffer: BufferDefinitionBuild = _
     var outputDefinition: OutputDefinition = NoOutput
     /**
@@ -316,6 +318,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       val delegate = stateDefinition.newDelegateBuffer(argument, argument.bufferConfiguration)
       argument.delegates += delegate.id
       pipeline.inputBuffer = delegate
+      pipeline.lhs = argument.producingPipelineId
       pipeline
     } else {
       throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -334,6 +337,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           pipeline.inputBuffer = outputToBuffer(source, plan)
+          pipeline.lhs = source.id
           pipeline.serial = true
           pipeline
         } else {
@@ -349,6 +353,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan)
           val argumentStateBuffer = outputToArgumentStateBuffer(source, plan, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = argumentStateBuffer
+          pipeline.lhs = source.id
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -359,6 +364,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan)
           val optionalMorselBuffer = outputToOptionalMorselBuffer(source, plan, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = optionalMorselBuffer
+          pipeline.lhs = source.id
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -388,6 +394,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         } else if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           pipeline.inputBuffer = outputToBuffer(source, plan)
+          pipeline.lhs = source.id
           pipeline
         } else if (canFuse) {
           source.fusedPlans += plan
@@ -440,6 +447,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan)
           val buffer = outputToLhsAccumulatingRhsStreamingBuffer(NO_PIPELINE_BUILD, rhs, plan.id, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = buffer
+          pipeline.lhs = lhs.id
+          pipeline.rhs = rhs.id
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
@@ -450,6 +459,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan)
           val buffer = outputToLhsAccumulatingRhsStreamingBuffer(lhs, rhs, plan.id, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = buffer
+          pipeline.lhs = lhs.id
+          pipeline.rhs = rhs.id
           pipeline
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")

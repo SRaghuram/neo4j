@@ -10,6 +10,7 @@ import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
 import org.neo4j.cypher.internal.ir.{LazyMode, StrictnessMode}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
@@ -423,6 +424,8 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
                                   parallelExecution = true,
                                   codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)))
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
+                                      NO_PIPELINE,
+                                      NO_PIPELINE,
                                       pipelineBuilder.pipeline.headPlan,
                                       pipelineBuilder.pipeline.fusedPlans,
                                       mock[BufferDefinition](RETURNS_DEEP_STUBS),
