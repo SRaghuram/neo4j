@@ -162,7 +162,7 @@ class PrepareStoreCopyFilesIT
         try ( Transaction transaction = db.beginTx() )
         {
             transaction.execute( "CREATE INDEX FOR (n:Person) ON (n.id)" ).close();
-            transaction.execute( "CALL db.createIndex(':Person(name)', $provider)", Map.of( "provider", NATIVE30.providerName() ) ).close();
+            transaction.execute( "CALL db.createIndex('person names', ':Person(name)', $provider)", Map.of( "provider", NATIVE30.providerName() ) ).close();
             transaction.execute( "CALL db.index.fulltext.createNodeIndex('nameAndTitle', ['Person'], ['name', 'title'])" ).close();
             transaction.execute( "CALL db.index.fulltext.createRelationshipIndex('description', ['KNOWS'], ['description'])" ).close();
             transaction.commit();
