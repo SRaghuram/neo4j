@@ -34,6 +34,11 @@ public class SecurityHelpers
         tx.execute( format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", username, password ) );
     }
 
+    public static Result showUsers( Transaction tx )
+    {
+        return tx.execute( "SHOW USERS" );
+    }
+
     public static Set<String> getAllRoleNames( DatabaseManagementService dbms )
     {
         try ( Transaction tx = dbms.database( SYSTEM_DATABASE_NAME ).beginTx() )

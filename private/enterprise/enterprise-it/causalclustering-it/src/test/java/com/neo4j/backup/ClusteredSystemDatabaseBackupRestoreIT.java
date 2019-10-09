@@ -43,6 +43,8 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
+import static com.neo4j.security.SecurityHelpers.newUser;
+import static com.neo4j.security.SecurityHelpers.showUsers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -92,7 +94,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.systemTx( ( db, tx ) ->
         {
-            tx.execute( "CALL dbms.security.createUser('newAdmin', 'testPassword', false)" );
+            newUser( tx, "newAdmin", "testPassword" );
             tx.commit();
         } );
 
@@ -111,7 +113,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.systemTx( ( db, tx ) ->
         {
-            tx.execute( "CREATE USER " + preBackupUsername + " SET PASSWORD 'testPassword'" );
+            newUser( tx, preBackupUsername, "testPassword" );
             tx.commit();
         } );
 
@@ -119,7 +121,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.systemTx( ( db, tx ) ->
         {
-            tx.execute( "CREATE USER " + postBackupUsername + " SET PASSWORD 'testPassword'" );
+            newUser( tx, postBackupUsername, "testPassword" );
             tx.commit();
         } );
 
@@ -141,7 +143,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
         cluster.systemTx( ( db, tx ) ->
         {
-            Result securityResults = tx.execute( "SHOW USERS" );
+            Result securityResults = showUsers( tx );
             Set<String> systemUsernames = securityResults.stream().map( r -> (String) r.get( "user" ) ).collect( Collectors.toSet() );
             assertTrue( systemUsernames.contains( preBackupUsername ) );
             assertFalse( systemUsernames.contains( postBackupUsername ) );
