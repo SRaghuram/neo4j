@@ -13,6 +13,8 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.MorselAcc
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
 
+import scala.util.control.NonFatal
+
 /**
   * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
   * next [[ExecutingQuery]] to work on. Then asks [[SchedulingPolicy]] for a suitable
@@ -93,7 +95,7 @@ class Worker(val workerId: Int,
         true
       } catch {
         // Failure while executing `task`
-        case throwable: Throwable =>
+        case NonFatal(throwable) =>
           try {
             schedulingResult.task match {
               case pipelineTask: PipelineTask =>
@@ -101,7 +103,7 @@ class Worker(val workerId: Int,
                 pipelineTask.close(resources)
             }
           } catch {
-            case t2:Throwable =>
+            case NonFatal(t2) =>
               // Cleaning up also failed
               if (throwable != t2) {
                 throwable.addSuppressed(t2)

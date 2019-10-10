@@ -27,6 +27,8 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
 
+import scala.util.control.NonFatal
+
 class CompiledExpressionConverter(log: Log,
                                   physicalPlan: PhysicalPlan,
                                   tokenContext: TokenContext,
@@ -49,7 +51,7 @@ class CompiledExpressionConverter(log: Log,
         .compileExpression(e)
         .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
-      case t: Throwable =>
+      case NonFatal(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
@@ -68,7 +70,7 @@ class CompiledExpressionConverter(log: Log,
         .map(CompileWrappingProjection(_, projections.isEmpty))
     }
     catch {
-      case t: Throwable =>
+      case NonFatal(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
@@ -95,7 +97,7 @@ class CompiledExpressionConverter(log: Log,
       }
     }
     catch {
-      case t: Throwable =>
+      case NonFatal(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter

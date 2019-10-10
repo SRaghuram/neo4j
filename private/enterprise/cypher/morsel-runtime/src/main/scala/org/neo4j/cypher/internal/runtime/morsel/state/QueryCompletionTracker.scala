@@ -18,6 +18,7 @@ import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.control.NonFatal
 
 /**
   * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
@@ -153,7 +154,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
             subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
           }
         } catch {
-          case reportError: Throwable =>
+          case NonFatal(reportError) =>
             error(reportError) // stash and continue
         }
         tracer.stopQuery()
