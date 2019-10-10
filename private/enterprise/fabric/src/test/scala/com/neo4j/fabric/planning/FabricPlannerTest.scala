@@ -232,6 +232,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |CALL {
           |  WITH 2 AS y
           |  CREATE (z:A)
+          |  RETURN 3 AS w
           |}
           |RETURN x
           |""".stripMargin
@@ -239,7 +240,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
           with_(literal(2).as("y")),
-          create(nodePat("z", "A"))
+          create(nodePat("z", "A")),
+          return_(literal(3).as("w"))
+        )))
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqual(Seq(
+          input(varFor("x"), varFor("w")),
+          return_(varFor("x").aliased)
         )))
     }
 
@@ -381,6 +387,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |CALL {
           |  USE g
           |  CALL some.procedure() YIELD z, y
+          |  RETURN z, y
           |}
           |RETURN x, y, z
           |""".stripMargin
@@ -388,10 +395,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           call(Seq("some"), "procedure", yields = Some(Seq(varFor("z"), varFor("y")))),
-          return_(varFor("y").aliased, varFor("z").aliased)
+          return_(varFor("z").aliased, varFor("y").aliased)
         )))
         .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqualAst(Seq(
-          input(varFor("x"), varFor("y"), varFor("z")),
+          input(varFor("x"), varFor("z"), varFor("y")),
           return_(varFor("x").aliased, varFor("y").aliased, varFor("z").aliased)
         )))
     }
@@ -402,16 +409,18 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |CALL {
           |  USE g
           |  CREATE (x:X)
+          |  RETURN 2 as y
           |}
           |RETURN x
           |""".stripMargin
 
       planner.plan(q, params).query.asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
-          create(nodePat("x", "X"))
+          create(nodePat("x", "X")),
+          return_(literal(2).as("y"))
         )))
         .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqualAst(Seq(
-          input(varFor("x")),
+          input(varFor("x"), varFor("y")),
           return_(varFor("x").aliased)
         )))
     }
@@ -426,6 +435,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |  USE h
           |  WITH y
           |  CREATE (z)
+          |  RETURN z
           |}
           |RETURN x, y
           |""".stripMargin
@@ -440,10 +450,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@y", CTAny).as("y")),
           with_(varFor("y").aliased),
-          create(nodePat("z"))
+          create(nodePat("z")),
+          return_(varFor("z").aliased)
         )))
         .check(_.queries(2).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
-          with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y")),
+          with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y"), parameter("@@z", CTAny).as("z")),
           return_(varFor("x").aliased, varFor("y").aliased)
         )))
     }
