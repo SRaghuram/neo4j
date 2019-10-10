@@ -357,8 +357,8 @@ class FabricExecutorTest
 
         Transaction tx = transaction( "mega", AccessMode.READ );
         ResultSummary summary = tx.run( String.join( "\n",
-                "CALL { FROM mega.graph(0) RETURN 1 AS x }",
-                "CALL { FROM mega.graph(1) CREATE () RETURN 1 AS y }",
+                "CALL { USE mega.graph(0) RETURN 1 AS x }",
+                "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
                 "RETURN 1"
         ) ).summary();
         tx.success();
@@ -398,8 +398,8 @@ class FabricExecutorTest
         Transaction tx = transaction( "mega", AccessMode.READ );
         ResultSummary summary = tx.run( String.join( "\n",
                 "EXPLAIN",
-                "CALL { FROM mega.graph(0) RETURN 1 AS x }",
-                "CALL { FROM mega.graph(1) CREATE () RETURN 1 AS y }",
+                "CALL { USE mega.graph(0) RETURN 1 AS x }",
+                "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
                 "RETURN y, x"
         ) ).summary();
         tx.success();
