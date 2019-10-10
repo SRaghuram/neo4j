@@ -202,7 +202,6 @@ class EndToEndTest
 
         var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
         assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
-
     }
 
     @Test
@@ -607,7 +606,7 @@ class EndToEndTest
     }
 
     @Test
-    void testSubqueryEndingWithCreate()
+    void testSubqueryWithCreate()
     {
         List<Record> r;
 
@@ -617,20 +616,24 @@ class EndToEndTest
                     "WITH 1 AS x",
                     "CALL {",
                     "  USE mega.graph(0)",
-                    "  CREATE (:Foo)",
+                    "  CREATE (y:Foo {p: 123})",
+                    "  RETURN y",
                     "}",
-                    "RETURN x"
+                    "RETURN x, y"
             );
 
             r = tx.run( query ).list();
             tx.success();
         }
 
-        assertThat( r.size(), equalTo( 0 ) );
+        assertThat( r.size(), equalTo( 1 ) );
+        assertThat( r.get( 0 ).get( "x" ).asLong(), is( 1L ) );
+        assertThat( r.get( 0 ).get( "y" ).asNode().labels(), contains( "Foo" ) );
+        assertThat( r.get( 0 ).get( "y" ).asNode().get( "p" ).asLong(), is( 123L ) );
     }
 
     @Test
-    void testSubqueryEndingWithCreate2()
+    void testSubqueryWithSet()
     {
         List<Record> r;
 
@@ -640,16 +643,19 @@ class EndToEndTest
                     "WITH 1 AS x",
                     "CALL {",
                     "  USE mega.graph(0)",
-                    "  CREATE (f:Foo {name: 'abc'})",
+                    "  MATCH (y:Person {age: 30})",
+                    "  SET y.age = 100",
+                    "  RETURN y",
                     "}",
-                    "RETURN x"
+                    "RETURN y"
             );
 
             r = tx.run( query ).list();
             tx.success();
         }
 
-        assertThat( r.size(), equalTo( 0 ) );
+        assertThat( r.size(), is( 1 ) );
+        assertThat( r.get( 0 ).get( "y" ).asNode().get( "age" ).asLong(), is( 100L ) );
     }
 
     @Test
