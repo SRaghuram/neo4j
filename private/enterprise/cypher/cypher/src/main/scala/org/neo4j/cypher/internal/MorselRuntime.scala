@@ -9,7 +9,7 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
+import org.neo4j.cypher.internal.compiler.{CodeGenerationFailedNotification, ExperimentalFeatureNotification}
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
@@ -74,7 +74,8 @@ class MorselRuntime(parallelExecution: Boolean,
       compilePlan(operatorFusionPolicy,
                   query,
                   context,
-                  new QueryIndexRegistrator(context.schemaRead))
+                  new QueryIndexRegistrator(context.schemaRead),
+                  Set.empty)
     } catch {
       case e: CypherException if ENABLE_DEBUG_PRINTS =>
         printFailureStackTrace(e)
@@ -93,13 +94,13 @@ class MorselRuntime(parallelExecution: Boolean,
   }
 
   /**
-    * If `shouldFuseOperators` is `true` it first attempts to fuse operators but in the case of failure
-    * it steps back and redo the physical planning without any attempts to fuse operators.
-    */
+   * This tries to compile a plan, first with fusion enabled, second with fusion only inside a pipeline and third without fusion.
+   */
   private def compilePlan(operatorFusionPolicy: OperatorFusionPolicy,
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
-                          queryIndexRegistrator: QueryIndexRegistrator ): MorselExecutionPlan = {
+                          queryIndexRegistrator: QueryIndexRegistrator,
+                          warnings: Set[InternalNotification]): MorselExecutionPlan = {
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
@@ -205,12 +206,15 @@ class MorselRuntime(parallelExecution: Boolean,
                               context.config.memoryTrackingController,
                               maybeThreadSafeExecutionResources,
                               metadata,
+                              warnings,
                               executionGraphSchedulingPolicy)
     } catch {
       case e: CantCompileQueryException if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
-        context.log.debug("Retrying physical planning", e)
+        context.log.debug("Code generation failed. Retrying physical planning.", e)
         DebugLog.log("Could not compile pipeline because of %s", e)
+
+        val warning = CodeGenerationFailedNotification(e.getMessage)
 
         val nextOperatorFusionPolicy =
           if (operatorFusionPolicy.fusionOverPipelineEnabled)
@@ -220,7 +224,7 @@ class MorselRuntime(parallelExecution: Boolean,
             // Try again with fusion disabled
             OperatorFusionPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false)
 
-        compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator)
+        compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator, warnings + warning)
     }
   }
 
@@ -237,6 +241,7 @@ class MorselRuntime(parallelExecution: Boolean,
                             memoryTrackingController: MemoryTrackingController,
                             maybeThreadSafeExecutionResources: Option[(CursorFactory, ResourceManagerFactory)],
                             override val metadata: Seq[Argument],
+                            warnings: Set[InternalNotification],
                             executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
@@ -269,9 +274,9 @@ class MorselRuntime(parallelExecution: Boolean,
 
     override def notifications: Set[InternalNotification] =
       if (parallelExecution)
-        Set(ExperimentalFeatureNotification(
-          "The parallel runtime is experimental and might suffer from instability and potentially correctness issues."))
-      else Set.empty
+        warnings + ExperimentalFeatureNotification(
+          "The parallel runtime is experimental and might suffer from instability and potentially correctness issues.")
+      else warnings
 
     override def threadSafeExecutionResources(): Option[(CursorFactory, ResourceManagerFactory)] = maybeThreadSafeExecutionResources
   }
