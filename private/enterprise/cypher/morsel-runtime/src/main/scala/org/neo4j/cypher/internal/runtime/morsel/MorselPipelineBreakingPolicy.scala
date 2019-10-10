@@ -33,7 +33,7 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, inte
       => true
 
       // 1 child operators
-      case e: Expand if (e.mode == ExpandAll)
+      case e: Expand if e.mode == ExpandAll
       => !canFuseOneChildOperator(e)
 
       case _: UnwindCollection |
@@ -165,8 +165,7 @@ object InterpretedPipesFallbackPolicy {
 
       //------------------------------------------------------------------------------------
       // Whitelisted non-breaking plans
-      case _: DropResult |
-           _: ErrorPlan =>
+      case _: ErrorPlan =>
         false
     }
 
