@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.{NonFatalCypherError, RuntimeResourceLeakException}
 import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
 import org.neo4j.cypher.internal.runtime.morsel.execution._
 import org.neo4j.cypher.internal.runtime.morsel.operators.PreparedOutput
@@ -93,7 +93,7 @@ class Worker(val workerId: Int,
         true
       } catch {
         // Failure while executing `task`
-        case NonFatalToRuntime(throwable) =>
+        case NonFatalCypherError(throwable) =>
           try {
             schedulingResult.task match {
               case pipelineTask: PipelineTask =>
@@ -101,7 +101,7 @@ class Worker(val workerId: Int,
                 pipelineTask.close(resources)
             }
           } catch {
-            case NonFatalToRuntime(t2) =>
+            case NonFatalCypherError(t2) =>
               // Cleaning up also failed
               if (throwable != t2) {
                 throwable.addSuppressed(t2)

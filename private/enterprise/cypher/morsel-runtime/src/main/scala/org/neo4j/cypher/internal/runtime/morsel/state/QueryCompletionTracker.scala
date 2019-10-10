@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
+import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.morsel.NonFatalToRuntime
 import org.neo4j.cypher.internal.runtime.morsel.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
@@ -154,7 +154,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
             subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
           }
         } catch {
-          case NonFatalToRuntime(reportError) =>
+          case NonFatalCypherError(reportError) =>
             error(reportError) // stash and continue
         }
         tracer.stopQuery()

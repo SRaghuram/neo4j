@@ -272,7 +272,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     *  Exceptions simultaneously.
     *
     * @param resources      resources where to hand-back any open cursors
-    * @param failedPipeline pipeline what was executing while the failure occurred, or `null` if
+    * @param failedPipeline pipeline that was executing while the failure occurred, or `null` if
     *                       the failure happened outside of pipeline execution
     */
   private def closeOutstandingWork(resources: QueryResources, failedPipeline: ExecutablePipeline): Unit = {

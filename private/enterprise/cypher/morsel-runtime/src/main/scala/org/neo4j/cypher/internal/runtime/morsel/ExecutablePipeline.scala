@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
@@ -116,7 +117,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
         // if it returns `true`, there is no work left and the task has been already closed.
       } while (task != null && taskCancelled(task))
     } catch {
-      case NonFatalToRuntime(t) =>
+      case NonFatalCypherError(t) =>
         if (DebugSupport.SCHEDULING.enabled)
           DebugSupport.SCHEDULING.log(s"[nextTask] failed with $t")
         else if (DebugSupport.WORKERS.enabled)
