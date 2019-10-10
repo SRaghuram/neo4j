@@ -17,7 +17,6 @@ import com.neo4j.bench.macro.execution.CountingResultVisitor;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.QueryString;
-import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -103,21 +102,11 @@ public class PlanCreator
                                                                    QueryString queryString,
                                                                    Map<String,Object> queryParameters )
     {
-        MutableObject<ExecutionPlanDescription> plan = new MutableObject<>();
-        try
+        return db.executeTransactionally( queryString.value(), queryParameters, result ->
         {
-            db.executeTransactionally( queryString.value(), queryParameters, result ->
-            {
-                CountingResultVisitor resultVisitor = new CountingResultVisitor();
-                result.accept( resultVisitor );
-                plan.setValue( result.getExecutionPlanDescription() );
-                throw new RuntimeException();
-            } );
-        }
-        catch ( Exception e )
-        {
-            //ignore
-        }
-        return plan.getValue();
+            CountingResultVisitor resultVisitor = new CountingResultVisitor();
+            result.accept( resultVisitor );
+            return result.getExecutionPlanDescription();
+        } );
     }
 }
