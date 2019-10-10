@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.morsel.NonFatalToRuntime
 import org.neo4j.cypher.internal.runtime.morsel.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
@@ -18,7 +19,6 @@ import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.control.NonFatal
 
 /**
   * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
@@ -154,7 +154,7 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
             subscriber.onResultCompleted(queryContext.getOptStatistics.getOrElse(QueryStatistics()))
           }
         } catch {
-          case NonFatal(reportError) =>
+          case NonFatalToRuntime(reportError) =>
             error(reportError) // stash and continue
         }
         tracer.stopQuery()

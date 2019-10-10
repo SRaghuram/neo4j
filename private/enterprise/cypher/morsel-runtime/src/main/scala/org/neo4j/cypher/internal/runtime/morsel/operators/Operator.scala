@@ -12,11 +12,9 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{Argument
 import org.neo4j.cypher.internal.runtime.morsel.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.morsel.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, SchedulingInputException}
+import org.neo4j.cypher.internal.runtime.morsel.{ArgumentStateMapCreator, NonFatalToRuntime, SchedulingInputException}
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.internal.kernel.api.KernelReadTracer
-
-import scala.util.control.NonFatal
 
 /**
   * Input to use for starting an operator task.
@@ -156,7 +154,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
       try {
         nextTasks(context, state, input, resources)
       } catch {
-        case NonFatal(t) =>
+        case NonFatalToRuntime(t) =>
           throw SchedulingInputException(input, t)
       }
     } else {
@@ -189,7 +187,7 @@ trait StreamingOperator extends Operator with OperatorState {
       try {
         nextTasks(context, state, input, parallelism, resources, argumentStateMaps)
       } catch {
-        case NonFatal(t) =>
+        case NonFatalToRuntime(t) =>
           throw SchedulingInputException(input, t)
       }
     } else {

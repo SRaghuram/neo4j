@@ -18,8 +18,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdenti
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.util.Preconditions
 
-import scala.util.control.NonFatal
-
 case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
                               middleOperators: Array[MiddleOperator],
@@ -118,7 +116,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
         // if it returns `true`, there is no work left and the task has been already closed.
       } while (task != null && taskCancelled(task))
     } catch {
-      case NonFatal(t) =>
+      case NonFatalToRuntime(t) =>
         if (DebugSupport.SCHEDULING.enabled)
           DebugSupport.SCHEDULING.log(s"[nextTask] failed with $t")
         else if (DebugSupport.WORKERS.enabled)
