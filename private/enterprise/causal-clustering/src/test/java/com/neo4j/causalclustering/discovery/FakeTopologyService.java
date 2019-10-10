@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,6 +25,8 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static java.util.function.Function.identity;
 
 /**
  * Simple stub topology service with a small number of utility methods and factories for creating stable memberIds from int seeds.
@@ -49,8 +52,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         }
 
         this.coreRoles = this.coreMembers.keySet().stream()
-                .map( memberId -> Pair.of( memberId, RoleInfo.FOLLOWER ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+                .collect( Collectors.toMap( identity(), ignored -> RoleInfo.FOLLOWER ) );
 
         var candidates = new ArrayList<>( cores );
 
@@ -98,27 +100,23 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
                 .findAny();
     }
 
-    public void setGroups( Set<MemberId> members, Set<String> groups )
+    public void setGroups( Set<MemberId> members, final Set<String> groups )
     {
+        Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
+                new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
+                        serverInfo.connectors(), groups, serverInfo.getDatabaseIds(), serverInfo.refusesToBeLeader() );
+
+        Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform = serverInfo ->
+                new ReadReplicaInfo( serverInfo.connectors(),
+                        serverInfo.catchupServer(), groups, serverInfo.getDatabaseIds() );
+
         var updatedCores = coreMembers.entrySet().stream()
                 .filter( e -> members.contains( e.getKey() ) )
-                .map( e ->
-                {
-                    var serverInfo = e.getValue();
-                    return Pair.of( e.getKey(), new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
-                            serverInfo.connectors(), groups, serverInfo.getDatabaseIds(), serverInfo.refusesToBeLeader() ) );
-                } )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+                .collect( Collectors.toMap( Map.Entry::getKey, e -> coreInfoTransform.apply( e.getValue() ) ) );
 
         var updatedRRs = replicaMembers.entrySet().stream()
                 .filter( e -> members.contains( e.getKey() ) )
-                .map( e ->
-                {
-                    var serverInfo = e.getValue();
-                    return Pair.of( e.getKey(), new ReadReplicaInfo( serverInfo.connectors(),
-                            serverInfo.catchupServer(), groups, serverInfo.getDatabaseIds() ) );
-                } )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+                .collect( Collectors.toMap( Map.Entry::getKey, e -> replicaInfoTransform.apply( e.getValue() ) ) );
 
         coreMembers.putAll( updatedCores );
         replicaMembers.putAll( updatedRRs );
