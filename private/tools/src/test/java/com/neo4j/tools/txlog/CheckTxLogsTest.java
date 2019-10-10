@@ -59,8 +59,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
 @EphemeralTestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -673,7 +673,7 @@ class CheckTxLogsTest
     {
         // given
         File log = logFile( 1 );
-        writeCheckPoint( log, 2, LOG_HEADER_SIZE );
+        writeCheckPoint( log, 2, CURRENT_FORMAT_LOG_HEADER_SIZE );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
@@ -685,7 +685,7 @@ class CheckTxLogsTest
         assertEquals( 1, handler.checkPointInconsistencies.size() );
 
         assertEquals( 1, handler.checkPointInconsistencies.get( 0 ).logVersion );
-        assertEquals( new LogPosition( 2, LOG_HEADER_SIZE ), handler.checkPointInconsistencies.get( 0 ).logPosition );
+        assertEquals( new LogPosition( 2, CURRENT_FORMAT_LOG_HEADER_SIZE ), handler.checkPointInconsistencies.get( 0 ).logPosition );
         assertThat( handler.checkPointInconsistencies.get( 0 ).size, lessThan( 0L ) );
     }
 
@@ -694,7 +694,7 @@ class CheckTxLogsTest
     {
         // given
         ensureLogExists( logFile( 1 ) );
-        writeCheckPoint( logFile( 2 ), 1, LOG_HEADER_SIZE + 42 );
+        writeCheckPoint( logFile( 2 ), 1, CURRENT_FORMAT_LOG_HEADER_SIZE + 42 );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
@@ -706,17 +706,17 @@ class CheckTxLogsTest
         assertEquals( 1, handler.checkPointInconsistencies.size() );
 
         assertEquals( 2, handler.checkPointInconsistencies.get( 0 ).logVersion );
-        assertEquals( new LogPosition( 1, LOG_HEADER_SIZE + 42 ), handler.checkPointInconsistencies.get( 0 ).logPosition );
-        assertEquals( LOG_HEADER_SIZE, handler.checkPointInconsistencies.get( 0 ).size );
+        assertEquals( new LogPosition( 1, CURRENT_FORMAT_LOG_HEADER_SIZE + 42 ), handler.checkPointInconsistencies.get( 0 ).logPosition );
+        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE, handler.checkPointInconsistencies.get( 0 ).size );
     }
 
     @Test
     void shouldNotReportInconsistencyIfTheCheckPointAreValidOrTheyReferToPrunedLogs() throws Exception
     {
         // given
-        writeCheckPoint( logFile( 1 ), 0, LOG_HEADER_SIZE );
-        writeCheckPoint( logFile( 2 ), 1, LOG_HEADER_SIZE );
-        writeCheckPoint( logFile( 3 ), 3, LOG_HEADER_SIZE );
+        writeCheckPoint( logFile( 1 ), 0, CURRENT_FORMAT_LOG_HEADER_SIZE );
+        writeCheckPoint( logFile( 2 ), 1, CURRENT_FORMAT_LOG_HEADER_SIZE );
+        writeCheckPoint( logFile( 3 ), 3, CURRENT_FORMAT_LOG_HEADER_SIZE );
 
         CapturingInconsistenciesHandler handler = new CapturingInconsistenciesHandler();
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );

@@ -24,6 +24,7 @@ import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -36,7 +37,8 @@ import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.kernel.impl.transaction.log.LogPosition.start;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
 {
@@ -67,18 +69,27 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, databasePageCache, configWithoutSpecificStoreFormat );
         metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache );
+        LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations, asPartOfStoreCopy ) )
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore )
                 .withStoreId( metaDataStore.getStoreId() )
-                .withLastClosedTransactionPositionSupplier( () -> start( metaDataStore.getCurrentLogVersion() ) );
+                .withLastClosedTransactionPositionSupplier( () -> startPosition );
         this.logFiles = logFilesBuilder.build();
         this.lifespan.add( logFiles );
         this.logChannel = logFiles.getLogFile().getWriter();
         this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
         this.validInitialTxId = validInitialTxId;
+    }
+
+    private static LogPosition getLastClosedTransactionPosition( DatabaseLayout databaseLayout, TransactionMetaDataStore metaDataStore,
+            FileSystemAbstraction fs ) throws IOException
+    {
+        var logFilesHelper = new TransactionLogFilesHelper( fs, databaseLayout.getTransactionLogsDirectory() );
+        var logFile = logFilesHelper.getLogFileForVersion( metaDataStore.getCurrentLogVersion() );
+        return fs.fileExists( logFile ) ? readLogHeader( fs, logFile ).getStartPosition() : new LogPosition( 0, CURRENT_FORMAT_LOG_HEADER_SIZE );
     }
 
     private static Config configWithoutSpecificStoreFormat( Config config )
@@ -184,7 +195,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             /* A checkpoint which points to the beginning of all the log files, meaning that
             all the streamed transactions will be applied as part of recovery. */
             long logVersion = logFiles.getLowestLogVersion();
-            LogPosition checkPointPosition = start( logVersion );
+            LogPosition checkPointPosition = logFiles.extractHeader( logVersion ).getStartPosition();
 
             log.info( "Writing checkpoint as part of store copy: " + checkPointPosition );
             writer.checkPoint( checkPointPosition );

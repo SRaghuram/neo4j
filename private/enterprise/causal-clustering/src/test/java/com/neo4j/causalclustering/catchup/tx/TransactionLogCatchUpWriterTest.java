@@ -68,7 +68,7 @@ import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.transaction.log.TestLogEntryReader.logEntryReader;
-import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
+import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @RunWith( Parameterized.class )
@@ -261,7 +261,7 @@ public class TransactionLogCatchUpWriterTest
 
         assertNotNull( tailInformation.lastCheckPoint );
         assertEquals( 0, tailInformation.lastCheckPoint.getLogPosition().getLogVersion() );
-        assertEquals( LOG_HEADER_SIZE, tailInformation.lastCheckPoint.getLogPosition().getByteOffset() );
+        assertEquals( CURRENT_FORMAT_LOG_HEADER_SIZE, tailInformation.lastCheckPoint.getLogPosition().getByteOffset() );
         assertTrue( tailInformation.commitsAfterLastCheckpoint() );
     }
 

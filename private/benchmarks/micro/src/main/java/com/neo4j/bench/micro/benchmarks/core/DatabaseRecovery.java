@@ -35,7 +35,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
@@ -149,7 +148,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
 
         LogFile logFile = logFiles.getLogFile();
         VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader();
-        ReadableLogChannel reader = logFile.getReader( LogPosition.start( logFiles.getHighestLogVersion() ) );
+        ReadableLogChannel reader = logFile.getReader( logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition() );
         LogEntry logEntry;
         Deque<CheckPoint> checkPoints = new ArrayDeque<>();
         do

@@ -1311,7 +1311,7 @@ class BackupIT
         // Assert header of specified log version containing correct txId
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs ).build();
         LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ) );
-        assertEquals( txId, logHeader.lastCommittedTxId );
+        assertEquals( txId, logHeader.getLastCommittedTxId() );
     }
 
     private String[] findBackupInconsistenciesReports()
