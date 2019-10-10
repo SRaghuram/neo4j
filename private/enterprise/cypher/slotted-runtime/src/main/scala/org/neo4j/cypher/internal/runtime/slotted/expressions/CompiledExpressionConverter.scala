@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
+import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
@@ -26,8 +27,6 @@ import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
-
-import scala.util.control.NonFatal
 
 class CompiledExpressionConverter(log: Log,
                                   physicalPlan: PhysicalPlan,
@@ -51,7 +50,7 @@ class CompiledExpressionConverter(log: Log,
         .compileExpression(e)
         .map(CompileWrappingExpression(_, inner.toCommandExpression(id, expression)))
     } catch {
-      case NonFatal(t) =>
+      case NonFatalCypherError(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
@@ -70,7 +69,7 @@ class CompiledExpressionConverter(log: Log,
         .map(CompileWrappingProjection(_, projections.isEmpty))
     }
     catch {
-      case NonFatal(t) =>
+      case NonFatalCypherError(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
@@ -97,7 +96,7 @@ class CompiledExpressionConverter(log: Log,
       }
     }
     catch {
-      case NonFatal(t) =>
+      case NonFatalCypherError(t) =>
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
