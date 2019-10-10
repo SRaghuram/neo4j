@@ -25,6 +25,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -203,7 +204,7 @@ public class RsdrMain
         try ( StoreChannel channel = fileSystem.read( store.getStorageFile() ) )
         {
             int recordSize = store.getRecordSize();
-            ByteBuffer buf = ByteBuffer.allocate( recordSize );
+            ByteBuffer buf = ByteBuffers.allocate( recordSize );
             for ( long i = fromId; i <= toId; i++ )
             {
                 buf.clear();

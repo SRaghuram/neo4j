@@ -19,6 +19,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
@@ -128,7 +129,7 @@ class DurableStateStorageTest
          * We have written stuff in fileA but not gotten to the end (resulting in rotation). The largestValueWritten
          * should nevertheless be correct
          */
-        ByteBuffer forReadingBackIn = ByteBuffer.allocate( 10_000 );
+        ByteBuffer forReadingBackIn = ByteBuffers.allocate( 10_000 );
         StoreChannel lastWrittenTo = fileSystem.read( stateFileA() );
         lastWrittenTo.read( forReadingBackIn );
         forReadingBackIn.flip();

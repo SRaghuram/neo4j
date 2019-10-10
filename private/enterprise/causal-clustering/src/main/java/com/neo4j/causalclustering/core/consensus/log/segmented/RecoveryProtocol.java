@@ -42,7 +42,7 @@ class RecoveryProtocol
     private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final LogProvider logProvider;
     private final Log log;
-    private ReaderPool readerPool;
+    private final ReaderPool readerPool;
 
     RecoveryProtocol( FileSystemAbstraction fileSystem, FileNames fileNames, ReaderPool readerPool,
             Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider )

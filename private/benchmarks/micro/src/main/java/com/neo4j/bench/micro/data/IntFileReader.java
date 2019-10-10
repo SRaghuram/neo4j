@@ -12,6 +12,8 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
+import org.neo4j.io.memory.ByteBuffers;
+
 class IntFileReader implements AutoCloseable
 {
     private static final int INTEGERS_PER_BYTE_BUFFER = 10_000;
@@ -37,7 +39,7 @@ class IntFileReader implements AutoCloseable
     IntFileReader( Path path, int integersPerByteBuffer ) throws UncheckedIOException
     {
         this.path = path;
-        this.byteBuffer = ByteBuffer.allocate( integersPerByteBuffer * Integer.BYTES );
+        this.byteBuffer = ByteBuffers.allocate( integersPerByteBuffer * Integer.BYTES );
         reset();
     }
 

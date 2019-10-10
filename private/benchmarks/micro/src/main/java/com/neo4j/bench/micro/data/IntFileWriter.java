@@ -11,6 +11,8 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
+import org.neo4j.io.memory.ByteBuffers;
+
 class IntFileWriter implements AutoCloseable
 {
     private static final int INTEGERS_PER_BYTE_BUFFER = 10_000;
@@ -32,7 +34,7 @@ class IntFileWriter implements AutoCloseable
         this.path = path;
         this.integersWritten = 0;
         this.fileChannel = FileChannel.open( path, StandardOpenOption.WRITE );
-        this.byteBuffer = ByteBuffer.allocate( integersPerByteBuffer * Integer.BYTES );
+        this.byteBuffer = ByteBuffers.allocate( integersPerByteBuffer * Integer.BYTES );
         byteBuffer.clear();
     }
 

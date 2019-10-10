@@ -20,6 +20,7 @@ import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
@@ -192,7 +193,7 @@ public class StateRecoveryManagerTest
     private void writeSomeGarbage( EphemeralFileSystemAbstraction fsa, File file ) throws IOException
     {
         final StoreChannel channel = fsa.write( file );
-        ByteBuffer buffer = ByteBuffer.allocate( 4 );
+        ByteBuffer buffer = ByteBuffers.allocate( 4 );
         buffer.putInt( 9876 );
         buffer.flip();
         channel.writeAll( buffer );
@@ -203,7 +204,7 @@ public class StateRecoveryManagerTest
     private void writeSomeLongsIn( EphemeralFileSystemAbstraction fsa, File file, long... longs ) throws IOException
     {
         final StoreChannel channel = fsa.write( file );
-        ByteBuffer buffer = ByteBuffer.allocate( longs.length * 8 );
+        ByteBuffer buffer = ByteBuffers.allocate( longs.length * 8 );
 
         for ( long aLong : longs )
         {
@@ -228,7 +229,7 @@ public class StateRecoveryManagerTest
 
     private ByteBuffer writeLong( long logIndex )
     {
-        ByteBuffer buffer = ByteBuffer.allocate( 8 );
+        ByteBuffer buffer = ByteBuffers.allocate( 8 );
         buffer.putLong( logIndex );
         buffer.flip();
         return buffer;

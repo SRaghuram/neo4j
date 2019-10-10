@@ -16,6 +16,7 @@ import java.io.PrintStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 
+import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
@@ -33,7 +34,7 @@ class DumpStoreTest
         ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( outStream );
         DumpStore dumpStore = new DumpStore( out );
-        ByteBuffer buffer = ByteBuffer.allocate( 1024 );
+        ByteBuffer buffer = ByteBuffers.allocate( 1024 );
         for ( byte i = 0; i < 10; i++ )
         {
             buffer.put( i );
@@ -57,7 +58,7 @@ class DumpStoreTest
         ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         PrintStream out = new PrintStream( outStream );
         DumpStore dumpStore = new DumpStore( out );
-        ByteBuffer buffer = ByteBuffer.allocate( 1024 );
+        ByteBuffer buffer = ByteBuffers.allocate( 1024 );
         AbstractBaseRecord record = Mockito.mock( AbstractBaseRecord.class );
 
         // When

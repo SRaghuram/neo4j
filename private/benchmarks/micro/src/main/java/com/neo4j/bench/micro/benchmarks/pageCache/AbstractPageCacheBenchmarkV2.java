@@ -26,6 +26,7 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
@@ -41,6 +42,7 @@ import org.neo4j.logging.NullLog;
 
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
+import static org.neo4j.io.ByteUnit.KibiByte;
 
 public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
 {
@@ -69,7 +71,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         {
             throw new AssertionError( e );
         }
-        buf = ByteBuffer.allocate( (int) ByteUnit.kibiBytes( 8 ) );
+        buf = ByteBuffers.allocate( 8, KibiByte );
         // NOTE: can not use SplittableRandom as it does not have nextBytes()
         ThreadLocalRandom.current().nextBytes( buf.array() );
     }
