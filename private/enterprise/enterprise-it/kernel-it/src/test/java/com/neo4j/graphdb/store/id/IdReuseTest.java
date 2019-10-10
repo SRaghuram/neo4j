@@ -46,12 +46,6 @@ class IdReuseTest
 
             tx.rollback();
         }
-        try ( Transaction tx = db.beginTx() )
-        {
-            tx.createNode();
-
-            tx.commit();
-        }
 
         restartDatabase();
 
@@ -89,14 +83,6 @@ class IdReuseTest
                     .createRelationshipTo( tx.getNodeById( node2.getId() ), RelationshipType.withName( "LIKE" ) ).getId();
 
             tx.rollback();
-        }
-
-        try ( Transaction tx = db.beginTx() )
-        {
-            tx.getNodeById( node1.getId() )
-                    .createRelationshipTo( tx.getNodeById( node2.getId() ), RelationshipType.withName( "LIKE" ) ).getId();
-
-            tx.commit();
         }
 
         restartDatabase();

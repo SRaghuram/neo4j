@@ -14,6 +14,7 @@ import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGenerator.Marker;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdRange;
 import org.neo4j.internal.id.IdType;
@@ -94,13 +95,9 @@ class MultiDatabaseIdGeneratorIT
         assertThat( firstNodeIdGenerator.getNumberOfIdsInUse(), greaterThanOrEqualTo( requestedSize ) );
         for ( long idToReuse = batch.getRangeStart(); idToReuse < batch.getRangeStart() + idsToReuse; idToReuse++ )
         {
-            try ( IdGenerator.ReuseMarker marker = firstNodeIdGenerator.reuseMarker() )
+            try ( Marker marker = firstNodeIdGenerator.marker() )
             {
-                marker.markFree( idToReuse );
-            }
-            try ( IdGenerator.CommitMarker marker = firstNodeIdGenerator.commitMarker() )
-            {
-                marker.markDeleted( idToReuse );
+                marker.markDeletedAndFree( idToReuse );
             }
         }
 
