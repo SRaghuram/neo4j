@@ -74,7 +74,7 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
     execute(query).executionPlanDescription() should not equal "MORSEL"
   }
 
-  for (runtime <- Seq("interpreted", "slotted", "morsel", "compiled", "parallel")) {
+  for (runtime <- Seq("interpreted", "slotted", "morsel", "legacy_compiled", "parallel")) {
 
     test(s"runtime=$runtime is selectable") {
       val query = s"CYPHER runtime=$runtime RETURN 1"

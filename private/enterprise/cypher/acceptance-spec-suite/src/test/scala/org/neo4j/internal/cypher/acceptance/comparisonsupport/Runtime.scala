@@ -17,9 +17,9 @@ object Runtimes {
     if (runtimes.nonEmpty) Runtimes(runtimes: _*) else all
   }
 
-  object CompiledSource extends Runtime(Set("COMPILED", "SCHEMA"), "runtime=compiled debug=generate_java_source")
+  object CompiledSource extends Runtime(Set("LEGACY_COMPILED", "SCHEMA"), "runtime=legacy_compiled debug=generate_java_source")
 
-  object CompiledBytecode extends Runtime(Set("COMPILED", "SCHEMA"), "runtime=compiled")
+  object CompiledBytecode extends Runtime(Set("LEGACY_COMPILED", "SCHEMA"), "runtime=legacy_compiled")
 
   object Slotted extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted")
 

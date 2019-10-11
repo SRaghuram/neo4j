@@ -28,12 +28,12 @@ class TestConfigurationTest extends CypherFunSuite {
   }
 
   test("should parse planner and runtime") {
-    TestConfiguration("planner=cost runtime=compiled") should be(TestConfiguration(Planners.Cost, Runtimes.CompiledBytecode))
+    TestConfiguration("planner=cost runtime=legacy_compiled") should be(TestConfiguration(Planners.Cost, Runtimes.CompiledBytecode))
   }
 
   test("should parse multiple lines") {
     TestConfiguration(
-      """planner=cost runtime=compiled
+      """planner=cost runtime=legacy_compiled
         |runtime=interpreted""".stripMargin
     ) should be(
       TestConfiguration(Planners.Cost, Runtimes.CompiledBytecode) +

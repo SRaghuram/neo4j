@@ -460,9 +460,9 @@ public class SerializationTest
                 "cost",
                 "cost",
                 "cost",
-                "compiled",
-                "compiled",
-                "compiled",
+                "legacy_compiled",
+                "legacy_compiled",
+                "legacy_compiled",
                 "3.2",
                 new PlanCompilationMetrics( planCompilationMetricsMap ),
                 new PlanTree( description, root )

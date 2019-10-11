@@ -70,7 +70,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
   test("should show_java_source for compiled runtime") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=compiled debug=generate_java_source debug=show_java_source
+        """CYPHER runtime=legacy_compiled debug=generate_java_source debug=show_java_source
           |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
@@ -111,7 +111,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
   test("should show_bytecode for compiled runtime") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=compiled debug=show_bytecode
+        """CYPHER runtime=legacy_compiled debug=show_bytecode
           |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
@@ -152,7 +152,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     graph.withTx { tx =>
       val res = {
         executeOfficial(tx,
-          """CYPHER runtime=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+          """CYPHER runtime=legacy_compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
             |MATCH (n) RETURN n""".stripMargin)
       }
       res.resultAsString()

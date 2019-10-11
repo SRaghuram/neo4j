@@ -318,7 +318,7 @@ public class RunExportCommand implements Runnable
     private static final String CMD_CYPHER_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
              name = {CMD_CYPHER_RUNTIME},
-             description = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
+             description = "Cypher Runtime: DEFAULT, INTERPRETED, LEGACY_COMPILED, SLOTTED",
              title = "Cypher Runtime" )
     private RuntimeType runtime = RuntimeType.DEFAULT;
 

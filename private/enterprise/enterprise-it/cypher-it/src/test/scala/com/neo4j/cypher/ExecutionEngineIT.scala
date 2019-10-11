@@ -57,7 +57,7 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
 
       // when
       val transaction = db.beginTx()
-      val result = transaction.execute("CYPHER runtime=compiled MATCH (n) RETURN n")
+      val result = transaction.execute("CYPHER runtime=legacy_compiled MATCH (n) RETURN n")
       result.accept(new ResultVisitor[RuntimeException] {
         def visit(row: ResultRow) = true
       })

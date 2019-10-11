@@ -48,7 +48,7 @@ public class EnterpriseSanityCheckTest
     @Test
     public void shouldUseCompiled() throws Exception
     {
-        shouldUseRuntime( Optional.of( "compiled" ), "compiled" );
+        shouldUseRuntime( Optional.of( "legacy_compiled" ), "legacy_compiled" );
     }
 
     @Test

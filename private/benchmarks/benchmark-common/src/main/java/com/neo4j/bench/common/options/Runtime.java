@@ -10,7 +10,7 @@ public enum Runtime
     DEFAULT,
     INTERPRETED,
     SLOTTED,
-    COMPILED,
+    LEGACY_COMPILED,
     MORSEL,
     PARALLEL;
 

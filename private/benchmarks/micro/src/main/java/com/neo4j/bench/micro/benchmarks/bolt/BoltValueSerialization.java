@@ -62,8 +62,8 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
             RelationshipType.withName( "REL" ), 1 );
 
     @ParamValues(
-            allowed = {"compiled", "interpreted"},
-            base = {"compiled", "interpreted"} )
+            allowed = {"legacy_compiled", "interpreted"},
+            base = {"legacy_compiled", "interpreted"} )
     @Param( {} )
     public String BoltValueSerialization_runtime;
 

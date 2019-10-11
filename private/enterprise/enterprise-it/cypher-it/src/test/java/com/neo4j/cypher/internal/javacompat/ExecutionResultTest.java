@@ -46,7 +46,7 @@ class ExecutionResultTest
         {
             // When
             List<Map<String,Object>> listResult;
-            try ( Result result = transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            try ( Result result = transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ) )
             {
                 listResult = Iterators.asList( result );
             }
@@ -68,7 +68,7 @@ class ExecutionResultTest
         {
             // When
             Map<String,Object> firstRow = null;
-            try ( Result result = transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            try ( Result result = transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ) )
             {
                 if ( result.hasNext() )
                 {
@@ -93,7 +93,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             final List<Result.ResultRow> listResult = new ArrayList<>();
-            try ( Result result = transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ) )
+            try ( Result result = transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ) )
             {
                 result.accept( row ->
                 {
@@ -116,7 +116,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "COMPILED" ) )//TODO MORSEL leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO MORSEL leaves cursors open
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -146,7 +146,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED" ) )//TODO MORSEL leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -178,7 +178,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "COMPILED" ) )//TODO MORSEL leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO MORSEL leaves cursors open
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -210,7 +210,7 @@ class ExecutionResultTest
         {
             // Then
             // just close result without consuming it
-            transaction.execute( "CYPHER runtime=compiled MATCH (n) RETURN n" ).close();
+            transaction.execute( "CYPHER runtime=legacy_compiled MATCH (n) RETURN n" ).close();
             transaction.commit();
         }
     }
@@ -290,7 +290,7 @@ class ExecutionResultTest
         try ( Transaction transaction = db.beginTx() )
         {
             // Given
-            Result result = transaction.execute( "EXPLAIN CYPHER runtime=compiled MATCH (n) RETURN n.prop" );
+            Result result = transaction.execute( "EXPLAIN CYPHER runtime=legacy_compiled MATCH (n) RETURN n.prop" );
 
             // When
             Map<String,Object> arguments = result.getExecutionPlanDescription().getArguments();
@@ -299,8 +299,8 @@ class ExecutionResultTest
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
             assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
             assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "COMPILED" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "COMPILED" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "LEGACY_COMPILED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "LEGACY_COMPILED" ) );
             transaction.commit();
         }
     }

@@ -113,7 +113,7 @@ public class BoltV4TransportEnterpriseIT
     {
         negotiateBoltV4();
 
-        for ( String runtime : RUNTIMES )
+        for ( String runtime : READ_RUNTIMES )
         {
             String query = "CYPHER runtime=" + runtime + " UNWIND $param AS x RETURN x";
 
@@ -218,7 +218,7 @@ public class BoltV4TransportEnterpriseIT
     {
         negotiateBoltV4();
 
-        for ( String runtime : RUNTIMES )
+        for ( String runtime : READ_RUNTIMES )
         {
             String query = "CYPHER runtime=" + runtime + " UNWIND $param AS x RETURN x";
 
@@ -399,7 +399,8 @@ public class BoltV4TransportEnterpriseIT
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
     }
 
-    private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "compiled" };
+    private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled" };
+    private static final String[] READ_RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled", "morsel" };
 
     private static MapValue paramWithRange( int from, int to )
     {

@@ -70,8 +70,8 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
     public String BoltPropertySerialization_type;
 
     @ParamValues(
-            allowed = {"compiled", "interpreted"},
-            base = {"compiled", "interpreted"} )
+            allowed = {"legacy_compiled", "interpreted"},
+            base = {"legacy_compiled", "interpreted"} )
     @Param( {} )
     public String BoltPropertySerialization_runtime;
 

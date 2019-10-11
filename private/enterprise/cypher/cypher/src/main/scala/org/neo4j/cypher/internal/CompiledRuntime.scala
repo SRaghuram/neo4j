@@ -18,7 +18,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 
 object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
-  override def name: String = "compiled"
+  override def name: String = "legacy_compiled"
 
   @throws[CantCompileQueryException]
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {

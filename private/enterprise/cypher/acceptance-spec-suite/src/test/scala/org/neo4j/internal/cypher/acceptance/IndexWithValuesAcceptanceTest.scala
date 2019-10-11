@@ -109,7 +109,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("compiled creates an extra dbhit because it can't get values from indexes") {
-    val result = executeSingle("CYPHER runtime=compiled PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo")
+    val result = executeSingle("CYPHER runtime=legacy_compiled PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 AS foo")
 
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection")
       .containingArgument("{foo : cache[n.prop1]}")

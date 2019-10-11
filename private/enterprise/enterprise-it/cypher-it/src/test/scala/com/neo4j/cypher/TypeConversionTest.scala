@@ -30,5 +30,5 @@ class TypeConversionTest extends ExecutionEngineFunSuite with EnterpriseGraphDat
   }
 
   override def execute(q: String, params: (String, Any)*): RewindableExecutionResult =
-    super.execute(s"cypher runtime=compiled $q", params:_*)
+    super.execute(s"cypher runtime=legacy_compiled $q", params:_*)
 }

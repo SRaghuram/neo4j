@@ -114,18 +114,18 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(19, 1, 20), cartesianProduct(Set("c", "d").asJava))))
   }
 
-  test("Warn for cartesian product with runtime=compiled") {
-    val result = executeSingle("explain cypher runtime=compiled match (a)-->(b), (c)-->(d) return count(*)", Map.empty)
+  test("Warn for cartesian product with runtime=legacy_compiled") {
+    val result = executeSingle("explain cypher runtime=legacy_compiled match (a)-->(b), (c)-->(d) return count(*)", Map.empty)
 
     result.notifications.toList should equal(List(
       DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
-      CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(32, 1, 33), cartesianProduct(Set("c", "d").asJava)),
+      CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(39, 1, 40), cartesianProduct(Set("c", "d").asJava)),
       RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty, NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported"))))
   }
 
-  test("Warn unsupported runtime with explain and runtime=compiled") {
+  test("Warn unsupported runtime with explain and runtime=legacy_compiled") {
     val result = executeSingle(
-      """explain cypher runtime=compiled
+      """explain cypher runtime=legacy_compiled
          RETURN reduce(y=0, x IN [0] | x) AS z""", Map.empty)
 
     result.notifications.toList should equal(List(
@@ -148,8 +148,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications shouldBe empty
   }
 
-  test("warn when requesting runtime=compiled on an unsupported query") {
-    val result = executeSingle("EXPLAIN CYPHER runtime=compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
+  test("warn when requesting runtime=legacy_compiled on an unsupported query") {
+    val result = executeSingle("EXPLAIN CYPHER runtime=legacy_compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
     result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
       NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported")))
   }

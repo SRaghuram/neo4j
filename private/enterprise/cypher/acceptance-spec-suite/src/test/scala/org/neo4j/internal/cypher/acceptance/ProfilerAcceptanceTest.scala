@@ -613,7 +613,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("L")
 
     //when
-    val result = executeSingle("PROFILE CYPHER runtime=compiled MATCH (n:L) RETURN count(n.prop)", Map.empty)
+    val result = executeSingle("PROFILE CYPHER runtime=legacy_compiled MATCH (n:L) RETURN count(n.prop)", Map.empty)
 
     //then
     result.executionPlanDescription() should includeSomewhere.aPlan("EagerAggregation").withRows(1)

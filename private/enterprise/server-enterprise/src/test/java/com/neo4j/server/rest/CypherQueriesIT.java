@@ -19,7 +19,7 @@ public class CypherQueriesIT extends EnterpriseServerIT
     {
         // Given
         String uri = functionalTestHelper.txCommitUri();
-        String payload = "{ 'statements': [ { 'statement': 'CYPHER runtime=compiled MATCH (n) RETURN n' } ] }";
+        String payload = "{ 'statements': [ { 'statement': 'CYPHER runtime=legacy_compiled MATCH (n) RETURN n' } ] }";
 
         // When
         HTTP.Response res = HTTP.POST( uri, quotedJson( payload ) );

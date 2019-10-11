@@ -297,15 +297,15 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     runWithTimeout(TIMEOUT_MS) {
       //this is an optimization just so that we only compare results when we have to
       val runtimeUsed = graph.withTx { tx =>
-          tx.execute(s"EXPLAIN CYPHER runtime=compiled $query")
+          tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $query")
             .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
         }
-      if (runtimeUsed == "COMPILED") {
+      if (runtimeUsed == "LEGACY_COMPILED") {
         // We resort to using internals of CypherComparisonSupport,
         // since with randomized patterns we cannot know at compile time, for which
         // of those we expect plans to be equal or not.
         val resultInterpreted = executeSingle(s"CYPHER runtime=interpreted $query", Map.empty)
-        val resultCompiled = executeSingle(s"CYPHER runtime=compiled $query", Map.empty)
+        val resultCompiled = executeSingle(s"CYPHER runtime=legacy_compiled $query", Map.empty)
         assertResultsSameDeprecated(resultCompiled, resultInterpreted, query,
           "Diverging results between interpreted and compiled runtime")
         resultCompiled

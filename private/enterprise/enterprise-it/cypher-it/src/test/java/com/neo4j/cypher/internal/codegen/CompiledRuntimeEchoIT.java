@@ -59,7 +59,7 @@ class CompiledRuntimeEchoIT
     {
         try ( Transaction transaction = db.beginTx() )
         {
-            Object result = transaction.execute( "CYPHER runtime=compiled RETURN $p AS p", map( "p", value ) ).next().get( "p" );
+            Object result = transaction.execute( "CYPHER runtime=legacy_compiled RETURN $p AS p", map( "p", value ) ).next().get( "p" );
             assertThat( result, equalTo( value ) );
             transaction.commit();
         }
