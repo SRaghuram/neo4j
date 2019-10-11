@@ -214,10 +214,11 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, RelationshipScanCursor]("singleRelationship"), relationship, cursor)
 
   def allocateAndTraceCursor(cursorField: InstanceField, executionEventField: InstanceField, allocate: IntermediateRepresentation): IntermediateRepresentation =
-    block(
+    condition(isNull(loadField(cursorField)))(
+      block(
       setField(cursorField, allocate),
       invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField))
-    )
+    ))
 
   def freeCursor[CURSOR](cursor: IntermediateRepresentation, cursorPools: CursorPoolsType)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
     invokeSideEffect(
