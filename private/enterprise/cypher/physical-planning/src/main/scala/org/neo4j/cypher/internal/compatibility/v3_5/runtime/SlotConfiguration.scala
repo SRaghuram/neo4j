@@ -154,11 +154,14 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   def addCachedPropertiesOf(other: SlotConfiguration, renames: Map[String, String]): Unit = {
     other.cachedProperties.foreach {
-      case (prop@CachedNodeProperty(varName, _), _) =>
+      case (prop@CachedNodeProperty(varName, _), _) if renames.contains(varName) =>
         newCachedProperty(prop)
-        renames.get(prop.nodeVariableName).foreach(newName =>
-          addAlias(prop.nodeVariableName, newName)
-        )
+        renames.get(prop.nodeVariableName).foreach(newName => {
+          if (prop.nodeVariableName != newName) {
+            addAlias(prop.nodeVariableName, newName)
+          }
+        })
+      case _ => //do nothing
     }
   }
 
