@@ -61,7 +61,7 @@ public class ProcedureCall extends AbstractProceduresBenchmark
     public long testProcedure() throws ProcedureException
     {
         RawIterator<AnyValue[],ProcedureException> iterator = procedures.callProcedure(
-                null,
+                context,
                 token,
                 new AnyValue[]{longValue( ProcedureCall_rows )},
                 DUMMY_TRACKER );

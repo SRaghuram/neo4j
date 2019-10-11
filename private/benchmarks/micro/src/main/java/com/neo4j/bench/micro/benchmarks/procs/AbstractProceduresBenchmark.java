@@ -10,14 +10,15 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.BasicContext;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
-import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.values.ValueMapper;
+import org.neo4j.values.virtual.PathValue;
+import org.neo4j.values.virtual.VirtualNodeValue;
+import org.neo4j.values.virtual.VirtualRelationshipValue;
 
 @State( Scope.Benchmark )
 public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
@@ -25,14 +26,36 @@ public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
     static final ResourceTracker DUMMY_TRACKER = new DummyResourceTracker();
     GlobalProcedures procedures;
     int token;
-    DependencyResolver dependencyResolver;
+    Context context;
 
     @Override
     protected void afterDatabaseStart()
     {
-        dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
+        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
         procedures = dependencyResolver.resolveDependency( GlobalProcedures.class );
+        context = BasicContext.buildContext( dependencyResolver, MAPPER ).context();
     }
+
+    private static final ValueMapper<Object> MAPPER = new ValueMapper.JavaMapper()
+    {
+        @Override
+        public Object mapPath( PathValue value )
+        {
+            throw new RuntimeException( "Unable to evaluate paths" );
+        }
+
+        @Override
+        public Object mapNode( VirtualNodeValue value )
+        {
+            throw new RuntimeException( "Unable to evaluate nodes" );
+        }
+
+        @Override
+        public Object mapRelationship( VirtualRelationshipValue value )
+        {
+            throw new RuntimeException( "Unable to evaluate relationships" );
+        }
+    };
 
     @Override
     public String description()
