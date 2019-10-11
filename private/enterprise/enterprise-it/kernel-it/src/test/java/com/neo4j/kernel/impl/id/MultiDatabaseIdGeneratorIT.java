@@ -97,7 +97,7 @@ class MultiDatabaseIdGeneratorIT
         {
             try ( Marker marker = firstNodeIdGenerator.marker() )
             {
-                marker.markDeletedAndFree( idToReuse );
+                marker.markDeleted( idToReuse );
             }
         }
 
