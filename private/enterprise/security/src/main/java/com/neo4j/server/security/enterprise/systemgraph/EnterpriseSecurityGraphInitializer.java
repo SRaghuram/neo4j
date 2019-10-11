@@ -129,14 +129,9 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             {
                 importUsersAndRoles( tx );
             }
-            tx.commit();
-        }
 
-        // If no users or roles were imported we setup the
-        // default predefined roles and user and make sure we have an admin user
-        // TODO why can this not share transaction with above without test failure?
-        try ( Transaction tx = systemDb.beginTx() )
-        {
+            // If no users or roles were imported we setup the
+            // default predefined roles and user and make sure we have an admin user
             ensureDefaultUserAndRoles( tx );
             tx.commit();
         }
@@ -153,33 +148,28 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         // This is not an efficient implementation, since it executes many queries
         // If performance becomes an issue we could do this with a single query instead
 
-        Set<String> usernames;
-        Set<String> roleNames;
-
         try ( Transaction tx = systemDb.beginTx() )
         {
-            usernames = getAllNames( tx, USER_LABEL );
-            for ( String username : usernames )
+            for ( Node user : userNodes )
             {
-                deleteNodeWithRelationships( tx, USER_LABEL, "name", username );
+                deleteNodeWithRelationships( user );
             }
 
-            roleNames = getAllNames( tx, ROLE_LABEL );
-            for ( String roleName : roleNames )
+            for ( Node role : roleNodes )
             {
-                deleteNodeWithRelationships( tx, ROLE_LABEL, "name", roleName );
+                deleteNodeWithRelationships( role );
             }
             tx.commit();
         }
 
-        String userString = usernames.size() == 1 ? "user" : "users";
-        String roleString = roleNames.size() == 1 ? "role" : "roles";
+        String userString = userNodes.size() == 1 ? "user" : "users";
+        String roleString = roleNodes.size() == 1 ? "role" : "roles";
 
-        log.info( "Deleted %s %s and %s %s into system graph.", Integer.toString( usernames.size() ), userString, Integer.toString( roleNames.size() ),
+        log.info( "Deleted %s %s and %s %s into system graph.", Integer.toString( userNodes.size() ), userString, Integer.toString( roleNodes.size() ),
                 roleString );
 
         userNodes.clear();
-        this.usernames.clear();
+        usernames.clear();
         roleNodes.clear();
     }
 
@@ -215,8 +205,17 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         else if ( roleNodes.isEmpty() )
         {
             // This will be the case when upgrading from community to enterprise system-graph
-            String newAdmin = ensureAdmin();
-            ensureDefaultRolesAndPrivileges( tx, newAdmin );
+            try
+            {
+                String newAdmin = ensureAdmin();
+                ensureDefaultRolesAndPrivileges( tx, newAdmin );
+            }
+            catch ( InvalidArgumentsException e )
+            {
+                // Should still add users even if failed to decide who should be admin
+                tx.commit();
+                throw e;
+            }
         }
 
         // If applicable, give the default user the password set by set-initial-password command
@@ -297,6 +296,16 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     private void setUpDefaultPrivileges( Transaction tx )
     {
+        // Check for DatabaseAll node to see if the default privileges were already setup
+        final ResourceIterator<Node> itr = tx.findNodes( Label.label( "DatabaseAll" ) );
+        boolean foundNode = itr.hasNext();
+        itr.close();
+
+        if ( foundNode )
+        {
+            return;
+        }
+
         // Create a DatabaseAll node
         Node allDb = tx.createNode( Label.label( "DatabaseAll" ) );
         allDb.setProperty( "name", "*" );
@@ -474,7 +483,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
 
-        boolean isEmpty = users.values().isEmpty() && roles.values().isEmpty();
+        boolean usersToImport = !users.values().isEmpty();
+        boolean rolesToImport = !roles.values().isEmpty();
         boolean valid = RoleRepository.validate( users.values(), roles.values() );
 
         if ( !valid )
@@ -482,7 +492,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             return false;
         }
 
-        if ( !isEmpty )
+        if ( rolesToImport )
         {
             setUpDefaultPrivileges( tx );
             // This is not an efficient implementation, since it executes many queries
@@ -504,7 +514,10 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                 }
             }
             assert validateImportSucceeded( tx, userRepository, roleRepository );
+        }
 
+        if ( usersToImport || rolesToImport )
+        {
             // Log what happened to the security log
             String roleString = roles.values().size() == 1 ? "role" : "roles";
             log.info( "Completed import of %s %s into system graph.", Integer.toString( roles.values().size() ), roleString );
@@ -552,9 +565,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         return node;
     }
 
-    private void deleteNodeWithRelationships( Transaction tx, Label label, String propertyKey, String propertyValue )
+    private void deleteNodeWithRelationships( Node node )
     {
-        Node node = tx.findNode( label, propertyKey, propertyValue );
         final Iterable<Relationship> relationships = node.getRelationships();
         relationships.forEach( Relationship::delete );
         node.delete();
