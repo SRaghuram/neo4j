@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.cluster.Cluster;
 import akka.cluster.ddata.Key;
@@ -14,6 +13,7 @@ import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
 import scala.concurrent.duration.FiniteDuration;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -22,9 +22,10 @@ import java.util.function.Supplier;
 import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
 import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 
-public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractLoggingActor
+public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActorWithTimersAndLogging
 {
     private static final Replicator.WriteConsistency WRITE_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
+    private static final String METRIC_TIMER_KEY = "refresh metric";
 
     protected final Cluster cluster;
     protected final ActorRef replicator;
@@ -51,6 +52,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     {
         sendInitialDataToReplicator();
         subscribeToReplicatorEvents( new Replicator.Subscribe<>( key, getSelf() ) );
+        getTimers().startPeriodicTimer( METRIC_TIMER_KEY, Tick.getInstance(), Duration.ofMinutes( 1 ) );
     }
 
     protected abstract void sendInitialDataToReplicator();
@@ -78,7 +80,8 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
                 T newData = (T) message.dataValue();
                 handleIncomingData( newData );
                 logDataMetric();
-            } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) );
+            } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) )
+        .match( Tick.class, ignored -> logDataMetric() );
     }
 
     protected void handleCustomEvents( ReceiveBuilder builder )
@@ -88,7 +91,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
 
     protected abstract void handleIncomingData( T newData );
 
-    private final void logDataMetric()
+    private void logDataMetric()
     {
         monitor.setVisibleDataSize( identifier, dataMetricVisible() );
         monitor.setInvisibleDataSize( identifier, dataMetricInvisible() );
@@ -114,5 +117,4 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
 
         replicator.tell( update, self() );
     }
-
 }

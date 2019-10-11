@@ -10,6 +10,7 @@ import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
+import com.neo4j.causalclustering.discovery.akka.Tick;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -105,19 +106,5 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     private void sendClusterView()
     {
         parent.tell( new ReadReplicaViewMessage( clusterClientReadReplicas ), getSelf() );
-    }
-
-    static class Tick
-    {
-        private static Tick instance = new Tick();
-
-        private Tick()
-        {
-        }
-
-        public static Tick getInstance()
-        {
-            return instance;
-        }
     }
 }

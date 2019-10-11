@@ -118,6 +118,13 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
       assertEventually(monitor.setVis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
       assertEventually(monitor.setInvis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
+    "update metrics on tick" in {
+      val fixture = newFixture
+      import fixture._
+      replicatedDataActorRef ! Tick.getInstance()
+      assertEventually(monitor.setVis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.setInvis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+    }
   }
 
   trait ReplicatedDataActorFixture[A <: ReplicatedData]

@@ -13,19 +13,16 @@ import akka.Done
 import akka.cluster.client.ClusterClientReceptionist
 import akka.cluster.pubsub.DistributedPubSub
 import akka.cluster.pubsub.DistributedPubSubMediator.{CurrentTopics, GetTopics, Publish}
+import akka.pattern._
 import akka.testkit.TestProbe
-import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick
+import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, Tick}
 import org.neo4j.causalclustering.discovery.TestTopology
 import org.neo4j.causalclustering.identity.MemberId
-import org.neo4j.logging.NullLogProvider
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.FiniteDuration
-import akka.pattern._
-
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
 

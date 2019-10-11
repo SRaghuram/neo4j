@@ -11,6 +11,7 @@ import akka.actor.Props;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.japi.pf.ReceiveBuilder;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.discovery.akka.Tick;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
 
 import java.time.Clock;
@@ -61,7 +62,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
         return ReceiveBuilder.create()
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
-                .match( ReadReplicaViewActor.Tick.class,    this::sendTopologiesToClients )
+                .match( Tick.class,    this::sendTopologiesToClients )
                 .match( CoreTopology.class,                 this::setCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
                 .build();
@@ -86,7 +87,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
                 .flatMap( readReplicaViewMessage::topologyClient );
     }
 
-    private void sendTopologiesToClients( ReadReplicaViewActor.Tick ignored )
+    private void sendTopologiesToClients( Tick ignored )
     {
         log().debug( "Sending to clients: {}, {}, {}", readReplicaTopology, coreTopology, databaseLeaderInfo );
         myTopologyClients().forEach( client -> {
