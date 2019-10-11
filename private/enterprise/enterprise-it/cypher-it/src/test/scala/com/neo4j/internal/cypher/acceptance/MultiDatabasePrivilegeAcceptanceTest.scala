@@ -60,6 +60,36 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
   }
 
+  test("should list access database privilege") {
+    // GIVEN
+    setupUserWithCustomRole(access = false)
+
+    // WHEN
+    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).role("custom").map
+    ))
+
+    // WHEN
+    execute(s"DENY ACCESS ON DATABASE $SYSTEM_DATABASE_NAME TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
+      access("DENIED").database(SYSTEM_DATABASE_NAME).role("custom").map
+    ))
+
+    // WHEN
+    execute(s"REVOKE ACCESS ON DATABASE $SYSTEM_DATABASE_NAME FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).role("custom").map
+    ))
+  }
+
   // START DATABASE
 
   test("admin should be allowed to start database") {
@@ -388,6 +418,42 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       db("bar", offlineStatus),
       db(SYSTEM_DATABASE_NAME))
     )
+  }
+
+  // ACCESS DATABASE
+
+  test("should be able to access database with grant privilege") {
+    // GIVEN
+    setupUserWithCustomRole(access = false)
+
+    // WHEN
+    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+  }
+
+  test("should not be able to access database with deny privilege") {
+    // GIVEN
+    setupUserWithCustomRole(access = false)
+
+    // WHEN
+    execute(s"DENY ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("should not be able to access database without privilege") {
+    // GIVEN
+    setupUserWithCustomRole(access = false)
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
   }
 
   private val onlineStatus = DatabaseStatus.Online.stringValue()
