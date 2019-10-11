@@ -9,6 +9,7 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
+import org.neo4j.cypher.internal.MorselRuntime.CODE_GEN_FAILED_MESSAGE
 import org.neo4j.cypher.internal.compiler.{CodeGenerationFailedNotification, ExperimentalFeatureNotification}
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
@@ -37,6 +38,8 @@ import org.neo4j.values.virtual.MapValue
 object MorselRuntime {
   val MORSEL = new MorselRuntime(false, "morsel")
   val PARALLEL = new MorselRuntime(true, "parallel")
+
+  val CODE_GEN_FAILED_MESSAGE = "Code generation failed. Retrying physical planning."
 }
 
 class MorselRuntime(parallelExecution: Boolean,
@@ -211,7 +214,7 @@ class MorselRuntime(parallelExecution: Boolean,
     } catch {
       case e: CantCompileQueryException if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
-        context.log.debug("Code generation failed. Retrying physical planning.", e)
+        context.log.debug(CODE_GEN_FAILED_MESSAGE, e)
         DebugLog.log("Could not compile pipeline because of %s", e)
 
         val warning = CodeGenerationFailedNotification(e.getMessage)
