@@ -8,6 +8,7 @@ package com.neo4j.fabric.planning
 import com.neo4j.fabric.cache.FabricQueryCache
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.eval.Catalog
+import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
@@ -23,8 +24,9 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
-import org.neo4j.cypher.internal.{CypherConfiguration, CypherPreParser, FullyParsedQuery, PreParser, QueryOptions}
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
+import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
@@ -77,6 +79,7 @@ case class FabricPlanner(
     parameters: MapValue
   ): PlannerContext = {
     val preParsed = preParser.preParseQuery(query)
+    assertNotPeriodicCommit(preParsed)
     assertOptionsNotSet(preParsed.options)
 
     val pipeline = Pipeline.Instance(monitors, query, signatures)
@@ -89,6 +92,12 @@ case class FabricPlanner(
       catalog = catalog,
       pipeline = pipeline,
     )
+  }
+
+  private def assertNotPeriodicCommit(preParsedStatement: PreParsedQuery): Unit = {
+    if (preParsedStatement.options.isPeriodicCommit) {
+      throw new FabricException(SemanticError, "Periodic commit is not supported in Fabric")
+    }
   }
 
   private def assertOptionsNotSet(options: QueryOptions): Unit = {
@@ -474,12 +483,6 @@ case class FabricPlanner(
       override def withParams(p: Map[String, Any]): BaseState = fail("withParams")
     }
 
-  }
-
-  /** Extracted from PreParser */
-  def isPeriodicCommit(query: String): Boolean = {
-    val preParsedStatement = CypherPreParser(query)
-    PreParser.periodicCommitHintRegex.findFirstIn(preParsedStatement.statement.toUpperCase).nonEmpty
   }
 
 }

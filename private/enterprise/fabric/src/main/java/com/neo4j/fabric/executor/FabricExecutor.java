@@ -62,11 +62,6 @@ public class FabricExecutor
         } );
     }
 
-    public boolean isPeriodicCommit( String query )
-    {
-        return planner.isPeriodicCommit( query );
-    }
-
     class FabricStatementExecution
     {
         private final FabricPlan plan;

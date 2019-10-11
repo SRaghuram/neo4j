@@ -33,7 +33,6 @@ import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.values.virtual.MapValue;
 
-import static org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.InvalidBookmark;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 
@@ -60,11 +59,6 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     public BoltTransaction beginTransaction( KernelTransaction.Type type, LoginContext loginContext, ClientConnectionInfo clientInfo, Duration txTimeout,
             AccessMode accessMode, Map<String,Object> txMetadata )
     {
-        // for transactions started by Bolt it holds that implicit transaction = periodic commit
-        if ( type == KernelTransaction.Type.implicit )
-        {
-            throw new FabricException( SemanticError, "Periodic commit is not supported in Fabric" );
-        }
         if ( txTimeout == null )
         {
             txTimeout = config.getTransactionTimeout();
@@ -86,7 +80,10 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     @Override
     public boolean isPeriodicCommit( String query )
     {
-        return fabricExecutor.isPeriodicCommit( query );
+        // Since Fabric does not support periodic commit,
+        // there is no special transaction handling needed from Bolt server.
+        // If a periodic query is submitted, it will simply fail during planning
+        return false;
     }
 
     @Override
