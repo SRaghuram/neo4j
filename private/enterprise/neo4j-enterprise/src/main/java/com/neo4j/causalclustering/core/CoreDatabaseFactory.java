@@ -338,7 +338,7 @@ class CoreDatabaseFactory
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors );
+                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors, debugLog );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

@@ -54,9 +54,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 class RaftBinderTest
 {
@@ -89,14 +92,14 @@ class RaftBinderTest
     {
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_DATABASE_ID, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, DatabaseId databaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
     }
 
     @Test
@@ -274,5 +277,54 @@ class RaftBinderTest
         verify( topologyService ).setRaftId( raftId.get(), SOME_DATABASE_ID );
         assertTrue( boundState.snapshot().isPresent() );
         assertEquals( snapshot, boundState.snapshot().get() );
+    }
+
+    @Test
+    void shouldNotBootstrapDatabaseWhenRaftIdAlreadyPublished() throws Exception
+    {
+        // given
+        RaftId publishedRaftId = RaftId.from( SOME_DATABASE_ID );
+        DatabaseCoreTopology boundTopology = new DatabaseCoreTopology( SOME_DATABASE_ID, publishedRaftId, emptyMap() );
+
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        when( topologyService.coreTopologyForDatabase( SOME_DATABASE_ID ) ).thenReturn( boundTopology );
+
+        ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_DATABASE_ID, emptySet() );
+        RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_DATABASE_ID, systemGraph );
+
+        // when
+        binder.bindToRaft();
+
+        // then
+        verify( topologyService ).coreTopologyForDatabase( SOME_DATABASE_ID );
+        verifyZeroInteractions( raftBootstrapper );
+
+        Optional<RaftId> raftId = binder.get();
+        assertEquals( Optional.of( publishedRaftId ), raftId );
+    }
+
+    @Test
+    void shouldNotBootstrapSystemDatabaseWhenRaftIdAlreadyPublished() throws Exception
+    {
+        // given
+        RaftId publishedRaftId = RaftId.from( SYSTEM_DATABASE_ID );
+        DatabaseCoreTopology boundTopology = new DatabaseCoreTopology( SYSTEM_DATABASE_ID, publishedRaftId, emptyMap() );
+
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        when( topologyService.coreTopologyForDatabase( SYSTEM_DATABASE_ID ) ).thenReturn( boundTopology );
+
+        ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SYSTEM_DATABASE_ID, emptySet() );
+        RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SYSTEM_DATABASE_ID, systemGraph );
+
+        // when
+        binder.bindToRaft();
+
+        // then
+        verify( topologyService ).coreTopologyForDatabase( SYSTEM_DATABASE_ID );
+        verify( raftBootstrapper ).removeStore();
+        verifyNoMoreInteractions( raftBootstrapper );
+
+        Optional<RaftId> raftId = binder.get();
+        assertEquals( Optional.of( publishedRaftId ), raftId );
     }
 }

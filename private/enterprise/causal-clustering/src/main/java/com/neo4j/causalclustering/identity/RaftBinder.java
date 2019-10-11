@@ -23,6 +23,8 @@ import java.util.function.Supplier;
 
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.logging.internal.DatabaseLog;
+import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -53,12 +55,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final ThrowingAction<InterruptedException> retryWaiter;
     private final Duration timeout;
     private final int minCoreHosts;
+    private final DatabaseLog log;
 
     private RaftId raftId;
 
     public RaftBinder( DatabaseId databaseId, MemberId myIdentity, SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService,
             ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter, Duration timeout,
-            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors )
+            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors, DatabaseLogProvider logProvider )
     {
         this.databaseId = databaseId;
         this.myIdentity = myIdentity;
@@ -71,6 +74,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
         this.minCoreHosts = minCoreHosts;
+        this.log = logProvider.getLog( getClass() );
     }
 
     /**
@@ -126,7 +130,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             return new BoundState( raftId );
         }
 
-        CoreSnapshot snapshot;
+        CoreSnapshot snapshot = null;
         DatabaseCoreTopology topology;
         long endTime = clock.millis() + timeout.toMillis();
 
@@ -134,13 +138,25 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         {
             topology = topologyService.coreTopologyForDatabase( databaseId );
 
-            if ( databaseId.isSystemDatabase() )
+            if ( topology.raftId() != null )
             {
-                // Used for initial databases (system + default) in conjunction with cluster formation.
-                snapshot = tryBootstrapUsingDiscoveryService( topology );
+                // Someone else bootstrapped, we're done!
+                if ( databaseId.isSystemDatabase() )
+                {
+                    /* Because the bootstrapping instance might modify the seed and change
+                       the store ID, other instances have to remove their seeds and perform
+                       a store copy later in the startup. */
+                    log.info( "Removing system database to force store copy" );
+                    raftBootstrapper.removeStore();
+                }
+                raftId = topology.raftId();
+                monitor.boundToRaft( databaseId, raftId );
             }
-            else if ( systemGraph.getInitialMembers( databaseId ).isEmpty() )
+            else if ( databaseId.isSystemDatabase() || systemGraph.getInitialMembers( databaseId ).isEmpty() )
             {
+                // Used for initial databases (system + default) in conjunction with new cluster formation,
+                // or when cluster has been restored from a backup of the system database which defines other databases.
+                log.info( "Trying bootstrap using discovery service method" );
                 snapshot = tryBootstrapUsingDiscoveryService( topology );
             }
             else
@@ -154,6 +170,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 StoreId storeId = systemGraph.getStoreId( databaseId );
 
                 // Used for databases created during runtime in response to operator commands.
+                log.info( "Trying bootstrap using initial members " + initialMembers + " and store ID " + storeId );
                 snapshot = tryBootstrapUsingSystemDatabase( initialMembers, storeId );
             }
 
@@ -164,22 +181,8 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 publishRaftId( raftId );
                 monitor.bootstrapped( snapshot, databaseId, raftId );
             }
-            else if ( topology.raftId() != null )
-            {
-                // Someone else bootstrapped, we're done!
-                if ( databaseId.isSystemDatabase() )
-                {
-                    /* Because the bootstrapping instance might modify the seed and change
-                       the store ID, other instances have to remove their seeds and perform
-                       a store copy later in the startup. */
-                    raftBootstrapper.removeStore();
-                }
-                raftId = topology.raftId();
-                monitor.boundToRaft( databaseId, raftId );
-            }
 
             retryWaiter.apply();
-
         }
         while ( raftId == null && clock.millis() < endTime );
 
