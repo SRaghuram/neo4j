@@ -82,14 +82,14 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     @Override
     public void initializeSecurityGraph() throws Exception
     {
-        systemGraphInitializer.initializeSystemGraph();
-        doInitializeSecurityGraph();
+        initializeSecurityGraph( getSystemDb() );
     }
 
     @Override
     public void initializeSecurityGraph( GraphDatabaseService database ) throws Exception
     {
         systemGraphInitializer.initializeSystemGraph( database );
+        systemDb = database;
         doInitializeSecurityGraph();
     }
 
@@ -108,7 +108,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         // 2) Otherwise, are there existing userNodes and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
         // 3) If no userNodes or roles were imported or migrated, create the predefined roles and one default admin user
 
-        try ( Transaction tx = getSystemDb().beginTx() )
+        try ( Transaction tx = systemDb.beginTx() )
         {
             userNodes = findInitialNodes( tx, USER_LABEL );
             userNodes.forEach( node -> usernames.add( (String) node.getProperty( "name" ) ) );
@@ -135,7 +135,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         // If no users or roles were imported we setup the
         // default predefined roles and user and make sure we have an admin user
         // TODO why can this not share transaction with above without test failure?
-        try ( Transaction tx = getSystemDb().beginTx() )
+        try ( Transaction tx = systemDb.beginTx() )
         {
             ensureDefaultUserAndRoles( tx );
             tx.commit();
@@ -156,7 +156,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         Set<String> usernames;
         Set<String> roleNames;
 
-        try ( Transaction tx = getSystemDb().beginTx() )
+        try ( Transaction tx = systemDb.beginTx() )
         {
             usernames = getAllNames( tx, USER_LABEL );
             for ( String username : usernames )
@@ -186,7 +186,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private void setupConstraints()
     {
         // Ensure that multiple roles cannot have the same name and are indexed
-        try ( Transaction tx = getSystemDb().beginTx() )
+        try ( Transaction tx = systemDb.beginTx() )
         {
             try
             {
