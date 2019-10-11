@@ -89,7 +89,9 @@ class MorselExpandAllTest extends ExpandAllTestBase(FUSING, MORSEL, SIZE_HINT)
 class MorselExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, MORSEL, SIZE_HINT)
                                   with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class MorselExpandIntoTest extends ExpandIntoTestBase(FUSING, MORSEL, SIZE_HINT)
+                           with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class MorselExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+                                   with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 
 // VAR EXPAND
 class MorselVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, MORSEL, SIZE_HINT)
