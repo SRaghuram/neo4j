@@ -29,6 +29,8 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -37,7 +39,7 @@ public class FabricServicesBootstrap
 
     private final FabricConfig fabricConfig;
 
-    public FabricServicesBootstrap( LifeSupport lifeSupport, Dependencies dependencies )
+    public FabricServicesBootstrap( LifeSupport lifeSupport, Dependencies dependencies, LogService logService )
     {
         var serviceBootstrapper = new ServiceBootstrapper( lifeSupport, dependencies );
         var config = dependencies.resolveDependency( Config.class );
@@ -64,7 +66,7 @@ public class FabricServicesBootstrap
             var catalog = Catalog.fromConfig( fabricConfig );
             var useEvaluation =
                     serviceBootstrapper.registerService( new UseEvaluation( catalog, proceduresSupplier, signatureResolver ), UseEvaluation.class );
-            var executor = new FabricExecutor( fabricConfig, planner, useEvaluation );
+            var executor = new FabricExecutor( fabricConfig, planner, useEvaluation, logService.getInternalLogProvider() );
             serviceBootstrapper.registerService( executor, FabricExecutor.class );
         }
     }

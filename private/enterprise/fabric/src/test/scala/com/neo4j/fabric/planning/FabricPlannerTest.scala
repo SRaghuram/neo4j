@@ -460,6 +460,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
   }
 
+  "hex" in {
+    println(java.lang.String.format("%08X", java.lang.Integer.valueOf(java.lang.Integer.MAX_VALUE)))
+    println(java.lang.String.format("%08X", java.lang.Integer.valueOf(0)))
+  }
+
   "Procedures:" - {
 
     "a single known procedure local query" in {

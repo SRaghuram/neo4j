@@ -18,6 +18,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.LogProvider;
 
 public class TestServer implements AutoCloseable
 {
@@ -28,6 +29,9 @@ public class TestServer implements AutoCloseable
     private DatabaseManagementService dbms;
     private Path directory;
     private boolean databaseRootDirProvided;
+    private TestFabricDatabaseManagementServiceBuilder dbmsBuilder;
+    private LogProvider userLogProvider;
+    private LogProvider internalLogProvider;
 
     public TestServer()
     {
@@ -52,14 +56,31 @@ public class TestServer implements AutoCloseable
         this.mocks.addAll( Arrays.asList( mocks ) );
     }
 
+
+    public void setUserLogProvider( LogProvider userLogProvider )
+    {
+        this.userLogProvider = userLogProvider;
+    }
+    public void setInternalLogProvider( LogProvider internalLogProvider )
+    {
+        this.internalLogProvider = internalLogProvider;
+    }
+
     public void start()
     {
-
         if ( !databaseRootDirProvided )
         {
             this.directory = createDirectory();
         }
         var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory.toFile(), mocks );
+        if ( internalLogProvider != null )
+        {
+            dbmsBuilder.setInternalLogProvider( internalLogProvider );
+        }
+        if ( userLogProvider != null )
+        {
+            dbmsBuilder.setUserLogProvider( userLogProvider );
+        }
         this.dbms = dbmsBuilder.setConfig( config )
                 .build();
 

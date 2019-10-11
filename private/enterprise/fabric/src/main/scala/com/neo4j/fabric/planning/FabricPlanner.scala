@@ -10,6 +10,7 @@ import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.eval.Catalog
 import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.pipeline.Pipeline
+import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
 import com.neo4j.fabric.util.Errors
@@ -55,15 +56,10 @@ case class FabricPlanner(
   ): FabricPlan =
     queryCache.computeIfAbsent(query, parameters, (q, p) => init(q, p).plan)
 
-  def init(
-    query: String,
-    parameters: MapValue
-  ): PlannerContext = {
-    val preParsed = preParser.preParseQuery(query)
-    assertNotPeriodicCommit(preParsed)
-    assertOptionsNotSet(preParsed.options)
-
+  def init(query: String, parameters: MapValue): PlannerContext = {
     val pipeline = Pipeline.Instance(monitors, query, signatures)
+
+    val preParsed = preParse(query)
     val state = pipeline.parseAndPrepare.process(preParsed.statement)
     PlannerContext(
       query = query,
@@ -74,6 +70,13 @@ case class FabricPlanner(
       catalog = catalog,
       pipeline = pipeline,
     )
+  }
+
+  private def preParse(query: String): PreParsedQuery = {
+    val preParsed = preParser.preParseQuery(query)
+    assertNotPeriodicCommit(preParsed)
+    assertOptionsNotSet(preParsed.options)
+    preParsed
   }
 
   private def assertNotPeriodicCommit(preParsedStatement: PreParsedQuery): Unit = {
@@ -93,7 +96,6 @@ case class FabricPlanner(
     check("expressionEngine", options.expressionEngine, cypherConfig.expressionEngineOption)
     check("operatorEngine", options.operatorEngine, cypherConfig.operatorEngine)
     check("interpretedPipesFallback", options.interpretedPipesFallback, cypherConfig.interpretedPipesFallback)
-    check("debug", options.debugOptions, Set.empty)
   }
 
   case class PlannerContext(
@@ -253,25 +255,23 @@ case class FabricPlanner(
       }
     }
 
-    def plan: FabricPlan = {
-      val queryType: FabricPlan.QueryType = original match {
-        case q: ast.Query => q.part.containsUpdates match {
+    def plan: FabricPlan = FabricPlan(
+      query = fabricQuery,
+      queryType = original match {
+        case d: ast.CatalogDDL => Errors.ddlNotSupported(d)
+        case c: ast.Command    => Errors.notSupported("Commands")
+        case q: ast.Query      => q.part.containsUpdates match {
           case true  => FabricPlan.ReadWrite
           case false => FabricPlan.Read
         }
-
-        case d: ast.CatalogDDL => Errors.ddlNotSupported(d)
-        case c: ast.Command    => Errors.notSupported("Commands")
-      }
-
-      val executionType: FabricPlan.ExecutionType = options.executionMode match {
+      },
+      executionType = options.executionMode match {
         case CypherExecutionMode.normal  => FabricPlan.Execute
         case CypherExecutionMode.explain => FabricPlan.Explain
         case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
-      }
-
-      FabricPlan(fabricQuery, queryType, executionType)
-    }
+      },
+      debugOptions = DebugOptions.from(options.debugOptions)
+    )
 
     def fabricQuery: FabricQuery =
       fabricQuery(fragment)

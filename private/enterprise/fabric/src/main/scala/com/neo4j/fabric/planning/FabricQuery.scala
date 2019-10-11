@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.planning
 
+import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.FullyParsedQuery
@@ -15,6 +16,7 @@ case class FabricPlan(
   query: FabricQuery,
   queryType: FabricPlan.QueryType,
   executionType: FabricPlan.ExecutionType,
+  debugOptions: DebugOptions,
 )
 
 object FabricPlan {
@@ -31,6 +33,18 @@ object FabricPlan {
   val EXECUTE: ExecutionType = Execute
   val EXPLAIN: ExecutionType = Explain
   val PROFILE: ExecutionType = Profile
+
+  object DebugOptions {
+    def from(debugOptions: Set[String]): DebugOptions = DebugOptions(
+      logPlan = debugOptions.contains("fabriclogplan"),
+      logRecords = debugOptions.contains("fabriclogrecords"),
+    )
+  }
+
+  case class DebugOptions(
+    logPlan: Boolean,
+    logRecords: Boolean,
+  )
 }
 
 sealed trait FabricQuery {

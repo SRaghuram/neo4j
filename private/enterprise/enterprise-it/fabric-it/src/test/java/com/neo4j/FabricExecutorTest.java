@@ -9,6 +9,7 @@ import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
+import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.PartialSummary;
@@ -41,12 +42,15 @@ import org.neo4j.driver.summary.StatementType;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.impl.notification.NotificationCode;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -56,6 +60,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class FabricExecutorTest
 {
@@ -82,6 +87,7 @@ class FabricExecutorTest
     private ArgumentCaptor<org.neo4j.bolt.runtime.AccessMode> accessModeArgument = ArgumentCaptor.forClass( org.neo4j.bolt.runtime.AccessMode.class );
     private static final AutoCommitStatementResult graph0Result = mock( AutoCommitStatementResult.class );
     private static final AutoCommitStatementResult graph1Result = mock( AutoCommitStatementResult.class );
+    private static AssertableLogProvider internalLogProvider;
 
     @BeforeAll
     static void setUp()
@@ -89,6 +95,8 @@ class FabricExecutorTest
         testServer = new TestServer( config );
 
         testServer.addMocks( driverPool  );
+        internalLogProvider = new AssertableLogProvider();
+        testServer.setInternalLogProvider( internalLogProvider );
         testServer.start();
 
         clientDriver = GraphDatabase.driver(
@@ -112,6 +120,8 @@ class FabricExecutorTest
     {
         mockResult( graph0Result );
         mockResult( graph1Result );
+
+        internalLogProvider.clear();
 
         mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
     }
@@ -473,6 +483,55 @@ class FabricExecutorTest
             assertThat( c2c0.operatorType(), is( "LocalQuery" ) );
             assertThat( c2c0.identifiers(), containsInAnyOrder( "x", "y" ) );
         }
+    }
+
+    @Test
+    void testPlanLogging()
+    {
+        Transaction tx = transaction( "mega", AccessMode.READ );
+        tx.run( String.join( "\n",
+                "CYPHER debug=fabriclogplan",
+                "RETURN 1"
+        ) ).consume();
+        tx.success();
+
+        internalLogProvider.assertAtLeastOnce(
+                inLog( FabricExecutor.class ).debug( containsString( "Fabric plan:" ) )
+        );
+    }
+
+    @Test
+    void testExecutionLogging()
+    {
+        when( graph0Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
+        );
+
+        when( graph1Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
+        );
+
+        Transaction tx = transaction( "mega", AccessMode.READ );
+        tx.run( String.join( "\n",
+                "CYPHER debug=fabriclogrecords",
+                "UNWIND [0, 1] AS s",
+                "CALL { USE mega.graph(s) RETURN 2 AS y }",
+                "RETURN s, y ORDER BY s, y"
+        ) ).consume();
+        tx.success();
+
+        internalLogProvider.assertAtLeastOnce(
+                inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "UNWIND [0, 1] AS s" ) ) )
+        );
+        internalLogProvider.assertAtLeastOnce(
+                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 0" ), containsString( "RETURN 2 AS y" ) ) )
+        );
+        internalLogProvider.assertAtLeastOnce(
+                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 1" ), containsString( "RETURN 2 AS y" ) ) )
+        );
+        internalLogProvider.assertAtLeastOnce(
+                inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" ) ) )
+        );
     }
 
     private String codeOf( NotificationCode notificationCode )

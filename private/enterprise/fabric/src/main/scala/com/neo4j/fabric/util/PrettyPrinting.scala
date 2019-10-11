@@ -49,6 +49,9 @@ trait PrettyPrinting[T] extends PrettyPrintingUtils {
 
   def pprint(t: T): Unit =
     pretty(t).foreach(println)
+
+  def asString(t: T): String =
+    pretty(t).mkString(System.lineSeparator())
 }
 trait PrettyPrintingUtils {
 
