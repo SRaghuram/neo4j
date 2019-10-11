@@ -72,7 +72,7 @@ object Configs {
   val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
-  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
