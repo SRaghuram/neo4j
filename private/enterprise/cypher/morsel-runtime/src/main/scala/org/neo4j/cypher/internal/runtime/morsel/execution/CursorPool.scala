@@ -8,9 +8,10 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.helpers.{RelationshipDenseSelectionCursor, RelationshipSelectionCursor, RelationshipSparseSelectionCursor}
 import org.neo4j.io.IOUtils
 
-class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
+class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoCloseable {
 
   val nodeCursorPool = new CursorPool[NodeCursor](
     () => cursorFactory.allocateNodeCursor())
@@ -34,6 +35,17 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     nodeLabelIndexCursorPool.setKernelTracer(tracer)
   }
 
+  def free(selectionCursor: RelationshipSelectionCursor): Unit = selectionCursor match {
+    case dense: RelationshipDenseSelectionCursor =>
+      relationshipGroupCursorPool.free(dense.groupCursor())
+      relationshipTraversalCursorPool.free(dense.traversalCursor())
+    case sparse: RelationshipSparseSelectionCursor =>
+      relationshipTraversalCursorPool.free(sparse.traversalCursor())
+
+    case _ => //either null or empty
+
+  }
+
   override def close(): Unit = {
     IOUtils.closeAll(nodeCursorPool,
                      relationshipGroupCursorPool,
@@ -51,6 +63,28 @@ class CursorPools(cursorFactory: CursorFactory) extends AutoCloseable {
     liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
     liveCounts.nodeLabelIndexCursorPool += nodeLabelIndexCursorPool.getLiveCount
   }
+
+  override def allocateNodeCursor(): NodeCursor = nodeCursorPool.allocate()
+
+  override def allocateFullAccessNodeCursor(): NodeCursor = ???
+
+  override def allocateRelationshipScanCursor(): RelationshipScanCursor = relationshipScanCursorPool.allocate()
+
+  override def allocateFullAccessRelationshipScanCursor(): RelationshipScanCursor = ???
+
+  override def allocateRelationshipTraversalCursor(): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
+
+  override def allocatePropertyCursor(): PropertyCursor = ???
+
+  override def allocateFullAccessPropertyCursor(): PropertyCursor = ???
+
+  override def allocateRelationshipGroupCursor(): RelationshipGroupCursor = relationshipGroupCursorPool.allocate()
+
+  override def allocateNodeValueIndexCursor(): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
+
+  override def allocateNodeLabelIndexCursor(): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
+
+  override def allocateRelationshipIndexCursor(): RelationshipIndexCursor = ???
 }
 
 class LiveCounts(var nodeCursorPool: Long = 0,
@@ -100,14 +134,12 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     if (DebugSupport.CURSORS.enabled) {
       DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
     }
-    val cursor =
-      if (cached != null) {
-        val temp = cached
-        cached = null.asInstanceOf[CURSOR]
-        temp
-      } else {
-        cursorFactory()
-      }
+    var cursor = cached
+    if (cursor != null) {
+      cached = null.asInstanceOf[CURSOR]
+    } else {
+      cursor = cursorFactory()
+    }
     cursor.setTracer(tracer)
     cursor
   }
@@ -122,15 +154,17 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
       }
       cursor.setTracer(KernelReadTracer.NONE)
       liveCount -= 1
-      if (cached != null)
-        cached.close()
+      val c = cached
+      if (c != null)
+        c.close()
       cached = cursor
     }
   }
 
   override def close(): Unit = {
-    if (cached != null) {
-      cached.close()
+    val c = cached
+    if (c != null) {
+      c.close()
       cached = null.asInstanceOf[CURSOR]
     }
   }
