@@ -5,12 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InCheckContainer, SingleThreadedLRUCache}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, InputDataStream, NoInput, QueryContext, QueryMemoryTracker}
-import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, pipes}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExternalCSVResource, NullPipeDecorator, Pipe, PipeDecorator}
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.{InterpretedProfileInformation, Profiler}
+import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, pipes}
 import org.neo4j.cypher.internal.runtime.morsel.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.SlottedPipeOperator.{createFeedPipeQueryState, updateProfileEvent}
@@ -18,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentS
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityMutableDescription}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -35,6 +35,26 @@ abstract class SlottedPipeOperator(val workIdentity: WorkIdentityMutableDescript
   private var _pipe: Pipe = initialPipe
   def pipe: Pipe = _pipe
   def setPipe(newPipe: Pipe): Unit = _pipe = newPipe
+}
+
+trait OperatorWithInterpretedDBHitsProfiling extends OperatorTask {
+  // Overridden to not set the tracer on the operatorExecutionEvent. Otherwise we would count dbHits twice,
+  // once from the morsel Tracer and once from the interpreted Profiler.
+  override def operateWithProfile(output: MorselExecutionContext,
+                                  context: QueryContext,
+                                  state: QueryState,
+                                  resources: QueryResources,
+                                  queryProfiler: QueryProfiler): Unit = {
+    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+    setExecutionEvent(operatorExecutionEvent)
+    try {
+      operate(output, context, state, resources)
+      operatorExecutionEvent.rows(output.getValidRows)
+    } finally {
+      setExecutionEvent(OperatorProfileEvent.NONE)
+      operatorExecutionEvent.close()
+    }
+  }
 }
 
 class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
@@ -66,7 +86,7 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
     }
   }
 
-  class OTask(val inputMorsel: MorselExecutionContext, val feedPipeQueryState: FeedPipeQueryState) extends ContinuableOperatorTaskWithMorsel {
+  class OTask(val inputMorsel: MorselExecutionContext, val feedPipeQueryState: FeedPipeQueryState) extends ContinuableOperatorTaskWithMorsel with OperatorWithInterpretedDBHitsProfiling {
 
     private var resultIterator: Iterator[ExecutionContext] = _
     private var profileEvent: OperatorProfileEvent = _
@@ -119,7 +139,7 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
     new OMiddleTask(inputQueryState)
   }
 
-  class OMiddleTask(val feedPipeQueryState: FeedPipeQueryState) extends OperatorTask {
+  class OMiddleTask(val feedPipeQueryState: FeedPipeQueryState) extends OperatorTask with OperatorWithInterpretedDBHitsProfiling {
 
     private var resultIterator: Iterator[ExecutionContext] = _
     private var profileEvent: OperatorProfileEvent = _
