@@ -41,7 +41,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                        subscriber: QuerySubscriber,
                                        doProfile: Boolean,
                                        morselSize: Int,
-                                       memoryTracking: MemoryTracking): ProfiledQuerySubscription = {
+                                       memoryTracking: MemoryTracking,
+                                       executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription = {
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
@@ -94,7 +95,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
                                                          workersProfiler,
                                                          worker,
                                                          workerResourceProvider,
-                                                         LazyScheduling)
+                                                         executionGraphSchedulingPolicy)
     ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
 }

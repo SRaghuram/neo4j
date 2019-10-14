@@ -34,7 +34,8 @@ trait QueryExecutor {
                               subscriber: QuerySubscriber,
                               doProfile: Boolean,
                               morselSize: Int,
-                              memoryTracking: MemoryTracking): ProfiledQuerySubscription
+                              memoryTracking: MemoryTracking,
+                              executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription
 
   /**
     * Assert that all resources that have been acquired for query execution by any query have also been released

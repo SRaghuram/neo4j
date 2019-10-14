@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.morsel.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutionState, Worker, WorkerResourceProvider}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
@@ -19,8 +18,8 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
                                   workersQueryProfiler: WorkersQueryProfiler,
                                   worker: Worker,
                                   workerResourceProvider: WorkerResourceProvider,
-                                  schedulingPolicy: SchedulingPolicy)
-  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider, schedulingPolicy)
+                                  executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy)
+  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider, executionGraphSchedulingPolicy)
   with QuerySubscription {
 
   private val workerResources = workerResourceProvider.resourcesForWorker(worker.workerId)

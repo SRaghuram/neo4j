@@ -9,7 +9,6 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
@@ -18,15 +17,16 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.morsel.execution.{ProfiledQuerySubscription, QueryExecutor}
+import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutionGraphSchedulingPolicy, LazyScheduling, ProfiledQuerySubscription, QueryExecutor}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselBlacklist
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, FuseOperators, InterpretedPipesFallbackPolicy, MorselPipelineBreakingPolicy, OperatorFactory}
+import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InternalNotification}
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
@@ -154,6 +154,12 @@ class MorselRuntime(parallelExecution: Boolean,
 
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
+
+    // Let scheduling policy compute static information
+    val executionGraphSchedulingPolicy = LazyScheduling.executionGraphSchedulingPolicy(executionGraphDefinition)
+
+    DebugLog.logDiff("Scheduling")
+    //=======================================================
     val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution,
       codeGenerationMode)
 
@@ -191,7 +197,8 @@ class MorselRuntime(parallelExecution: Boolean,
                               morselSize,
                               context.config.memoryTrackingController,
                               maybeThreadSafeCursors,
-                              metadata)
+                              metadata,
+                              executionGraphSchedulingPolicy)
     } catch {
       case e: CantCompileQueryException if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -222,7 +229,8 @@ class MorselRuntime(parallelExecution: Boolean,
                             morselSize: Int,
                             memoryTrackingController: MemoryTrackingController,
                             maybeThreadSafeCursors: Option[CursorFactory],
-                            override val metadata: Seq[Argument]) extends ExecutionPlan {
+                            override val metadata: Seq[Argument],
+                            executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -246,7 +254,8 @@ class MorselRuntime(parallelExecution: Boolean,
                               subscriber,
                               doProfile,
                               morselSize,
-                              memoryTrackingController.memoryTracking)
+                              memoryTrackingController.memoryTracking,
+                              executionGraphSchedulingPolicy)
     }
 
     override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName
@@ -275,7 +284,8 @@ class MorselRuntime(parallelExecution: Boolean,
                             subscriber: QuerySubscriber,
                             doProfile: Boolean,
                             morselSize: Int,
-                            memoryTracking: MemoryTracking) extends RuntimeResult {
+                            memoryTracking: MemoryTracking,
+                            executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
 
     private var querySubscription: QuerySubscription = _
     private var _queryProfile: QueryProfile = _
@@ -331,7 +341,8 @@ class MorselRuntime(parallelExecution: Boolean,
           subscriber,
           doProfile,
           morselSize,
-          memoryTracking)
+          memoryTracking,
+          executionGraphSchedulingPolicy)
 
         querySubscription = sub
         _queryProfile = prof

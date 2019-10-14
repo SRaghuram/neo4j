@@ -47,7 +47,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                        subscriber: QuerySubscriber,
                                        doProfile: Boolean,
                                        morselSize: Int,
-                                       memoryTracking: MemoryTracking): ProfiledQuerySubscription = {
+                                       memoryTracking: MemoryTracking,
+                                       executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription = {
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
@@ -91,7 +92,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                             tracer,
                                             workersProfiler,
                                             workerResourceProvider,
-                                            LazyScheduling)
+                                            executionGraphSchedulingPolicy)
 
     queryContext.transactionalContext.transaction.freezeLocks()
 

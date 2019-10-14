@@ -16,9 +16,9 @@ class ExecutingQuery(val executionState: ExecutionState,
                      val queryExecutionTracer: QueryExecutionTracer,
                      val workersQueryProfiler: WorkersQueryProfiler,
                      val workerResourceProvider: WorkerResourceProvider,
-                     schedulingPolicy: SchedulingPolicy) extends QuerySubscription {
+                     executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends QuerySubscription {
 
-  val querySchedulingPolicy: QuerySchedulingPolicy = schedulingPolicy.querySchedulingPolicy(this)
+  val querySchedulingPolicy: QuerySchedulingPolicy = executionGraphSchedulingPolicy.querySchedulingPolicy(this)
 
   protected val flowControl: FlowControl = queryState.flowControl
 

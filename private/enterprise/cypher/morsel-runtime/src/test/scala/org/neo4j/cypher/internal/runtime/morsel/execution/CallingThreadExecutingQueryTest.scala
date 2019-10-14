@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PipelineDefinition, PipelineId}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.MockHelper.pipelineState
 import org.neo4j.cypher.internal.runtime.morsel._
@@ -75,6 +75,10 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
   }
 
   def getExecutingQuery(executionState: ExecutionState): CallingThreadExecutingQuery = {
+    val executionGraphDefinition = ExecutionGraphDefinition(
+      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, null, null, null, null, null, serial = false)), null
+    )
+
     new CallingThreadExecutingQuery(
       executionState,
       mock[QueryContext],
@@ -83,7 +87,7 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
       mock[WorkersQueryProfiler],
       getWorker,
       mock[WorkerResourceProvider],
-      LazyScheduling
+      new LazyExecutionGraphScheduling(executionGraphDefinition)
     )
   }
 
