@@ -9,16 +9,20 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorRef, ActorSystem, BootstrapSetup, ProviderSelection}
 import akka.cluster.Cluster
-import akka.cluster.ddata.{Key, ReplicatedData, Replicator}
+import akka.cluster.ddata._
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
+import com.neo4j.causalclustering.discovery.akka.monitoring.{ReplicatedDataIdentifier, ReplicatedDataMonitor}
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
+import org.hamcrest.Matchers.is
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
+import org.neo4j.function.ThrowingSupplier
+import org.neo4j.test.assertion.Assert.assertEventually
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
@@ -108,14 +112,43 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
         case Replicator.Unsubscribe(`dataKey`, `replicatedDataActorRef`) => ()
       }
     }
+    "update metrics on changed data" in {
+      val fixture = newFixture
+      import fixture._
+      replicatedDataActorRef ! Replicator.Changed(dataKey)(data)
+      assertEventually(monitor.setVis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.setInvis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+    }
+    "update metrics on tick" in {
+      val fixture = newFixture
+      import fixture._
+      replicatedDataActorRef ! Tick.getInstance()
+      assertEventually(monitor.setVis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.setInvis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+    }
   }
 
   trait ReplicatedDataActorFixture[A <: ReplicatedData]
   {
     val replicator: TestProbe = TestProbe("replicator")
     val cluster = Cluster.get(system)
+    val monitor = new ReplicatedDataMonitor {
+      private var hasSetVisible = false
+      private var hasSetInvisible = false
+
+      def setVis = new ThrowingSupplier[Boolean, Exception] {
+        override def get(): Boolean = hasSetVisible
+      }
+      def setInvis = new ThrowingSupplier[Boolean, Exception] {
+        override def get(): Boolean = hasSetInvisible
+      }
+
+      override def setVisibleDataSize(key: ReplicatedDataIdentifier, size: Int): Unit = hasSetVisible = true
+      override def setInvisibleDataSize(key: ReplicatedDataIdentifier, size: Int): Unit = hasSetInvisible = true
+    }
 
     val replicatedDataActorRef: ActorRef
     val dataKey: Key[A]
+    val data: A
   }
 }

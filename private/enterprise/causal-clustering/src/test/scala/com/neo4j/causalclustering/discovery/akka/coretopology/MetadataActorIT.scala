@@ -13,6 +13,7 @@ import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
@@ -112,7 +113,8 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
   class Fixture extends ReplicatedDataActorFixture[LWWMap[UniqueAddress, CoreServerInfoForMemberId]] {
     val coreTopologyProbe = TestProbe("topology")
     val myself = new MemberId(UUID.randomUUID())
-    val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
+    val dataKey = LWWMapKey.create[UniqueAddress, CoreServerInfoForMemberId](ReplicatedDataIdentifier.METADATA.keyName())
+    val data = LWWMap.empty[UniqueAddress, CoreServerInfoForMemberId]
 
     val databaseIdRepository = new TestDatabaseIdRepository()
     val databaseIds = Set(databaseIdRepository.getRaw("system"), databaseIdRepository.getRaw("not_system"))
@@ -126,7 +128,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
     }
 
     val replicatedDataActorRef = system.actorOf(MetadataActor.props(
-      discoveryMember, cluster, replicator.ref, coreTopologyProbe.ref, config))
+      discoveryMember, cluster, replicator.ref, coreTopologyProbe.ref, config, monitor))
 
     def expectUpdateWithDatabases(databaseIds: Set[DatabaseId]): Unit = {
       val update = expectReplicatorUpdates(replicator, dataKey)

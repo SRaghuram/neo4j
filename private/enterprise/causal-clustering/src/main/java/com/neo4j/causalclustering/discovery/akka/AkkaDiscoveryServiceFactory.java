@@ -54,7 +54,8 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 restartRetryStrategy,
                 discoveryMemberFactory,
                 executor,
-                clock );
+                clock,
+                monitors );
     }
 
     @Override

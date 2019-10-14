@@ -16,6 +16,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka._
+import com.neo4j.causalclustering.discovery.akka.monitoring.{ReplicatedDataIdentifier, ReplicatedDataMonitor}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, _}
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.mockito.ArgumentMatchers.any
@@ -198,8 +199,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 
     val replicatorProbe = TestProbe("replicator")
 
-    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](MetadataActor.MEMBER_DATA_KEY)
-    val raftIdKey = LWWMapKey[String, RaftId](RaftIdActor.RAFT_ID_PER_DB_KEY)
+    val memberDataKey = LWWMapKey[UniqueAddress, CoreServerInfoForMemberId](ReplicatedDataIdentifier.METADATA.keyName())
+    val raftIdKey = LWWMapKey[String, RaftId](ReplicatedDataIdentifier.RAFT_ID.keyName())
 
     val topologyBuilder = mock[TopologyBuilder]
     val expectedCoreTopology = new DatabaseCoreTopology(
@@ -228,7 +229,9 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       replicatorProbe.ref,
       cluster,
       topologyBuilder,
-      config)
+      config,
+      mock[ReplicatedDataMonitor])
+
     val topologyActorRef = system.actorOf(props)
 
     def awaitExpectedCoreTopology(newCoreTopology: DatabaseCoreTopology = expectedCoreTopology) = {

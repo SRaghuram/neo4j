@@ -43,6 +43,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
@@ -249,7 +250,8 @@ public class AkkaCoreTopologyDowningIT
                 new RetryStrategy( 0L, 10L ),
                 TestDiscoveryMember::new,
                 pool,
-                Clocks.systemClock()
+                Clocks.systemClock(),
+                new Monitors()
         );
 
         service.init();

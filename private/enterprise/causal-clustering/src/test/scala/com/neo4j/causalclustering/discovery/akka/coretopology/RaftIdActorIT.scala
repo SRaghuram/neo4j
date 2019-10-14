@@ -9,6 +9,7 @@ import akka.actor.ActorRef
 import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.identity.RaftId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
@@ -45,9 +46,10 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
   }
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseId, RaftId]] {
-    override val dataKey: Key[LWWMap[DatabaseId, RaftId]] = LWWMapKey(RaftIdActor.RAFT_ID_PER_DB_KEY)
+    override val dataKey: Key[LWWMap[DatabaseId, RaftId]] = LWWMapKey(ReplicatedDataIdentifier.RAFT_ID.keyName())
+    override val data = LWWMap.empty[DatabaseId, RaftId]
     val coreTopologyProbe = TestProbe("coreTopologyActor")
-    val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref)
+    val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
   }
 }

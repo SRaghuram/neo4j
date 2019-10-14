@@ -29,6 +29,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
@@ -75,7 +76,8 @@ class AkkaCoreTopologyServiceTest
             restartRetryStrategy,
             TestDiscoveryMember::new,
             executor,
-            clock );
+            clock,
+            new Monitors() );
 
     @Test
     void shouldLifecycle() throws Throwable

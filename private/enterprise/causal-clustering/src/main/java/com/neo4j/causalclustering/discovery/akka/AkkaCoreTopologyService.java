@@ -31,6 +31,7 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListe
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
@@ -51,6 +52,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
@@ -64,6 +66,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final DiscoveryMemberFactory discoveryMemberFactory;
     private final Executor executor;
     private final Clock clock;
+    private final ReplicatedDataMonitor monitor;
     private final Config config;
     private final MemberId myself;
     private final Log log;
@@ -78,7 +81,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
-            DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock )
+            DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock, Monitors monitors )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
@@ -91,6 +94,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         this.myself = myself;
         this.log = logProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
+        this.monitor = monitors.newMonitor( ReplicatedDataMonitor.class );
         this.globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
     }
 
@@ -124,14 +128,15 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
                 replicator,
                 cluster,
                 topologyBuilder,
-                config );
+                config,
+                monitor );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
-        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor );
+        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, monitor );
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 

@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.TestDiscoveryMember;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -26,6 +25,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
 import static org.mockito.Mockito.mock;
@@ -52,7 +52,8 @@ class CoreTopologyChangeListenerTest
             discoveryRestartRetryStrategy,
             TestDiscoveryMember::new,
             executor,
-            Clocks.systemClock() );
+            Clocks.systemClock(),
+            new Monitors() );
 
     @Test
     void shouldNotifyListenersOnTopologyChange()

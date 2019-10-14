@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
 import java.util.HashSet;
@@ -24,14 +25,14 @@ import java.util.Set;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
 
+import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.METADATA;
+
 public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,CoreServerInfoForMemberId>>
 {
-    static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config )
+    static Props props( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
     {
-        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config ) );
+        return Props.create( MetadataActor.class, () -> new MetadataActor( myself, cluster, replicator, topologyActor, config, monitor ) );
     }
-
-    static final String MEMBER_DATA_KEY = "member-data";
 
     private final DiscoveryMember myself;
     private final ActorRef topologyActor;
@@ -39,9 +40,9 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
 
     private final Set<DatabaseId> startedDatabases = new HashSet<>();
 
-    private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config )
+    private MetadataActor( DiscoveryMember myself, Cluster cluster, ActorRef replicator, ActorRef topologyActor, Config config, ReplicatedDataMonitor monitor )
     {
-        super( cluster, replicator, LWWMapKey.create( MEMBER_DATA_KEY ), LWWMap::empty );
+        super( cluster, replicator, LWWMapKey::create, LWWMap::empty, METADATA, monitor );
         this.myself = myself;
         this.topologyActor = topologyActor;
         this.config = config;
@@ -84,10 +85,22 @@ public class MetadataActor extends BaseReplicatedDataActor<LWWMap<UniqueAddress,
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<UniqueAddress,CoreServerInfoForMemberId> delta )
+    protected void handleIncomingData( LWWMap<UniqueAddress,CoreServerInfoForMemberId> newData )
     {
-        data = data.merge( delta );
+        data = newData;
         topologyActor.tell( new MetadataMessage( data ), getSelf() );
+    }
+
+    @Override
+    protected int dataMetricVisible()
+    {
+        return data.size();
+    }
+
+    @Override
+    protected int dataMetricInvisible()
+    {
+        return data.underlying().keys().vvector().size();
     }
 
     private void sendCoreServerInfo()

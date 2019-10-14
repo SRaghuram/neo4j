@@ -12,24 +12,26 @@ import akka.cluster.ddata.LWWMap;
 import akka.cluster.ddata.LWWMapKey;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import org.neo4j.kernel.database.DatabaseId;
 
+import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_ID;
+
 public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,RaftId>>
 {
-    static final String RAFT_ID_PER_DB_KEY = "raft-id-per-db-name";
     private final ActorRef coreTopologyActor;
 
-    public RaftIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor )
+    public RaftIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, ReplicatedDataMonitor monitors )
     {
-        super( cluster, replicator, LWWMapKey.create( RAFT_ID_PER_DB_KEY ), LWWMap::create );
+        super( cluster, replicator, LWWMapKey::create, LWWMap::create, RAFT_ID, monitors );
         this.coreTopologyActor = coreTopologyActor;
     }
 
-    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor )
+    public static Props props( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, ReplicatedDataMonitor monitors )
     {
-        return Props.create( RaftIdActor.class, () -> new RaftIdActor( cluster, replicator, coreTopologyActor ) );
+        return Props.create( RaftIdActor.class, () -> new RaftIdActor( cluster, replicator, coreTopologyActor, monitors ) );
     }
 
     @Override
@@ -51,7 +53,19 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,RaftI
     @Override
     protected void handleIncomingData( LWWMap<DatabaseId,RaftId> newData )
     {
-        data = data.merge( newData );
+        data = newData;
         coreTopologyActor.tell( new RaftIdDirectoryMessage( data ), getSelf() );
+    }
+
+    @Override
+    protected int dataMetricVisible()
+    {
+        return data.size();
+    }
+
+    @Override
+    protected int dataMetricInvisible()
+    {
+        return data.underlying().keys().vvector().size();
     }
 }

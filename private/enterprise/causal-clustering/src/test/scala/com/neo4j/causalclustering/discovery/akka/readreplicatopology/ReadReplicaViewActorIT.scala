@@ -16,10 +16,8 @@ import akka.cluster.pubsub.DistributedPubSubMediator.{CurrentTopics, GetTopics, 
 import akka.pattern._
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
-import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick
+import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, Tick}
 import com.neo4j.causalclustering.identity.MemberId
-import org.neo4j.logging.NullLogProvider
 import org.neo4j.time.Clocks
 
 import scala.collection.JavaConverters._

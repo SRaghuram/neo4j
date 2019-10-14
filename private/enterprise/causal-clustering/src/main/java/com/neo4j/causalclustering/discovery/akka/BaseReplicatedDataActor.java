@@ -5,36 +5,44 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.cluster.Cluster;
 import akka.cluster.ddata.Key;
 import akka.cluster.ddata.ReplicatedData;
 import akka.cluster.ddata.Replicator;
 import akka.japi.pf.ReceiveBuilder;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import scala.concurrent.duration.FiniteDuration;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractLoggingActor
+public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActorWithTimersAndLogging
 {
     private static final Replicator.WriteConsistency METADATA_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
+    private static final String METRIC_TIMER_KEY = "refresh metric";
 
     protected final Cluster cluster;
     protected final ActorRef replicator;
     protected final Key<T> key;
-    protected final Supplier<T> emptyData;
     protected T data;
+    private final ReplicatedDataIdentifier identifier;
+    private final Supplier<T> emptyData;
+    private final ReplicatedDataMonitor monitor;
 
-    protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Key<T> key, Supplier<T> emptyData )
+    protected BaseReplicatedDataActor( Cluster cluster, ActorRef replicator, Function<String,Key<T>> keyFunction, Supplier<T> emptyData,
+            ReplicatedDataIdentifier identifier, ReplicatedDataMonitor monitor )
     {
         this.cluster = cluster;
         this.replicator = replicator;
-        this.key = key;
+        this.key = keyFunction.apply( identifier.keyName() );
         this.emptyData = emptyData;
         this.data = emptyData.get();
+        this.identifier = identifier;
+        this.monitor = monitor;
     }
 
     @Override
@@ -42,6 +50,7 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     {
         sendInitialDataToReplicator();
         subscribeToReplicatorEvents( new Replicator.Subscribe<>( key, getSelf() ) );
+        getTimers().startPeriodicTimer( METRIC_TIMER_KEY, Tick.getInstance(), Duration.ofMinutes( 1 ) );
     }
 
     protected abstract void sendInitialDataToReplicator();
@@ -68,14 +77,24 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
             {
                 T newData = (T) message.dataValue();
                 handleIncomingData( newData );
-            } ).match( Replicator.UpdateResponse.class, updated -> {
-                log().debug( "Update: {}", updated );
-            } );
+                logDataMetric();
+            } ).match( Replicator.UpdateResponse.class, updated -> log().debug( "Update: {}", updated ) )
+               .match( Tick.class, ignored -> logDataMetric() );
     }
 
     protected abstract void handleCustomEvents( ReceiveBuilder builder );
 
     protected abstract void handleIncomingData( T newData );
+
+    private void logDataMetric()
+    {
+        monitor.setVisibleDataSize( identifier, dataMetricVisible() );
+        monitor.setInvisibleDataSize( identifier, dataMetricInvisible() );
+    }
+
+    protected abstract int dataMetricVisible();
+
+    protected abstract int dataMetricInvisible();
 
     private void subscribeToReplicatorEvents( Replicator.ReplicatorMessage message )
     {
