@@ -25,14 +25,14 @@ object RuntimeEnvironment {
          workerManager: WorkerManagement): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
-      createMorselQueryExecutor(),
+      createMorselQueryExecutor(cursors),
       createParallelQueryExecutor(cursors, lifeSupport, workerManager),
       createTracer(config, jobScheduler, lifeSupport),
       cursors)
   }
 
-  private def createMorselQueryExecutor() = {
-    new CallingThreadQueryExecutor()
+  private def createMorselQueryExecutor(cursors: CursorFactory) = {
+    new CallingThreadQueryExecutor(cursors)
   }
 
   private def createParallelQueryExecutor(cursors: CursorFactory,

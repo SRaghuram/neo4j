@@ -37,10 +37,10 @@ class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoC
 
   def free(selectionCursor: RelationshipSelectionCursor): Unit = selectionCursor match {
     case dense: RelationshipDenseSelectionCursor =>
-      relationshipGroupCursorPool.free(dense.groupCursor())
-      relationshipTraversalCursorPool.free(dense.traversalCursor())
+      relationshipGroupCursorPool.forceFree(dense.groupCursor())
+      relationshipTraversalCursorPool.forceFree(dense.traversalCursor())
     case sparse: RelationshipSparseSelectionCursor =>
-      relationshipTraversalCursorPool.free(sparse.traversalCursor())
+      relationshipTraversalCursorPool.forceFree(sparse.traversalCursor())
 
     case _ => //either null or empty
 
@@ -149,16 +149,27 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     */
   def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
+      liveCount -= 1
+      freeCursor(cursor)
+    }
+  }
+
+  def forceFree(cursor: CURSOR): Unit = {
+    liveCount -= 1
+    if (cursor != null) {
+      freeCursor(cursor)
+    }
+  }
+
+  private def freeCursor(cursor: CURSOR): Unit = {
       if (DebugSupport.CURSORS.enabled) {
         DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
       }
       cursor.setTracer(KernelReadTracer.NONE)
-      liveCount -= 1
       val c = cached
       if (c != null)
         c.close()
       cached = cursor
-    }
   }
 
   override def close(): Unit = {

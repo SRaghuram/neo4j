@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, Sleeper, Worker, WorkerResourceProvider}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, _}
 import org.neo4j.cypher.result.QueryProfile
-import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
@@ -21,7 +21,7 @@ import org.neo4j.values.AnyValue
   * the thread which calls execute, without any synchronization with other queries
   * or any parallel execution.
   */
-class CallingThreadQueryExecutor() extends QueryExecutor with WorkerWaker {
+class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor with WorkerWaker {
 
   override def wakeOne(): Unit = ()
 
@@ -53,7 +53,7 @@ class CallingThreadQueryExecutor() extends QueryExecutor with WorkerWaker {
         case MEMORY_BOUND(maxAllocatedBytes) => new MemoryTrackingStandardStateFactory(maxAllocatedBytes)
       }
 
-    val resources = new QueryResources(queryContext.transactionalContext.cursors)
+    val resources = new QueryResources(cursors: CursorFactory)
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,
