@@ -67,7 +67,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asC
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asConfigString;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asCypherStringsList;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asProcedureConfigMap;
-import static org.neo4j.kernel.impl.index.schema.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
+import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexSettingsKeys.PROCEDURE_EVENTUALLY_CONSISTENT;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
