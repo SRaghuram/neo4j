@@ -81,4 +81,27 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
     val result = executeSingle("MATCH (n:Label) RETURN size(n.prop) as l", Map.empty)
     result.toSet should equal(Set(Map("l" -> 3), Map("l" -> 4)))
   }
+
+  test("should allow newline in label") {
+    executeSingle(s"CREATE (:`Label with $newline in it`)")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel , s"MATCH (n:`Label with $newline in it`) RETURN labels(n) as labels")
+    result.toList should be(List(Map("labels" -> List(s"Label with $newline in it"))))
+  }
+
+  test("should allow newline in relationship type") {
+    executeSingle(s"CREATE ()-[:`RELTYPE WITH $newline IN IT`]->()")
+
+    val result = executeWith(Configs.All, s"MATCH ()-[r:`RELTYPE WITH $newline IN IT`]->() RETURN type(r) as type")
+    result.toList should be(List(Map("type" -> s"RELTYPE WITH $newline IN IT")))
+  }
+
+  test("should allow newline in property key") {
+    executeSingle(s"CREATE ({`prop name with $newline in it`: 1})")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"MATCH (n {`prop name with $newline in it`: 1}) RETURN keys(n) as keys")
+    result.toList should be(List(Map("keys" -> List(s"prop name with $newline in it"))))
+  }
+
+  private val newline = if (System.getProperty("os.name").toLowerCase.startsWith("windows")) "\r\n" else "\n"
 }
