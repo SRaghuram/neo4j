@@ -423,7 +423,7 @@ class EndToEndTest
                     "  RETURN y",
                     "}",
                     "RETURN gid, y AS person",
-                    "  ORDER BY id(person)" );
+                    "  ORDER BY person.uid" );
             r = tx.run( query ).list();
             tx.success();
         }
