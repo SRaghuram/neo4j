@@ -17,8 +17,8 @@ class LazyQuerySchedulingTest extends CypherFunSuite {
     // given
     val input = Array(
       pipelineState(PipelineId(0)),
-      pipelineState(PipelineId(1), PipelineId(0)),
-      pipelineState(PipelineId(2), PipelineId(1))
+      pipelineState(PipelineId(1), lhs = PipelineId(0)),
+      pipelineState(PipelineId(2), lhs = PipelineId(1))
     )
 
     // when
@@ -37,7 +37,7 @@ class LazyQuerySchedulingTest extends CypherFunSuite {
     val input = Array(
       pipelineState(PipelineId(0)),
       pipelineState(PipelineId(1)),
-      pipelineState(PipelineId(2), PipelineId(0), PipelineId(1))
+      pipelineState(PipelineId(2), lhs = PipelineId(0), rhs = PipelineId(1))
     )
 
     // when
@@ -55,9 +55,9 @@ class LazyQuerySchedulingTest extends CypherFunSuite {
     // given
     val input = Array(
       pipelineState(PipelineId(0)),
-      pipelineState(PipelineId(1), PipelineId(0)),
-      pipelineState(PipelineId(2), PipelineId(0)),
-      pipelineState(PipelineId(3), PipelineId(1), PipelineId(2))
+      pipelineState(PipelineId(1), lhs = PipelineId(0)),
+      pipelineState(PipelineId(2), lhs = PipelineId(0)),
+      pipelineState(PipelineId(3), lhs = PipelineId(1), rhs = PipelineId(2))
     )
 
     // when
