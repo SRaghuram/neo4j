@@ -44,7 +44,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static java.lang.String.format;
@@ -60,7 +59,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseI
 class DatabaseMetricsExtensionTest
 {
     @Inject
-    private TestDirectory testDirectory;
+    private FileSystemAbstraction fileSystem;
     @Inject
     private DatabaseLayout databaseLayout;
     private ExtensionContext context;
@@ -158,7 +157,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public FileSystemAbstraction fileSystemAbstraction()
         {
-            return testDirectory.getFileSystem();
+            return fileSystem;
         }
 
         @Override
@@ -241,7 +240,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public FileSystemAbstraction fileSystem()
         {
-            return testDirectory.getFileSystem();
+            return fileSystem;
         }
 
         @Override

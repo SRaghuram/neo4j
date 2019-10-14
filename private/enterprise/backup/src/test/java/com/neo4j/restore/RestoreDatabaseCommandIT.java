@@ -276,7 +276,7 @@ class RestoreDatabaseCommandIT
         Neo4jLayout neo4jLayout = databaseLayout.getNeo4jLayout();
         managementService = new DatabaseManagementServiceBuilder( neo4jLayout.homeDirectory() )
                 .setConfig( databases_root_path, neo4jLayout.databasesDirectory().toPath() )
-                .setConfig( transaction_logs_root_path, neo4jLayout.txLogsDirectory().toPath() )
+                .setConfig( transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toPath() )
                 .setConfig( online_backup_enabled, false )
                 .setConfig( default_database, databaseLayout.getDatabaseName() )
                 .build();

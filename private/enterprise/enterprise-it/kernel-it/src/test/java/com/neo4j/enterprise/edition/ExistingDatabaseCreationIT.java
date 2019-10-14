@@ -21,7 +21,6 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,8 +34,6 @@ class ExistingDatabaseCreationIT
     private static final String anotherDatabaseName = "anotherdatabase";
     private static final String cloneDatabase = "clonedatabase";
     private static final int NUMBER_OF_CREATED_NODES = 100;
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fileSystem;
     @Inject
@@ -95,7 +92,7 @@ class ExistingDatabaseCreationIT
         DatabaseLayout cloneLayout = neo4jLayout.databaseLayout( cloneDatabase );
         copyDatabaseData( databaseLayout, cloneLayout );
 
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( neo4jLayout )
                 .setConfig( fail_on_missing_files, false ).build();
         managementService.createDatabase( cloneDatabase );
         GraphDatabaseService cloneDatabaseService = managementService.database( cloneDatabase );
@@ -121,7 +118,7 @@ class ExistingDatabaseCreationIT
         copyDatabaseData( databaseLayout, cloneLayout );
 
         var logProvider = new AssertableLogProvider();
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( neo4jLayout )
                 .setInternalLogProvider( logProvider )
                 .build();
 
@@ -141,7 +138,7 @@ class ExistingDatabaseCreationIT
 
     private DatabaseManagementService startManagementService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
+        return new TestEnterpriseDatabaseManagementServiceBuilder( neo4jLayout ).build();
     }
 
     private void copyDatabase( DatabaseLayout databaseLayout, DatabaseLayout cloneLayout ) throws IOException

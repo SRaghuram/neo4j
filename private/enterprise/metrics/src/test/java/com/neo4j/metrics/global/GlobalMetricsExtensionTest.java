@@ -26,7 +26,6 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class GlobalMetricsExtensionTest
 {
     @Inject
-    private TestDirectory testDirectory;
+    private FileSystemAbstraction fileSystem;
     @Inject
     private Neo4jLayout neo4jLayout;
     private ExtensionContext context;
@@ -136,7 +135,7 @@ class GlobalMetricsExtensionTest
         @Override
         public FileSystemAbstraction fileSystemAbstraction()
         {
-            return testDirectory.getFileSystem();
+            return fileSystem;
         }
 
         @Override

@@ -41,7 +41,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
@@ -61,8 +60,6 @@ class RecordFormatsMigrationIT
 
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private DatabaseLayout databaseLayout;
     private DatabaseManagementService managementService;
@@ -158,7 +155,7 @@ class RecordFormatsMigrationIT
 
     private DatabaseManagementServiceBuilder getGraphDatabaseBuilder()
     {
-        return new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( GraphDatabaseSettings.allow_upgrade, true )
+        return new TestDatabaseManagementServiceBuilder( databaseLayout ).setConfig( GraphDatabaseSettings.allow_upgrade, true )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

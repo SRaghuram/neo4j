@@ -28,7 +28,6 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -44,8 +43,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 class DefaultDatabaseSelectionIT
 {
     private static final String LEGACY_DATABASE_NAME = "graph.db";
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private Neo4jLayout neo4jLayout;
     @Inject
@@ -174,7 +171,6 @@ class DefaultDatabaseSelectionIT
         managementService.shutdown();
         DatabaseLayout systemLayout = neo4jLayout.databaseLayout( SYSTEM_DATABASE_NAME );
         assertTrue( systemLayout.metadataStore().exists() );
-        FileSystemAbstraction fileSystem = testDirectory.getFileSystem();
         fileSystem.deleteRecursively( systemLayout.getTransactionLogsDirectory() );
         fileSystem.deleteRecursively( systemLayout.databaseDirectory() );
         assertFalse( systemLayout.databaseDirectory().exists() );
@@ -199,7 +195,7 @@ class DefaultDatabaseSelectionIT
 
     private TestEnterpriseDatabaseManagementServiceBuilder getDatabaseBuilder()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( neo4jLayout )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 

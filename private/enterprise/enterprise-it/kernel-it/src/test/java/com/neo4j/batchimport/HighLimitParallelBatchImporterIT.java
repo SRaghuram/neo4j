@@ -8,10 +8,9 @@ package com.neo4j.batchimport;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 
-import java.io.File;
-
 import org.neo4j.internal.batchimport.ParallelBatchImporter;
 import org.neo4j.internal.batchimport.ParallelBatchImporterTest;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
@@ -27,8 +26,8 @@ public class HighLimitParallelBatchImporterIT extends ParallelBatchImporterTest
     }
 
     @Override
-    public TestDatabaseManagementServiceBuilder getDBMSBuilder( File databaseRootDir )
+    public TestDatabaseManagementServiceBuilder getDBMSBuilder( DatabaseLayout layout )
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( databaseRootDir );
+        return new TestEnterpriseDatabaseManagementServiceBuilder( layout );
     }
 }

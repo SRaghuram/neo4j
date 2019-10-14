@@ -29,7 +29,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,8 +37,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 @Neo4jLayoutExtension
 class BatchingNeoStoresIT
 {
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
     @Inject
@@ -79,7 +76,7 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
+        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseLayout )
                 .setConfig( GraphDatabaseSettings.fail_on_missing_files, false )
                 .build();
         GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );

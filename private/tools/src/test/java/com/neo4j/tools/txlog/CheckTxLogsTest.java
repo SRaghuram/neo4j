@@ -47,7 +47,6 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.CHECK_TYPES;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.NODE;
@@ -70,8 +69,6 @@ class CheckTxLogsTest
 {
     @Inject
     private FileSystemAbstraction fs;
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private DatabaseLayout databaseLayout;
 

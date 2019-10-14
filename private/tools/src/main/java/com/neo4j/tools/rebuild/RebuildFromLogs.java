@@ -288,7 +288,7 @@ class RebuildFromLogs
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, databaseLayout.getDatabaseName() )
                 .setConfig( GraphDatabaseSettings.databases_root_path, neo4jLayout.databasesDirectory().toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, neo4jLayout.txLogsDirectory().toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toPath().toAbsolutePath() )
                 .build();
         return (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
     }

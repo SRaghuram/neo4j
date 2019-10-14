@@ -33,7 +33,6 @@ import org.neo4j.storageengine.api.format.CapabilityType;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
-import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,8 +46,6 @@ import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 @Neo4jLayoutExtension
 class HighLimitStoreMigrationTest
 {
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fileSystem;
     @Inject
@@ -77,6 +74,7 @@ class HighLimitStoreMigrationTest
         {
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
+            fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
             prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 

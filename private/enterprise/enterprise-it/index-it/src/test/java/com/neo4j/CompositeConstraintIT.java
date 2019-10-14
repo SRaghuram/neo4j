@@ -26,7 +26,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,8 +37,6 @@ import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 @ResourceLock( Resources.SYSTEM_OUT )
 class CompositeConstraintIT
 {
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private DatabaseLayout databaseLayout;
 
