@@ -12,7 +12,6 @@ import org.neo4j.kernel.impl.locking.LockingCompatibilityTestSuite;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
-import org.neo4j.lock.WaitStrategy;
 import org.neo4j.test.extension.actors.Actor;
 
 public class ForsetiLocksTest extends LockingCompatibilityTestSuite
