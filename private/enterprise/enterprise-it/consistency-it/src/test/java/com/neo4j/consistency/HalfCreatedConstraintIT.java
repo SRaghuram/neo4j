@@ -86,7 +86,7 @@ class HalfCreatedConstraintIT
         } );
         assertThat( exception.getMessage(), containsString(
                     "Index IndexDefinition[label:MARKER on:property] " +
-                            "(Index( 1, 'Uniqueness constraint on :Label (prop)', UNIQUE, :label[0](property[0]), native-btree-1.0 )) " +
+                            "(Index( 1, 'Uniqueness constraint on :Label (prop)', UNIQUE BTREE, :label[0](property[0]), native-btree-1.0 )) " +
                             "entered a FAILED state. Please see database logs.: Cause of failure:" ) );
     }
 

@@ -50,6 +50,7 @@ class ProcedureResourcesIT
     private final String indexDefinition = ":Label(prop)";
     private final String ftsNodesIndex = "'ftsNodes'";
     private final String ftsRelsIndex = "'ftsRels'";
+    private final String ftsRelsIndexToDrop = "'ftsRelsToDrop'";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private String indexName;
 
@@ -169,6 +170,7 @@ class ProcedureResourcesIT
         {
             tx.execute( "call db.index.fulltext.createNodeIndex(" + ftsNodesIndex + ", ['Label'], ['prop'])" ).close();
             tx.execute( "call db.index.fulltext.createRelationshipIndex(" + ftsRelsIndex + ", ['Label'], ['prop'])" ).close();
+            tx.execute( "call db.index.fulltext.createRelationshipIndex(" + ftsRelsIndexToDrop + ", ['Label', 'ToDrop'], ['prop'])" ).close();
             tx.commit();
         }
     }
@@ -289,7 +291,7 @@ class ProcedureResourcesIT
             proc.withParam( "'value'" );
             break;
         case "db.index.fulltext.drop":
-            proc.withParam( ftsRelsIndex );
+            proc.withParam( ftsRelsIndexToDrop );
             break;
         case "db.index.fulltext.createRelationshipIndex":
             // Grabs schema lock an so can not execute concurrently with node creation

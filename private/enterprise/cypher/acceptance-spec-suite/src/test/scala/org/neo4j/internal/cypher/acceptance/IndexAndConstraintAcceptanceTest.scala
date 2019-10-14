@@ -119,7 +119,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("CREATE INDEX ON :Person(name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple indexes with same schema (new syntax)") {
@@ -131,7 +131,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple indexes with same schema (mixed syntax)") {
@@ -143,7 +143,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN: new syntax
       executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
 
     // GIVEN: new syntax
     executeSingle("CREATE INDEX ON :Person(age)")
@@ -153,7 +153,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN: old syntax
       executeSingle("CREATE INDEX FOR (n:Person) ON (n.age)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 2, 'Index on :Person (age)', GENERAL, :Person(age), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 2, 'Index on :Person (age)', GENERAL BTREE, :Person(age), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple named indexes with same name and schema") {
@@ -165,7 +165,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("CREATE INDEX my_index FOR (n:Person) ON (n.name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'my_index', GENERAL, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'my_index', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple named indexes with different names but same schema") {

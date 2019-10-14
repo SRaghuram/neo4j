@@ -195,7 +195,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
         else
         {
-            final String indexDescription = "Index( 1, 'Index on :Superhero (primaryPower)', GENERAL, :Superhero(primaryPower), native-btree-1.0 )";
+            final String indexDescription = "Index( 1, 'Index on :Superhero (primaryPower)', GENERAL BTREE, :Superhero(primaryPower), native-btree-1.0 )";
             assertEquals( "An equivalent index already exists, '" + indexDescription + "'.", e.getMessage() );
         }
     }
