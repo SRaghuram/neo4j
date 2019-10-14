@@ -129,29 +129,44 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
 
         try
         {
-            if ( localTransaction != null )
+            try
             {
-                localTransaction.commit();
+                if ( localTransaction != null )
+                {
+                    localTransaction.commit();
+                }
             }
-        }
-        catch ( Exception e )
-        {
-            // failure to commit a local transaction is just logged and not reported to the user
-            userLog.error( String.format( "Local transaction %d commit failed", id ), e );
-        }
+            catch ( Exception e )
+            {
+                // the exception with stack trace will be logged by Bolt's ErrorReporter
+                userLog.error( String.format( "Local transaction %d commit failed", id ) );
+                try
+                {
+                    if ( remoteTransaction != null )
+                    {
+                        remoteTransaction.rollback().block();
+                    }
+                }
+                catch ( Exception ee )
+                {
+                    userLog.error( "Failed to rollback remote transaction", ee );
+                }
+                throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit transaction", e );
+            }
 
-        try
-        {
-            if ( remoteTransaction != null )
+            try
             {
-                remoteTransaction.commit().block();
+                if ( remoteTransaction != null )
+                {
+                    remoteTransaction.commit().block();
+                }
             }
-        }
-        catch ( Exception e )
-        {
-            // the exception with stack trace will be logged by Bolt's ErrorReporter
-            userLog.error( "Transaction %d commit failed", id );
-            throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit remote transaction", e );
+            catch ( Exception e )
+            {
+                // the exception with stack trace will be logged by Bolt's ErrorReporter
+                userLog.error( "Transaction %d commit failed", id );
+                throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit remote transaction", e );
+            }
         }
         finally
         {
@@ -200,6 +215,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         internalLog.debug( "Rolling back transaction %d", id );
         cancelTimeout();
 
+        Exception localError = null;
         try
         {
             if ( localTransaction != null )
@@ -209,8 +225,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
         catch ( Exception e )
         {
-            // failure to rollback a local transaction is just logged and not reported to the user
-            userLog.error( String.format( "Local transaction %d rollback failed", id ), e );
+            localError = e;
         }
 
         try
@@ -223,12 +238,23 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         catch ( Exception e )
         {
             // the exception with stack trace will be logged by Bolt's ErrorReporter
-            userLog.error( "Transaction %d rollback failed", id );
+            userLog.error( "Remote transaction %d rollback failed", id );
+            // remote error are considered more important, so a remote error is just thrown even if localError != null
+            if ( localError != null )
+            {
+                userLog.error( String.format( "Local transaction %d rollback failed", id ), localError );
+            }
             throw new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback remote transaction", e );
         }
         finally
         {
             transactionManager.removeTransaction( this );
+        }
+
+        if ( localError != null )
+        {
+            userLog.error( String.format( "Local transaction %d rollback failed", id ) );
+            throw new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback local transaction", localError );
         }
 
         internalLog.debug( "Transaction %d rolled back", id );

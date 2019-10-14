@@ -79,9 +79,9 @@ class TransactionIntegrationTest
                 "fabric.graph.1.uri", remote1.boltURI().toString(),
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
-                "fabric.stream.buffer.low.watermark", "1",
-                "fabric.stream.sync.batch.size", "1",
-                "fabric.stream.buffer.size", "10",
+                "fabric.stream.buffer.low_watermark", "1",
+                "fabric.stream.sync_batch_size", "1",
+                "fabric.stream.buffer_size", "10",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true"
         );
