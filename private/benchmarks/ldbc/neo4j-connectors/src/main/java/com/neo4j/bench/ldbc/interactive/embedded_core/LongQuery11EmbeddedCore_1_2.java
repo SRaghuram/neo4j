@@ -40,8 +40,7 @@ public class LongQuery11EmbeddedCore_1_2 extends Neo4jQuery11<Neo4jConnectionSta
         Node country = Operators.findNode( connection.getTx(), Place.Type.Country, Place.NAME, operation.countryName() );
 
         Set<Node> companies = new HashSet<>();
-        for ( Relationship isLocatedIn : country
-                .getRelationships( Rels.ORGANISATION_IS_LOCATED_IN, Direction.INCOMING ) )
+        for ( Relationship isLocatedIn : country.getRelationships( Direction.INCOMING, Rels.ORGANISATION_IS_LOCATED_IN ) )
         {
             Node company = isLocatedIn.getStartNode();
             if ( company.hasLabel( Organisation.Type.University ) )

@@ -59,13 +59,13 @@ public class LongQuery6EmbeddedCore_0_1 extends Neo4jQuery6<Neo4jConnectionState
         }
 
         Map<Node,Integer> tagPostCounts = new HashMap<>();
-        for ( Relationship hasKnownTag : knownTag.getRelationships( Rels.POST_HAS_TAG, Direction.INCOMING ) )
+        for ( Relationship hasKnownTag : knownTag.getRelationships( Direction.INCOMING, Rels.POST_HAS_TAG ) )
         {
             Node post = hasKnownTag.getStartNode();
             Node creator = post.getSingleRelationship( Rels.POST_HAS_CREATOR, Direction.OUTGOING ).getEndNode();
             if ( friends.contains( creator ) )
             {
-                for ( Relationship hasTag : post.getRelationships( Rels.POST_HAS_TAG, Direction.OUTGOING ) )
+                for ( Relationship hasTag : post.getRelationships( Direction.OUTGOING, Rels.POST_HAS_TAG ) )
                 {
                     Node tag = hasTag.getEndNode();
                     if ( !tag.equals( knownTag ) )

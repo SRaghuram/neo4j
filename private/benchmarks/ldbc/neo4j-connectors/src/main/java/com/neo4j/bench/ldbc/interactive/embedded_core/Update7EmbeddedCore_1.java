@@ -141,7 +141,7 @@ public class Update7EmbeddedCore_1 extends Neo4jUpdate7<Neo4jConnectionState>
 
     private Relationship getKnowsOrNull( Node person1, Node person2 )
     {
-        try ( ResourceIterator<Relationship> knowsIter = (ResourceIterator<Relationship>) person1.getRelationships( Rels.KNOWS, Direction.BOTH ).iterator() )
+        try ( ResourceIterator<Relationship> knowsIter = (ResourceIterator<Relationship>) person1.getRelationships( Direction.BOTH, Rels.KNOWS ).iterator() )
         {
             while ( knowsIter.hasNext() )
             {

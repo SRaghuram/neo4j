@@ -156,7 +156,7 @@ public class Expand extends AbstractCoreBenchmark
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
         Node node = txState.tx.getNodeById( nodeId );
         RelationshipType type = txState.randomRelationshipType( rngState.rng );
-        Iterable<Relationship> relationships = node.getRelationships( type, Direction.OUTGOING );
+        Iterable<Relationship> relationships = node.getRelationships( Direction.OUTGOING, type );
         for ( Relationship rel : relationships )
         {
             bh.consume( rel.getOtherNode( node ) );

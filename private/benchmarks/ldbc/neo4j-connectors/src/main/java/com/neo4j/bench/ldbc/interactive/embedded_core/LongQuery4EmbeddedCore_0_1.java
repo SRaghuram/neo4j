@@ -55,8 +55,7 @@ public class LongQuery4EmbeddedCore_0_1 extends Neo4jQuery4<Neo4jConnectionState
         for ( Relationship knows : person.getRelationships( Rels.KNOWS ) )
         {
             Node friend = knows.getOtherNode( person );
-            for ( Relationship hasCreator : friend
-                    .getRelationships( Rels.POST_HAS_CREATOR, Direction.INCOMING ) )
+            for ( Relationship hasCreator : friend.getRelationships( Direction.INCOMING, Rels.POST_HAS_CREATOR ) )
             {
                 Node post = hasCreator.getStartNode();
                 long postCreationDate = (long) post.getProperty( Message.CREATION_DATE );
@@ -66,7 +65,7 @@ public class LongQuery4EmbeddedCore_0_1 extends Neo4jQuery4<Neo4jConnectionState
                 }
                 else if ( postCreationDate < endDate )
                 {
-                    for ( Relationship hasTag : post.getRelationships( Rels.POST_HAS_TAG, Direction.OUTGOING ) )
+                    for ( Relationship hasTag : post.getRelationships( Direction.OUTGOING, Rels.POST_HAS_TAG ) )
                     {
                         Node tag = hasTag.getEndNode();
                         Integer postCount = tagPostCounts.get( tag );
@@ -114,7 +113,7 @@ public class LongQuery4EmbeddedCore_0_1 extends Neo4jQuery4<Neo4jConnectionState
     private List<Node> tagsOnPost( Node post )
     {
         List<Node> tags = new ArrayList<>();
-        for ( Relationship hasTag : post.getRelationships( Rels.POST_HAS_TAG, Direction.OUTGOING ) )
+        for ( Relationship hasTag : post.getRelationships( Direction.OUTGOING, Rels.POST_HAS_TAG ) )
         {
             Node tag = hasTag.getEndNode();
             tags.add( tag );

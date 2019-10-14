@@ -103,7 +103,7 @@ public class ShortQuery7EmbeddedCore_0_1 extends Neo4jShortQuery7<Neo4jConnectio
         private KnowsCache( Node person )
         {
             this.person = person;
-            this.knows = (ResourceIterator<Relationship>) person.getRelationships( Rels.KNOWS, Direction.BOTH ).iterator();
+            this.knows = (ResourceIterator<Relationship>) person.getRelationships( Direction.BOTH, Rels.KNOWS ).iterator();
             this.knowsIsClosed = false;
             this.friends = new LongOpenHashSet();
         }

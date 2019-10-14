@@ -88,8 +88,7 @@ public class LongQuery12EmbeddedCore_0_1 extends Neo4jQuery12<Neo4jConnectionSta
         {
             Node friend = friendEntry.getKey();
             LdbcQuery12PreResult preResult = friendEntry.getValue();
-            for ( Relationship hasCreator : friend
-                    .getRelationships( Rels.COMMENT_HAS_CREATOR, Direction.INCOMING ) )
+            for ( Relationship hasCreator : friend.getRelationships( Direction.INCOMING, Rels.COMMENT_HAS_CREATOR ) )
             {
                 Node comment = hasCreator.getStartNode();
                 LongSet tagsOnRepliedToPost = tagsOnPost.getTags( comment );

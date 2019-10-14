@@ -70,7 +70,7 @@ public class LongQuery5EmbeddedCore_1 extends Neo4jQuery5<Neo4jConnectionState>
         Map<Node,Set<Node>> friendsInForumsWithPosts = new HashMap<>();
         for ( Node friend : friends )
         {
-            for ( Relationship hasMember : friend.getRelationships( Rels.HAS_MEMBER_WITH_POSTS, Direction.INCOMING ) )
+            for ( Relationship hasMember : friend.getRelationships( Direction.INCOMING, Rels.HAS_MEMBER_WITH_POSTS ) )
             {
                 long joinDate = (long) hasMember.getProperty( HasMember.JOIN_DATE );
                 if ( joinDate > minDate )
@@ -90,7 +90,7 @@ public class LongQuery5EmbeddedCore_1 extends Neo4jQuery5<Neo4jConnectionState>
         for ( Node forum : friendsInForumsWithPosts.keySet() )
         {
             int forumPostCount = 0;
-            for ( Relationship containerOf : forum.getRelationships( Rels.CONTAINER_OF, Direction.OUTGOING ) )
+            for ( Relationship containerOf : forum.getRelationships( Direction.OUTGOING, Rels.CONTAINER_OF ) )
             {
                 Node post = containerOf.getEndNode();
                 Node creator = post.getSingleRelationship( Rels.POST_HAS_CREATOR, Direction.OUTGOING ).getEndNode();

@@ -293,7 +293,7 @@ public class LongQuery1EmbeddedCore_1_2 extends Neo4jQuery1<Neo4jConnectionState
                     .getProperty( Place.NAME );
 
             List<List<Object>> unis = new ArrayList<>();
-            for ( Relationship studyAt : person.getRelationships( Rels.STUDY_AT, Direction.OUTGOING ) )
+            for ( Relationship studyAt : person.getRelationships( Direction.OUTGOING, Rels.STUDY_AT ) )
             {
                 Node university = studyAt.getEndNode();
                 unis.add(

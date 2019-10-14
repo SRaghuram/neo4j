@@ -385,8 +385,7 @@ class RelationshipIdReuseStressIT
         {
             Node bandNode = getRandomBandNode( transaction, bandLabel );
             TestRelationshipTypes relationshipType = getRandomRelationshipType();
-            Iterable<Relationship> relationships =
-                    bandNode.getRelationships( relationshipType, getRandomDirection() );
+            Iterable<Relationship> relationships = bandNode.getRelationships( getRandomDirection(), relationshipType );
             for ( Relationship relationship : relationships )
             {
                 relationship.delete();

@@ -151,7 +151,7 @@ public interface ManyToOneIsConnectedCache
         {
             this.baseThing = baseThing;
             this.thingsConnected = new LongOpenHashSet();
-            this.connectionsIterator = baseThing.getRelationships( relationshipType, direction ).iterator();
+            this.connectionsIterator = baseThing.getRelationships( direction, relationshipType ).iterator();
             this.neighborFun = Operators.neighborFun( direction );
         }
 

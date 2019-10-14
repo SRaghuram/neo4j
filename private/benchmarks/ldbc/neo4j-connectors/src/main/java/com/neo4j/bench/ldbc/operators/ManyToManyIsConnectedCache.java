@@ -63,7 +63,7 @@ public interface ManyToManyIsConnectedCache
             if ( !connectedMatrix.containsKey( fromThing.getId() ) )
             {
                 LongSet fromThingConnections = new LongOpenHashSet();
-                for ( Relationship relationship : fromThing.getRelationships( relationshipType, direction ) )
+                for ( Relationship relationship : fromThing.getRelationships( direction, relationshipType ) )
                 {
                     fromThingConnections.add( neighborFun.apply( relationship, fromThing ).getId() );
                 }

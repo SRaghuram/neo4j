@@ -89,7 +89,7 @@ public class LongQuery10EmbeddedCore_0_1 extends Neo4jQuery10<Neo4jConnectionSta
         }
 
         final Set<Node> tagsPersonIsInterestedIn = new HashSet<>();
-        for ( Relationship relationship : person.getRelationships( Rels.HAS_INTEREST, Direction.OUTGOING ) )
+        for ( Relationship relationship : person.getRelationships( Direction.OUTGOING, Rels.HAS_INTEREST ) )
         {
             Node tag = relationship.getEndNode();
             tagsPersonIsInterestedIn.add( tag );
@@ -103,8 +103,7 @@ public class LongQuery10EmbeddedCore_0_1 extends Neo4jQuery10<Neo4jConnectionSta
         for ( Node friend : friendsOfFriends )
         {
             int commonInterestScore = 0;
-            for ( Relationship hasCreator : friend
-                    .getRelationships( Rels.POST_HAS_CREATOR, Direction.INCOMING ) )
+            for ( Relationship hasCreator : friend.getRelationships( Direction.INCOMING, Rels.POST_HAS_CREATOR ) )
             {
                 Node post = hasCreator.getStartNode();
                 if ( postIsTaggedWithAnyOfGivenTags( post, tagsPersonIsInterestedIn ) )
@@ -143,7 +142,7 @@ public class LongQuery10EmbeddedCore_0_1 extends Neo4jQuery10<Neo4jConnectionSta
     private boolean postIsTaggedWithAnyOfGivenTags( Node post, Set<Node> tags )
     {
         try ( ResourceIterator<Relationship> relationships =
-                      (ResourceIterator<Relationship>) post.getRelationships( Rels.POST_HAS_TAG, Direction.OUTGOING ).iterator() )
+                      (ResourceIterator<Relationship>) post.getRelationships( Direction.OUTGOING, Rels.POST_HAS_TAG ).iterator() )
         {
             while ( relationships.hasNext() )
             {

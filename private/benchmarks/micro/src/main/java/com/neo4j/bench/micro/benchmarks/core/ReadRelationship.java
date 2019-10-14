@@ -158,7 +158,7 @@ public class ReadRelationship extends AbstractCoreBenchmark
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
         int randomTypeIndex = rngState.rng.nextInt( txState.relationshipTypes.length );
         RelationshipType type = txState.relationshipTypes[randomTypeIndex];
-        return Iterables.count( txState.tx.getNodeById( nodeId ).getRelationships( type, Direction.BOTH ) );
+        return Iterables.count( txState.tx.getNodeById( nodeId ).getRelationships( Direction.BOTH, type ) );
     }
 
     @Benchmark
@@ -168,7 +168,7 @@ public class ReadRelationship extends AbstractCoreBenchmark
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
         int randomTypeIndex = rngState.rng.nextInt( txState.relationshipTypes.length );
         RelationshipType type = txState.relationshipTypes[randomTypeIndex];
-        return Iterables.count( txState.tx.getNodeById( nodeId ).getRelationships( type, Direction.OUTGOING ) );
+        return Iterables.count( txState.tx.getNodeById( nodeId ).getRelationships( Direction.OUTGOING, type ) );
     }
 
     // Has Relationship

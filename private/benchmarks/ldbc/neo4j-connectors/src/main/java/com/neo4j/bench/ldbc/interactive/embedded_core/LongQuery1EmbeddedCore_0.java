@@ -279,7 +279,7 @@ public class LongQuery1EmbeddedCore_0 extends Neo4jQuery1<Neo4jConnectionState>
                     .getProperty( Place.NAME );
 
             List<List<Object>> unis = new ArrayList<>();
-            for ( Relationship studyAt : person.getRelationships( Rels.STUDY_AT, Direction.OUTGOING ) )
+            for ( Relationship studyAt : person.getRelationships( Direction.OUTGOING, Rels.STUDY_AT ) )
             {
                 Node university = studyAt.getEndNode();
                 unis.add(
@@ -288,7 +288,7 @@ public class LongQuery1EmbeddedCore_0 extends Neo4jQuery1<Neo4jConnectionState>
             }
 
             List<List<Object>> companies = new ArrayList<>();
-            for ( Relationship worksAt : person.getRelationships( Rels.WORKS_AT, Direction.OUTGOING ) )
+            for ( Relationship worksAt : person.getRelationships( Direction.OUTGOING, Rels.WORKS_AT ) )
             {
                 Node company = worksAt.getEndNode();
                 companies.add(

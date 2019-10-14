@@ -44,7 +44,7 @@ public class ShortQuery3EmbeddedCore_0_1_2 extends Neo4jShortQuery3<Neo4jConnect
         Node person = Operators.findNode( connection.getTx(), Nodes.Person, Person.ID, operation.personId() );
 
         List<LdbcShortQuery3PersonFriendsResult> results = new ArrayList<>();
-        for ( Relationship knows : person.getRelationships( Rels.KNOWS, Direction.BOTH ) )
+        for ( Relationship knows : person.getRelationships( Direction.BOTH, Rels.KNOWS ) )
         {
             Node friend = knows.getOtherNode( person );
             Map<String,Object> friendProperties = friend.getProperties( PERSON_PROPERTIES );
