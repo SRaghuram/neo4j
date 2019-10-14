@@ -207,12 +207,12 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
   import OperatorCodeGenHelperTemplates._
 
-  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName(),
+  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
                                             if (types.isEmpty && missingTypes.isEmpty) constant(null)
                                             else arrayOf[Int](types.map(constant):_*))
-  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName(),
+  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
                                                       arrayOf[String](missingTypes.map(constant):_*))
-  private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName())
+  private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName() + "varExpandCursor")
   private val toOffset = toSlot.offset
   private val projectBackwards = VarLengthExpandPipe.projectBackwards(dir, projectedDir)
   private var startNodePredicate: Option[IntermediateExpression] = _
@@ -252,8 +252,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val resultBoolean = codeGen.namer.nextVariableName()
-    val fromNode = codeGen.namer.nextVariableName()
-    val toNode = codeGen.namer.nextVariableName()
+    val fromNode = codeGen.namer.nextVariableName() + "fromNode"
+    val toNode = codeGen.namer.nextVariableName() + "toNode"
 
     /**
       * Generate node predicate to be checked on the fromNode
@@ -328,13 +328,9 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genInnerLoop: IntermediateRepresentation = {
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, MorselExecutionContext]("copyFrom"),
-                           loadField(INPUT_MORSEL))
-        } else {
-          noop()
-        },
-        setNode(fromSlot),
+        codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+                              Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
+        //setNode(fromSlot),
         codeGen.setRefAt(relOffset, invoke(loadField(varExpandCursorField),
                                             method[VarExpandCursor, ListValue]("relationships"))),
         if (shouldExpandAll) codeGen.setLongAt(toOffset, invoke(loadField(varExpandCursorField), method[VarExpandCursor, Long]("toNode")) )
@@ -483,7 +479,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     val fields = nodePredicate.map(_.fields).getOrElse(Seq.empty) ++ relPredicate.map(_.fields).getOrElse(Seq.empty)
     val locals = nodePredicate.map(_.variables).getOrElse(Set.empty) ++ relPredicate.map(_.variables).getOrElse(Set.empty)
 
-    ExtendClass(codeGen.namer.nextVariableName().toUpperCase, classToExtend,
+    ExtendClass(codeGen.namer.nextVariableName().toUpperCase + "VarExpandCursorImpl", classToExtend,
                 Seq(param[Long]("fromNode"),
                    param[Long]("toNode"),
                    param[NodeCursor]("nodeCursor"),
@@ -522,27 +518,20 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   }
 
   private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
+    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
     case LongSlot(offset, _, _) =>
-      codeGen.getLongAtOrElse(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+      codeGen.getLongAtNoSave(offset)
     case RefSlot(offset, false, _) =>
       invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeIdOrNullFromAnyValue"),
-                   codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))))
+                   codeGen.getRefAtNoSave(offset))
     case RefSlot(offset, true, _) =>
       ternary(
-        equal(codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))), noValue),
+        equal(codeGen.getRefAtNoSave(offset), noValue),
         constant(-1L),
         invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeIdOrNullFromAnyValue"),
-                     codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))))
+                     codeGen.getRefAtNoSave(offset))
+      )
     case _ =>
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
-  }
-
-  private def setNode(slot: Slot): IntermediateRepresentation = slot match {
-    case LongSlot(offset, _, _) =>
-      if (codeGen.hasLongAt(offset)) noop()
-      else codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
-    case RefSlot(offset, _, _) =>
-      if (codeGen.hasRefAt(offset)) noop()
-      else codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
   }
 }

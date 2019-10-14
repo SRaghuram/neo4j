@@ -260,15 +260,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     }
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext) {
-          // TODO: This does not work if not head operator. We need to overload copyFrom in OperatorExpressionCompiler
-          //       so that we can copy local slot variables if they exist
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, MorselExecutionContext]("copyFrom"),
-                           loadField(INPUT_MORSEL))
-        } else {
-          noop()
-        },
-        setNode(fromSlot),
+        codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+                              Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
         codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
@@ -315,28 +308,19 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   }
 
   private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
+    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
     case LongSlot(offset, _, _) =>
-      codeGen.getLongAtOrElse(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
+      codeGen.getLongAtNoSave(offset)
     case RefSlot(offset, false, _) =>
-      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"),
-                   codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))))
+      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAtNoSave(offset))
     case RefSlot(offset, true, _) =>
       ternary(
-        equal(codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))), noValue),
+        equal(codeGen.getRefAtNoSave(offset), noValue),
         constant(-1L),
-        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"),
-                     codeGen.getRefAtOrElse(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))))
+        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAtNoSave(offset))
+      )
     case _ =>
       throw new InternalException(s"Do not know how to get a node id for slot $slot")
-  }
-
-  private def setNode(slot: Slot): IntermediateRepresentation = slot match {
-    case LongSlot(offset, _, _) =>
-      if (codeGen.hasLongAt(offset)) noop()
-      else codeGen.setLongAt(offset, codeGen.getLongFromExecutionContext(offset, loadField(INPUT_MORSEL)))
-    case RefSlot(offset, _, _) =>
-      if (codeGen.hasRefAt(offset)) noop()
-      else codeGen.setRefAt(offset, codeGen.getRefFromExecutionContext(offset, loadField(INPUT_MORSEL)))
   }
 }
 

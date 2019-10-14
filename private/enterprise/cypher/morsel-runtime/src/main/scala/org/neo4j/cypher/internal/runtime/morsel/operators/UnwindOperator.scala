@@ -140,11 +140,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, MorselExecutionContext]("copyFrom"), loadField(INPUT_MORSEL))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.inputSlotConfiguration.numberOfReferences),
         codeGen.setRefAt(offset, cast[AnyValue](invoke(loadField(iteratorField), method[java.util.Iterator[_], Object]("next")))),
         profileRow(id),
         inner.genOperateWithExpressions,

@@ -10,12 +10,13 @@ import org.neo4j.codegen.api.{CodeGeneration, Field, IntermediateRepresentation}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.operations.CursorUtils
+import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.{LocalVariableSlotMapper, LocalsForSlots, ScopeContinuationState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
-import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
-import org.neo4j.cypher.operations.CursorUtils
-import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, OUTPUT_ROW, UNINITIALIZED_LONG_SLOT_VALUE}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -23,10 +24,15 @@ import scala.collection.mutable.ArrayBuffer
 
 object OperatorExpressionCompiler {
 
+  // (`slot offset`, `local variable name`, `is modified`)
+  type FOREACH_LOCAL_FUN = (Int, String, Boolean) => Unit
+
   case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration) {
-    val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
-    val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
-    val cachedProperties: Array[String] = new Array[String](slots.numberOfReferences)
+    private val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
+    private val longSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfLongs)
+    private val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
+    private val refSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfReferences)
+    private val cachedProperties: Array[String] = new Array[String](slots.numberOfReferences)
 
     def addLocalForLongSlot(offset: Int): String = {
       val local = s"longSlot$offset"
@@ -46,50 +52,55 @@ object OperatorExpressionCompiler {
       refslot
     }
 
+    def markModifiedLocalForLongSlot(offset: Int): Unit = {
+      longSlotToLocalModified(offset) = true
+    }
+
+    def markModifiedLocalForRefSlot(offset: Int): Unit = {
+      refSlotToLocalModified(offset) = true
+    }
+
     def getLocalForLongSlot(offset: Int): String = longSlotToLocal(offset)
 
     def getLocalForRefSlot(offset: Int): String = refSlotToLocal(offset)
 
-    def getAllLocalsForLongSlots: Seq[(Int, String)] =
-      getAllLocalsFor(longSlotToLocal)
+    val foreachLocalForLongSlot: (FOREACH_LOCAL_FUN) => Unit = foreachLocalFor(longSlotToLocal, longSlotToLocalModified)
+    val foreachLocalForRefSlot: (FOREACH_LOCAL_FUN) => Unit = foreachLocalFor(refSlotToLocal, refSlotToLocalModified)
 
-    def getAllLocalsForRefSlots: Seq[(Int, String)] =
-      getAllLocalsFor(refSlotToLocal)
-
-    def getAllLocalsForCachedProperties: Seq[(Int, String)] = {
+    private def foreachLocalFor(slotToLocal: Array[String], slotToLocalModified: Array[Boolean])
+                               (f: FOREACH_LOCAL_FUN): Unit = {
       var i = 0
-      val locals = new ArrayBuffer[(Int, String)]()
+      while (i < slotToLocal.length) {
+        val name = slotToLocal(i)
+        if (name != null) {
+          val modified = slotToLocalModified(i)
+          f(i, name, modified)
+        }
+        i += 1
+      }
+    }
+
+    def foreachCachedProperty(f: (Int, String) => Unit): Unit = {
+      var i = 0
       while (i < cachedProperties.length) {
         val cp = cachedProperties(i)
         if (cp != null) {
-          locals += i -> cp
+          f(i, cp)
         }
         i += 1
       }
-      locals
-    }
-
-    private def getAllLocalsFor(slotToLocal: Array[String]): Seq[(Int, String)] = {
-      val locals = new ArrayBuffer[(Int, String)](slotToLocal.length)
-      var i = 0
-      while (i < slotToLocal.length) {
-        val v = slotToLocal(i)
-        if (v != null) {
-          locals += (i -> v)
-        }
-        i += 1
-      }
-      locals
     }
 
     def merge(other: LocalVariableSlotMapper): Unit = {
-      other.getAllLocalsForLongSlots.foreach { case (slot, local) =>
+      other.foreachLocalForLongSlot { case (slot, local, modified) =>
         longSlotToLocal(slot) = local
+        longSlotToLocalModified(slot) = modified
       }
-      other.getAllLocalsForRefSlots.foreach { case (slot, local) =>
+      other.foreachLocalForRefSlot { case (slot, local, modified) =>
         refSlotToLocal(slot) = local
+        refSlotToLocalModified(slot) = modified
       }
-      other.getAllLocalsForCachedProperties.foreach { case(i, key) =>
+      other.foreachCachedProperty { case(i, key) =>
         cachedProperties(i) = key
       }
     }
@@ -105,11 +116,11 @@ object OperatorExpressionCompiler {
         restoreOps += assign(local, loadField(f))
       }
 
-      getAllLocalsForLongSlots.foreach { case (_, local) =>
+      foreachLocalForLongSlot { case (_, local, _) =>
         addField(field[Long]("saved" + local.capitalize), local)
       }
 
-      getAllLocalsForRefSlots.foreach { case (_, local) =>
+      foreachLocalForRefSlot { case (_, local, _) =>
         addField(field[AnyValue]("saved" + local.capitalize), local)
       }
 
@@ -142,7 +153,8 @@ object OperatorExpressionCompiler {
      * Mark the beginning of a new scope
      *
      * Pushes a new scope to a scope stack.
-     * Local slot variables that are adde
+     * Local slot variables that are added from now on will be added to this new scope,
+     * until endScope is called with an option to merge them back into the parent scope or not.
      *
      * @param scopeId A string identifier for this scope.
      *                NOTE: This will be used as a prefix to a generated variable name for the continuation state returned by [[endScope]],
@@ -186,6 +198,14 @@ object OperatorExpressionCompiler {
       scopeStack.head.addCachedProperty(offset)
     }
 
+    def markModifiedLocalForLongSlot(offset: Int): Unit = {
+      scopeStack.head.markModifiedLocalForLongSlot(offset)
+    }
+
+    def markModifiedLocalForRefSlot(offset: Int): Unit = {
+      scopeStack.head.markModifiedLocalForRefSlot(offset)
+    }
+
     def getLocalForLongSlot(offset: Int): String = {
       var local: String = null
       var scope = scopeStack
@@ -206,22 +226,22 @@ object OperatorExpressionCompiler {
       local
     }
 
-    def getAllLocalsForLongSlots: Seq[(Int, String)] = {
-      scopeStack.head.getAllLocalsForLongSlots
+    def foreachLocalForLongSlot(f: FOREACH_LOCAL_FUN): Unit = {
+      scopeStack.head.foreachLocalForLongSlot(f)
     }
 
-    def getAllLocalsForRefSlots: Seq[(Int, String)] = {
-      scopeStack.head.getAllLocalsForRefSlots
+    def foreachLocalForRefSlot(f: FOREACH_LOCAL_FUN): Unit = {
+      scopeStack.head.foreachLocalForRefSlot(f)
     }
 
-    def getAllLocalsForCachedProperties: Seq[(Int, String)] = {
-      scopeStack.head.getAllLocalsForCachedProperties
+    def foreachCachedProperty(f: (Int, String) => Unit): Unit = {
+      scopeStack.head.foreachCachedProperty(f)
     }
   }
 }
 
 class OperatorExpressionCompiler(slots: SlotConfiguration,
-                                 inputSlotConfiguration: SlotConfiguration,
+                                 val inputSlotConfiguration: SlotConfiguration,
                                  readOnly: Boolean,
                                  codeGenerationMode: CodeGeneration.CodeGenerationMode,
                                  namer: VariableNamer)
@@ -229,8 +249,23 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   import org.neo4j.codegen.api.IntermediateRepresentation._
 
+  /**
+   * Used to track which slots have been loaded into local variables ([[getLongAt]], [[getRefAt]]),
+   * and which ones have been modified ([[setLongAt]], [[setRefAt]])
+   * and may need to be written to the output context by [[writeLocalsToSlots()]],
+   * as well as which properties have been cached ([[getCachedPropertyAt]], [[setCachedPropertyAt]]).
+   */
   private val locals = LocalsForSlots(slots)
 
+  /**
+   * Used by [[copyFromInput]] to track the argument state
+   */
+  private var nLongSlotsToCopyFromInput: Int = 0
+  private var nRefSlotsToCopyFromInput: Int = 0
+
+  /**
+   * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable
+   */
   override final def getLongAt(offset: Int): IntermediateRepresentation = {
     var local = locals.getLocalForLongSlot(offset)
     if (local == null) {
@@ -244,13 +279,23 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
   }
 
-  final def getLongAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
+  /**
+   * Like getLongAt, this uses a local slot variable if one is already defined, otherwise gets the value directly from
+   * the input ExecutionContext without declaring a new local slot variable for it.
+   * This is useful to avoid creating unnecessary continuation state if only a single use of the value is known to be contained within a local scope.
+   */
+  final def getLongAtNoSave(offset: Int): IntermediateRepresentation = {
     val local = locals.getLocalForLongSlot(offset)
-    if (local == null) orElse else {
+    if (local == null) {
+      getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
+    } else {
       load(local)
     }
   }
 
+  /**
+   * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable
+   */
   override final def getRefAt(offset: Int): IntermediateRepresentation = {
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
@@ -264,9 +309,16 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
   }
 
-  final def getRefAtOrElse(offset: Int, orElse: IntermediateRepresentation): IntermediateRepresentation = {
+  /**
+   * Like getRefAt, this uses a local slot variable if one is already defined, otherwise gets the value directly from
+   * the input ExecutionContext without declaring a new local slot variable for it.
+   * This is useful to avoid creating unnecessary continuation state if only a single use of the value is known to be contained within a local scope.
+   */
+  final def getRefAtNoSave(offset: Int): IntermediateRepresentation = {
     val local = locals.getLocalForRefSlot(offset)
-    if (local == null) orElse else {
+    if (local == null) {
+      getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
+    } else {
       load(local)
     }
   }
@@ -276,19 +328,39 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     if (local == null) {
       local = locals.addLocalForLongSlot(offset)
     }
+    locals.markModifiedLocalForLongSlot(offset)
     assign(local, value)
   }
-
-  def hasLongAt(offset: Int): Boolean = locals.getLocalForLongSlot(offset) != null
-
-  def hasRefAt(offset: Int): Boolean = locals.getLocalForRefSlot(offset) != null
 
   override final def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
     }
+    locals.markModifiedLocalForRefSlot(offset)
     assign(local, value)
+  }
+
+  /**
+   * Mark the initial range of slots that needs to be copied from the input ExecutionContext.
+   * These are usually the argument slots of a pipeline.
+   */
+  def copyFromInput(nLongs: Int, nRefs: Int): IntermediateRepresentation = {
+    // Update the number of slots that we need to copy from the input row to the output row
+    if (nLongs > nLongSlotsToCopyFromInput) {
+      nLongSlotsToCopyFromInput = nLongs
+    }
+    if (nRefs > nRefSlotsToCopyFromInput) {
+      nRefSlotsToCopyFromInput = nRefs
+    }
+    // The actual copy will occur later, and only if it is needed, in writeLocalsToSlots()
+    noop()
+  }
+
+  final def doCopyFromWithExecutionContext(context: IntermediateRepresentation, input: IntermediateRepresentation, nLongs: Int, nRefs: Int): IntermediateRepresentation = {
+    invokeSideEffect(context, method[ExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+      input, constant(nLongs), constant(nRefs)
+    )
   }
 
   // Testing hooks
@@ -342,6 +414,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     if (local == null) {
       local = locals.addCachedProperty(offset)
     }
+    locals.markModifiedLocalForRefSlot(offset)
     assign(local, value)
   }
 
@@ -383,14 +456,96 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       ExpressionCompiler.RELATIONSHIP_CURSOR,
       ExpressionCompiler.PROPERTY_CURSOR)
 
+  /**
+   * Write to the output ExecutionContext
+   *
+   * We write all local slot variables that have been modified within this pipeline,
+   * plus an argument prefix range of slots that has been tracked by [[nLongSlotsToCopyFromInput]] and [[nRefSlotsToCopyFromInput]]
+   * upon calls to [[copyFromInput]] by operator codegen templates.
+   *
+   * We can assume that this argument range of m slots can be divided into a prefix range of 0 to n initial arguments from the input context that are not
+   * accessed within the pipeline that always needs to be copied to the output context because a pipeline of an outer apply-nesting level may need them later on,
+   * and a suffix range of n+1 to m arguments that are being accessed in this pipeline, and thus already declared as locals.
+   * However, currently we copy the whole range from the input context, up to the first slot that was modified within this pipeline.
+   * If that range is very small, within a threshold, we use individual slot setter methods (e.g. [[ExecutionContext.setLongAt]]),
+   * otherwise we use the [[ExecutionContext.copyFrom]] method.
+   *
+   */
   def writeLocalsToSlots(): IntermediateRepresentation = {
-    val writeLongs = locals.getAllLocalsForLongSlots.map { case (offset, local) =>
-      setLongInExecutionContext(offset, load(local))
+    val writeOps = new ArrayBuffer[IntermediateRepresentation]()
+    val writeLongSlotOps = new ArrayBuffer[IntermediateRepresentation]()
+    val writeRefSlotOps = new ArrayBuffer[IntermediateRepresentation]()
+
+    val USE_ARRAY_COPY_THRESHOLD = 2
+
+    // First collect all write operations for modified slots
+    var firstModifiedLongSlot = Int.MaxValue
+    locals.foreachLocalForLongSlot { case (offset, local, modified) =>
+      if (modified) {
+        if (firstModifiedLongSlot > offset) {
+          firstModifiedLongSlot = offset
+        }
+        writeLongSlotOps += setLongInExecutionContext(offset, load(local))
+      }
     }
-    val writeRefs = locals.getAllLocalsForRefSlots.map { case (offset, local) =>
-      setRefInExecutionContext(offset, load(local))
+    var firstModifiedRefSlot = Int.MaxValue
+    locals.foreachLocalForRefSlot { case (offset, local, modified) =>
+      if (modified) {
+        if (firstModifiedRefSlot > offset) {
+          firstModifiedRefSlot = offset
+        }
+        writeRefSlotOps += setRefInExecutionContext(offset, load(local))
+      }
     }
-    block(writeLongs ++ writeRefs: _*)
+
+    // Now we can compute how many arguments slots that we actually need to copy
+    val nLongsToCopy = Math.min(nLongSlotsToCopyFromInput, firstModifiedLongSlot)
+    val nRefsToCopy = Math.min(nRefSlotsToCopyFromInput, firstModifiedRefSlot)
+
+    // Prepend the write operations for argument slots
+    // Decide if we should use ExecutionContext.copyFrom or just prepend individual set operations for the remaining slots?
+    if (nLongsToCopy > USE_ARRAY_COPY_THRESHOLD || nRefsToCopy > USE_ARRAY_COPY_THRESHOLD) {
+      // Use the ExecutionContext.copyFrom method (which may use array copy)
+      writeOps += doCopyFromWithExecutionContext(OUTPUT_ROW, loadField(INPUT_MORSEL), nLongsToCopy, nRefsToCopy)
+      writeOps ++= writeLongSlotOps
+      writeOps ++= writeRefSlotOps
+    } else {
+      // Add ExecutionContext.setLongAt operations for argument slots?
+      if (nLongsToCopy > 0) {
+        var i = 0
+        while (i < nLongsToCopy) {
+          val local = locals.getLocalForLongSlot(i)
+          val getOp =
+            if (local == null)
+              getLongFromExecutionContext(i, loadField(INPUT_MORSEL))
+            else
+              load(local)
+          writeOps += setLongInExecutionContext(i, getOp)
+          i += 1
+        }
+      }
+      // Add the write operations for the modified long slots
+      writeOps ++= writeLongSlotOps
+
+      // Add ExecutionContext.setRefAt operations for argument slots?
+      if (nRefsToCopy > 0) {
+        var i = 0
+        while (i < nRefsToCopy) {
+          val local = locals.getLocalForRefSlot(i)
+          val getOp =
+            if (local == null)
+              getRefFromExecutionContext(i, loadField(INPUT_MORSEL))
+            else
+              load(local)
+          setRefInExecutionContext(i, getOp) +=: writeRefSlotOps
+          i += 1
+        }
+      }
+      // Add the write operations for the modified ref slots
+      writeOps ++= writeRefSlotOps
+    }
+
+    block(writeOps: _*)
   }
 
   //===========================================================================
@@ -405,14 +560,26 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   }
 
   def getAllLocalsForLongSlots: Seq[(Int, String)] = {
-    locals.getAllLocalsForLongSlots
+    val all = new ArrayBuffer[(Int, String)]()
+    locals.foreachLocalForLongSlot { case (slot, local, _) =>
+      all += slot -> local
+    }
+    all
   }
 
   def getAllLocalsForRefSlots: Seq[(Int, String)] = {
-    locals.getAllLocalsForRefSlots
+    val all = new ArrayBuffer[(Int, String)]()
+    locals.foreachLocalForRefSlot { case (slot, local, _) =>
+      all += slot -> local
+    }
+    all
   }
 
   def getAllLocalsForCachedProperties: Seq[(Int, String)] = {
-    locals.getAllLocalsForCachedProperties
+    val all = new ArrayBuffer[(Int, String)]()
+    locals.foreachCachedProperty { case (slot, name) =>
+      all += slot -> name
+    }
+    all
   }
 }

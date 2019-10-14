@@ -204,12 +204,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       unknownLabelOps,
       knownLabelOps,
       wildCardOps,
-      if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                         loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-      } else {
-        noop()
-      },
+      codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), load(countVar))),
       profileRow(id),
       inner.genOperateWithExpressions,

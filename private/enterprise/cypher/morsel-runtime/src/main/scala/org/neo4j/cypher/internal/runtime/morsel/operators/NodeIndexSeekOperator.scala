@@ -261,12 +261,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
         profileRow(id),
@@ -440,12 +435,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_,
                                                                              invoke(

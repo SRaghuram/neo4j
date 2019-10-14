@@ -218,21 +218,9 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        // TODO: This argument slot copy is not strictly necessary for slots with locals that are used within this pipeline
-        //       We can assume there is a prefix range of 0 to n initial arguments that are not accessed within the pipeline
-        //       that needs to be array-copied because a pipeline of an outer nesting may need them later on,
-        //       and an suffix range of n+1 to m arguments that are being used in this pipeline, and thus declared as locals.
-        //       The suffix range will be written from locals to the context by the innermost template,
-        //       (unless this pipeline ends with a ProduceResult, in which case it is written directly to the result),
-        //       so we do not need to include it in this copy.
         // If the pipeline ends with a ProduceResult, the prefix range array copy could be skipped entirely
         // since it means nobody is interested in those arguments.
-        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         profileRow(id),
         inner.genOperateWithExpressions,

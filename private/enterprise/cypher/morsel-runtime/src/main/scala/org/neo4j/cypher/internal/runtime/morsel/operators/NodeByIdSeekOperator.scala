@@ -165,12 +165,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, load(idVariable)),
         profileRow(id),
         inner.genOperateWithExpressions,
@@ -246,13 +241,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
         invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
         condition(isValidNode(idVariable))(
           block(
-            if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-              invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                               loadField(INPUT_MORSEL), constant(argumentSize.nLongs),
-                               constant(argumentSize.nReferences))
-            } else {
-              noop()
-            },
+            codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(offset, load(idVariable)),
             profileRow(id),
             inner.genOperateWithExpressions

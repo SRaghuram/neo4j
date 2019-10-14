@@ -365,12 +365,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(relationshipOffset, load(idVariable)),
         codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
@@ -426,12 +421,7 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-          invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-        } else {
-          noop()
-        },
+        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(relationshipOffset, load(idVariable)),
         ifElse(loadField(forwardDirection)) {
           //this is the on true block of if {} else {}
@@ -553,13 +543,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
         condition(and(greaterThanOrEqual(load(idVariable), constant(0L)), cursorNext[RelationshipScanCursor](loadField(cursor))))(
           block(
-            if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-              invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                               loadField(INPUT_MORSEL), constant(argumentSize.nLongs),
-                               constant(argumentSize.nReferences))
-            } else {
-              noop()
-            },
+            codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(relationshipOffset, load(idVariable)),
             codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
@@ -639,13 +623,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
         condition(and(greaterThanOrEqual(load(idVariable), constant(0L)),
                       or(not(loadField(forwardDirection)), cursorNext[RelationshipScanCursor](loadField(cursor)))))(
           block(
-            if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-              invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                               loadField(INPUT_MORSEL), constant(argumentSize.nLongs),
-                               constant(argumentSize.nReferences))
-            } else {
-              noop()
-            },
+            codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(relationshipOffset, load(idVariable)),
             ifElse(loadField(forwardDirection))(block(
               codeGen.setLongAt(fromOffset,

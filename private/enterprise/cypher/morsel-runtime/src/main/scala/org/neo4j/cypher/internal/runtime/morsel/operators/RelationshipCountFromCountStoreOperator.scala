@@ -228,12 +228,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
       else invoke(loadField(executionEventField), TRACE_DB_HITS, constant(relationshipTypes.size))
 
     block(
-      if (innermost.shouldWriteToContext && (argumentSize.nLongs > 0 || argumentSize.nReferences > 0)) {
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
-                         loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences))
-      } else {
-        noop()
-      },
+      codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), condition(countOps))),
       dbHits,
       profileRow(id),
