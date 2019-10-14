@@ -171,4 +171,9 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     assertStats(result, nodesCreated = 1, labelsAdded = 1, propertiesWritten = 3)
   }
+
+  test("deprecated parameter syntax should still work") {
+    val result = executeWith(Configs.All, "RETURN {param} as output", params = Map("param" -> 1 ))
+    result.toList should be( Map("output" -> 1))
+  }
 }
