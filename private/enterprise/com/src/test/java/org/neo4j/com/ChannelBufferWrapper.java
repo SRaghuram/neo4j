@@ -855,19 +855,7 @@ public class ChannelBufferWrapper implements ChannelBuffer
     }
 
     @Override
-    public ChannelBuffer readBytes( ChannelBufferIndexFinder indexFinder )
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ChannelBuffer readSlice( int length )
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ChannelBuffer readSlice( ChannelBufferIndexFinder indexFinder )
     {
         throw new UnsupportedOperationException();
     }
@@ -977,12 +965,6 @@ public class ChannelBufferWrapper implements ChannelBuffer
     public void skipBytes( int length )
     {
         delegate.positionReader( delegate.readerPosition() + length );
-    }
-
-    @Override
-    public int skipBytes( ChannelBufferIndexFinder indexFinder )
-    {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -1259,30 +1241,6 @@ public class ChannelBufferWrapper implements ChannelBuffer
 
     @Override
     public String toString( int index, int length, Charset charset )
-    {
-        return toString();
-    }
-
-    @Override
-    public String toString( String charsetName )
-    {
-        return toString();
-    }
-
-    @Override
-    public String toString( String charsetName, ChannelBufferIndexFinder terminatorFinder )
-    {
-        return toString();
-    }
-
-    @Override
-    public String toString( int index, int length, String charsetName )
-    {
-        return toString();
-    }
-
-    @Override
-    public String toString( int index, int length, String charsetName, ChannelBufferIndexFinder terminatorFinder )
     {
         return toString();
     }
