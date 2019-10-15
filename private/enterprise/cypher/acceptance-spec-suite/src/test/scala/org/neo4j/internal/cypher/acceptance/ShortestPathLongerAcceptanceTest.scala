@@ -312,36 +312,42 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("All shortest paths from first to last node via bottom left") {
     val start = System.currentTimeMillis
-    val result = executeUsingCostPlannerOnly(
-      s"""MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
-         | WHERE ANY(n in nodes(p) WHERE n:$bottomLeft)
-         | RETURN p""".stripMargin)
+    graph.withTx( tx => {
+      val result = execute(costQuery(
+        s"""MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
+           | WHERE ANY(n in nodes(p) WHERE n:$bottomLeft)
+           | RETURN p""".stripMargin), Map.empty[String, Any], tx)
 
-    evaluateAllShortestPathResults(result, "p", start, 1, Set(col(0) ++ row(dMax)))
+      evaluateAllShortestPathResults(result, "p", start, 1, Set(col(0) ++ row(dMax)))
+    } )
   }
 
   test("All shortest paths from first to last node via top right") {
     val start = System.currentTimeMillis
-    val result = executeUsingCostPlannerOnly(
-      s"""MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
-         | WHERE ANY(n in nodes(p) WHERE n:$topRight)
-         | RETURN p""".stripMargin)
+    graph.withTx( tx => {
+      val result = execute(costQuery(
+        s"""MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
+           | WHERE ANY(n in nodes(p) WHERE n:$topRight)
+           | RETURN p""".stripMargin), Map.empty[String, Any], tx)
 
-    evaluateAllShortestPathResults(result, "p", start, 1, Set(row(0) ++ col(dMax)))
+      evaluateAllShortestPathResults(result, "p", start, 1, Set(row(0) ++ col(dMax)))
+    } )
   }
 
   test("All shortest paths from first to last node via middle") {
     val start = System.currentTimeMillis
-    val result = executeUsingCostPlannerOnly(
-      s"""PROFILE MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
-         | WHERE ANY(n in nodes(p) WHERE n:$middle)
-         | RETURN p""".stripMargin)
+    graph.withTx( tx => {
+      val result = execute(costQuery(
+        s"""PROFILE MATCH p = allShortestPaths((src:$topLeft)-[*]-(dst:$bottomRight))
+           | WHERE ANY(n in nodes(p) WHERE n:$middle)
+           | RETURN p""".stripMargin), Map.empty[String, Any], tx)
 
-    val expectedPathCount = Map(3 -> 4, 4 -> 12, 5 -> 36)
-    evaluateAllShortestPathResults(result, "p", start, expectedPathCount(dim), Set(
-      row(0, min = 0, max = dMax / 2) ++ col(dMax / 2) ++ row(dMax, min = dMax / 2, max = dMax),
-      col(0, min = 0, max = dMax / 2) ++ row(dMax / 2) ++ col(dMax, min = dMax / 2, max = dMax)
-    ))
+      val expectedPathCount = Map(3 -> 4, 4 -> 12, 5 -> 36)
+      evaluateAllShortestPathResults(result, "p", start, expectedPathCount(dim), Set(
+        row(0, min = 0, max = dMax / 2) ++ col(dMax / 2) ++ row(dMax, min = dMax / 2, max = dMax),
+        col(0, min = 0, max = dMax / 2) ++ row(dMax / 2) ++ col(dMax, min = dMax / 2, max = dMax)
+      ))
+    } )
   }
 
   // FAIL: expected row count 0 was not equal to 8
@@ -752,7 +758,11 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   }
 
   private def executeUsingCostPlannerOnly(query: String) =
-    execute(s"CYPHER planner=COST $query")
+    execute(costQuery(query))
+
+  private def costQuery(query: String) = {
+    s"CYPHER planner=COST $query"
+  }
 
   private class DebugDataMonitor extends DataMonitor {
     var count = 0
