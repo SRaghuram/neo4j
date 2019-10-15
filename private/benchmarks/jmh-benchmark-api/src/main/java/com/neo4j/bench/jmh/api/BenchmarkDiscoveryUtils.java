@@ -151,7 +151,7 @@ public class BenchmarkDiscoveryUtils
     }
 
     // do own to string to protect against JMH changing naming, which would affect the contents stored results
-    private static Mode toNativeMode( org.openjdk.jmh.annotations.Mode mode )
+    public static Mode toNativeMode( org.openjdk.jmh.annotations.Mode mode )
     {
         switch ( mode )
         {
