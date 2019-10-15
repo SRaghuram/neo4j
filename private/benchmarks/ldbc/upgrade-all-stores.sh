@@ -43,8 +43,10 @@ for i in "${dbs[@]}"; do
     echo "Old path : ${old_db_path}"
     echo "New path : ${new_db_path}"
     echo "Config   : ${neo4j_config}"
-    aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/"${old_db_name}" "${old_db_name}" --no-progress
-    
+    aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/"${old_db_name}".tar.gz "${old_db_name}".tar.gz --no-progress
+
+    tar -xzvf "${old_db_name}".tar.gz
+    rm "${old_db_name}".tar.gz
     echo "---------------"
     echo "Preparing temporary locations"
 	temp_old_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
@@ -70,7 +72,7 @@ for i in "${dbs[@]}"; do
 	mkdir "${new_db_path}"
 	mv "${temp_new_db_path}"/"${old_db_name}"/* "${new_db_path}"
 
-    tar -cvzf "${new_db_name}".tar.gz "${new_db_path}"
+    tar -cvzf "${new_db_name}".tar.gz "${new_db_name}"
 
     aws s3 sync "${new_db_name}".tar.gz s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_db_name}".tar.gz --no-progress --delete
     rm -rf "${old_db_path}"
