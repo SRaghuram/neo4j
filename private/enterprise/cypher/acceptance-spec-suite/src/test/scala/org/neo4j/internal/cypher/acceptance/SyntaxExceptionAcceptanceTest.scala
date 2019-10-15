@@ -16,7 +16,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
   test("should raise error when missing index value") {
     test(
       "start s = node:index(key=) return s",
-      "Invalid input ')': expected whitespace, \"...string...\" or a parameter (line 1, column 26)"
+      "Invalid input ')': expected whitespace, \"...string...\", a parameter or a parameter (old syntax) (line 1, column 26)"
     )
   }
 
@@ -30,7 +30,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
   test("should raise error when missing index key") {
     test(
       "start s = node:index(=\"value\") return s",
-      "Invalid input '=': expected whitespace, an identifier, \"...string...\" or a parameter (line 1, column 22)"
+      "Invalid input '=': expected whitespace, an identifier, \"...string...\", a parameter or a parameter (old syntax) (line 1, column 22)"
     )
   }
 
@@ -44,7 +44,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
   test("should complain about a string being expected") {
     test(
       "start s=node:index(key = value) return s",
-      "Invalid input 'v': expected whitespace, comment, \"...string...\" or a parameter (line 1, column 26)"
+      "Invalid input 'v': expected whitespace, comment, \"...string...\", a parameter or a parameter (old syntax) (line 1, column 26)"
     )
   }
 
@@ -115,7 +115,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
          f=node(0),
          g=node(0),
          s=node:index(key = value) return s""",
-      "Invalid input 'v': expected whitespace, comment, \"...string...\" or a parameter (line 9, column 29)"
+      "Invalid input 'v': expected whitespace, comment, \"...string...\", a parameter or a parameter (old syntax) (line 9, column 29)"
     )
   }
 
@@ -130,7 +130,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
          f=node(0),
          g=node(0),
          s=node:index(key = value) return s""",
-      "Invalid input 'v': expected whitespace, comment, \"...string...\" or a parameter (line 9, column 29)"
+      "Invalid input 'v': expected whitespace, comment, \"...string...\", a parameter or a parameter (old syntax) (line 9, column 29)"
     )
   }
 
