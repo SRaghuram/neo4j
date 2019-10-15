@@ -146,8 +146,6 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
- // private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName())
- // private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName())
   private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName())
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName(),
                                             if (types.isEmpty && missingTypes.isEmpty) constant(null)

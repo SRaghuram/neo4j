@@ -66,17 +66,17 @@ class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoC
 
   override def allocateNodeCursor(): NodeCursor = nodeCursorPool.allocate()
 
-  override def allocateFullAccessNodeCursor(): NodeCursor = ???
+  override def allocateFullAccessNodeCursor(): NodeCursor = fail("FullAccessNodeCursor")
 
   override def allocateRelationshipScanCursor(): RelationshipScanCursor = relationshipScanCursorPool.allocate()
 
-  override def allocateFullAccessRelationshipScanCursor(): RelationshipScanCursor = ???
+  override def allocateFullAccessRelationshipScanCursor(): RelationshipScanCursor = fail("FullAccessRelationshipScanCursor")
 
   override def allocateRelationshipTraversalCursor(): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
 
-  override def allocatePropertyCursor(): PropertyCursor = ???
+  override def allocatePropertyCursor(): PropertyCursor = fail("PropertyCursor")
 
-  override def allocateFullAccessPropertyCursor(): PropertyCursor = ???
+  override def allocateFullAccessPropertyCursor(): PropertyCursor = fail("FullAccessPropertyCursor")
 
   override def allocateRelationshipGroupCursor(): RelationshipGroupCursor = relationshipGroupCursorPool.allocate()
 
@@ -84,7 +84,9 @@ class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoC
 
   override def allocateNodeLabelIndexCursor(): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
 
-  override def allocateRelationshipIndexCursor(): RelationshipIndexCursor = ???
+  override def allocateRelationshipIndexCursor(): RelationshipIndexCursor = fail("RelationshipIndexCursor")
+
+  private def fail(cursor: String) = throw new IllegalStateException(s"This cursor pool doesn't support allocating $cursor")
 }
 
 class LiveCounts(var nodeCursorPool: Long = 0,
