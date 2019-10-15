@@ -35,7 +35,10 @@ for i in "${dbs[@]}"; do
     neo4j_config_file=${arr[2]}
     neo4j_config="neo4j-connectors/src/main/resources/neo4j/${neo4j_config_file}"
     old_db_path="$(pwd)/${old_db_name}"
+    old_tar="${old_db_name}".tar.gz
     new_db_path="$(pwd)/${new_db_name}"
+    new_db_path="$(pwd)/${new_db_name}"
+    new_tar="${new_db_name}".tar.gz
     echo "---------------"
     echo "Upgrading database"
     echo "Old name : ${old_db_name}"
@@ -43,10 +46,10 @@ for i in "${dbs[@]}"; do
     echo "Old path : ${old_db_path}"
     echo "New path : ${new_db_path}"
     echo "Config   : ${neo4j_config}"
-    aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/"${old_db_name}".tar.gz "${old_db_name}".tar.gz --no-progress
+    aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/"${old_tar}" "${old_tar}" --no-progress
 
-    tar -xzvf "${old_db_name}".tar.gz
-    rm "${old_db_name}".tar.gz
+    tar -xzvf "${old_tar}"
+    rm "${old_tar}"
     echo "---------------"
     echo "Preparing temporary locations"
 	temp_old_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
@@ -72,13 +75,13 @@ for i in "${dbs[@]}"; do
 	mkdir "${new_db_path}"
 	mv "${temp_new_db_path}"/"${old_db_name}"/* "${new_db_path}"
 
-    tar -cvzf "${new_db_name}".tar.gz "${new_db_name}"
+    tar -cvzf "${new_tar}" "${new_db_name}"
 
-    aws s3 sync "${new_db_name}".tar.gz s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_db_name}".tar.gz --no-progress --delete
+    aws s3 sync "${new_tar}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_tar}" --no-progress --delete
     rm -rf "${old_db_path}"
     rm -rf "${new_db_path}"
     rm -rf "${temp_old_db_path}"
     rm -rf "${temp_new_db_path}"
-    rm -f "${new_db_name}".tar.gz
+    rm -f "${new_tar}"
 
 done
