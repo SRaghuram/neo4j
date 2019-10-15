@@ -26,6 +26,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readDoubleGaugeValue;
+import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
@@ -53,7 +54,7 @@ class PageCacheMetricsIT
         builder.setConfig( MetricsSettings.metricsEnabled, true  )
                 .setConfig( MetricsSettings.neoPageCacheEnabled, true  )
                 .setConfig( MetricsSettings.csvEnabled, true )
-                .setConfig( MetricsSettings.csvInterval, Duration.ofMillis( 100 ) )
+                .setConfig( MetricsSettings.csvInterval, Duration.ofMillis( 10 ) )
                 .setConfig( MetricsSettings.csvPath, metricsDirectory.toPath().toAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
@@ -98,6 +99,6 @@ class PageCacheMetricsIT
 
     private void assertMetrics( String message, String metricName, Matcher<Long> matcher ) throws Exception
     {
-        assertEventually( message, () -> readLongCounterValue( metricsCsv( metricsDirectory, metricName ) ), matcher, 5, SECONDS );
+        assertEventually( message, () -> readLongCounterAndAssert( metricsCsv( metricsDirectory, metricName ), -1, ( a, b ) -> true ), matcher, 5, SECONDS );
     }
 }

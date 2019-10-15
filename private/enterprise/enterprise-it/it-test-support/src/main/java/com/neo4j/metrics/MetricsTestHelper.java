@@ -114,6 +114,12 @@ public class MetricsTestHelper
         return readValueAndAssert( metricFile, 0L, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
     }
 
+    public static long readLongCounterAndAssert( File metricFile, long startValue, BiPredicate<Long,Long> assumption )
+            throws IOException, InterruptedException
+    {
+        return readValueAndAssert( metricFile, startValue, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
+    }
+
     static double readDoubleGaugeValue( File metricFile ) throws IOException, InterruptedException
     {
         return readValueAndAssert( metricFile, 0d, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE,
