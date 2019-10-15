@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.MorselRuntime.PARALLEL
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.runtime.spec.morsel.{AssertFusingSucceeded, MorselDbHitsTestBase, ProfileNoTimeTestBase, SchedulerTracerTestBase}
+import org.neo4j.cypher.internal.runtime.spec.morsel._
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
@@ -198,6 +198,7 @@ class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.FUSING, PARALLEL) 
 class ParallelRuntimeNoFusingMiscTest extends MiscTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeExpressionTest extends ExpressionTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeNoFusingExpressionTest extends ExpressionTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
+class ParallelFusingNotificationTest extends MorselFusingNotificationTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest // not ParallelRuntimeSpecSuite, since we expect fusing to fail
 class ParallelRuntimeSchedulerTracerTest extends SchedulerTracerTestBase(PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite

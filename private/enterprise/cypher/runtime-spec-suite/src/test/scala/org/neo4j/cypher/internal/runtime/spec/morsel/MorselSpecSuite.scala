@@ -178,6 +178,7 @@ class MorselMiscTest extends MiscTestBase(FUSING, MORSEL) with MorselSpecSuite
 class MorselMiscNoFusingTest extends MiscTestBase(NO_FUSING, MORSEL) with MorselSpecSuite
 class MorselExpressionTest extends ExpressionTestBase(FUSING, MORSEL)
 class MorselExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, MORSEL)
+class MorselFusingNotificationTest extends MorselFusingNotificationTestBase(FUSING, MORSEL) // not MorselSpecSuite, since we expect fusing to fail
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL) with MorselSpecSuite
 class MorselMemoryManagementTest extends MemoryManagementTestBase(FUSING, MORSEL)
                                  with WithSlotsMemoryManagementTestBase
