@@ -320,7 +320,7 @@ public abstract class Runner
                             // may occur multiple times for same benchmark, once per thread count, this is ok
                             // if benchmark profiling fails at any thread count it will not be executed in next phase
                             benchmarksWithProfiles.remove( benchmark );
-                            errorReporter.recordOrThrow( e, benchmark.group(), benchmark.className() );
+                            errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
                         }
                         finally
                         {
@@ -375,7 +375,7 @@ public abstract class Runner
                     }
                     catch ( Exception e )
                     {
-                        errorReporter.recordOrThrow( e, benchmark.group(), benchmark.className() );
+                        errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
                     }
                     finally
                     {

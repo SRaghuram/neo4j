@@ -113,7 +113,7 @@ class BenchmarksRunner extends Runner
                 catch ( Exception e )
                 {
                     benchmarksWithStores.remove( benchmark );
-                    errorReporter.recordOrThrow( e, benchmark.group(), benchmark.className() );
+                    errorReporter.recordOrThrow( e, benchmark.group(), benchmark.guessSingleName() );
                 }
                 finally
                 {
