@@ -64,6 +64,45 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "START is deprecated"))
   }
 
+  test("should provide sensible error message for START with old parameter syntax in newer runtimes") {
+    val nodeQuery = "START n=node({props}) RETURN n"
+    failWithError(Configs.All - Configs.RulePlanner, nodeQuery, Seq(
+      "The given query is not currently supported in the selected runtime",
+      "The given query is not currently supported in the selected cost-based planner",
+      "START is deprecated"))
+
+    val relQuery = "START r=relationship({props}) RETURN r"
+    failWithError(Configs.All - Configs.RulePlanner, relQuery, Seq(
+      "The given query is not currently supported in the selected runtime",
+      "The given query is not currently supported in the selected cost-based planner",
+      "START is deprecated"))
+  }
+
+  test("should provide sensible error message for START index search with old parameter syntax in newer runtimes") {
+    val conf = TestConfiguration(
+      Versions(Versions.V2_3, Versions.V3_1, Versions.V3_5),
+      Planners.all,
+      Runtimes.Interpreted)
+
+    val node = createNode()
+    graph.inTx {
+      graph.index().forNodes("index").add(node, "key", "value")
+    }
+    resampleIndexes()
+
+    val query1 = "START n=node:indexName(key = {prop}) RETURN n"
+    failWithError(Configs.All - conf, query1, Seq(
+      "The given query is not currently supported in the selected runtime",
+      "The given query is not currently supported in the selected cost-based planner",
+      "START is deprecated"), params = Map("prop" -> "value"))
+
+    val query2 = "START n=node:indexName({prop}) RETURN n"
+    failWithError(Configs.All - conf, query2, Seq(
+      "The given query is not currently supported in the selected runtime",
+      "The given query is not currently supported in the selected cost-based planner",
+      "START is deprecated"), params = Map("prop" -> "key:value"))
+  }
+
   test("should not fail when using compatible runtime with START") {
     createNode()
     val query = "START n=node(0) RETURN n"
@@ -72,6 +111,40 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       Planners.Rule,
       Runtimes.Interpreted)
     executeWith(conf, query) // should not fail
+  }
+
+  test("should not fail when using compatible runtime with START and old parameter syntax") {
+    val conf = TestConfiguration(
+      Versions(Versions.V2_3, Versions.V3_1),
+      Planners.Rule,
+      Runtimes.Interpreted)
+
+    val props = Map("props" -> Map("prop" -> 1))
+
+    val nodeQuery = "START n=node({props}) RETURN n"
+    executeWith(conf, nodeQuery, params = props) // should not fail
+
+    val relQuery = "START r=relationship({props}) RETURN r"
+    executeWith(conf, relQuery, params = props) // should not fail
+  }
+
+  test("should not fail when using compatible runtime with START index search and old parameter syntax") {
+    val conf = TestConfiguration(
+      Versions(Versions.V2_3, Versions.V3_1, Versions.V3_5),
+      Planners.all,
+      Runtimes.Interpreted)
+
+    val node = createNode()
+    graph.inTx {
+      graph.index().forNodes("index").add(node, "key", "value")
+    }
+    resampleIndexes()
+
+    val query1 = "START n=node:index(key = {prop}) RETURN n"
+    executeWith(conf, query1, params = Map("prop" -> "value")) // should not fail
+
+    val query2 = "START n=node:index({prop}) RETURN n"
+    executeWith(conf, query2, params = Map("prop" -> "key:value")) // should not fail
   }
 
   test("should provide sensible error message for CREATE UNIQUE in newer runtimes") {
