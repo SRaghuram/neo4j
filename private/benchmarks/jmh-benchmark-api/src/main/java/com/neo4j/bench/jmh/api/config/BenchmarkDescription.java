@@ -6,6 +6,7 @@
 package com.neo4j.bench.jmh.api.config;
 
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -63,6 +64,47 @@ public class BenchmarkDescription
         this.parameters = parameters;
         this.description = description;
         this.isEnabled = isEnabled;
+    }
+
+    /**
+     * Attempt to construct full benchmark name from {@link BenchmarkDescription} instance.
+     * This string is only used for error reporting.
+     * It is not essential for the string to be identical to that returned by {@link Benchmark#name()}.
+     * <p>
+     * IMPORTANT: method assumes the {@link BenchmarkDescription} instance represents exactly one benchmark, e.g., after {@link BenchmarkDescription#explode()}.
+     */
+    public String guessSingleName()
+    {
+        if ( methods().size() != 1 )
+        {
+            throw new RuntimeException( "Benchmark description represents more than one benchmark\n" +
+                                        "Expected one method but found: " + methods() );
+        }
+        BenchmarkMethodDescription method = methods().iterator().next();
+
+        if ( method.modes().size() != 1 )
+        {
+            throw new RuntimeException( "Benchmark description represents more than one benchmark\n" +
+                                        "Expected one mode but found: " + method.modes() );
+        }
+        Benchmark.Mode mode = BenchmarkDiscoveryUtils.toNativeMode( method.modes().iterator().next() );
+
+        Map<String,String> params = parameters().values()
+                                                .stream()
+                                                .peek( paramDescription ->
+                                                       {
+                                                           if ( paramDescription.values().size() != 1 )
+                                                           {
+                                                               throw new RuntimeException(
+                                                                       "Benchmark description represents more than one benchmark\n" +
+                                                                       "Expected single values params but found: " + paramDescription );
+                                                           }
+                                                       } )
+                                                .collect( toMap( BenchmarkParamDescription::name, p -> p.values().iterator().next() ) );
+
+        String simpleName = className().substring( className().lastIndexOf( "." ) ) + method.name();
+
+        return Benchmark.benchmarkFor( description(), simpleName, mode, params ).name();
     }
 
     public boolean isEnabled()
@@ -138,7 +180,8 @@ public class BenchmarkDescription
         }
         Map<String,BenchmarkParamDescription> newParameters = new HashMap<>( parameters );
 
-        BiConsumer<String,Set<String>> updateParametersFun = ( paramName, newValues ) -> {
+        BiConsumer<String,Set<String>> updateParametersFun = ( paramName, newValues ) ->
+        {
             if ( !parameters.containsKey( paramName ) )
             {
                 validation.configuredParameterDoesNotExist( className, paramName );
