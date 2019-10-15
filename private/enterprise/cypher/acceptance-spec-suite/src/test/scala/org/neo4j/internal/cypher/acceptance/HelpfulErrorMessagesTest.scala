@@ -53,6 +53,20 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
       "START is deprecated"))
   }
 
+  test("should provide sensible error message for START with old parameter syntax in newer runtimes") {
+    val nodeQuery = "START n=node({props}) RETURN n"
+    failWithError(Configs.All, nodeQuery, Seq(
+      "The given query is not currently supported in the selected runtime",
+      "The given query is not currently supported in the selected cost-based planner",
+      "START is deprecated"))
+
+    val relQuery = "START r=relationship({props}) RETURN r"
+    failWithError(Configs.All, relQuery, Seq(
+      "The given query is not currently supported in the selected runtime",
+      "The given query is not currently supported in the selected cost-based planner",
+      "START is deprecated"))
+  }
+
   test("should provide sensible error message for CREATE UNIQUE in newer runtimes") {
     val query = "MATCH (root { name: 'root' }) CREATE UNIQUE (root)-[:LOVES]-(someone) RETURN someone"
     failWithError(Configs.All, query, Seq(
