@@ -8,10 +8,12 @@ package com.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.graphdb.Result
+import org.neo4j.graphdb.{RelationshipType, Result}
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction.Type
+
+import scala.collection.JavaConverters._
 
 // Tests for actual behaviour of authorization rules for restricted users based on element privileges
 class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -286,5 +288,256 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
         result.get("name") should be ("nodes")
       }
     ) should be(1)
+  }
+
+  test("should see label and type but not properties when returning path with only full traverse privilege") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Person {name: 'Alice'})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob'})")
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val node1 = path.startNode()
+      val node2 = path.endNode()
+      val relationship = path.lastRelationship()
+
+      // Then
+      node1.labels should be(List("Person"))
+      node1.getAllProperties.asScala should be(Map.empty)
+      node2.labels should be(List("Person"))
+      node2.getAllProperties.asScala should be(Map.empty)
+      relationship.isType(RelationshipType.withName("KNOWS"))
+      relationship.getAllProperties.asScala should be(Map.empty)
+    }) should be(1)
+  }
+
+  test("should see label, type and properties when returning path with full traverse and read privileges") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT READ {*} ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Person {name: 'Alice'})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob'})")
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val node1 = path.startNode()
+      val node2 = path.endNode()
+      val relationship = path.lastRelationship()
+
+      // Then
+      node1.labels should be(List("Person"))
+      node1.getAllProperties.asScala should be(Map("name" -> "Alice"))
+      node2.labels should be(List("Person"))
+      node2.getAllProperties.asScala should be(Map("name" -> "Bob"))
+      relationship.isType(RelationshipType.withName("KNOWS"))
+      relationship.getAllProperties.asScala should be(Map("since" -> "2019"))
+    }) should be(1)
+  }
+
+  test("should see allowed label and type but not properties when returning path with only traverse privilege") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES Person, Dog TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP KNOWS TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """CREATE (a:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob', age: 23}),
+        |(a)-[:KNOWS {since: '2010'}]->(:Friend {name: 'Charlie', age: 27}),
+        |(a)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis'})
+        |""".stripMargin)
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val node1 = path.startNode()
+      val node2 = path.endNode()
+      val relationship = path.lastRelationship()
+
+      // Then
+      node1.labels should be(List("Person"))
+      node1.getAllProperties.asScala should be(Map.empty)
+      node2.labels should be(List("Person"))
+      node2.getAllProperties.asScala should be(Map.empty)
+      relationship.isType(RelationshipType.withName("KNOWS"))
+      relationship.getAllProperties.asScala should be(Map.empty)
+    }) should be(1)
+  }
+
+  test("should see allowed label, type and properties when returning path with traverse and read privileges") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES Person, Dog TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP KNOWS TO custom")
+    execute("GRANT READ {name} ON GRAPH * NODES Person, Dog TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIP KNOWS TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """CREATE (a:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019'}]->(:Person {name: 'Bob', age: 23}),
+        |(a)-[:KNOWS {since: '2010'}]->(:Friend {name: 'Charlie', age: 27}),
+        |(a)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis'})
+        |""".stripMargin)
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val node1 = path.startNode()
+      val node2 = path.endNode()
+      val relationship = path.lastRelationship()
+
+      // Then
+      node1.labels should be(List("Person"))
+      node1.getAllProperties.asScala should be(Map("name" -> "Alice"))
+      node2.labels should be(List("Person"))
+      node2.getAllProperties.asScala should be(Map("name" -> "Bob"))
+      relationship.isType(RelationshipType.withName("KNOWS"))
+      relationship.getAllProperties.asScala should be(Map("since" -> "2019"))
+    }) should be(1)
+  }
+
+  test("should see not denied label and type but not properties when returning path with only traverse privilege") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODES Friend TO custom")
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """CREATE (a:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019', met_at: 'library'}]->(:Person {name: 'Bob', age: 23}),
+        |(a)-[:KNOWS {since: '2010'}]->(:Person:Friend {name: 'Charlie', age: 27}),
+        |(a)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis'})
+        |""".stripMargin)
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val node1 = path.startNode()
+      val node2 = path.endNode()
+      val relationship = path.lastRelationship()
+
+      // Then
+      node1.labels should be(List("Person"))
+      node1.getAllProperties.asScala should be(Map.empty)
+      node2.labels should be(List("Person"))
+      node2.getAllProperties.asScala should be(Map.empty)
+      relationship.isType(RelationshipType.withName("KNOWS"))
+      relationship.getAllProperties.asScala should be(Map.empty)
+    }) should be(1)
+  }
+
+  test("should see not denied label, type and properties when returning path with traverse and read privileges") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODES Friend TO custom")
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+    execute("GRANT READ {*} ON GRAPH * TO custom")
+    execute("DENY READ {age} ON GRAPH * NODES Person TO custom")
+    execute("DENY READ {met_at} ON GRAPH * RELATIONSHIP KNOWS TO custom")
+    execute("DENY READ {*} ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(
+      """CREATE (a:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019', met_at: 'library'}]->(:Person {name: 'Bob', age: 23}),
+        |(a)-[:KNOWS {since: '2010'}]->(:Person:Friend {name: 'Charlie', age: 27}),
+        |(a)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis'})
+        |""".stripMargin)
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val node1 = path.startNode()
+      val node2 = path.endNode()
+      val relationship = path.lastRelationship()
+
+      // Then
+      node1.labels should be(List("Person"))
+      node1.getAllProperties.asScala should be(Map("name" -> "Alice"))
+      node2.labels should be(List("Person"))
+      node2.getAllProperties.asScala should be(Map("name" -> "Bob"))
+      relationship.isType(RelationshipType.withName("KNOWS"))
+      relationship.getAllProperties.asScala should be(Map("since" -> "2019"))
+    }) should be(1)
+  }
+
+  test("should see labels and types but not properties for nodes with only traverse privilege when returning path") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * TO custom")
+    execute("GRANT READ {*} ON GRAPH * NODES Dog TO custom")
+    execute("GRANT READ {name} ON GRAPH * NODES Friend TO custom")
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIP HAS_PET TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(// Alice knows Bob, Bob knows Charlie, Charlie has pet Dennis
+      """CREATE (:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019', met_at: 'library'}]->(b:Person {name: 'Bob', age: 25}),
+        |(b)-[:KNOWS {since: '2010'}]->(c:Person:Friend {name: 'Charlie', age: 27}),
+        |(c)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis', age: 5})
+        |""".stripMargin)
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val nodes = path.nodes().asScala
+      val relationships = path.relationships().asScala
+
+      // Then
+      nodes.flatMap(n => Set((n.getAllProperties.asScala, n.labels.toSet))).toList should be(List(
+        (Map.empty, Set("Person")),
+        (Map.empty, Set("Person")),
+        (Map("name" -> "Charlie"), Set("Person", "Friend")),
+        (Map("name" -> "Dennis", "age" -> 5), Set("Dog"))
+      ))
+      relationships.flatMap(r => Set((r.getAllProperties.asScala, r.getType))).toList should be(List(
+        (Map.empty, RelationshipType.withName("KNOWS")),
+        (Map.empty, RelationshipType.withName("KNOWS")),
+        (Map("since" -> "2018"), RelationshipType.withName("HAS_PET"))
+      ))
+    }) should be(1)
+  }
+
+  test("should see labels and types but not properties for nodes with traverse and denied read privilege when returning path") {
+    // Given
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("DENY READ {*} ON GRAPH * NODES Person TO custom")
+    execute("DENY READ {age} ON GRAPH * NODES Friend TO custom")
+    execute("DENY READ {since} ON GRAPH * RELATIONSHIP KNOWS TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(// Alice knows Bob, Bob knows Charlie, Charlie has pet Dennis
+      """CREATE (:Person {name: 'Alice', age: 28})-[:KNOWS {since: '2019', met_at: 'library'}]->(b:Person {name: 'Bob', age: 25}),
+        |(b)-[:KNOWS {since: '2010'}]->(c:Person:Friend {name: 'Charlie', age: 27}),
+        |(c)-[:HAS_PET {since: '2018'}]->(:Dog {name: 'Dennis', age: 5})
+        |""".stripMargin)
+
+    // When
+    executeOnDefault("joe", "soap", "MATCH p=()-[*3]->() RETURN p", resultHandler = (row, _) => {
+      val path = row.getPath("p")
+      val nodes = path.nodes().asScala
+      val relationships = path.relationships().asScala
+
+      // Then
+      nodes.flatMap(n => Set((n.getAllProperties.asScala, n.labels.toSet))).toList should be(List(
+        (Map.empty, Set("Person")),
+        (Map.empty, Set("Person")),
+        (Map.empty, Set("Person", "Friend")),
+        (Map("name" -> "Dennis", "age" -> 5), Set("Dog"))
+      ))
+      relationships.flatMap(r => Set((r.getAllProperties.asScala, r.getType))).toSet should be(Set(
+        (Map("met_at" -> "library"), RelationshipType.withName("KNOWS")),
+        (Map.empty, RelationshipType.withName("KNOWS")),
+        (Map("since" -> "2018"), RelationshipType.withName("HAS_PET"))
+      ))
+    }) should be(1)
   }
 }
