@@ -91,7 +91,7 @@ public class FabricSettings implements SettingsDeclaration
             "Normally, this parameter should not need tuning.\n" +
             "Value 0 means connections will always be tested for validity" )
     @DocumentedDefaultValue(  "No connection liveliness check is done by default." )
-    static Setting<Duration> driverIdleTimeBeforeConnectionTest = newBuilder( "fabric." + DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, ofMinutes( -1 ) )
+    static Setting<Duration> driverIdleTimeBeforeConnectionTest = newBuilder( "fabric." + DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null )
             .build();
 
     @Description( "Pooled connections older than this threshold will be closed and removed from the pool.\n" +

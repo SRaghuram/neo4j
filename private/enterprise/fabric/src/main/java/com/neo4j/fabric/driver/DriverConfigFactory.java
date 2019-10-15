@@ -66,6 +66,10 @@ class DriverConfigFactory
         {
             builder.withConnectionLivenessCheckTimeout( idleTimeBeforeConnectionTest.toMillis(), MILLISECONDS );
         }
+        else
+        {
+            builder.withConnectionLivenessCheckTimeout( -1, MILLISECONDS );
+        }
 
         var maxConnectionLifetime = getProperty( graph, FabricConfig.DriverConfig::getMaxConnectionLifetime );
         if ( maxConnectionLifetime != null )
