@@ -32,8 +32,12 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 @ExtendWith( RandomExtension.class )
@@ -381,6 +385,23 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         Class<ConstraintWithNameAlreadyExistsException> expectedCause = ConstraintWithNameAlreadyExistsException.class;
         String expectedMessage = "There already exists a constraint called 'name'.";
         assertExpectedException( expectedCause, expectedMessage, exception );
+    }
+
+    @Test
+    void nonIndexBackedConstraintNamesCannotContainBackTicks()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintCreator creator = tx.schema().constraintFor( label ).withName( "a`b" ).assertPropertyExists( propertyKey );
+            assertThrows( IllegalArgumentException.class, creator::create );
+            tx.commit();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            assertThat( count( tx.schema().getIndexes() ), is( 0L ) );
+            assertThat( count( tx.schema().getConstraints() ), is( 0L ) );
+            tx.commit();
+        }
     }
 
     private ConstraintDefinition createUniquenessConstraint( Label label, String prop )
