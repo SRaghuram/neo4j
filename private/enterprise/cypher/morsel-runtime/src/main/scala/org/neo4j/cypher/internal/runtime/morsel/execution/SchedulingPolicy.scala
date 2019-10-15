@@ -16,14 +16,14 @@ trait SchedulingPolicy {
 }
 
 /**
- * Gives scheduling policies for executing queries.
+ * Gives scheduling policies for executing queries. Must be cacheable.
  */
 trait ExecutionGraphSchedulingPolicy {
   def querySchedulingPolicy(executingQuery: ExecutingQuery): QuerySchedulingPolicy
 }
 
 /**
-  * Policy which selects the next task to execute.
+  * Policy which selects the next task to execute. Must be thread-safe.
   */
 trait QuerySchedulingPolicy {
   /**
