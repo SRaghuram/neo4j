@@ -29,8 +29,8 @@ class GroupingAndAggregation extends AbstractCypherBenchmark {
   var GroupingAndAggregation_runtime: String = _
 
   @ParamValues(
-    allowed = Array("1", "10000"),
-    base = Array("1", "10000"))
+    allowed = Array("1", "100", "10000"),
+    base = Array("1", "100", "10000"))
   @Param(Array[Int]())
   var GroupingAndAggregation_distinctCount: Int = _
 
