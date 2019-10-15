@@ -212,7 +212,7 @@ class MorselRuntime(parallelExecution: Boolean,
                               warnings,
                               executionGraphSchedulingPolicy)
     } catch {
-      case e: CantCompileQueryException if operatorFusionPolicy.fusionEnabled =>
+      case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
         context.log.debug(CODE_GEN_FAILED_MESSAGE, e)
         DebugLog.log("Could not compile pipeline because of %s", e)

@@ -29,7 +29,7 @@ trait AssertFusingSucceeded extends TestSuiteMixin {
     try {
       logProvider.assertNone(inLog(any(classOf[String])).debug(
         containsString(MorselRuntime.CODE_GEN_FAILED_MESSAGE),
-        instanceOf(classOf[CantCompileQueryException]): Matcher[Throwable] /*Type annotation is a compiler help to choose the right overloaded method - do not remove!*/))
+        instanceOf(classOf[Exception]): Matcher[Throwable] /*Type annotation is a compiler help to choose the right overloaded method - do not remove!*/))
       result
     } catch {
       case t: Throwable =>
