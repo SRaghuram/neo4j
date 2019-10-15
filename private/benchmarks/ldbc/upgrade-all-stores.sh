@@ -9,6 +9,8 @@ set -eu
 
 old_neo4j_version="35"
 new_neo4j_version="40"
+set -e
+set -u
 
 if [[ -z "$JAVA_HOME" ]]; then
     echo "JAVA_HOME not set, bye, bye"
@@ -52,14 +54,29 @@ for i in "${dbs[@]}"; do
 	mkdir -p "${temp_old_db_path}"/data/databases/neo4j
 	mv "${old_db_path}"/* "${temp_old_db_path}/data/databases/neo4j"
 	
+	temp_new_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
+
+    echo "Temporary old db path : ${temp_old_db_path}"
+
+	mkdir -p "${temp_old_db_path}"
+	mv "${old_db_path}" "${temp_old_db_path}"
+
     "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
         --upgraded-db "${new_db_path}" \
         --recreate-indexes  \
         --config "${neo4j_config}"
 
-    aws s3 sync "${new_db_path}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_db_name}" --no-progress --delete
+	mkdir "${new_db_path}"
+	mv "${temp_new_db_path}"/"${old_db_name}"/* "${new_db_path}"
+
+    tar -cvzf "${new_db_name}".tar.gz "${new_db_path}"
+
+    aws s3 sync "${new_db_name}".tar.gz s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_db_name}".tar.gz --no-progress --delete
     rm -rf "${old_db_path}"
     rm -rf "${new_db_path}"
     rm -rf "${temp_old_db_path}"
+    rm -rf "${temp_new_db_path}"
+    rm -f "${new_db_name}".tar.gz
+
 done
