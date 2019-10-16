@@ -7,6 +7,7 @@ package org.neo4j.internal.cypher.debug
 
 import java.io.File
 
+import org.neo4j.cypher.internal.v3_5.util.symbols._
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
 import org.neo4j.cypher.internal.compatibility.v3_5.Cypher35Planner
@@ -31,6 +32,48 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger): GraphCountsPlanContext = {
       val context = new GraphCountsPlanContext(graphCountData)(tc, logger)
       // Add UDFs here, if you have any in your query
+
+      // Add UDFs for temporal functions
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "datetime"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTDateTime, None, Array.empty, Some("Create a DateTime instant"), isAggregate = false)
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "date"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTDate, None, Array.empty, Some("Create a Date instant"), isAggregate = false)
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "time"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTTime, None, Array.empty, Some("Create a Time instant"), isAggregate = false)
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "localdatetime"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTLocalDateTime, None, Array.empty, Some("Create a LocalDateTime instant"), isAggregate = false)
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "localtime"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTLocalTime, None, Array.empty, Some("Create a LocalTime instant"), isAggregate = false)
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "duration"),
+        IndexedSeq(FieldSignature("Input", CTAny)),
+        CTDuration, None, Array.empty, Some("Construct a Duration value"), isAggregate = false)
+      )
+
       context
     }
 
