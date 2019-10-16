@@ -58,7 +58,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       val id = label.getId(context)
       if (id == UNKNOWN) false
       else {
-        cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
+        cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocateAndTrace()
         val read = context.transactionalContext.dataRead
         read.nodeLabelScan(id, cursor)
         true

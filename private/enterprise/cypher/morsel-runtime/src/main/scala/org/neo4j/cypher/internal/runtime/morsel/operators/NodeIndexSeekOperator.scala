@@ -85,7 +85,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                            NoMemoryTracker)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
-      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       true
     }
 

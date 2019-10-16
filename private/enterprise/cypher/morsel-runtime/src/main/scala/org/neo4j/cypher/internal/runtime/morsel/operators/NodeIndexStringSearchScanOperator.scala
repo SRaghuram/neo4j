@@ -76,7 +76,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
       value match {
         case value: TextValue =>
           val indexQuery = computeIndexQuery(property.propertyKeyId, value)
-          cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+          cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
           read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 

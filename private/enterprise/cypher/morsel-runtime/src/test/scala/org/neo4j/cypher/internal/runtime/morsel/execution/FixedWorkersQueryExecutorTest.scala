@@ -30,7 +30,7 @@ class FixedWorkersQueryExecutorTest extends CypherFunSuite {
 
       // when
       val p = pool(executor.randomCursorPools())
-      p.allocate()
+      p.allocateAndTrace()
 
       // then
       withClue(cursorName+"Cursor: ") {
@@ -54,7 +54,7 @@ class FixedWorkersQueryExecutorTest extends CypherFunSuite {
 
       // when
       val p = pool(executor.randomCursorPools())
-      val cursor = p.allocate()
+      val cursor = p.allocateAndTrace()
       p.free(cursor)
 
       // then
@@ -76,7 +76,7 @@ class FixedWorkersQueryExecutorTest extends CypherFunSuite {
       val executor = new RandomExecutor()
 
       // when
-      val cursor = pool(executor.randomCursorPools()).allocate()
+      val cursor = pool(executor.randomCursorPools()).allocateAndTrace()
       pool(executor.randomCursorPools()).free(cursor)
 
       // then

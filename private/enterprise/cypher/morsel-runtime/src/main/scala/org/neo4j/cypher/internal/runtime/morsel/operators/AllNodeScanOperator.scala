@@ -40,7 +40,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       var i = 0
       while (i < parallelism) {
         // Each task gets its own cursor which it reuses until it's done.
-        val cursor = resources.cursorPools.nodeCursorPool.allocate()
+        val cursor = resources.cursorPools.nodeCursorPool.allocateAndTrace()
         val rowForTask = inputMorsel.nextCopy
         tasks(i) = new ParallelScanTask(rowForTask, scan, cursor, state.morselSize)
         i += 1
@@ -66,7 +66,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
-      cursor = resources.cursorPools.nodeCursorPool.allocate()
+      cursor = resources.cursorPools.nodeCursorPool.allocateAndTrace()
       context.transactionalContext.dataRead.allNodesScan(cursor)
       true
     }

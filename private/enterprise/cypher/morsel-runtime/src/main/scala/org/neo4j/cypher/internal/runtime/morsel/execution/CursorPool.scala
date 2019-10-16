@@ -7,23 +7,24 @@ package org.neo4j.cypher.internal.runtime.morsel.execution
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.{RelationshipDenseSelectionCursor, RelationshipSelectionCursor, RelationshipSparseSelectionCursor}
 import org.neo4j.io.IOUtils
 
 class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoCloseable {
 
-  val nodeCursorPool = new CursorPool[NodeCursor](
+  val nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
     () => cursorFactory.allocateNodeCursor())
-  val relationshipGroupCursorPool = new CursorPool[RelationshipGroupCursor](
+  val relationshipGroupCursorPool: CursorPool[RelationshipGroupCursor] = CursorPool[RelationshipGroupCursor](
     () => cursorFactory.allocateRelationshipGroupCursor())
-  val relationshipTraversalCursorPool = new CursorPool[RelationshipTraversalCursor](
+  val relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
     () => cursorFactory.allocateRelationshipTraversalCursor())
-  val relationshipScanCursorPool = new CursorPool[RelationshipScanCursor](
+  val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
     () => cursorFactory.allocateRelationshipScanCursor())
-  val nodeValueIndexCursorPool = new CursorPool[NodeValueIndexCursor](
+  val nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
     () => cursorFactory.allocateNodeValueIndexCursor())
-  val nodeLabelIndexCursorPool = new CursorPool[NodeLabelIndexCursor](
+  val nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
     () => cursorFactory.allocateNodeLabelIndexCursor())
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
@@ -131,6 +132,12 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   /**
     * Allocate a cursor of type `CURSOR`.
     */
+  def allocateAndTrace(): CURSOR = {
+    val cursor = allocate()
+    cursor.setTracer(tracer)
+    cursor
+  }
+
   def allocate(): CURSOR = {
     liveCount += 1
     if (DebugSupport.CURSORS.enabled) {
@@ -142,7 +149,6 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     } else {
       cursor = cursorFactory()
     }
-    cursor.setTracer(tracer)
     cursor
   }
 

@@ -51,7 +51,7 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
-      cursor = resources.cursorPools.relationshipScanCursorPool.allocate()
+      cursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
       val queryState = new OldQueryState(context,
                                            resources = null,
                                            params = state.params,

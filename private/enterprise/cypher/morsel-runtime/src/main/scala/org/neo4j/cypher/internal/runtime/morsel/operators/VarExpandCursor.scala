@@ -121,12 +121,12 @@ abstract class VarExpandCursor(val fromNode: Long,
   private def expand(node: Long): Unit = {
 
     val groupCursor = relGroupCursors.computeIfAbsent(pathLength, () => {
-      val cursor = cursorPools.relationshipGroupCursorPool.allocate()
+      val cursor = cursorPools.relationshipGroupCursorPool.allocateAndTrace()
       cursor.setTracer(event)
       cursor
     })
     val traversalCursor = relTraCursors.computeIfAbsent(pathLength, () => {
-      val cursor = cursorPools.relationshipTraversalCursorPool.allocate()
+      val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()
       cursor.setTracer(event)
       cursor
     })

@@ -52,7 +52,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
-      cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+      cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       val read = context.transactionalContext.dataRead
       read.nodeIndexScan(index, cursor, indexOrder, needsValues)
       true
