@@ -66,6 +66,11 @@ public class SecuritySettings implements LoadableConfig
     public static final Setting<List<String>> auth_providers =
             derivedSetting( "dbms.security.auth_providers", auth_provider, Arrays::asList, STRING_LIST );
 
+    @Description( "Enable this setting to disable role management, all users wil be granted the Admin role when created." )
+    @Internal
+    public static final Setting<Boolean> aura_restrict_rbac =
+            setting( "dbms.aura.disable_rbac", BOOLEAN, FALSE );
+
     @Description( "Enable authentication via native authentication provider." )
     @Internal
     public static final Setting<Boolean> native_authentication_enabled =

@@ -70,9 +70,10 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
     protected EnterpriseUserManager getUserManager() throws Throwable
     {
         SystemGraphImportOptions importOptions =
-                new SystemGraphImportOptions( false, false, false, false, () -> new InMemoryUserRepository(), () -> new InMemoryRoleRepository(),
-                        () -> new InMemoryUserRepository(), () -> new InMemoryRoleRepository(), () -> new InMemoryUserRepository(),
-                        () -> new InMemoryUserRepository() );
+                new SystemGraphImportOptions( false, false, false, false,
+                                              InMemoryUserRepository::new, InMemoryRoleRepository::new,
+                                              InMemoryUserRepository::new, InMemoryRoleRepository::new,
+                                              InMemoryUserRepository::new, InMemoryUserRepository::new );
 
         QueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
         SecureHasher secureHasher = new SecureHasher();
@@ -80,7 +81,7 @@ public class SystemGraphUserManagementProceduresLoggingTest extends UserManageme
 
         SystemGraphRealm realm = new SystemGraphRealm(
                 systemGraphOperations,
-                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, authProcedures.securityLog ),
+                new SystemGraphInitializer( queryExecutor, systemGraphOperations, importOptions, secureHasher, userManagementProcedures.securityLog ),
                 true,
                 new SecureHasher(),
                 new BasicPasswordPolicy(),

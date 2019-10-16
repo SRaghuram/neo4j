@@ -36,7 +36,8 @@ import static org.neo4j.test.assertion.Assert.assertException;
 
 public class UserManagementProceduresLoggingTest
 {
-    protected TestUserManagementProcedures authProcedures;
+    protected TestUserManagementProcedures userManagementProcedures;
+    private RoleManagementProcedures roleManagementProcedures;
     private AssertableLogProvider log;
     private EnterpriseSecurityContext matsContext;
     private EnterpriseUserManager generalUserManager;
@@ -47,9 +48,13 @@ public class UserManagementProceduresLoggingTest
         log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
-        authProcedures = new TestUserManagementProcedures();
-        authProcedures.graph = mock( GraphDatabaseAPI.class );
-        authProcedures.securityLog = securityLog;
+        userManagementProcedures = new TestUserManagementProcedures();
+        userManagementProcedures.graph = mock( GraphDatabaseAPI.class );
+        userManagementProcedures.securityLog = securityLog;
+
+        roleManagementProcedures = new RoleManagementProcedures();
+        roleManagementProcedures.graph = userManagementProcedures.graph;
+        roleManagementProcedures.securityLog = userManagementProcedures.securityLog;
 
         generalUserManager = getUserManager();
         EnterpriseSecurityContext adminContext =
@@ -63,9 +68,12 @@ public class UserManagementProceduresLoggingTest
 
     private void setSubject( EnterpriseSecurityContext securityContext )
     {
-        authProcedures.securityContext = securityContext;
-        authProcedures.userManager = new PersonalUserManager( generalUserManager, securityContext.subject(),
-                authProcedures.securityLog, securityContext.isAdmin() );
+        PersonalUserManager userManager = new PersonalUserManager( generalUserManager, securityContext.subject(),
+                                                                   userManagementProcedures.securityLog, securityContext.isAdmin() );
+        userManagementProcedures.securityContext = securityContext;
+        userManagementProcedures.userManager = userManager;
+        roleManagementProcedures.securityContext = securityContext;
+        roleManagementProcedures.userManager = userManager;
     }
 
     protected EnterpriseUserManager getUserManager() throws Throwable
@@ -86,8 +94,8 @@ public class UserManagementProceduresLoggingTest
     @Test
     public void shouldLogCreatingUser() throws Throwable
     {
-        authProcedures.createUser( "andres", "el password", true );
-        authProcedures.createUser( "mats", "el password", false );
+        userManagementProcedures.createUser( "andres", "el password", true );
+        userManagementProcedures.createUser( "mats", "el password", false );
 
         log.assertExactly(
                 info( "[admin]: created user `%s`%s", "andres", ", with password change required" ),
@@ -98,11 +106,11 @@ public class UserManagementProceduresLoggingTest
     @Test
     public void shouldLogFailureToCreateUser()
     {
-        catchInvalidArguments( () -> authProcedures.createUser( null, "pw", true ) );
-        catchInvalidArguments( () -> authProcedures.createUser( "", "pw", true ) );
-        catchInvalidArguments( () -> authProcedures.createUser( "andres", "", true ) );
-        catchInvalidArguments( () -> authProcedures.createUser( "mats", null, true ) );
-        catchInvalidArguments( () -> authProcedures.createUser( "neo4j", "nonEmpty", true ) );
+        catchInvalidArguments( () -> userManagementProcedures.createUser( null, "pw", true ) );
+        catchInvalidArguments( () -> userManagementProcedures.createUser( "", "pw", true ) );
+        catchInvalidArguments( () -> userManagementProcedures.createUser( "andres", "", true ) );
+        catchInvalidArguments( () -> userManagementProcedures.createUser( "mats", null, true ) );
+        catchInvalidArguments( () -> userManagementProcedures.createUser( "neo4j", "nonEmpty", true ) );
 
         log.assertExactly(
                 error( "[admin]: tried to create user `%s`: %s", null, "The provided username is empty." ),
@@ -117,7 +125,7 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogUnauthorizedCreatingUser()
     {
         setSubject( matsContext );
-        catchAuthorizationViolation( () -> authProcedures.createUser( "andres", "", true ) );
+        catchAuthorizationViolation( () -> userManagementProcedures.createUser( "andres", "", true ) );
 
         log.assertExactly( error( "[mats]: tried to create user `%s`: %s", "andres", PERMISSION_DENIED ) );
     }
@@ -125,8 +133,8 @@ public class UserManagementProceduresLoggingTest
     @Test
     public void shouldLogDeletingUser() throws Throwable
     {
-        authProcedures.createUser( "andres", "el password", false );
-        authProcedures.deleteUser( "andres" );
+        userManagementProcedures.createUser( "andres", "el password", false );
+        userManagementProcedures.deleteUser( "andres" );
 
         log.assertExactly(
                 info( "[admin]: created user `%s`%s", "andres", "" ),
@@ -136,7 +144,7 @@ public class UserManagementProceduresLoggingTest
     @Test
     public void shouldLogDeletingNonExistentUser()
     {
-        catchInvalidArguments( () -> authProcedures.deleteUser( "andres" ) );
+        catchInvalidArguments( () -> userManagementProcedures.deleteUser( "andres" ) );
 
         log.assertExactly( error( "[admin]: tried to delete user `%s`: %s", "andres", "User 'andres' does not exist." ) );
     }
@@ -145,7 +153,7 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogUnauthorizedDeleteUser()
     {
         setSubject( matsContext );
-        catchAuthorizationViolation( () -> authProcedures.deleteUser( ADMIN ) );
+        catchAuthorizationViolation( () -> userManagementProcedures.deleteUser( ADMIN ) );
 
         log.assertExactly( error( "[mats]: tried to delete user `%s`: %s", ADMIN, PERMISSION_DENIED ) );
     }
@@ -153,8 +161,8 @@ public class UserManagementProceduresLoggingTest
     @Test
     public void shouldLogAddingRoleToUser() throws Throwable
     {
-        authProcedures.createUser( "mats", "neo4j", false );
-        authProcedures.addRoleToUser( ARCHITECT, "mats" );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
+        roleManagementProcedures.addRoleToUser( ARCHITECT, "mats" );
 
         log.assertExactly(
                 info( "[admin]: created user `%s`%s", "mats", "" ),
@@ -164,8 +172,8 @@ public class UserManagementProceduresLoggingTest
     @Test
     public void shouldLogFailureToAddRoleToUser() throws Throwable
     {
-        authProcedures.createUser( "mats", "neo4j", false );
-        catchInvalidArguments( () -> authProcedures.addRoleToUser( "null", "mats" ) );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
+        catchInvalidArguments( () -> roleManagementProcedures.addRoleToUser( "null", "mats" ) );
 
         log.assertExactly(
                 info( "[admin]: created user `%s`%s", "mats", "" ),
@@ -176,7 +184,7 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogUnauthorizedAddingRole()
     {
         setSubject( matsContext );
-        catchAuthorizationViolation( () -> authProcedures.addRoleToUser( ADMIN, "mats" ) );
+        catchAuthorizationViolation( () -> roleManagementProcedures.addRoleToUser( ADMIN, "mats" ) );
 
         log.assertExactly( error( "[mats]: tried to add role `%s` to user `%s`: %s", ADMIN, "mats", PERMISSION_DENIED ) );
     }
@@ -185,12 +193,12 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogRemovalOfRoleFromUser() throws Throwable
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", false );
-        authProcedures.addRoleToUser( READER, "mats" );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
+        roleManagementProcedures.addRoleToUser( READER, "mats" );
         log.clear();
 
         // When
-        authProcedures.removeRoleFromUser( READER, "mats" );
+        roleManagementProcedures.removeRoleFromUser( READER, "mats" );
 
         // Then
         log.assertExactly( info( "[admin]: removed role `%s` from user `%s`", READER, "mats" ) );
@@ -200,13 +208,13 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToRemoveRoleFromUser() throws Throwable
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", false );
-        authProcedures.addRoleToUser( READER, "mats" );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
+        roleManagementProcedures.addRoleToUser( READER, "mats" );
         log.clear();
 
         // When
-        catchInvalidArguments( () -> authProcedures.removeRoleFromUser( "notReader", "mats" ) );
-        catchInvalidArguments( () -> authProcedures.removeRoleFromUser( READER, "notMats" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.removeRoleFromUser( "notReader", "mats" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.removeRoleFromUser( READER, "notMats" ) );
 
         // Then
         log.assertExactly(
@@ -219,7 +227,7 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogUnauthorizedRemovingRole()
     {
         setSubject( matsContext );
-        catchAuthorizationViolation( () -> authProcedures.removeRoleFromUser( ADMIN, ADMIN ) );
+        catchAuthorizationViolation( () -> roleManagementProcedures.removeRoleFromUser( ADMIN, ADMIN ) );
 
         log.assertExactly( error( "[mats]: tried to remove role `%s` from user `%s`: %s", ADMIN, ADMIN, PERMISSION_DENIED ) );
     }
@@ -228,18 +236,18 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogUserPasswordChanges() throws IOException, InvalidArgumentsException
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", true );
+        userManagementProcedures.createUser( "mats", "neo4j", true );
         log.clear();
 
         // When
-        authProcedures.changeUserPassword( "mats", "longPassword", false );
-        authProcedures.changeUserPassword( "mats", "longerPassword", true );
+        userManagementProcedures.changeUserPassword( "mats", "longPassword", false );
+        userManagementProcedures.changeUserPassword( "mats", "longerPassword", true );
 
         setSubject( matsContext );
-        authProcedures.changeUserPassword( "mats", "evenLongerPassword", false );
+        userManagementProcedures.changeUserPassword( "mats", "evenLongerPassword", false );
 
-        authProcedures.changePassword( "superLongPassword", false );
-        authProcedures.changePassword( "infinitePassword", true );
+        userManagementProcedures.changePassword( "superLongPassword", false );
+        userManagementProcedures.changePassword( "infinitePassword", true );
 
         // Then
         log.assertExactly(
@@ -255,13 +263,13 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToChangeUserPassword() throws Throwable
     {
         // Given
-        authProcedures.createUser( "andres", "neo4j", true );
+        userManagementProcedures.createUser( "andres", "neo4j", true );
         log.clear();
 
         // When
-        catchInvalidArguments( () -> authProcedures.changeUserPassword( "andres", "neo4j", false ) );
-        catchInvalidArguments( () -> authProcedures.changeUserPassword( "andres", "", false ) );
-        catchInvalidArguments( () -> authProcedures.changeUserPassword( "notAndres", "good password", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changeUserPassword( "andres", "neo4j", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changeUserPassword( "andres", "", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changeUserPassword( "notAndres", "good password", false ) );
 
         // Then
         log.assertExactly(
@@ -278,17 +286,17 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToChangeOwnPassword() throws Throwable
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", true );
+        userManagementProcedures.createUser( "mats", "neo4j", true );
         setSubject( matsContext );
         log.clear();
 
         // When
-        catchInvalidArguments( () -> authProcedures.changeUserPassword( "mats", "neo4j", false ) );
-        catchInvalidArguments( () -> authProcedures.changeUserPassword( "mats", "", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changeUserPassword( "mats", "neo4j", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changeUserPassword( "mats", "", false ) );
 
-        catchInvalidArguments( () -> authProcedures.changePassword( null, false ) );
-        catchInvalidArguments( () -> authProcedures.changePassword( "", false ) );
-        catchInvalidArguments( () -> authProcedures.changePassword( "neo4j", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changePassword( null, false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changePassword( "", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.changePassword( "neo4j", false ) );
 
         // Then
         log.assertExactly(
@@ -304,12 +312,12 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogUnauthorizedChangePassword() throws Throwable
     {
         // Given
-        authProcedures.createUser( "andres", "neo4j", true );
+        userManagementProcedures.createUser( "andres", "neo4j", true );
         log.clear();
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.changeUserPassword( "andres", "otherPw", false ) );
+        catchAuthorizationViolation( () -> userManagementProcedures.changeUserPassword( "andres", "otherPw", false ) );
 
         // Then
         log.assertExactly(
@@ -321,12 +329,12 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogSuspendUser() throws Throwable
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", false );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
         log.clear();
 
         // When
-        authProcedures.suspendUser( "mats" );
-        authProcedures.suspendUser( "mats" );
+        userManagementProcedures.suspendUser( "mats" );
+        userManagementProcedures.suspendUser( "mats" );
 
         // Then
         log.assertExactly(
@@ -339,12 +347,12 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToSuspendUser() throws Throwable
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", false );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
         log.clear();
 
         // When
-        catchInvalidArguments( () -> authProcedures.suspendUser( "notMats" ) );
-        catchInvalidArguments( () -> authProcedures.suspendUser( ADMIN ) );
+        catchInvalidArguments( () -> userManagementProcedures.suspendUser( "notMats" ) );
+        catchInvalidArguments( () -> userManagementProcedures.suspendUser( ADMIN ) );
 
         // Then
         log.assertExactly(
@@ -360,7 +368,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.suspendUser( ADMIN ) );
+        catchAuthorizationViolation( () -> userManagementProcedures.suspendUser( ADMIN ) );
 
         // Then
         log.assertExactly(
@@ -372,13 +380,13 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogActivateUser() throws Throwable
     {
         // Given
-        authProcedures.createUser( "mats", "neo4j", false );
-        authProcedures.suspendUser( "mats" );
+        userManagementProcedures.createUser( "mats", "neo4j", false );
+        userManagementProcedures.suspendUser( "mats" );
         log.clear();
 
         // When
-        authProcedures.activateUser( "mats", false );
-        authProcedures.activateUser( "mats", false );
+        userManagementProcedures.activateUser( "mats", false );
+        userManagementProcedures.activateUser( "mats", false );
 
         // Then
         log.assertExactly(
@@ -391,8 +399,8 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToActivateUser()
     {
         // When
-        catchInvalidArguments( () -> authProcedures.activateUser( "notMats", false ) );
-        catchInvalidArguments( () -> authProcedures.activateUser( ADMIN, false ) );
+        catchInvalidArguments( () -> userManagementProcedures.activateUser( "notMats", false ) );
+        catchInvalidArguments( () -> userManagementProcedures.activateUser( ADMIN, false ) );
 
         // Then
         log.assertExactly(
@@ -408,7 +416,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.activateUser( "admin", true ) );
+        catchAuthorizationViolation( () -> userManagementProcedures.activateUser( "admin", true ) );
 
         // Then
         log.assertExactly(
@@ -420,7 +428,7 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogCreatingRole() throws Throwable
     {
         // When
-        authProcedures.createRole( "role" );
+        roleManagementProcedures.createRole( "role" );
 
         // Then
         log.assertExactly( info( "[admin]: created role `%s`", "role" ) );
@@ -430,14 +438,14 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToCreateRole() throws Throwable
     {
         // Given
-        authProcedures.createRole( "role" );
+        roleManagementProcedures.createRole( "role" );
         log.clear();
 
         // When
-        catchInvalidArguments( () -> authProcedures.createRole( null ) );
-        catchInvalidArguments( () -> authProcedures.createRole( "" ) );
-        catchInvalidArguments( () -> authProcedures.createRole( "role" ) );
-        catchInvalidArguments( () -> authProcedures.createRole( "!@#$" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.createRole( null ) );
+        catchInvalidArguments( () -> roleManagementProcedures.createRole( "" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.createRole( "role" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.createRole( "!@#$" ) );
 
         // Then
         log.assertExactly(
@@ -456,7 +464,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.createRole( "role" ) );
+        catchAuthorizationViolation( () -> roleManagementProcedures.createRole( "role" ) );
 
         // Then
         log.assertExactly( error("[mats]: tried to create role `%s`: %s", "role", PERMISSION_DENIED) );
@@ -466,11 +474,11 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogDeletingRole() throws Exception
     {
         // Given
-        authProcedures.createRole( "foo" );
+        roleManagementProcedures.createRole( "foo" );
         log.clear();
 
         // When
-        authProcedures.deleteRole( "foo" );
+        roleManagementProcedures.deleteRole( "foo" );
 
         // Then
         log.assertExactly( info( "[admin]: deleted role `%s`", "foo" ) );
@@ -480,10 +488,10 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogFailureToDeleteRole()
     {
         // When
-        catchInvalidArguments( () -> authProcedures.deleteRole( null ) );
-        catchInvalidArguments( () -> authProcedures.deleteRole( "" ) );
-        catchInvalidArguments( () -> authProcedures.deleteRole( "foo" ) );
-        catchInvalidArguments( () -> authProcedures.deleteRole( ADMIN ) );
+        catchInvalidArguments( () -> roleManagementProcedures.deleteRole( null ) );
+        catchInvalidArguments( () -> roleManagementProcedures.deleteRole( "" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.deleteRole( "foo" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.deleteRole( ADMIN ) );
 
         // Then
         log.assertExactly(
@@ -501,7 +509,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.deleteRole( ADMIN ) );
+        catchAuthorizationViolation( () -> roleManagementProcedures.deleteRole( ADMIN ) );
 
         // Then
         log.assertExactly( error( "[mats]: tried to delete role `%s`: %s", ADMIN, PERMISSION_DENIED ) );
@@ -511,12 +519,12 @@ public class UserManagementProceduresLoggingTest
     public void shouldLogIfUnexpectedErrorTerminatingTransactions() throws Exception
     {
         // Given
-        authProcedures.createUser( "johan", "neo4j", false );
-        authProcedures.failTerminateTransaction();
+        userManagementProcedures.createUser( "johan", "neo4j", false );
+        userManagementProcedures.failTerminateTransaction();
         log.clear();
 
         // When
-        assertException( () -> authProcedures.deleteUser( "johan" ), RuntimeException.class, "Unexpected error" );
+        assertException( () -> userManagementProcedures.deleteUser( "johan" ), RuntimeException.class, "Unexpected error" );
 
         // Then
         log.assertExactly(
@@ -533,7 +541,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.listUsers() );
+        catchAuthorizationViolation( () -> userManagementProcedures.listUsers() );
 
         log.assertExactly( error( "[mats]: tried to list users: %s", PERMISSION_DENIED ) );
     }
@@ -545,7 +553,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.listRoles() );
+        catchAuthorizationViolation( () -> roleManagementProcedures.listRoles() );
 
         log.assertExactly( error( "[mats]: tried to list roles: %s", PERMISSION_DENIED ) );
     }
@@ -556,9 +564,9 @@ public class UserManagementProceduresLoggingTest
         // Given
 
         // When
-        catchInvalidArguments( () -> authProcedures.listRolesForUser( null ) );
-        catchInvalidArguments( () -> authProcedures.listRolesForUser( "" ) );
-        catchInvalidArguments( () -> authProcedures.listRolesForUser( "nonExistent" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.listRolesForUser( null ) );
+        catchInvalidArguments( () -> roleManagementProcedures.listRolesForUser( "" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.listRolesForUser( "nonExistent" ) );
 
         log.assertExactly(
                 error( "[admin]: tried to list roles for user `%s`: %s", null, "User 'null' does not exist." ),
@@ -574,7 +582,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.listRolesForUser( "user" ) );
+        catchAuthorizationViolation( () -> roleManagementProcedures.listRolesForUser( "user" ) );
 
         log.assertExactly( error( "[mats]: tried to list roles for user `%s`: %s", "user", PERMISSION_DENIED ) );
     }
@@ -585,9 +593,9 @@ public class UserManagementProceduresLoggingTest
         // Given
 
         // When
-        catchInvalidArguments( () -> authProcedures.listUsersForRole( null ) );
-        catchInvalidArguments( () -> authProcedures.listUsersForRole( "" ) );
-        catchInvalidArguments( () -> authProcedures.listUsersForRole( "nonExistent" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.listUsersForRole( null ) );
+        catchInvalidArguments( () -> roleManagementProcedures.listUsersForRole( "" ) );
+        catchInvalidArguments( () -> roleManagementProcedures.listUsersForRole( "nonExistent" ) );
 
         log.assertExactly(
                 error( "[admin]: tried to list users for role `%s`: %s", null, "Role 'null' does not exist." ),
@@ -603,7 +611,7 @@ public class UserManagementProceduresLoggingTest
         setSubject( matsContext );
 
         // When
-        catchAuthorizationViolation( () -> authProcedures.listUsersForRole( "role" ) );
+        catchAuthorizationViolation( () -> roleManagementProcedures.listUsersForRole( "role" ) );
 
         log.assertExactly( error( "[mats]: tried to list users for role `%s`: %s", "role", PERMISSION_DENIED ) );
     }

@@ -33,7 +33,6 @@ import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import org.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.neo4j.kernel.impl.factory.AccessCapability;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -99,13 +98,16 @@ public class EnterpriseSecurityModule extends SecurityModule
         {
             procedures.registerComponent( EnterpriseUserManager.class,
                     ctx -> authManager.getUserManager( ctx.get( SECURITY_CONTEXT ).subject(), ctx.get( SECURITY_CONTEXT ).isAdmin() ), true );
-            if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
+
+            String warning = config.get( SecuritySettings.auth_providers ).size() > 1 ? "%s only applies to native users." : null;
+            procedures.registerProcedure( UserManagementProcedures.class, true, warning );
+            if ( config.get( SecuritySettings.aura_restrict_rbac ) )
             {
-                procedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users."  );
+                procedures.registerProcedure( AuraUserManagementProcedures.class, true, warning );
             }
             else
             {
-                procedures.registerProcedure( UserManagementProcedures.class, true );
+                procedures.registerProcedure( RoleManagementProcedures.class, true, warning );
             }
         }
         else
