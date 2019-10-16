@@ -167,7 +167,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                         override val id: Id,
                                         columns: Seq[String],
                                         slots: SlotConfiguration)
-                                       (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                       (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
 

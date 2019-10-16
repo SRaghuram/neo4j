@@ -172,7 +172,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                               innermost: DelegateOperatorTaskTemplate,
                                               argumentStateMapId: ArgumentStateMapId,
                                               generateCountExpression: () => IntermediateExpression)
-                                             (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                             (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   import SerialTopLevelLimitOperatorTaskTemplate._
 

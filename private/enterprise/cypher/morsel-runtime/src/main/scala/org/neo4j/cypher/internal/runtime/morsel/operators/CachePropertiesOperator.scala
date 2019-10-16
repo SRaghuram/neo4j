@@ -50,7 +50,7 @@ class CachePropertiesOperator(val workIdentity: WorkIdentity,
 
 class CachePropertiesOperatorTemplate(override val inner: OperatorTaskTemplate,
                                       override val id: Id,
-                                      propertyOps: Seq[Expression])(codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                      propertyOps: Seq[Expression])(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }

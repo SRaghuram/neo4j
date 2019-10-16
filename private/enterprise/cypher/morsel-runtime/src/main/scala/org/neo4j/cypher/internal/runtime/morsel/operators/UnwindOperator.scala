@@ -101,6 +101,8 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val iteratorField = field[java.util.Iterator[AnyValue]](codeGen.namer.nextVariableName())
   private var listExpression: IntermediateExpression = _
 
+  override final def scopeId: String = "unwind" + id.x
+
   override def genMoreFields: Seq[Field] = Seq(iteratorField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)

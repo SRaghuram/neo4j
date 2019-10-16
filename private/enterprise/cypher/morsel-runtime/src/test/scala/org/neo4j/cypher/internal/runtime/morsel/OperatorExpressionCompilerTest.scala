@@ -189,7 +189,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getAllLocalsForRefSlots shouldEqual Seq((1, ref1))
 
     // When
-    val continuationState = oec.endScope(mergeIntoParentScope = false)
+    val continuationState = oec.endInitializationScope(mergeIntoParentScope = false)
 
     // Then coninuationState should have 3 fields
     continuationState.fields should have size 3 // long1 + ref1 + boolean state flag
@@ -232,7 +232,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getAllLocalsForRefSlots shouldEqual Seq((1, ref1))
 
     // When
-    val continuationState = oec.endScope(mergeIntoParentScope = true)
+    val continuationState = oec.endInitializationScope(mergeIntoParentScope = true)
 
     // Then coninuationState should have 3 fields
     continuationState.fields should have size 3 // long1 + ref1 + boolean state flag
@@ -294,7 +294,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getRefAt(2) should matchIR(Load(ref2))
 
     // When
-    val continuationState2 = oec.endScope(mergeIntoParentScope = true)
+    val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
 
     // Then coninuationState2 should have 3 fields
     continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
@@ -304,7 +304,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getAllLocalsForRefSlots shouldEqual Seq((1, ref1), (2, ref2))
 
     // When
-    val continuationState1 = oec.endScope(mergeIntoParentScope = false)
+    val continuationState1 = oec.endInitializationScope(mergeIntoParentScope = false)
 
     // Then coninuationState1 should have 5 fields
     continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag
@@ -366,7 +366,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getRefAt(2) should matchIR(Load(ref2))
 
     // When
-    val continuationState2 = oec.endScope(mergeIntoParentScope = true)
+    val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
 
     // Then coninuationState2 should have 3 fields
     continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
@@ -376,7 +376,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getAllLocalsForRefSlots shouldEqual Seq((1, ref1), (2, ref2))
 
     // When
-    val continuationState1 = oec.endScope(mergeIntoParentScope = true)
+    val continuationState1 = oec.endInitializationScope(mergeIntoParentScope = true)
 
     // Then coninuationState1 should have 5 fields
     continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag
@@ -450,7 +450,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getAllLocalsForCachedProperties shouldEqual Seq((2, ref2))
 
     // When
-    val continuationState2 = oec.endScope(mergeIntoParentScope = true)
+    val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
 
     // Then coninuationState2 should have 3 fields
     continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
@@ -461,7 +461,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     oec.getAllLocalsForCachedProperties shouldEqual Seq((2, ref2))
 
     // When
-    val continuationState1 = oec.endScope(mergeIntoParentScope = true)
+    val continuationState1 = oec.endInitializationScope(mergeIntoParentScope = true)
 
     // Then coninuationState1 should have 5 fields
     continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag

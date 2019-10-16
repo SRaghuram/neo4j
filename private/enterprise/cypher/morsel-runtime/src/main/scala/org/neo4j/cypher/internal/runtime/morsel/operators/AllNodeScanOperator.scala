@@ -183,6 +183,8 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
 
+  override final def scopeId: String = "allNodesScan" + id.x
+
   override def genMoreFields: Seq[Field] = Seq(nodeCursorField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)

@@ -48,6 +48,7 @@ object OperatorCodeGenHelperTemplates {
   }
 
   val UNINITIALIZED_LONG_SLOT_VALUE: IntermediateRepresentation = constant(-2L)
+  val UNINITIALIZED_REF_SLOT_VALUE: IntermediateRepresentation = constant(null)
 
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")

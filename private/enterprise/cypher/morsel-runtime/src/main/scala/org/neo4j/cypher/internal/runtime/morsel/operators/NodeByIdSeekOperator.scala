@@ -119,7 +119,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
                                      offset: Int,
                                      nodeIdExpr: Expression,
                                      argumentSize: SlotConfiguration.Size)
-                                         (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
+                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
   import OperatorCodeGenHelperTemplates._
 

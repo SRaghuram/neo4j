@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -57,7 +58,8 @@ class FilterOperator(val workIdentity: WorkIdentity,
 
 class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
                              override val id: Id,
-                             generatePredicate: () => IntermediateExpression) extends OperatorTaskTemplate {
+                             generatePredicate: () => IntermediateExpression)
+                            (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }

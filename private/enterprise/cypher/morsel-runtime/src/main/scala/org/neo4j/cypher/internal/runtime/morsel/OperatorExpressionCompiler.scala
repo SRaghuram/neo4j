@@ -5,8 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, constant, field, load, loadField, setField}
-import org.neo4j.codegen.api.{CodeGeneration, Field, IntermediateRepresentation}
+import java.util
+
+import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, constant, declare, field, load, loadField, setField, variable}
+import org.neo4j.codegen.api.{CodeGeneration, Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
@@ -14,9 +16,9 @@ import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.{LocalVariableSlotMapper, LocalsForSlots, ScopeContinuationState}
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.{LocalsForSlots, ScopeContinuationState, ScopeLocalsState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
-import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, OUTPUT_ROW, UNINITIALIZED_LONG_SLOT_VALUE}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, OUTPUT_ROW, UNINITIALIZED_LONG_SLOT_VALUE, UNINITIALIZED_REF_SLOT_VALUE}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -27,12 +29,27 @@ object OperatorExpressionCompiler {
   // (`slot offset`, `local variable name`, `is modified`)
   type FOREACH_LOCAL_FUN = (Int, String, Boolean) => Unit
 
-  case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration) {
-    private val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs)
-    private val longSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfLongs)
-    private val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences)
-    private val refSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfReferences)
+  case class LocalVariableSlotMapper(scopeId: String, slots: SlotConfiguration)(
+    private val longSlotToLocal: Array[String] = new Array[String](slots.numberOfLongs),
+    private val longSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfLongs),
+    private val longSlotToLocalInitialized: Array[Boolean] = new Array[Boolean](slots.numberOfLongs), // TODO: Change to a single array with flags (modified, initialized)
+    private val refSlotToLocal: Array[String] = new Array[String](slots.numberOfReferences),
+    private val refSlotToLocalModified: Array[Boolean] = new Array[Boolean](slots.numberOfReferences),
+    private val refSlotToLocalInitialized: Array[Boolean] = new Array[Boolean](slots.numberOfReferences), // TODO: Change to a single array with flags (modified, initialized)
     private val cachedProperties: Array[String] = new Array[String](slots.numberOfReferences)
+  ) {
+
+    def copy(): LocalVariableSlotMapper = {
+      LocalVariableSlotMapper(scopeId, slots)(
+        longSlotToLocal = util.Arrays.copyOf(this.longSlotToLocal, this.longSlotToLocal.length),
+        longSlotToLocalModified = util.Arrays.copyOf(this.longSlotToLocalModified, this.longSlotToLocalModified.length),
+        longSlotToLocalInitialized = util.Arrays.copyOf(this.longSlotToLocalInitialized, this.longSlotToLocalInitialized.length),
+        refSlotToLocal = util.Arrays.copyOf(this.refSlotToLocal, this.refSlotToLocal.length),
+        refSlotToLocalModified = util.Arrays.copyOf(this.refSlotToLocalModified, this.refSlotToLocalModified.length),
+        refSlotToLocalInitialized = util.Arrays.copyOf(this.refSlotToLocalInitialized, this.refSlotToLocalInitialized.length),
+        cachedProperties = util.Arrays.copyOf(this.cachedProperties, this.cachedProperties.length)
+      )
+    }
 
     def addLocalForLongSlot(offset: Int): String = {
       val local = s"longSlot$offset"
@@ -58,6 +75,10 @@ object OperatorExpressionCompiler {
 
     def markModifiedLocalForRefSlot(offset: Int): Unit = {
       refSlotToLocalModified(offset) = true
+    }
+
+    def markInitializedLocalForRefSlot(offset: Int): Unit = {
+      refSlotToLocalInitialized(offset) = true
     }
 
     def getLocalForLongSlot(offset: Int): String = longSlotToLocal(offset)
@@ -95,17 +116,58 @@ object OperatorExpressionCompiler {
       other.foreachLocalForLongSlot { case (slot, local, modified) =>
         longSlotToLocal(slot) = local
         longSlotToLocalModified(slot) = modified
+        longSlotToLocalInitialized(slot) = true // If we merge a scope, we assume that initialization is taken care of, and we should not automatically generate code to initialize from input context
       }
       other.foreachLocalForRefSlot { case (slot, local, modified) =>
         refSlotToLocal(slot) = local
         refSlotToLocalModified(slot) = modified
+        refSlotToLocalInitialized(slot) = true // If we merge a scope, we assume that initialization is taken care of, and we should not automatically generate code to initialize from input context
       }
       other.foreachCachedProperty { case(i, key) =>
         cachedProperties(i) = key
       }
     }
 
-    def genScopeContinuationState: ScopeContinuationState = {
+    def genScopeLocalsState(codeGen: ExpressionCompiler, inputContext: IntermediateRepresentation): ScopeLocalsState = {
+      val locals = new ArrayBuffer[LocalVariable]()
+
+      foreachLocalForLongSlot { case (slot, name, modified) =>
+        val initialized = longSlotToLocalInitialized(slot)
+        val initValueIR =
+          if (modified || initialized) {
+            // This should be overwritten within this scope
+            UNINITIALIZED_LONG_SLOT_VALUE
+          } else {
+            // Load from input context
+            codeGen.getLongFromExecutionContext(slot, inputContext)
+          }
+        locals += variable[Long](name, initValueIR)
+      }
+
+      foreachLocalForRefSlot { case (slot, name, modified) =>
+        val initialized = refSlotToLocalInitialized(slot)
+        val initValueIR =
+          if (modified || initialized) {
+            // This should be overwritten within this scope
+            UNINITIALIZED_REF_SLOT_VALUE
+          } else {
+            // Load from input context
+            codeGen.getRefFromExecutionContext(slot, inputContext)
+          }
+        locals += variable[AnyValue](name, initValueIR)
+      }
+
+      val declarations = new ArrayBuffer[IntermediateRepresentation]()
+      val assignments = new ArrayBuffer[IntermediateRepresentation]()
+      locals.foreach { lv =>
+        declarations += declare(lv.typ, lv.name)
+        assignments += assign(lv.name, lv.value)
+      }
+
+      ScopeLocalsState(locals, declarations, assignments)
+    }
+
+    def genScopeContinuationState(codeGen: ExpressionCompiler, inputContext: IntermediateRepresentation): ScopeContinuationState = {
       val fields = new ArrayBuffer[Field]()
       val saveOps = new ArrayBuffer[IntermediateRepresentation]()
       val restoreOps = new ArrayBuffer[IntermediateRepresentation]()
@@ -136,17 +198,29 @@ object OperatorExpressionCompiler {
         restoreOps += setField(hasStateField, constant(false))
       }
 
-      ScopeContinuationState(fields, block(saveOps: _*), block(restoreOps: _*))
+      val scopeLocalsState = genScopeLocalsState(codeGen, inputContext)
+
+      ScopeContinuationState(fields, block(saveOps: _*), block(restoreOps: _*), scopeLocalsState.declarations, scopeLocalsState.assignments)
     }
   }
 
-  case class ScopeContinuationState(fields: Seq[Field], saveStateIR: IntermediateRepresentation, restoreStateIR: IntermediateRepresentation) {
+  case class ScopeLocalsState(locals: Seq[LocalVariable], declarations: Seq[IntermediateRepresentation], assignments: Seq[IntermediateRepresentation]) {
+    def isEmpty: Boolean = locals.isEmpty
+    def nonsEmpty: Boolean = locals.nonEmpty
+  }
+
+  case class ScopeContinuationState(fields: Seq[Field],
+                                    saveStateIR: IntermediateRepresentation,
+                                    restoreStateIR: IntermediateRepresentation,
+                                    declarations: Seq[IntermediateRepresentation],
+                                    assignments: Seq[IntermediateRepresentation]) {
     def isEmpty: Boolean = fields.isEmpty
     def nonEmpty: Boolean = fields.nonEmpty
   }
 
-  case class LocalsForSlots(slots: SlotConfiguration) {
-    private val rootScope: LocalVariableSlotMapper = LocalVariableSlotMapper("root", slots)
+  case class LocalsForSlots(operatorExpressionCompiler: OperatorExpressionCompiler) {
+    private val slots = operatorExpressionCompiler.slots
+    private val rootScope: LocalVariableSlotMapper = LocalVariableSlotMapper("root", slots)()
     private var scopeStack: List[LocalVariableSlotMapper] = rootScope :: Nil
 
     /**
@@ -161,8 +235,23 @@ object OperatorExpressionCompiler {
      *                so the string has to follow Java variable naming rules
      */
     def beginScope(scopeId: String): Unit = {
-      val localVariableSlotMapper = LocalVariableSlotMapper(scopeId, slots)
+      val localVariableSlotMapper = LocalVariableSlotMapper(scopeId, slots)()
       scopeStack = localVariableSlotMapper :: scopeStack
+    }
+
+    /**
+     * End the scope started by the previous call to [[beginScope]]
+     *
+     * Pops the current scope from the scope state, and generates a [[ScopeLocalsState]] that contains
+     * all the local slot variables that were added in this scope, along with separate declaration and assignment code to load their values from the input context
+     *
+     * @param mergeIntoParentScope true if locals added in this scope should be merged back into the parent scope, otherwise they will be discarded
+     *                             @note The caller is responsible for making sure that the locals are indeed declared and initialized in the parent scope!
+     *
+     * @return continuationState The generated [[ScopeLocalsState]] for this scope
+     */
+    def endScope(mergeIntoParentScope: Boolean = false): ScopeLocalsState = {
+      endScope[ScopeLocalsState](_.genScopeLocalsState(operatorExpressionCompiler, loadField(INPUT_MORSEL)), mergeIntoParentScope)
     }
 
     /**
@@ -176,14 +265,32 @@ object OperatorExpressionCompiler {
      *
      * @return continuationState The generated [[ScopeContinuationState]] for this scope
      */
-    def endScope(mergeIntoParentScope: Boolean): ScopeContinuationState = {
+    def endInitializationScope(mergeIntoParentScope: Boolean = true): ScopeContinuationState = {
+      endScope[ScopeContinuationState](_.genScopeContinuationState(operatorExpressionCompiler, loadField(INPUT_MORSEL)), mergeIntoParentScope)
+    }
+
+    private def endScope[T](genState: LocalVariableSlotMapper => T, mergeIntoParentScope: Boolean): T = {
       val endedScope = scopeStack.head
       scopeStack = scopeStack.tail
-      val continuationState = endedScope.genScopeContinuationState
+      val state = genState(endedScope)
       if (mergeIntoParentScope) {
         scopeStack.head.merge(endedScope)
       }
-      continuationState
+      state
+    }
+
+    /**
+     * Return a new scope which is the result of merging all the scopes currently on the scope stack.
+     * The returned scope is a copy and the original scopes on the scope stack are not affected.
+     */
+    def mergeAllScopesCopy(): LocalVariableSlotMapper = {
+      var s = scopeStack
+      val scope = s.head.copy()
+      while (s.tail != Nil) {
+        s = s.tail
+        scope.merge(s.head)
+      }
+      scope
     }
 
     def addLocalForLongSlot(offset: Int): String = {
@@ -204,6 +311,10 @@ object OperatorExpressionCompiler {
 
     def markModifiedLocalForRefSlot(offset: Int): Unit = {
       scopeStack.head.markModifiedLocalForRefSlot(offset)
+    }
+
+    def markInitializedLocalForRefSlot(offset: Int): Unit = {
+      scopeStack.head.markInitializedLocalForRefSlot(offset)
     }
 
     def getLocalForLongSlot(offset: Int): String = {
@@ -255,7 +366,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * and may need to be written to the output context by [[writeLocalsToSlots()]],
    * as well as which properties have been cached ([[getCachedPropertyAt]], [[setCachedPropertyAt]]).
    */
-  private val locals = LocalsForSlots(slots)
+  private val locals = LocalsForSlots(this)
 
   /**
    * Used by [[copyFromInput]] to track the argument state
@@ -270,13 +381,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     var local = locals.getLocalForLongSlot(offset)
     if (local == null) {
       local = locals.addLocalForLongSlot(offset)
-      block(
-        assign(local, getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-        load(local)
-      )
-    } else {
-      load(local)
     }
+    load(local)
   }
 
   /**
@@ -300,13 +406,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
-      block(
-        assign(local, getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))),
-        load(local)
-      )
-    } else {
-      load(local)
     }
+    load(local)
   }
 
   /**
@@ -317,7 +418,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   final def getRefAtNoSave(offset: Int): IntermediateRepresentation = {
     val local = locals.getLocalForRefSlot(offset)
     if (local == null) {
-      getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
+      getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))
     } else {
       load(local)
     }
@@ -368,15 +469,28 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   protected def didInitializeCachedPropertyFromContext(): Unit = {}
   protected def didLoadLocalCachedProperty(): Unit = {}
 
+  /**
+   * Get _and_ cache property into a local variable for its predetermined refslot.
+   * If this is the first time this cached property is accessed and no local variable exists in this scope,
+   * the value will be retrieved from either 1) the input context if it exist there or else 2) from the store.
+   *
+   * Even if a local variable exists, a runtime check is also generated together with code that retrieves the value (in the same order as above),
+   * if the local variable is uninitialized (null).
+   * This is needed because the planner does not determine a single definition point for cached properties at compile time,
+   * but rather defers to the runtime to do this on first access.
+   */
   override def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
     val offset = property.cachedPropertyOffset
     var local = locals.getLocalForRefSlot(offset)
     val maybeCachedProperty = inputSlotConfiguration.getCachedPropertySlot(property)
 
-    def initializeFromStoreIR = {
+    // Mark the corresponding refslot as initialized in this scope, to prevent us from generating an additional load from input context
+    locals.markInitializedLocalForRefSlot(offset)
+
+    def initializeFromStoreIR: IntermediateRepresentation = {
       assign(local, getFromStore)
     }
-    def initializeFromContextIR = {
+    def initializeFromContextIR: IntermediateRepresentation = {
       block(
         assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
         condition(isNull(load(local)))(initializeFromStoreIR)
@@ -478,9 +592,12 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
     val USE_ARRAY_COPY_THRESHOLD = 2
 
-    // First collect all write operations for modified slots
+    // Merge all scopes (into a copy, without modifying the original scope stack)
+    val mergedLocals = locals.mergeAllScopesCopy()
+
+    // Collect all write operations for modified slots
     var firstModifiedLongSlot = Int.MaxValue
-    locals.foreachLocalForLongSlot { case (offset, local, modified) =>
+    mergedLocals.foreachLocalForLongSlot { case (offset, local, modified) =>
       if (modified) {
         if (firstModifiedLongSlot > offset) {
           firstModifiedLongSlot = offset
@@ -489,7 +606,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       }
     }
     var firstModifiedRefSlot = Int.MaxValue
-    locals.foreachLocalForRefSlot { case (offset, local, modified) =>
+    mergedLocals.foreachLocalForRefSlot { case (offset, local, modified) =>
       if (modified) {
         if (firstModifiedRefSlot > offset) {
           firstModifiedRefSlot = offset
@@ -514,7 +631,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       if (nLongsToCopy > 0) {
         var i = 0
         while (i < nLongsToCopy) {
-          val local = locals.getLocalForLongSlot(i)
+          val local = mergedLocals.getLocalForLongSlot(i)
           val getOp =
             if (local == null)
               getLongFromExecutionContext(i, loadField(INPUT_MORSEL))
@@ -531,7 +648,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       if (nRefsToCopy > 0) {
         var i = 0
         while (i < nRefsToCopy) {
-          val local = locals.getLocalForRefSlot(i)
+          val local = mergedLocals.getLocalForRefSlot(i)
           val getOp =
             if (local == null)
               getRefFromExecutionContext(i, loadField(INPUT_MORSEL))
@@ -555,8 +672,12 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     locals.beginScope(scopeId)
   }
 
-  def endScope(mergeIntoParentScope: Boolean = false): ScopeContinuationState = {
-    locals.endScope(mergeIntoParentScope)
+  def endInitializationScope(mergeIntoParentScope: Boolean = true): ScopeContinuationState = {
+    locals.endInitializationScope(mergeIntoParentScope)
+  }
+
+  def endScope(): ScopeLocalsState = {
+    locals.endScope()
   }
 
   def getAllLocalsForLongSlots: Seq[(Int, String)] = {

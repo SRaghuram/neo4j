@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.codegen.TypeReference
+import org.neo4j.codegen.{TypeReference, api}
 import org.neo4j.codegen.api.CodeGeneration.{CodeGenerationMode, compileClass}
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
@@ -261,6 +261,19 @@ trait OperatorTaskTemplate {
     */
   def inner: OperatorTaskTemplate
 
+  /**
+   * ID of the Logical plan of this template.
+   */
+  def id: Id
+
+  /**
+   * Uniquely identifies the operator within a fused loop.
+   * NOTE: Used in a generated variable name for the continuation state, so the string has to follow Java variable naming rules
+   */
+  protected def scopeId: String = "operator" + id.x
+
+  protected def codeGen: OperatorExpressionCompiler
+
   final def map[T](f: OperatorTaskTemplate => T): List[T] = {
     inner match {
       case null => f(this) :: Nil
@@ -274,11 +287,6 @@ trait OperatorTaskTemplate {
       case operator => f(this) ++ operator.flatMap(f)
     }
   }
-
-  /**
-    * ID of the Logical plan of this template.
-    */
-  def id: Id
 
   def genClassDeclaration(packageName: String, className: String, staticFields: Seq[StaticField]): ClassDeclaration[CompiledTask] = {
     throw new InternalException("Illegal start operator template")
@@ -324,19 +332,25 @@ trait OperatorTaskTemplate {
     * }}}
     */
   final def genOperateWithExpressions: IntermediateRepresentation = {
-    val ir = genOperate
+    codeGen.beginScope(scopeId)
+    val body = genOperate
+    val localState = codeGen.endScope()
+
+    val declarations = localState.declarations
+    val assignments = localState.assignments
+
     val expressionCursors = genExpressions.flatMap(_.variables)
       .intersect(Seq(ExpressionCompiler.vNODE_CURSOR,
                      ExpressionCompiler.vPROPERTY_CURSOR,
                      ExpressionCompiler.vRELATIONSHIP_CURSOR))
-    if (expressionCursors.nonEmpty) {
-      val setTracerCalls = expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
-      block(
-        setTracerCalls :+ ir:_*
-      )
-    } else {
-      ir
-    }
+    val setTracerCalls =
+      if (expressionCursors.nonEmpty) {
+        expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
+      } else {
+        Seq.empty
+      }
+
+    block(setTracerCalls ++ declarations ++ assignments :+ body:_*)
   }
 
   protected def genOperate: IntermediateRepresentation
@@ -417,6 +431,7 @@ trait OperatorTaskTemplate {
 object OperatorTaskTemplate {
   def empty(withId: Id): OperatorTaskTemplate = new OperatorTaskTemplate {
     override def inner: OperatorTaskTemplate = null
+    override protected def codeGen: OperatorExpressionCompiler = null
     override def id: Id = withId
     override def genOperate: IntermediateRepresentation = noop()
     override def genProduce: IntermediateRepresentation = noop()
@@ -442,6 +457,13 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 
   final override def genOperate: IntermediateRepresentation =
     if (isHead) genOperateHead else genOperateMiddle
+
+  protected def genScopeWithLocalDeclarations(scopeId: String, genBody: => IntermediateRepresentation): IntermediateRepresentation = {
+    codeGen.beginScope(scopeId)
+    val body = genBody
+    val localsState = codeGen.endScope()
+    block(localsState.declarations ++ localsState.assignments :+ body: _*)
+  }
 
   // We let the generated class extend the abstract class CompiledContinuableOperatorTaskWithMorsel(which extends ContinuableOperatorTaskWithMorsel),
   // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
@@ -559,7 +581,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,
                                    var shouldCheckOutputCounter: Boolean = false)
-                                  (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                  (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   // Reset configuration to the default settings
   def reset(): Unit = {
     shouldWriteToContext = true
@@ -651,20 +673,10 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genFields: Seq[Field] = Seq.empty
 
   override def genLocalVariables: Seq[LocalVariable] = {
-    val localsForSlots =
-      codeGen.getAllLocalsForLongSlots.map {
-        case (_, name) =>
-          variable[Long](name, UNINITIALIZED_LONG_SLOT_VALUE)
-      } ++
-      codeGen.getAllLocalsForRefSlots.map {
-        case (_, name) =>
-          variable[AnyValue](name, constant(null))
-      }
-
     if (shouldCheckOutputCounter) {
-      localsForSlots :+ OUTPUT_COUNTER
+      Seq(OUTPUT_COUNTER)
     } else {
-      localsForSlots
+      Seq.empty
     }
   }
 

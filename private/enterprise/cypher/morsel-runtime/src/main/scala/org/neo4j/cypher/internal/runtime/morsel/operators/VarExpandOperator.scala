@@ -219,6 +219,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private var nodePredicate: Option[IntermediateExpression] = _
   private var relPredicate: Option[IntermediateExpression] = _
 
+  override final def scopeId: String = "varExpand" + id.x
+
   override def genMoreFields: Seq[Field] = {
     val localFields =
       ArrayBuffer(typeField,
@@ -330,7 +332,6 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       block(
         codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
                               Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
-        //setNode(fromSlot),
         codeGen.setRefAt(relOffset, invoke(loadField(varExpandCursorField),
                                             method[VarExpandCursor, ListValue]("relationships"))),
         if (shouldExpandAll) codeGen.setLongAt(toOffset, invoke(loadField(varExpandCursorField), method[VarExpandCursor, Long]("toNode")) )

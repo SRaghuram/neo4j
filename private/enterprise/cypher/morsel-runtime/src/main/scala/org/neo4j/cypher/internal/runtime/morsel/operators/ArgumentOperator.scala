@@ -64,8 +64,10 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
                                    innermost: DelegateOperatorTaskTemplate,
                                    argumentSize: SlotConfiguration.Size,
                                    final override protected val isHead: Boolean = true)
-                                   (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+                                   (protected val codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
+
+  override protected def scopeId: String = "argument" + id.x
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
@@ -74,13 +76,18 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
-        block(
-          codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-          profileRow(id),
-          inner.genOperateWithExpressions,
-          INPUT_ROW_MOVE_TO_NEXT,
-          innermost.resetCachedPropertyVariables
-        )
+        {
+          val body =
+            block(
+              codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
+              profileRow(id),
+              inner.genOperateWithExpressions,
+              INPUT_ROW_MOVE_TO_NEXT,
+              innermost.resetCachedPropertyVariables
+            )
+          // TODO: Here we still need to fix a way to propagate variables to save in the continuation state like we do in InputLoopTask
+          body
+        }
       )
     )
   }

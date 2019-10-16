@@ -557,7 +557,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
           case plan@plans.Selection(predicate, _) =>
             acc.copy(
-              template = new FilterOperatorTemplate(acc.template, plan.id, compileExpression(predicate)),
+              template = new FilterOperatorTemplate(acc.template, plan.id, compileExpression(predicate))(expressionCompiler),
               fusedPlans = nextPlan :: acc.fusedPlans)
 
           case plan@plans.Projection(_, projections) =>

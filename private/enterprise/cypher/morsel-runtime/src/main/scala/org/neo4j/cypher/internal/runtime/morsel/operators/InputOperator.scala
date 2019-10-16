@@ -135,12 +135,14 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
                             refOffsets: Array[Int],
                             nullable: Boolean,
                             final override protected val isHead: Boolean = true)
-                           (codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+                           (protected val codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
   import IntermediateRepresentation._
   import OperatorCodeGenHelperTemplates._
 
   private val inputCursorField = field[MutatingInputCursor](codeGen.namer.nextVariableName())
   private val canContinue = field[Boolean](codeGen.namer.nextVariableName())
+
+  override protected def scopeId: String = "input" + id.x
 
   override def genCanContinue: Option[IntermediateRepresentation] =
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))

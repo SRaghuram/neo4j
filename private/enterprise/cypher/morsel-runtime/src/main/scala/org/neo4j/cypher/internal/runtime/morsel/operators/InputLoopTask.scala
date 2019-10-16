@@ -102,7 +102,7 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                                      override val id: Id,
                                      innermost: DelegateOperatorTaskTemplate,
-                                     codeGen: OperatorExpressionCompiler,
+                                     protected val codeGen: OperatorExpressionCompiler,
                                      override val isHead: Boolean = true) extends ContinuableOperatorTaskWithMorselTemplate {
   import OperatorCodeGenHelperTemplates._
 
@@ -112,11 +112,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
 
   private var continuationState: ScopeContinuationState = _
 
-  /**
-   * Uniquely identifies the operator within a fused loop.
-   * NOTE: Used in a generated variable name for the continuation state, so the string has to follow Java variable naming rules
-   */
-  protected def scopeId: String = "inputLoop" + id.x
+  override protected def scopeId: String = "leafOperator" + id.x
 
   // TODO: innerLoop and the first boolean field in continuationState (HasContinuationState) are redundant. Pick one when we have stable code/
   override final def genFields: Seq[Field] = Seq(canContinue, innerLoop) ++ continuationState.fields ++ genMoreFields
@@ -179,30 +175,36 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //outputRow.finishedWriting()
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
-        block(
-          // Initialize the inner loop
-          genInitializeInnerLoopOrRestoreContinuationState,
+        {
+          val body =
+            block(
+              // Initialize the inner loop
+              genInitializeInnerLoopOrRestoreContinuationState,
 
-          // Enter the inner loop if we have one for this input row
-          ifElse(loadField(innerLoop))(
-            block(
-              genInnerLoop,
-              condition(not(loadField(canContinue)))(
+              // Enter the inner loop if we have one for this input row
+              ifElse(loadField(innerLoop))(
                 block(
-                  genCloseInnerLoop,
-                  setField(innerLoop, constant(false)),
-                  INPUT_ROW_MOVE_TO_NEXT,
-                  setField(canContinue, INPUT_ROW_IS_VALID)
+                  genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
+                  condition(not(loadField(canContinue)))(
+                    block(
+                      genCloseInnerLoop,
+                      setField(innerLoop, constant(false)),
+                      INPUT_ROW_MOVE_TO_NEXT,
+                      setField(canContinue, INPUT_ROW_IS_VALID)
+                    )
+                  )
                 )
-              )
+              )( // Else move to the next input row
+                block(
+                  INPUT_ROW_MOVE_TO_NEXT
+                )
+              ),
+              innermost.resetCachedPropertyVariables
             )
-          )( // Else move to the next input row
-            block(
-              INPUT_ROW_MOVE_TO_NEXT
-            )
-          ),
-          innermost.resetCachedPropertyVariables
-        )
+          // We generate the code for the whole loop body first, before we generate the cod for loading locals from input context slots.
+          // This is because we need to know which ones are actually used.
+          block(continuationState.assignments :+ body: _*)
+        }
       )
     )
   }
@@ -231,27 +233,33 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     block(
       setField(canContinue, INPUT_ROW_IS_VALID),
       loop(and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
-        block(
-          // Initialize the inner loop
-          genInitializeInnerLoopOrRestoreContinuationState,
-
-          // Enter the inner loop if we have one for this input row
-          condition(loadField(innerLoop))(
+        {
+          val body =
             block(
-              genInnerLoop,
-              condition(not(loadField(canContinue)))(
+              // Initialize the inner loop
+              genInitializeInnerLoopOrRestoreContinuationState,
+
+              // Enter the inner loop if we have one for this input row
+              condition(loadField(innerLoop))(
                 block(
-                  genCloseInnerLoop,
-                  setField(innerLoop, constant(false)),
+                  genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
+                  condition(not(loadField(canContinue)))(
+                    block(
+                      genCloseInnerLoop,
+                      setField(innerLoop, constant(false)),
+                    )
+                  )
                 )
+              ),
+              innermost.resetCachedPropertyVariables,
+              condition(and(loadField(canContinue), not(innermost.predicate)))(
+                break(OUTER_LOOP_LABEL_NAME)
               )
             )
-          ),
-          innermost.resetCachedPropertyVariables,
-          condition(and(loadField(canContinue), not(innermost.predicate))) (
-            break(OUTER_LOOP_LABEL_NAME)
-          )
-        )
+          // We generate the code for the whole loop body first, before we generate the cod for loading locals from input context slots.
+          // This is because we need to know which ones are actually used.
+          block(continuationState.assignments :+ body: _*)
+        }
       )
     )
   }
@@ -263,9 +271,9 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
         // Record all the locals that are loaded from slots by the genInitializeInnerLoop code into continuationState
         // TODO: We can also incorporate the explicit fields that operators use (cursors etc.) so that we
         //       can use local variables and have a single continuation state per operator
-        { codeGen.beginScope(scopeId); noop() },
+        { codeGen.beginScope(scopeId + "init"); noop() },
         setField(innerLoop, genInitializeInnerLoop),
-        { continuationState = codeGen.endScope(mergeIntoParentScope = true); noop() } // NOTE: We emit the saveStateIR in genOperateExit
+        { continuationState = codeGen.endInitializationScope(); noop() } // NOTE: We emit the saveStateIR in genOperateExit
       )
     )(
       // Continuation of ongoing inner loop. We need to restore the state of local variables

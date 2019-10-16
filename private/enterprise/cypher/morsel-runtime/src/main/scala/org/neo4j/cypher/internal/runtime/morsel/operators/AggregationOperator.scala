@@ -290,7 +290,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             aggregationExpressionsCreator : () => Array[IntermediateExpression],
                                             groupingKeyExpressionCreator: () => IntermediateExpression,
                                             aggregationExpressions: Array[AstExpression])
-                                           (codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                                           (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   import OperatorCodeGenHelperTemplates._
   import org.neo4j.codegen.api.IntermediateRepresentation._
   import org.neo4j.cypher.internal.runtime.morsel.operators.AggregationMapperOperatorTaskTemplate._

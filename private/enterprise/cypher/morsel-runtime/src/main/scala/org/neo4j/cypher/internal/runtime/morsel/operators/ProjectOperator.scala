@@ -46,7 +46,7 @@ class ProjectOperator(val workIdentity: WorkIdentity,
 
 class ProjectOperatorTemplate(override val inner: OperatorTaskTemplate,
                               override val id: Id,
-                              projectionOps: Map[String, Expression])(codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+                              projectionOps: Map[String, Expression])(protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   override def genInit: IntermediateRepresentation = {
     inner.genInit
   }
