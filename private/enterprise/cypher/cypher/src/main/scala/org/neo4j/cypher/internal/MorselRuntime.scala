@@ -233,7 +233,7 @@ class MorselRuntime(parallelExecution: Boolean,
                             executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
-                     doProfile: Boolean,
+                     executionMode: ExecutionMode,
                      params: MapValue,
                      prePopulateResults: Boolean,
                      inputDataStream: InputDataStream,
@@ -252,7 +252,7 @@ class MorselRuntime(parallelExecution: Boolean,
                               queryExecutor,
                               schedulerTracer,
                               subscriber,
-                              doProfile,
+                              executionMode == ProfileMode,
                               morselSize,
                               memoryTrackingController.memoryTracking,
                               executionGraphSchedulingPolicy)

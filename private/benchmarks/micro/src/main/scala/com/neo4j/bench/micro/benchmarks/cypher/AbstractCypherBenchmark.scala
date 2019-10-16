@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
-import org.neo4j.cypher.internal.runtime.{NoInput, QueryContext}
+import org.neo4j.cypher.internal.runtime.{NoInput, NormalMode, QueryContext}
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -237,7 +237,7 @@ case class ExecutablePlan(executionPlan: ExecutionPlan, newQueryContext: Interna
   def execute(params: MapValue = VirtualValues.EMPTY_MAP, tx: InternalTransaction, subscriber: QuerySubscriber): RuntimeResult = {
     val queryContext = newQueryContext(tx)
 
-    executionPlan.run(queryContext, doProfile = false, params, prePopulateResults = false, input = NoInput, subscriber)
+    executionPlan.run(queryContext, NormalMode, params, prePopulateResults = false, input = NoInput, subscriber)
   }
 }
 

@@ -78,6 +78,23 @@ public class CypherOverBoltIT
     }
 
     @Test
+    public void explainingPeriodicCommitInOpenTransactionShouldNotFail()
+    {
+        try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
+              Session session = driver.session() )
+        {
+            ResultSummary summary = session.readTransaction( tx ->
+                                                             {
+                                                                 StatementResult result =
+                                                                         tx.run( "EXPLAIN USING PERIODIC COMMIT " +
+                                                                                 "100 LOAD CSV FROM $file AS row CREATE (n:Row) SET n.row = row" );
+                                                                 return result.summary();
+                                                             } );
+            assertTrue( summary.hasPlan() );
+        }
+    }
+
+    @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork2()
     {
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
