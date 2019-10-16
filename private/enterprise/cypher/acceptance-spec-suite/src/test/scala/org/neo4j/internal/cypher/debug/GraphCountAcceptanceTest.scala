@@ -12,6 +12,7 @@ import org.json4s.native.Serialization
 import org.neo4j.cypher.internal.compatibility.v3_5.Cypher35Planner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.v3_5.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.v3_5.logical.plans.{CypherValue, FieldSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.internal.collector.DataCollectorMatchers._
 import org.neo4j.internal.collector.SampleGraphs
@@ -25,18 +26,17 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
   ignore("template for support cases") {
     val file = new File("/home/satia/dev/temp/graphCounts.json")
-    val graphCounts = GraphCountsJson.parse(file)
-    val row = graphCounts.results.head.data.head.row
+    val graphCountData = GraphCountsJson.parse(file)
 
     def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger): GraphCountsPlanContext = {
-      val context = new GraphCountsPlanContext(row)(tc, logger)
+      val context = new GraphCountsPlanContext(graphCountData)(tc, logger)
       // Add UDFs here, if you have any in your query
       context
     }
 
     Cypher35Planner.customPlanContextCreator = Some(getPlanContext)
 
-    createGraph(graphCounts)
+    createGraph(graphCountData)
 
     // Modify graph to account for predicates in the query, add relationships, etc.
 

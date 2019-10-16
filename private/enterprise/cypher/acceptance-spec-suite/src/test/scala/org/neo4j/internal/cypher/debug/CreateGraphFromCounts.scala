@@ -21,11 +21,9 @@ trait CreateGraphFromCounts {
     *
     * Currently, no relationships are created.
     */
-  def createGraph(graphCounts: DbStatsRetrieveGraphCountsJSON): Unit = {
-    val row = graphCounts.results.head.data.head.row
-
+  def createGraph(graphCountData: GraphCountData): Unit = {
     graph.inTx {
-      for (constraint <- row.data.constraints) {
+      for (constraint <- graphCountData.constraints) {
         constraint.`type` match {
           case "Uniqueness constraint" =>
             // Uniqueness constraints can only be on labels, not on relationship types
@@ -53,7 +51,7 @@ trait CreateGraphFromCounts {
         }
       }
 
-      for (index <- row.data.indexes) {
+      for (index <- graphCountData.indexes) {
         val label = Label.label(index.labels.head)
         var creator = graph.schema().indexFor(label)
         for (prop <- index.properties)
@@ -70,7 +68,7 @@ trait CreateGraphFromCounts {
 
     graph.inTx {
       val nodeMap = scala.collection.mutable.Map[String, ArrayBuffer[Node]]()
-      for (nodeLabel <- row.data.nodes) {
+      for (nodeLabel <- graphCountData.nodes) {
         nodeLabel.label match {
           case None =>
             val labelName = ""
@@ -87,7 +85,7 @@ trait CreateGraphFromCounts {
         }
       }
 
-      for(relType <- row.data.relationships) {
+      for(relType <- graphCountData.relationships) {
         val startNodes = relType.startLabel.map(nodeMap).getOrElse(nodeMap("")).take(10)
         val endNodes = relType.endLabel.map(nodeMap).getOrElse(nodeMap("")).take(10)
         val relTypeName = relType.relationshipType.getOrElse("__REL")
@@ -97,6 +95,11 @@ trait CreateGraphFromCounts {
         }
       }
     }
+  }
+
+  def createGraph(graphCounts: DbStatsRetrieveGraphCountsJSON): Unit = {
+    val data = graphCounts.results.head.data.head.row.data
+    createGraph(data)
   }
 
   private def getSingleProperty(properties: Seq[String]) : String = {

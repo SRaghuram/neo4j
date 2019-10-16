@@ -21,9 +21,9 @@ object GraphCountsJson {
     * @param file the file with the JSON contents
     * @return the scala representation
     */
-  def parse(file: File): DbStatsRetrieveGraphCountsJSON = {
+  def parse(file: File): GraphCountData = {
     implicit val formats: Formats = DefaultFormats + RowSerializer
-    JsonMethods.parse(FileInput(file)).extract[DbStatsRetrieveGraphCountsJSON]
+    JsonMethods.parse(FileInput(file)).extract[GraphCountData]
   }
 
   def parse(str: String): DbStatsRetrieveGraphCountsJSON = {
