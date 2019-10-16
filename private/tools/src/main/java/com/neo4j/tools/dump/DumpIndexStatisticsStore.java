@@ -57,7 +57,7 @@ public class DumpIndexStatisticsStore
             if ( fs.isDirectory( path ) )
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
-                indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate() );
+                indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pageCache, fs, logProvider );
                 NeoStores neoStores = factory.openAllNeoStores();
@@ -67,7 +67,7 @@ public class DumpIndexStatisticsStore
             }
             else
             {
-                indexStatisticsStore = new IndexStatisticsStore( pageCache, path, immediate() );
+                indexStatisticsStore = new IndexStatisticsStore( pageCache, path, immediate(), true );
             }
             life.add( indexStatisticsStore );
             indexStatisticsStore.visit( new IndexStatsVisitor( out, schema ) );
