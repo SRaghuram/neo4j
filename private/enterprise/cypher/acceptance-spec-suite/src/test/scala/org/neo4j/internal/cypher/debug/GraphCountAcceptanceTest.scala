@@ -27,7 +27,13 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
   ignore("template for support cases") {
     val file = new File("/home/satia/dev/temp/graphCounts.json")
-    val graphCountData = GraphCountsJson.parse(file)
+
+    // If your json has the correct format including boiler plate:
+    val graphCounts = GraphCountsJson.parseAsGraphCountsJson(file)
+    val graphCountData = graphCounts.results.head.data.head.row.data
+
+    // If your json is missing the boiler plate, you can try this instead:
+    //val graphCountData = GraphCountsJson.parseAsGraphCountData(file)
 
     def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger): GraphCountsPlanContext = {
       val context = new GraphCountsPlanContext(graphCountData)(tc, logger)
