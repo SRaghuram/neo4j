@@ -119,9 +119,34 @@ class LiveCounts(var nodeCursorPool: Long = 0,
   }
 }
 
-class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
-
+class TrackingCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends CursorPool[CURSOR](cursorFactory) {
   @volatile private var liveCount: Long = 0L
+
+  override def allocateAndTrace(): CURSOR = {
+    liveCount += 1L
+    super.allocateAndTrace()
+  }
+
+  override def allocate(): CURSOR = {
+    liveCount += 1L
+    super.allocate()
+  }
+
+  override def free(cursor: CURSOR): Unit = {
+    if (cursor != null) {
+      liveCount -= 1L
+    }
+    super.free(cursor)
+  }
+
+  override def forceFree(cursor: CURSOR): Unit = {
+    liveCount -= 1L
+    super.forceFree(cursor)
+  }
+  override def getLiveCount: Long = liveCount
+}
+
+class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoCloseable {
   private var cached: CURSOR = _
   private var tracer: KernelReadTracer = KernelReadTracer.NONE
 
@@ -133,13 +158,14 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     * Allocate a cursor of type `CURSOR`.
     */
   def allocateAndTrace(): CURSOR = {
-    val cursor = allocate()
+    val cursor = allocateCursor()
     cursor.setTracer(tracer)
     cursor
   }
 
-  def allocate(): CURSOR = {
-    liveCount += 1
+  def allocate(): CURSOR = allocateCursor()
+
+  private final def allocateCursor(): CURSOR = {
     if (DebugSupport.CURSORS.enabled) {
       DebugSupport.CURSORS.log(stackTraceSlice(2, 5).mkString("+ allocate\n        ", "\n        ", ""))
     }
@@ -156,29 +182,25 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     * Free the given cursor. NOOP if `null`.
     */
   def free(cursor: CURSOR): Unit = {
-    if (cursor != null) {
-      liveCount -= 1
-      freeCursor(cursor)
-    }
+    freeCursor(cursor)
   }
 
   def forceFree(cursor: CURSOR): Unit = {
-    liveCount -= 1
-    if (cursor != null) {
-      freeCursor(cursor)
-    }
+    freeCursor(cursor)
   }
 
   private def freeCursor(cursor: CURSOR): Unit = {
+    if (cursor != null) {
       if (DebugSupport.CURSORS.enabled) {
         DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
       }
       cursor.setTracer(KernelReadTracer.NONE)
-    //use local variable in order to avoid `cached()` multiple times
-    val c = cached
+      //use local variable in order to avoid `cached()` multiple times
+      val c = cached
       if (c != null)
         c.close()
       cached = cursor
+    }
   }
 
   override def close(): Unit = {
@@ -190,7 +212,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     }
   }
 
-  def getLiveCount: Long = liveCount
+  def getLiveCount: Long = throw new UnsupportedOperationException("use TrackingCursorPool")
 
   /**
     * Collect a slice of the current stack trace.
@@ -201,4 +223,14 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   private def stackTraceSlice(from: Int, to: Int): Seq[String] = {
     new Exception().getStackTrace.slice(from, to).map(traceElement => "\tat "+traceElement)
   }
+}
+
+object CursorPool {
+
+  def apply[CURSOR <: Cursor](cursorFactory: () => CURSOR): CursorPool[CURSOR] =
+    if (AssertionRunner.isAssertionsEnabled) {
+      new TrackingCursorPool(cursorFactory)
+    } else {
+      new CursorPool(cursorFactory)
+    }
 }
