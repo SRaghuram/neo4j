@@ -168,13 +168,15 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
         DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
       }
       cursor.setTracer(KernelReadTracer.NONE)
-      val c = cached
+    //use local variable in order to avoid `cached()` multiple times
+    val c = cached
       if (c != null)
         c.close()
       cached = cursor
   }
 
   override def close(): Unit = {
+    //use local variable in order to avoid `cached()` multiple times
     val c = cached
     if (c != null) {
       c.close()
