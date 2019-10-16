@@ -17,7 +17,7 @@ import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.v3_5.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
 import org.neo4j.cypher.internal.planner.v3_5.spi._
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{NormalMode, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundPlanContext, TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
@@ -219,7 +219,7 @@ case class ExecutablePlan(executionPlan: ExecutionPlan, newQueryContext: Interna
   def execute(params: MapValue = VirtualValues.EMPTY_MAP, tx: InternalTransaction): RuntimeResult = {
     val queryContext = newQueryContext(tx)
 
-    executionPlan.run(queryContext, doProfile = false, params)
+    executionPlan.run(queryContext, NormalMode, params)
   }
 }
 
