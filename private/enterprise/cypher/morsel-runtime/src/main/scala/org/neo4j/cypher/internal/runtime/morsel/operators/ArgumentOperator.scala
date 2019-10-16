@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContex
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
@@ -76,18 +76,13 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
-        {
-          val body =
-            block(
-              codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-              profileRow(id),
-              inner.genOperateWithExpressions,
-              INPUT_ROW_MOVE_TO_NEXT,
-              innermost.resetCachedPropertyVariables
-            )
-          // TODO: Here we still need to fix a way to propagate variables to save in the continuation state like we do in InputLoopTask
-          body
-        }
+        block(
+          codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
+          profileRow(id),
+          inner.genOperateWithExpressions,
+          INPUT_ROW_MOVE_TO_NEXT,
+          innermost.resetCachedPropertyVariables
+        )
       )
     )
   }

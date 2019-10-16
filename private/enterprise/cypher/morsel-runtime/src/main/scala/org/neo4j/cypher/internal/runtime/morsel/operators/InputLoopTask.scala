@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.ScopeContinuationState
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -110,12 +109,9 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
 
   protected val innerLoop: InstanceField = field[Boolean](scopeId + "InnerLoop")
 
-  private var continuationState: ScopeContinuationState = _
-
   override protected def scopeId: String = "leafOperator" + id.x
 
-  // TODO: innerLoop and the first boolean field in continuationState (HasContinuationState) are redundant. Pick one when we have stable code/
-  override final def genFields: Seq[Field] = Seq(canContinue, innerLoop) ++ continuationState.fields ++ genMoreFields
+  override final def genFields: Seq[Field] = Seq(canContinue, innerLoop) ++ genMoreFields
 
   def genMoreFields: Seq[Field]
 
@@ -175,36 +171,30 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //outputRow.finishedWriting()
     block(
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
-        {
-          val body =
-            block(
-              // Initialize the inner loop
-              genInitializeInnerLoopOrRestoreContinuationState,
+        block(
+          // Initialize the inner loop
+          doInitializeInnerLoopOrRestoreContinuationState,
 
-              // Enter the inner loop if we have one for this input row
-              ifElse(loadField(innerLoop))(
+          // Enter the inner loop if we have one for this input row
+          ifElse(loadField(innerLoop))(
+            block(
+              genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
+              condition(not(loadField(canContinue)))(
                 block(
-                  genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
-                  condition(not(loadField(canContinue)))(
-                    block(
-                      genCloseInnerLoop,
-                      setField(innerLoop, constant(false)),
-                      INPUT_ROW_MOVE_TO_NEXT,
-                      setField(canContinue, INPUT_ROW_IS_VALID)
-                    )
-                  )
+                  genCloseInnerLoop,
+                  setField(innerLoop, constant(false)),
+                  INPUT_ROW_MOVE_TO_NEXT,
+                  setField(canContinue, INPUT_ROW_IS_VALID)
                 )
-              )( // Else move to the next input row
-                block(
-                  INPUT_ROW_MOVE_TO_NEXT
-                )
-              ),
-              innermost.resetCachedPropertyVariables
+              )
             )
-          // We generate the code for the whole loop body first, before we generate the cod for loading locals from input context slots.
-          // This is because we need to know which ones are actually used.
-          block(continuationState.assignments :+ body: _*)
-        }
+          )( // Else move to the next input row
+            block(
+              INPUT_ROW_MOVE_TO_NEXT
+            )
+          ),
+          innermost.resetCachedPropertyVariables
+        )
       )
     )
   }
@@ -233,64 +223,61 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     block(
       setField(canContinue, INPUT_ROW_IS_VALID),
       loop(and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
-        {
-          val body =
-            block(
-              // Initialize the inner loop
-              genInitializeInnerLoopOrRestoreContinuationState,
+        block(
+          // Initialize the inner loop
+          doInitializeInnerLoopOrRestoreContinuationState,
 
-              // Enter the inner loop if we have one for this input row
-              condition(loadField(innerLoop))(
+          // Enter the inner loop if we have one for this input row
+          condition(loadField(innerLoop))(
+            block(
+              genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
+              condition(not(loadField(canContinue)))(
                 block(
-                  genScopeWithLocalDeclarations(scopeId + "innerLoop", genInnerLoop),
-                  condition(not(loadField(canContinue)))(
-                    block(
-                      genCloseInnerLoop,
-                      setField(innerLoop, constant(false)),
-                    )
-                  )
+                  genCloseInnerLoop,
+                  setField(innerLoop, constant(false)),
                 )
-              ),
-              innermost.resetCachedPropertyVariables,
-              condition(and(loadField(canContinue), not(innermost.predicate)))(
-                break(OUTER_LOOP_LABEL_NAME)
               )
             )
-          // We generate the code for the whole loop body first, before we generate the cod for loading locals from input context slots.
-          // This is because we need to know which ones are actually used.
-          block(continuationState.assignments :+ body: _*)
-        }
+          ),
+          innermost.resetCachedPropertyVariables,
+          condition(and(loadField(canContinue), not(innermost.predicate)))(
+            break(OUTER_LOOP_LABEL_NAME)
+          )
+        )
       )
     )
   }
 
-  private def genInitializeInnerLoopOrRestoreContinuationState: IntermediateRepresentation = {
-    ifElse(not(loadField(innerLoop)))(
-      // Start a new inner loop
-      block(
-        // Record all the locals that are loaded from slots by the genInitializeInnerLoop code into continuationState
-        // TODO: We can also incorporate the explicit fields that operators use (cursors etc.) so that we
-        //       can use local variables and have a single continuation state per operator
-        { codeGen.beginScope(scopeId + "init"); noop() },
-        setField(innerLoop, genInitializeInnerLoop),
-        { continuationState = codeGen.endInitializationScope(); noop() } // NOTE: We emit the saveStateIR in genOperateExit
+  private def doInitializeInnerLoopOrRestoreContinuationState: IntermediateRepresentation = {
+    // TODO: In this initialization scope we can record all the operator state variables (cursors etc.) that are now generated as explicit fields
+    //       and instead use local variables together with a ScopeContinuationState containing the fields that needs to be
+    //       saved in genOperateExit() and restored here in an `else` branch when the operator is called with a continuation.
+    codeGen.beginScope(scopeId + "init")
+    val body =
+      condition(not(loadField(innerLoop)))(
+        // Start a new inner loop
+        block(
+          setField(innerLoop, genInitializeInnerLoop),
+        )
       )
-    )(
-      // Continuation of ongoing inner loop. We need to restore the state of local variables
-      continuationState.restoreStateIR
-    )
+    // Declarations need to be handled in the parent scope, since the same slot variables may be used in other sibling scopes (i.e. innerLoop)
+    // (This works by setting mergeIntoParentScope to true, which will then result in the locals encountered in this scope appearing in the parent scope
+    //  with the flag `initialized` set to true, which means they will be declared but not initialized from the input context)
+    val localsState = codeGen.endScope(mergeIntoParentScope = true)
+    // But we do generate the initialization assignments from input context here _before_ the conditional body, for every code path
+    block(localsState.assignments :+ body: _*)
   }
 
-  override def genOperateExit: IntermediateRepresentation = {
-    assert(continuationState != null)
-    block(
-      // If we still have an ongoing inner loop we need to save the local slot variables to fields
-      condition(loadField(innerLoop))(
-        continuationState.saveStateIR
-      ),
-      inner.genOperateExit
-    )
-  }
+  //override def genOperateExit: IntermediateRepresentation = {
+  //  assert(continuationState != null)
+  //  block(
+  //    // If we still have an ongoing inner loop we need to save the local slot variables to fields
+  //    condition(loadField(innerLoop))(
+  //      continuationState.saveStateIR
+  //    ),
+  //    inner.genOperateExit
+  //  )
+  //}
 
   /**
     * Responsible for generating method:

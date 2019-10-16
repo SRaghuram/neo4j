@@ -135,7 +135,7 @@ object OperatorExpressionCompiler {
         val initialized = longSlotToLocalInitialized(slot)
         val initValueIR =
           if (modified || initialized) {
-            // This should be overwritten within this scope
+            // This value will be overwritten within this scope or a child scope
             UNINITIALIZED_LONG_SLOT_VALUE
           } else {
             // Load from input context
@@ -148,7 +148,7 @@ object OperatorExpressionCompiler {
         val initialized = refSlotToLocalInitialized(slot)
         val initValueIR =
           if (modified || initialized) {
-            // This should be overwritten within this scope
+            // This value will be overwritten within this scope or a child scope
             UNINITIALIZED_REF_SLOT_VALUE
           } else {
             // Load from input context
@@ -250,7 +250,7 @@ object OperatorExpressionCompiler {
      *
      * @return continuationState The generated [[ScopeLocalsState]] for this scope
      */
-    def endScope(mergeIntoParentScope: Boolean = false): ScopeLocalsState = {
+    def endScope(mergeIntoParentScope: Boolean): ScopeLocalsState = {
       endScope[ScopeLocalsState](_.genScopeLocalsState(operatorExpressionCompiler, loadField(INPUT_MORSEL)), mergeIntoParentScope)
     }
 
@@ -265,7 +265,7 @@ object OperatorExpressionCompiler {
      *
      * @return continuationState The generated [[ScopeContinuationState]] for this scope
      */
-    def endInitializationScope(mergeIntoParentScope: Boolean = true): ScopeContinuationState = {
+    def endInitializationScope(mergeIntoParentScope: Boolean): ScopeContinuationState = {
       endScope[ScopeContinuationState](_.genScopeContinuationState(operatorExpressionCompiler, loadField(INPUT_MORSEL)), mergeIntoParentScope)
     }
 
@@ -391,12 +391,13 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * This is useful to avoid creating unnecessary continuation state if only a single use of the value is known to be contained within a local scope.
    */
   final def getLongAtNoSave(offset: Int): IntermediateRepresentation = {
-    val local = locals.getLocalForLongSlot(offset)
-    if (local == null) {
-      getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
-    } else {
-      load(local)
-    }
+    getLongAt(offset) // Do the same as getLongAt for now
+//    val local = locals.getLocalForLongSlot(offset)
+//    if (local == null) {
+//      getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
+//    } else {
+//      load(local)
+//    }
   }
 
   /**
@@ -416,12 +417,13 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * This is useful to avoid creating unnecessary continuation state if only a single use of the value is known to be contained within a local scope.
    */
   final def getRefAtNoSave(offset: Int): IntermediateRepresentation = {
-    val local = locals.getLocalForRefSlot(offset)
-    if (local == null) {
-      getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))
-    } else {
-      load(local)
-    }
+    getRefAt(offset) // Do the same as getRefAt for now
+//    val local = locals.getLocalForRefSlot(offset)
+//    if (local == null) {
+//      getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))
+//    } else {
+//      load(local)
+//    }
   }
 
   override final def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {
@@ -676,8 +678,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     locals.endInitializationScope(mergeIntoParentScope)
   }
 
-  def endScope(): ScopeLocalsState = {
-    locals.endScope()
+  def endScope(mergeIntoParentScope: Boolean = false): ScopeLocalsState = {
+    locals.endScope(mergeIntoParentScope)
   }
 
   def getAllLocalsForLongSlots: Seq[(Int, String)] = {
