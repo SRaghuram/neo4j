@@ -6,11 +6,14 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
+import org.neo4j.cypher.internal.codegen.CompiledCursorUtils
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
+import org.neo4j.internal.kernel.api.{NodeCursor, Read}
 import org.neo4j.values.storable.Value
 
 import scala.collection.mutable.ArrayBuffer
@@ -213,6 +216,14 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
     assign(local, value)
   }
+
+  override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invokeStatic(
+      method[CompiledCursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
+      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      ExpressionCompiler.NODE_CURSOR,
+      getLongAt(offset),
+      labelToken)
 
   def writeLocalsToSlots(): IntermediateRepresentation = {
     val writeLongs = locals.getAllLocalsForLongSlots.map { case (offset, local) =>

@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExp
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.{DB_ACCESS, NODE_CURSOR}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -1442,13 +1443,9 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val (tokenFields, inits) = tokenFieldsForLabels(lateLabels)
 
       val predicate: IntermediateRepresentation = ternary(
-        (resolvedLabelTokens.map { tokenId =>
-          invoke(DB_ACCESS, method[DbAccess, Boolean, Int, Long, NodeCursor]("isLabelSetOnNode"),
-            constant(tokenId), getLongAt(offset), NODE_CURSOR)
+        (resolvedLabelTokens.map { tokenId => isLabelSetOnNode(constant(tokenId), offset)
         } ++
-        tokenFields.map { tokenField =>
-          invoke(DB_ACCESS, method[DbAccess, Boolean, Int, Long, NodeCursor]("isLabelSetOnNode"),
-            loadField(tokenField), getLongAt(offset), NODE_CURSOR)
+        tokenFields.map { tokenField => isLabelSetOnNode(loadField(tokenField), offset)
         }).reduceLeft(and), trueValue, falseValue)
 
       Some(IntermediateExpression(block(inits :+ predicate:_*),
@@ -2092,13 +2089,6 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   //Extension points
   protected def getLongAt(offset: Int): IntermediateRepresentation
 
-  def getArgumentAt(offset: Int): IntermediateRepresentation =
-    if (offset == TopLevelArgument.SLOT_OFFSET) {
-      constant(0L)
-    } else {
-      getLongAt(offset)
-    }
-
   protected def getRefAt(offset: Int): IntermediateRepresentation
 
   protected def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
@@ -2108,6 +2098,15 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   protected def setCachedPropertyAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
   protected def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation
+
+  protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
+  def getArgumentAt(offset: Int): IntermediateRepresentation =
+    if (offset == TopLevelArgument.SLOT_OFFSET) {
+      constant(0L)
+    } else {
+      getLongAt(offset)
+    }
 
   final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
@@ -2932,10 +2931,10 @@ object ExpressionCompiler {
 
   private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
-  private val DB_ACCESS = load("dbAccess")
+  val DB_ACCESS: IntermediateRepresentation = load("dbAccess")
   private val CURSORS = load("cursors")
 
-  private val NODE_CURSOR = load("nodeCursor")
+  val NODE_CURSOR: IntermediateRepresentation = load("nodeCursor")
   val vNODE_CURSOR: LocalVariable = cursorVariable[NodeCursor]("nodeCursor")
 
   private val RELATIONSHIP_CURSOR = load("relationshipScanCursor")
@@ -3006,4 +3005,12 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
       ),
       load(variableName))
   }
+
+  override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation,
+                                          offset: Int): IntermediateRepresentation =
+    invoke(DB_ACCESS,
+           method[DbAccess, Boolean, Int, Long, NodeCursor]("isLabelSetOnNode"),
+           labelToken,
+           getLongAt(offset),
+           NODE_CURSOR)
 }
