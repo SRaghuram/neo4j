@@ -46,7 +46,7 @@ for i in "${dbs[@]}"; do
     echo "Old path : ${old_db_path}"
     echo "New path : ${new_db_path}"
     echo "Config   : ${neo4j_config}"
-    aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/"${old_tar}" "${old_tar}" --no-progress
+    aws s3 cp s3://benchmarking.neo4j.com/datasets/ldbc/db/"${old_tar}" . --no-progress
 
     tar -xzvf "${old_tar}"
     rm "${old_tar}"
@@ -63,8 +63,8 @@ for i in "${dbs[@]}"; do
 
     echo "Temporary old db path : ${temp_old_db_path}"
 
-	mkdir -p "${temp_old_db_path}"
-	mv "${old_db_path}" "${temp_old_db_path}"
+    mkdir -p "${temp_old_db_path}"
+    mv "${old_db_path}" "${temp_old_db_path}"
 
     "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
@@ -72,12 +72,9 @@ for i in "${dbs[@]}"; do
         --recreate-indexes  \
         --config "${neo4j_config}"
 
-	mkdir "${new_db_path}"
-	mv "${temp_new_db_path}"/"${old_db_name}"/* "${new_db_path}"
+    tar -cvzf "${new_tar}" "${temp_new_db_path}"/"${old_db_name}"
 
-    tar -cvzf "${new_tar}" "${new_db_name}"
-
-    aws s3 sync "${new_tar}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_tar}" --no-progress --delete
+    aws s3 cp "${new_tar}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_tar}" --no-progress
     rm -rf "${old_db_path}"
     rm -rf "${new_db_path}"
     rm -rf "${temp_old_db_path}"

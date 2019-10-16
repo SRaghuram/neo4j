@@ -11,11 +11,6 @@ set -u
 
 neo4j_version="34"
 
-
-if [[ -z "$JAVA_HOME" ]]; then
-    echo "JAVA_HOME not set, bye, bye"
-fi
-
 dbs=(
  "db_sf001_p006_regular_utc_${neo4j_version}ce"
  "db_sf001_p064_regular_utc_${neo4j_version}ce"
