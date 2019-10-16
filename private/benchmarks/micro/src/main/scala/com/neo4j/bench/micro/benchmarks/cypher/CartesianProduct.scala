@@ -24,16 +24,25 @@ class CartesianProduct extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var CartesianProduct_runtime: String = _
 
+  @ParamValues(
+    allowed = Array("1", "10", "100", "1000"),
+    base = Array("1", "1000"))
+  @Param(Array[String]())
+  var CartesianProduct_rows: Int = _
+
   override def description = "Cartesian Product"
 
-  private val NODE_COUNT = 1000
-  private val EXPECTED_ROW_COUNT = NODE_COUNT * NODE_COUNT
+  private var expectedRowCount: Int = _
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
-      .withNodeCount(NODE_COUNT)
+      .withNodeCount(CartesianProduct_rows)
       .isReusableStore(true)
       .build()
+
+  override protected def afterDatabaseStart(): Unit = {
+    expectedRowCount = CartesianProduct_rows * CartesianProduct_rows
+  }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val a = "a"
@@ -55,7 +64,7 @@ class CartesianProduct extends AbstractCypherBenchmark {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
-    assertExpectedRowCount(EXPECTED_ROW_COUNT, subscriber)
+    assertExpectedRowCount(expectedRowCount, subscriber)
   }
 }
 
