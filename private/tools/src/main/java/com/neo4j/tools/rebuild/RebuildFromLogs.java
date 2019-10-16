@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexProviderMap;
+import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -243,6 +244,7 @@ class RebuildFromLogs
         private final Config tuningConfiguration = Config.defaults();
         private final IndexProviderMap indexes;
         private final TokenHolders tokenHolders;
+        private final IndexStatisticsStore indexStatisticsStore;
 
         ConsistencyChecker( DatabaseLayout layout, PageCache pageCache )
         {
@@ -251,13 +253,14 @@ class RebuildFromLogs
             this.labelScanStore = resolver.resolveDependency( LabelScanStore.class );
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
             this.tokenHolders = resolver.resolveDependency( TokenHolders.class );
+            this.indexStatisticsStore = resolver.resolveDependency( IndexStatisticsStore.class );
         }
 
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders );
+            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore );
             FullCheck fullCheck = new FullCheck( ConsistencyFlags.DEFAULT, tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
                     Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
