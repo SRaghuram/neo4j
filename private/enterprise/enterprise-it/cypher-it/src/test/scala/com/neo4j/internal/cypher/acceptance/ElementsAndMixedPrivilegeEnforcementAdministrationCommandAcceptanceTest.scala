@@ -166,9 +166,9 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // THEN
     val all = List("prop1", "prop2", "prop3", "prop4", "prop5", "prop6", "prop7")
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      row.get("propertyKey") should be(all(index))
-    }) should be(all.size)
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("Should be empty because no properties are whitelisted")
+    }) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -200,26 +200,35 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {prop5} ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
+    execute("DENY READ {prop5} ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      row.get("propertyKey") should be(all(index))
-    }) should be(all.size)
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {prop5} ON GRAPH * RELATIONSHIPS * TO custom")
-
-    // THEN
-    val withoutFive = List("prop1", "prop2", "prop3", "prop4", "prop6", "prop7")
+    val withoutFive = all.filter(_ != "prop5")
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
       row.get("propertyKey") should be(withoutFive(index))
     }) should be(withoutFive.size)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY READ {*} ON GRAPH * NODES * TO custom") // won't do anything new because there could be a REL that has this propKey
+    execute("DENY READ {prop5} ON GRAPH * RELATIONSHIPS * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("propertyKey") should be(withoutFive(index))
+    }) should be(withoutFive.size)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {*} ON GRAPH * NODES * TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
+      fail("Should be empty because all properties are denied on nodes and not whitelisted on relationships")
+    }) should be(0)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {

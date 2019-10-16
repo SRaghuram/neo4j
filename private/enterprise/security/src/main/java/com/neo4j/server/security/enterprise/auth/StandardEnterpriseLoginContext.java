@@ -147,8 +147,10 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         private final boolean allowsReadAllPropertiesAllRelTypes;
         private final IntSet whitelistedLabelsForAllProperties;
         private final IntSet whitelistedRelTypesForAllProperties;
-        private final IntSet whitelistedNodeProperties;
-        private final IntSet whitelistedRelationshipProperties;
+        private final IntSet whitelistedNodePropertiesForAllLabels;
+        private final IntSet whitelistedNodePropertiesForSomeLabel;
+        private final IntSet whitelistedRelationshipPropertiesForAllTypes;
+        private final IntSet whitelistedRelationshipPropertiesForSomeType;
         private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
         private final IntObjectMap<IntSet> whitelistedRelTypesForProperty;
 
@@ -187,8 +189,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 boolean allowsReadAllPropertiesAllRelTypes,
                 IntSet whitelistedLabelsForAllProperties,
                 IntSet whitelistedRelTypesForAllProperties,
-                IntSet whitelistedNodeProperties,
-                IntSet whitelistedRelationshipProperties,
+                IntSet whitelistedNodePropertiesForAllLabels,
+                IntSet whitelistedRelationshipPropertiesForAllTypes,
                 IntObjectMap<IntSet> whitelistedLabelsForProperty,
                 IntObjectMap<IntSet> whitelistedRelTypesForProperty,
 
@@ -227,8 +229,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             this.allowsReadAllPropertiesAllRelTypes = allowsReadAllPropertiesAllRelTypes;
             this.whitelistedLabelsForAllProperties = whitelistedLabelsForAllProperties;
             this.whitelistedRelTypesForAllProperties = whitelistedRelTypesForAllProperties;
-            this.whitelistedNodeProperties = whitelistedNodeProperties;
-            this.whitelistedRelationshipProperties = whitelistedRelationshipProperties;
+            this.whitelistedNodePropertiesForAllLabels = whitelistedNodePropertiesForAllLabels;
+            this.whitelistedRelationshipPropertiesForAllTypes = whitelistedRelationshipPropertiesForAllTypes;
             this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
             this.whitelistedRelTypesForProperty = whitelistedRelTypesForProperty;
 
@@ -243,6 +245,12 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 
             this.adminAccessMode = adminAccessMode;
             this.database = new AdminActionOnResource.DatabaseScope( database );
+
+            this.whitelistedNodePropertiesForSomeLabel =
+                    whitelistedLabelsForProperty.keySet().select( key -> !whitelistedLabelsForProperty.get( key ).isEmpty() );
+
+            this.whitelistedRelationshipPropertiesForSomeType =
+                    whitelistedRelTypesForProperty.keySet().select( key -> !whitelistedRelTypesForProperty.get( key ).isEmpty() );
         }
 
         @Override
@@ -281,6 +289,16 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             // Note: we do not check blacklistTraverseLabels.contains(label) because this should be a first check
             // to be followed by the explicit blacklist check in disallowsTraverseLabel
             if ( disallowsTraverseAllLabels || blacklistTraverseLabels.notEmpty() )
+            {
+                return false;
+            }
+            return allowsTraverseAllLabels || whitelistTraverseLabels.contains( (int) label );
+        }
+
+        @Override
+        public boolean allowsLabel( long label )
+        {
+            if ( disallowsTraverseAllLabels || blacklistTraverseLabels.contains( (int) label ) )
             {
                 return false;
             }
@@ -353,7 +371,8 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         @Override
         public boolean allowsReadPropertyAllLabels( int propertyKey )
         {
-            return (allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey )) && !disallowsReadPropertyForSomeLabel( propertyKey );
+            return (allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey )) &&
+                    !disallowsReadPropertyForSomeLabel( propertyKey );
         }
 
         @Override
@@ -407,13 +426,13 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     return false;
                 }
             }
-            return allowed || allowsReadAllPropertiesAllLabels || whitelistedNodeProperties.contains( propertyKey );
+            return allowed || allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey );
         }
 
         @Override
         public boolean allowsReadPropertyAllRelTypes( int propertyKey )
         {
-            return (allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipProperties.contains( propertyKey )) &&
+            return (allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey )) &&
                     !disallowsReadPropertyForSomeRelType( propertyKey );
         }
 
@@ -447,7 +466,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             boolean allowed =
                     (whitelisted != null && whitelisted.contains( relType.getAsInt() ) ) ||
                             whitelistedRelTypesForAllProperties.contains( relType.getAsInt() ) ||
-                            allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipProperties.contains( propertyKey );
+                            allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey );
 
             boolean disallowedRelType =
                     (blacklisted != null && blacklisted.contains( relType.getAsInt() )) || blacklistedRelTypesForAllProperties.contains( relType.getAsInt() );
@@ -458,12 +477,15 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         @Override
         public boolean allowsPropertyReads( int propertyKey )
         {
-            if ( disallowsReadAllPropertiesAllLabels && disallowsReadAllPropertiesAllRelTypes )
-            {
-                return false;
-            }
+            boolean disabledForNodes = disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) ||
+                    !(allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey ) ||
+                            whitelistedNodePropertiesForSomeLabel.contains( propertyKey ) || whitelistedLabelsForAllProperties.notEmpty() );
 
-            return !(blacklistedNodeProperties.contains( propertyKey ) && blacklistedRelationshipProperties.contains( propertyKey ));
+            boolean disabledForRels = disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey ) ||
+                    !(allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey ) ||
+                            whitelistedRelationshipPropertiesForSomeType.contains( propertyKey ) || whitelistedRelTypesForAllProperties.notEmpty() );
+
+            return !(disabledForNodes && disabledForRels);
         }
 
         @Override

@@ -161,6 +161,8 @@ public class NativeAuthIT
                 session.run( "GRANT ROLE custom TO joe", map( "password", getPassword() ) ).consume();
                 session.run( "GRANT ACCESS ON DATABASE * TO custom" ).consume();
                 session.run( "GRANT MATCH {prop1} ON GRAPH * NODES * TO custom" ).consume();
+                session.run( "GRANT MATCH {prop2} ON GRAPH * NODES * TO custom" ).consume();
+                session.run( "GRANT MATCH {prop3} ON GRAPH * NODES * TO custom" ).consume();
                 session.run( "GRANT TRAVERSE ON GRAPH foo TO custom" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH foo NODES A TO custom" ).consume();
                 session.run( "DENY TRAVERSE ON GRAPH foo RELATIONSHIPS X TO custom" ).consume();
@@ -168,7 +170,7 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE custom PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 7 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 9 ) );
                 List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(prop1)" ) ).collect( Collectors.toList() );
                 assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
             }
