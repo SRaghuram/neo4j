@@ -568,15 +568,36 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   }
 
-  test("should read you own writes on nodes when granted TRAVERSE and WRITE privilege to custom role for all databases and all labels") {
+  test("should read you own writes on nodes with WRITE and ACCESS privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+
+    // Setup to create tokens
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a'})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) WITH n MATCH (m:A) RETURN m.name AS name ORDER BY name", resultHandler = (row, _) => {
+      row.get("name") should be("b")
+    }) should be(1)
+
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+  }
+
+  test("should read you own writes on nodes with WRITE and TRAVERSE privilege") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
-    // WHEN
+    // Setup to create tokens
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
@@ -590,16 +611,38 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
   }
 
-  test("should read you own writes on relationships when granted TRAVERSE and WRITE privilege to custom role for all databases and all types") {
+  test("should read you own writes on relationships when granted ACCESS and WRITE privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+
+    // Setup to create tokens
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A)-[:REL {name:'a'}]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CREATE (n:A)-[:REL {name:'b'}]->() WITH n MATCH (A)-[r:REL]->() RETURN r.name AS name ORDER BY name",
+      resultHandler = (row, _) => {
+        row.get("name") should be("b")
+      }) should be(1)
+
+    execute("MATCH (A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
+  }
+
+  test("should read you own writes on relationships when granted TRAVERSE and WRITE privilege") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
 
-    // WHEN
+    // Setup to create tokens
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A)-[:REL {name:'a'}]->()")
 
+    // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO custom")
 
