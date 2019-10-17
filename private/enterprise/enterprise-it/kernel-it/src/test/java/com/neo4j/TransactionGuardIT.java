@@ -587,16 +587,17 @@ class TransactionGuardIT
         }
 
         @Override
-        public IdGenerator open( PageCache pageCache, File filename, IdType idType, LongSupplier highIdSupplier, long maxId, OpenOption... openOptions )
+        public IdGenerator open( PageCache pageCache, File filename, IdType idType, LongSupplier highIdSupplier, long maxId, boolean readOnly,
+                OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId ) );
+            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly ) );
         }
 
         @Override
         public IdGenerator create( PageCache pageCache, File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
-                OpenOption... openOptions )
+                boolean readOnly, OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, openOptions ) );
+            return new TerminationIdGenerator( delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, openOptions ) );
         }
 
         @Override
