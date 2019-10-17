@@ -15,18 +15,13 @@ import java.nio.file.Path;
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
-import org.neo4j.commandline.dbms.CannotWriteException;
-import org.neo4j.commandline.dbms.DatabaseLockChecker;
+import org.neo4j.commandline.dbms.LockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
-import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static picocli.CommandLine.Command;
-import static picocli.CommandLine.Option;
 
 @Command(
         name = "unbind",
@@ -35,9 +30,6 @@ import static picocli.CommandLine.Option;
 )
 class UnbindFromClusterCommand extends AbstractCommand
 {
-    @Option( names = "--database", description = "Name of the database.", defaultValue = DEFAULT_DATABASE_NAME )
-    private String database;
-
     UnbindFromClusterCommand( ExecutionContext ctx )
     {
         super( ctx );
@@ -57,9 +49,9 @@ class UnbindFromClusterCommand extends AbstractCommand
         try
         {
             Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
-            DatabaseLayout databaseLayout = Neo4jLayout.of( config ).databaseLayout( database );
+            Neo4jLayout neo4jLayout = Neo4jLayout.of( config );
 
-            try ( Closeable ignored = validateDatabase( databaseLayout ) )
+            try ( Closeable ignored = LockChecker.checkDbmsLock( neo4jLayout ) )
             {
                 File clusterStateDirectory = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ).toFile() ).getClusterStateDirectory();
 
@@ -80,20 +72,6 @@ class UnbindFromClusterCommand extends AbstractCommand
         catch ( Exception e )
         {
             throw new CommandFailedException( e.getMessage(), e );
-        }
-    }
-
-    private Closeable validateDatabase( DatabaseLayout databaseLayout ) throws CannotWriteException
-    {
-        try
-        {
-            Validators.CONTAINS_EXISTING_DATABASE.validate( databaseLayout.databaseDirectory() );
-            return DatabaseLockChecker.check( databaseLayout );
-        }
-        catch ( IllegalArgumentException ignored )
-        {
-            // No such database, it must have been deleted. Must be OK to delete cluster state
-            return () -> { };
         }
     }
 

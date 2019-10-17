@@ -10,7 +10,7 @@ import java.io.IOException;
 
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.commandline.dbms.CannotWriteException;
-import org.neo4j.commandline.dbms.DatabaseLockChecker;
+import org.neo4j.commandline.dbms.LockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -62,7 +62,7 @@ public class RestoreDatabaseCommand
         }
         fs.mkdirs( targetDatabaseLayout.databaseDirectory() );
 
-        try ( var ignored = DatabaseLockChecker.check( targetDatabaseLayout ) )
+        try ( var ignored = LockChecker.checkDatabaseLock( targetDatabaseLayout ) )
         {
             cleanTargetDirectories();
             restoreDatabaseFiles();
