@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -138,6 +139,14 @@ public class Cluster
     {
         startCoreMembers();
         startReadReplicas();
+    }
+
+    public void startAndUpdateInitialHosts() throws ExecutionException, InterruptedException
+    {
+        var initialHosts = extractInitialHosts( coreMembers );
+        coreMembers().forEach( c -> c.config().set( CausalClusteringSettings.initial_discovery_members, initialHosts ) );
+        readReplicas().forEach( c -> c.config().set( CausalClusteringSettings.initial_discovery_members, initialHosts ) );
+        start();
     }
 
     public Set<CoreClusterMember> healthyCoreMembers()

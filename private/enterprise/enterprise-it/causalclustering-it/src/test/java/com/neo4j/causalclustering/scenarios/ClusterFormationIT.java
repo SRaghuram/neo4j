@@ -152,7 +152,7 @@ public class ClusterFormationIT
 
         // when
         cluster.shutdown();
-        cluster.start();
+        cluster.startAndUpdateInitialHosts();
 
         // then
         verifyNumberOfCoresReportedByTopology( 3 );
@@ -163,7 +163,7 @@ public class ClusterFormationIT
         cluster.newCoreMember().start();
         cluster.shutdown();
 
-        cluster.start();
+        cluster.startAndUpdateInitialHosts();
 
         // then
         verifyNumberOfCoresReportedByTopology( 3 );
