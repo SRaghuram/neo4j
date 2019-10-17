@@ -25,6 +25,8 @@ import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_DEFAULT_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
@@ -36,14 +38,16 @@ public class FabricDatabaseManager extends LifecycleAdapter
 {
     private final FabricConfig fabricConfig;
     private final DependencyResolver dependencyResolver;
+    private final Log log;
     private DatabaseManager<DatabaseContext> databaseManager;
     private DatabaseIdRepository databaseIdRepository;
     private DatabaseManagementService managementService;
 
-    public FabricDatabaseManager( FabricConfig fabricConfig, DependencyResolver dependencyResolver )
+    public FabricDatabaseManager( FabricConfig fabricConfig, DependencyResolver dependencyResolver, LogProvider logProvider )
     {
         this.dependencyResolver = dependencyResolver;
         this.fabricConfig = fabricConfig;
+        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -64,9 +68,18 @@ public class FabricDatabaseManager extends LifecycleAdapter
                 exists = checkExisting( tx );
             }
 
-            if ( !exists && fabricConfig.isEnabled() )
+            if ( fabricConfig.isEnabled() )
             {
-                newFabricDb( tx, fabricConfig.getDatabase().getName() );
+                String dbName = fabricConfig.getDatabase().getName();
+                if ( exists )
+                {
+                    log.info( "Using existing Fabric virtual database '%s'", dbName);
+                }
+                else
+                {
+                    log.info( "Creating Fabric virtual database '%s'", dbName);
+                    newFabricDb( tx, dbName );
+                }
             }
             tx.commit();
         }
@@ -104,10 +117,12 @@ public class FabricDatabaseManager extends LifecycleAdapter
 
                 if ( !fabricConfig.isEnabled() || !fabricConfig.getDatabase().getName().name().equals( dbName ) )
                 {
+                    log.info( "Setting Fabric virtual database '%s' status to offline", dbName);
                     fabricDb.setProperty( "status", "offline" );
                 }
                 else
                 {
+                    log.info( "Setting Fabric virtual database '%s' status to online", dbName);
                     fabricDb.setProperty( "status", "online" );
                     found = true;
                 }

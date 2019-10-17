@@ -6,6 +6,7 @@
 package com.neo4j;
 
 import com.neo4j.fabric.eval.UseEvaluation;
+import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,20 +29,24 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.values.storable.Values;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static scala.collection.JavaConverters.asScalaBuffer;
 
 class FabricDatabaseManagementTest
 {
     private TestServer testServer;
     private Path databaseDir;
+    private AssertableLogProvider logProvider;
 
     @BeforeEach
     void setUp() throws IOException
@@ -69,7 +74,8 @@ class FabricDatabaseManagementTest
 
         var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config, databaseDir );
-
+        logProvider = new AssertableLogProvider();
+        testServer.setInternalLogProvider( logProvider );
         testServer.start();
     }
 
@@ -88,6 +94,10 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database '%s'" ), "mega" )
+        );
+
         try ( var tx = openSystemDbTransaction() )
         {
             var fabricDatabases = getFabricDatabases( tx );
@@ -100,6 +110,13 @@ class FabricDatabaseManagementTest
         stopServer();
 
         createServer( "giga" );
+
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database '%s'" ), "giga" )
+        );
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "mega" )
+        );
 
         try ( var tx = openSystemDbTransaction() )
         {
@@ -118,6 +135,16 @@ class FabricDatabaseManagementTest
 
         createServer( null );
 
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "mega" )
+        );
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "giga" )
+        );
+        logProvider.assertNone(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database" ) )
+        );
+
         try ( var tx = openSystemDbTransaction() )
         {
             var fabricDatabases = getFabricDatabases( tx );
@@ -134,6 +161,19 @@ class FabricDatabaseManagementTest
         stopServer();
 
         createServer( "mega" );
+
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to online" ), "mega" )
+        );
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "giga" )
+        );
+        logProvider.assertAtLeastOnce(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Using existing Fabric virtual database '%s'" ), "mega" )
+        );
+        logProvider.assertNone(
+                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database" ) )
+        );
 
         try ( var tx = openSystemDbTransaction() )
         {

@@ -41,11 +41,12 @@ public class FabricServicesBootstrap
 
     public FabricServicesBootstrap( LifeSupport lifeSupport, Dependencies dependencies, LogService logService )
     {
+        LogProvider internalLogProvider = logService.getInternalLogProvider();
         var serviceBootstrapper = new ServiceBootstrapper( lifeSupport, dependencies );
         var config = dependencies.resolveDependency( Config.class );
         fabricConfig = serviceBootstrapper.registerService( FabricConfig.from( config ), FabricConfig.class );
         var fabricDatabaseManager = serviceBootstrapper.registerService(
-                new FabricDatabaseManager( fabricConfig, dependencies ),
+                new FabricDatabaseManager( fabricConfig, dependencies, internalLogProvider ),
                 FabricDatabaseManager.class );
 
         if ( fabricConfig.isEnabled() )
@@ -66,7 +67,7 @@ public class FabricServicesBootstrap
             var catalog = Catalog.fromConfig( fabricConfig );
             var useEvaluation =
                     serviceBootstrapper.registerService( new UseEvaluation( catalog, proceduresSupplier, signatureResolver ), UseEvaluation.class );
-            var executor = new FabricExecutor( fabricConfig, planner, useEvaluation, logService.getInternalLogProvider() );
+            var executor = new FabricExecutor( fabricConfig, planner, useEvaluation, internalLogProvider );
             serviceBootstrapper.registerService( executor, FabricExecutor.class );
         }
     }
