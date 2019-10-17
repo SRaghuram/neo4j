@@ -9,6 +9,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.common.DependencyResolver;
@@ -39,6 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.NONE;
 
 @Neo4jLayoutExtension
@@ -69,8 +71,10 @@ class HalfCreatedConstraintIT
         }
 
         ConsistencyCheckService service = new ConsistencyCheckService();
+        Path logs = testDirectory.cleanDirectory( "logs" ).toPath();
+        Config config = Config.defaults( logs_directory, logs );
         ConsistencyCheckService.Result checkResult =
-                service.runFullConsistencyCheck( databaseLayout, Config.defaults(), NONE, NullLogProvider.getInstance(), false );
+                service.runFullConsistencyCheck( databaseLayout, config, NONE, NullLogProvider.getInstance(), false );
         assertTrue( checkResult.isSuccessful(), Files.readString( checkResult.reportFile().toPath() ) );
     }
 
