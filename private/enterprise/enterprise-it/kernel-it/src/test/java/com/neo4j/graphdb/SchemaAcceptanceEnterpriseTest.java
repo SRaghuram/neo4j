@@ -62,7 +62,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             assertEquals( ConstraintType.NODE_PROPERTY_EXISTENCE, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
-            assertEquals( "Property existence constraint on :MY_LABEL (my_property_key)", constraint.getName() );
+            assertEquals( "constraint_591c9882", constraint.getName() );
             tx.commit();
         }
     }
@@ -98,7 +98,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             assertEquals( ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE, constraint.getConstraintType() );
             assertEquals( relType.name(), constraint.getRelationshipType().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
-            assertEquals( "Property existence constraint on ()-[:relType]-() (my_property_key)", constraint.getName() );
+            assertEquals( "constraint_4d78cae1", constraint.getName() );
             tx.commit();
         }
     }
@@ -134,7 +134,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             assertEquals( ConstraintType.NODE_KEY, constraint.getConstraintType() );
             assertEquals( label.name(), constraint.getLabel().name() );
             assertEquals( asSet( propertyKey ), Iterables.asSet( constraint.getPropertyKeys() ) );
-            assertEquals( "Node key constraint on :MY_LABEL (my_property_key)", constraint.getName() );
+            assertEquals( "constraint_bbf8bfaa", constraint.getName() );
             tx.commit();
         }
     }

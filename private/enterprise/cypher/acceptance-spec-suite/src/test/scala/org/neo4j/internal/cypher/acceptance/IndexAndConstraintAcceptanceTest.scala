@@ -22,10 +22,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getIndex("Person", Seq("name")).getName should be("Index on :Person (name)")
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
 
     // get by name
-    val (label, properties) = graph.getIndexSchemaByName("Index on :Person (name)")
+    val (label, properties) = graph.getIndexSchemaByName("index_5c0607ad")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -38,10 +38,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getIndex("Person", Seq("name")).getName should be("Index on :Person (name)")
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
 
     // get by name
-    val (label, properties) = graph.getIndexSchemaByName("Index on :Person (name)")
+    val (label, properties) = graph.getIndexSchemaByName("index_5c0607ad")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -54,10 +54,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getIndex("Person", Seq("name", "age")).getName should be("Index on :Person (name,age)")
+    graph.getIndex("Person", Seq("name", "age")).getName should be("index_c641c20c")
 
     // get by name
-    val (label, properties) = graph.getIndexSchemaByName("Index on :Person (name,age)")
+    val (label, properties) = graph.getIndexSchemaByName("index_c641c20c")
     label should be("Person")
     properties should be(Seq("name", "age"))
   }
@@ -70,10 +70,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getIndex("Person", Seq("name", "age")).getName should be("Index on :Person (name,age)")
+    graph.getIndex("Person", Seq("name", "age")).getName should be("index_c641c20c")
 
     // get by name
-    val (label, properties) = graph.getIndexSchemaByName("Index on :Person (name,age)")
+    val (label, properties) = graph.getIndexSchemaByName("index_c641c20c")
     label should be("Person")
     properties should be(Seq("name", "age"))
   }
@@ -119,7 +119,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("CREATE INDEX ON :Person(name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'index_5c0607ad', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple indexes with same schema (new syntax)") {
@@ -131,7 +131,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN
       executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'index_5c0607ad', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple indexes with same schema (mixed syntax)") {
@@ -143,7 +143,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN: new syntax
       executeSingle("CREATE INDEX FOR (n:Person) ON (n.name)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 1, 'Index on :Person (name)', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 1, 'index_5c0607ad', GENERAL BTREE, :Person(name), native-btree-1.0 )'."
 
     // GIVEN: new syntax
     executeSingle("CREATE INDEX ON :Person(age)")
@@ -153,7 +153,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       // WHEN: old syntax
       executeSingle("CREATE INDEX FOR (n:Person) ON (n.age)")
       // THEN
-    } should have message "An equivalent index already exists, 'Index( 2, 'Index on :Person (age)', GENERAL BTREE, :Person(age), native-btree-1.0 )'."
+    } should have message "An equivalent index already exists, 'Index( 2, 'index_50166b1e', GENERAL BTREE, :Person(age), native-btree-1.0 )'."
   }
 
   test("should fail to create multiple named indexes with same name and schema") {
@@ -197,7 +197,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop index by schema") {
     // GIVEN
     graph.createIndex("Person", "name")
-    graph.getIndex("Person", Seq("name")).getName should be("Index on :Person (name)")
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
 
     // WHEN
     executeSingle("DROP INDEX ON :Person(name)")
@@ -209,10 +209,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop index by name") {
     // GIVEN
     graph.createIndex("Person", "name")
-    graph.getIndex("Person", Seq("name")).getName should be("Index on :Person (name)")
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
 
     // WHEN
-    executeSingle("DROP INDEX `Index on :Person (name)`")
+    executeSingle("DROP INDEX `index_5c0607ad`")
 
     // THEN
     graph.getMaybeIndex("Person", Seq("name")) should be(None)
@@ -245,7 +245,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should get error when trying to drop the same index twice") {
     // GIVEN
     graph.createIndex("Person", "name")
-    graph.getIndex("Person", Seq("name")).getName should be("Index on :Person (name)")
+    graph.getIndex("Person", Seq("name")).getName should be("index_5c0607ad")
     executeSingle("DROP INDEX ON :Person(name)")
     graph.getMaybeIndex("Person", Seq("name")) should be(None)
 
@@ -296,10 +296,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Node key constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_9b73711d")
 
     // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("Node key constraint on :Person (name)")
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_9b73711d")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -312,10 +312,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("Node key constraint on :Person (name,age)")
+    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("constraint_c11599ca")
 
     // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("Node key constraint on :Person (name,age)")
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_c11599ca")
     label should be("Person")
     properties should be(Seq("name", "age"))
   }
@@ -328,10 +328,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Uniqueness constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_e26b1a8b")
 
     // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("Uniqueness constraint on :Person (name)")
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_e26b1a8b")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -352,10 +352,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Property existence constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_6ced8351")
 
     // get by name
-    val (label, properties) = graph.getConstraintSchemaByName("Property existence constraint on :Person (name)")
+    val (label, properties) = graph.getConstraintSchemaByName("constraint_6ced8351")
     label should be("Person")
     properties should be(Seq("name"))
   }
@@ -367,10 +367,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // THEN
 
     // get by schema
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("Property existence constraint on ()-[:HasPet]-() (since)")
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
 
     // get by name
-    val (relType, properties) = graph.getConstraintSchemaByName("Property existence constraint on ()-[:HasPet]-() (since)")
+    val (relType, properties) = graph.getConstraintSchemaByName("constraint_6c4e7adb")
     relType should be("HasPet")
     properties should be(Seq("since"))
   }
@@ -716,7 +716,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node key constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    executeSingle("DROP CONSTRAINT `Node key constraint on :Label (prop)`") // needed to test the uniqueness constraint
+    executeSingle("DROP CONSTRAINT `constraint_f6242497`") // needed to test the uniqueness constraint
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
@@ -786,7 +786,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
 
     // Node key constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    executeSingle("DROP CONSTRAINT `Node key constraint on :Label (prop)`") // needed to test the uniqueness constraint
+    executeSingle("DROP CONSTRAINT `constraint_f6242497`") // needed to test the uniqueness constraint
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
@@ -855,7 +855,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop node key constraint by schema") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Node key constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_9b73711d")
 
     // WHEN
     executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
@@ -867,7 +867,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop composite node key constraint by schema") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name", "age")
-    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("Node key constraint on :Person (name,age)")
+    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("constraint_c11599ca")
 
     // WHEN
     executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name, n.age) IS NODE KEY")
@@ -879,7 +879,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop unique property constraint by schema") {
     // GIVEN
     graph.createUniqueConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Uniqueness constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_e26b1a8b")
 
     // WHEN
     executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS UNIQUE")
@@ -891,7 +891,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop node property existence constraint by schema") {
     // GIVEN
     graph.createNodeExistenceConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Property existence constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_6ced8351")
 
     // WHEN
     executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT EXISTS (n.name)")
@@ -903,7 +903,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop relationship property existence constraint by schema") {
     // GIVEN
     graph.createRelationshipExistenceConstraint("HasPet", "since")
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("Property existence constraint on ()-[:HasPet]-() (since)")
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
 
     // WHEN
     executeSingle("DROP CONSTRAINT ON ()-[r:HasPet]-() ASSERT EXISTS (r.since)")
@@ -915,10 +915,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop node key constraint by name") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Node key constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_9b73711d")
 
     // WHEN
-    executeSingle("DROP CONSTRAINT `Node key constraint on :Person (name)`")
+    executeSingle("DROP CONSTRAINT `constraint_9b73711d`")
 
     // THEN
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
@@ -927,10 +927,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop composite node key constraint by name") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name", "age")
-    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("Node key constraint on :Person (name,age)")
+    graph.getNodeConstraint("Person", Seq("name", "age")).getName should be("constraint_c11599ca")
 
     // WHEN
-    executeSingle("DROP CONSTRAINT `Node key constraint on :Person (name,age)`")
+    executeSingle("DROP CONSTRAINT `constraint_c11599ca`")
 
     // THEN
     graph.getMaybeNodeConstraint("Person", Seq("name", "age")) should be(None)
@@ -939,10 +939,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop unique property constraint by name") {
     // GIVEN
     graph.createUniqueConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Uniqueness constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_e26b1a8b")
 
     // WHEN
-    executeSingle("DROP CONSTRAINT `Uniqueness constraint on :Person (name)`")
+    executeSingle("DROP CONSTRAINT `constraint_e26b1a8b`")
 
     // THEN
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
@@ -951,10 +951,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop node property existence constraint by name") {
     // GIVEN
     graph.createNodeExistenceConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Property existence constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_6ced8351")
 
     // WHEN
-    executeSingle("DROP CONSTRAINT `Property existence constraint on :Person (name)`")
+    executeSingle("DROP CONSTRAINT `constraint_6ced8351`")
 
     // THEN
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
@@ -963,10 +963,10 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should drop relationship property existence constraint by name") {
     // GIVEN
     graph.createRelationshipExistenceConstraint("HasPet", "since")
-    graph.getRelationshipConstraint("HasPet", "since").getName should be("Property existence constraint on ()-[:HasPet]-() (since)")
+    graph.getRelationshipConstraint("HasPet", "since").getName should be("constraint_6c4e7adb")
 
     // WHEN
-    executeSingle("DROP CONSTRAINT `Property existence constraint on ()-[:HasPet]-() (since)`")
+    executeSingle("DROP CONSTRAINT `constraint_6c4e7adb`")
 
     // THEN
     graph.getMaybeRelationshipConstraint("HasPet", "since") should be(None)
@@ -1023,7 +1023,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   test("should get error when trying to drop the same constraint twice") {
     // GIVEN
     graph.createNodeKeyConstraint("Person", "name")
-    graph.getNodeConstraint("Person", Seq("name")).getName should be("Node key constraint on :Person (name)")
+    graph.getNodeConstraint("Person", Seq("name")).getName should be("constraint_9b73711d")
     executeSingle("DROP CONSTRAINT ON (n:Person) ASSERT (n.name) IS NODE KEY")
     graph.getMaybeNodeConstraint("Person", Seq("name")) should be(None)
 
@@ -1209,9 +1209,9 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
       val node_constraints = tx.schema().getConstraints(Label.label("Label")).asScala.toList.map(_.getName).toSet
       val rel_constraints = tx.schema().getConstraints(RelationshipType.withName("Type")).asScala.toList.map(_.getName).toSet
 
-      indexes should equal(Set("Index on :Label (prop1)", "index1", "Node key constraint on :Label (prop2)", "constraint1", "Uniqueness constraint on :Label (prop3)", "constraint2"))
-      node_constraints should equal(Set("Node key constraint on :Label (prop2)", "constraint1", "Uniqueness constraint on :Label (prop3)", "constraint2", "Property existence constraint on :Label (prop4)", "constraint3"))
-      rel_constraints should equal(Set("Property existence constraint on ()-[:Type]-() (prop5)", "constraint4"))
+      indexes should equal(Set("index_8d3379fb", "index1", "constraint_4befd67f", "constraint1", "constraint_2b52dd68", "constraint2"))
+      node_constraints should equal(Set("constraint_4befd67f", "constraint1", "constraint_2b52dd68", "constraint2", "constraint_b753da28", "constraint3"))
+      rel_constraints should equal(Set("constraint_612fc078", "constraint4"))
     } )
   }
 

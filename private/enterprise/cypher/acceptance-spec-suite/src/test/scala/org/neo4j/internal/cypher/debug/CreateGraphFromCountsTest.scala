@@ -21,7 +21,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.constraints").toList should be(
       List(
         Map(
-          "name" -> "Uniqueness constraint on :User (name)",
+          "name" -> "constraint_952bbd70",
           "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name) IS UNIQUE")
       )
     )
@@ -29,7 +29,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.indexes").toList should beListInOrder(
       beMapContaining(
         "id" -> 1,
-        "name" -> "Uniqueness constraint on :User (name)",
+        "name" -> "constraint_952bbd70",
         // "state" -> // we don't care about state
         "uniqueness" -> "UNIQUE",
         // "populationPercent" -> // we don't care about specific population percentage,
@@ -51,7 +51,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.constraints").toList should be(
       List(
         Map(
-          "name" -> "Node key constraint on :User (name,surname)",
+          "name" -> "constraint_24564d05",
           "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.name, user.surname) IS NODE KEY")
       )
     )
@@ -66,7 +66,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.constraints").toList should be(
       List(
         Map(
-          "name" -> "Property existence constraint on :User (name)",
+          "name" -> "constraint_89c8c370",
           "description" -> "CONSTRAINT ON ( user:User ) ASSERT exists(user.name)")
       )
     )
@@ -81,7 +81,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.constraints").toList should be(
       List(
         Map(
-          "name" -> "Property existence constraint on ()-[:User]-() (name)",
+          "name" -> "constraint_36048d74",
           "description" -> "CONSTRAINT ON ()-[ user:User ]-() ASSERT exists(user.name)")
       )
     )
@@ -96,7 +96,7 @@ class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherCompa
     executeSingle("CALL db.indexes").toList should beListInOrder(
       beMapContaining(
         "id" -> 1,
-        "name" -> "Index on :Foo (bar,baz)",
+        "name" -> "index_ad031312",
         // "state" -> // we don't care about state
         "uniqueness" -> "NONUNIQUE",
         // "populationPercent" -> // we don't care about specific population percentage,

@@ -547,21 +547,21 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("should list indexes in alphabetical order") {
     // Given
-    graph.createIndex("A", "prop")
-    graph.createIndex("C", "foo")
-    graph.createIndex("B", "foo")
-    graph.createIndex("A", "foo")
-    graph.createIndex("A", "bar")
+    graph.createIndexWithName("poppy", "A", "prop")
+    graph.createIndexWithName("benny", "C", "foo")
+    graph.createIndexWithName("albert", "B", "foo")
+    graph.createIndexWithName("charlie", "A", "foo")
+    graph.createIndexWithName("xavier", "A", "bar")
 
     //When
     val result = executeWith(Configs.ProcedureCall, "CALL db.indexes() YIELD name RETURN name")
 
     // Then
     result.columnAs("name").toList should equal(
-      List("Index on :A (bar)",
-        "Index on :A (foo)",
-        "Index on :A (prop)",
-        "Index on :B (foo)",
-        "Index on :C (foo)"))
+      List("albert",
+        "benny",
+        "charlie",
+        "poppy",
+        "xavier"))
   }
 }

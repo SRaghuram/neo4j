@@ -19,7 +19,6 @@ import org.neo4j.internal.collector.DataCollectorMatchers._
 import org.neo4j.internal.collector.SampleGraphs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
-
 class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
                                with QueryStatisticsTestSupport
                                with CypherComparisonSupport
@@ -145,7 +144,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     executeSingle("CALL db.constraints").toList should be(
       List(
         Map(
-          "name" -> "Uniqueness constraint on :User (email)",
+          "name" -> "constraint_3a8336b6",
           "description" -> "CONSTRAINT ON ( user:User ) ASSERT (user.email) IS UNIQUE")
       )
     )
