@@ -143,4 +143,16 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     {
         return Long.compare( o1.value, o2.value );
     }
+
+    @Override
+    public void initializeAsLowest( AdaptableKey key )
+    {
+        key.value = Long.MIN_VALUE;
+    }
+
+    @Override
+    public void initializeAsHighest( AdaptableKey key )
+    {
+        key.value = Long.MAX_VALUE;
+    }
 }
