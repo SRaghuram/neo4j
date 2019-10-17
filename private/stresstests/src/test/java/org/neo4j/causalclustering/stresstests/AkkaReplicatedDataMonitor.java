@@ -7,6 +7,7 @@ package org.neo4j.causalclustering.stresstests;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier;
@@ -66,6 +67,14 @@ class AkkaReplicatedDataMonitor implements ReplicatedDataMonitor, AutoCloseable
         {
             log.info( member + " akka:" + entry.getKey().keyName() + " has invisible size: " + entry.getValue() );
         }
+    }
+
+    int maxSize()
+    {
+        return Stream
+                .concat( visibleSizes.values().stream(), invisibleSizes.values().stream() )
+                .max( Integer::compareTo )
+                .orElseThrow( IllegalStateException::new );
     }
 
     @Override

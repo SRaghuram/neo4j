@@ -9,8 +9,10 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BooleanSupplier;
 
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;
@@ -21,17 +23,21 @@ import org.neo4j.causalclustering.discovery.CoreTopologyService;
 import org.neo4j.causalclustering.discovery.RoleInfo;
 import org.neo4j.causalclustering.discovery.TopologyService;
 import org.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 
-import static java.lang.Long.min;
 import static java.lang.String.format;
+import static java.time.Duration.ofNanos;
+import static java.time.Duration.ofSeconds;
 import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
 import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.time.Clocks.nanoClock;
 
 class ReplaceRandomCore extends RepeatOnRandomCore
 {
@@ -56,6 +62,10 @@ class ReplaceRandomCore extends RepeatOnRandomCore
     @Override
     public void prepare()
     {
+        for ( CoreClusterMember member : cluster.coreMembers() )
+        {
+            log.info( "Started " + member + " with " + member.id() + " at " + discoveryAddress( member ) );
+        }
         cluster.coreMembers().forEach( core -> akkaMonitors.put( core, AkkaReplicatedDataMonitor.install( core, akkaAlertLevel, log ) ) );
     }
 
@@ -71,7 +81,7 @@ class ReplaceRandomCore extends RepeatOnRandomCore
 
         log.info( "Starting " + newMember );
         newMember.start();
-        log.info( "Started " + newMember + " with id " + newMember.id() );
+        log.info( "Started " + newMember + " with " + newMember.id() + " at " + discoveryAddress( newMember ) );
         rollCounter++;
 
         awaitRaftMembershipThroughRaftMachine( newMember );
@@ -83,18 +93,36 @@ class ReplaceRandomCore extends RepeatOnRandomCore
         if ( rollCounter % rollsBeforePause == 0 )
         {
             log.info( "Pause for pruning" );
-            pauseForAkkaPruning();
+            waitForAkkaPruning();
         }
     }
 
-    private void pauseForAkkaPruning() throws InterruptedException
+    private AdvertisedSocketAddress discoveryAddress( CoreClusterMember newMember )
     {
-        // akka.cluster.distributed-data.pruning-interval: 120s
-        // akka.cluster.distributed-data.max-pruning-dissemination: 300s
-        // extra time: 30s
-        Duration sleepTime = Duration.ofSeconds( rollsBeforePause * 120 + 300 + 30 );
-        Duration actionEvery = Duration.ofSeconds( 60 );
-        sleepWithAction( sleepTime, actionEvery, () -> akkaMonitors.values().forEach( AkkaReplicatedDataMonitor::dump ) );
+        return newMember.config().get( discovery_advertised_address );
+    }
+
+    private void waitForAkkaPruning() throws InterruptedException
+    {
+        Optional<Duration> pruneDuration = sleepUntil( this::akkaIsPruned, ofSeconds( 60 ), logAkka() );
+        pruneDuration.ifPresent( duration -> log.info( "Took %s seconds to prune", duration.getSeconds() ) );
+    }
+
+    private Runnable logAkka()
+    {
+        return () -> akkaMonitors.values().forEach( AkkaReplicatedDataMonitor::dump );
+    }
+
+    private boolean akkaIsPruned()
+    {
+        for ( AkkaReplicatedDataMonitor monitor : akkaMonitors.values() )
+        {
+            if ( monitor.maxSize() > startedCores().size() )
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -171,15 +199,26 @@ class ReplaceRandomCore extends RepeatOnRandomCore
         return cluster.coreMembers().stream().filter( c -> !c.isShutdown() ).collect( toSet() );
     }
 
-    private void sleepWithAction( Duration sleepTime, Duration actionEvery, Runnable action ) throws InterruptedException
+    private Optional<Duration> sleepUntil( BooleanSupplier endCondition, Duration actionEvery, Runnable action ) throws InterruptedException
     {
-        while ( sleepTime.toMillis() > 0 && control.keepGoing() )
+        long start = nanoClock().nanos();
+        long nextAction = nanoClock().nanos();
+        while ( !endCondition.getAsBoolean() )
         {
-            action.run();
+            if ( !control.keepGoing() )
+            {
+                return Optional.empty();
+            }
 
-            Thread.sleep( min( sleepTime.toMillis(), actionEvery.toMillis() ) );
-            sleepTime = sleepTime.minus( actionEvery );
+            long now = nanoClock().nanos();
+            if ( nextAction - now <= 0 )
+            {
+                action.run();
+                nextAction = now + actionEvery.toNanos();
+            }
+            Thread.sleep( 1000 );
         }
+        return Optional.of( ofNanos( nanoClock().nanos() - start ) );
     }
 
     private CoreTopologyService topologyService( CoreClusterMember core )
