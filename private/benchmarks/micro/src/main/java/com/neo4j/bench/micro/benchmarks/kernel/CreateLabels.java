@@ -45,8 +45,8 @@ public class CreateLabels extends AbstractKernelBenchmark
     public int CreateLabels_txSize;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap", "default"},
-            base = {"default"} )
+            allowed = {"off_heap", "on_heap"},
+            base = {"on_heap"} )
     @Param( {} )
     public String CreateLabels_txMemory;
 

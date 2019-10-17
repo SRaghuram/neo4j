@@ -61,8 +61,8 @@ public class ReadRelationship extends AbstractCoreBenchmark
     public String ReadRelationship_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap", "default"},
-            base = {"default"} )
+            allowed = {"off_heap", "on_heap"},
+            base = {"on_heap"} )
     @Param( {} )
     public String ReadRelationship_txMemory;
 

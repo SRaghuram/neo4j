@@ -52,8 +52,8 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
     public String CreateManyPropertyKeysViaCypher_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap", "default"},
-            base = {"default"} )
+            allowed = {"off_heap", "on_heap"},
+            base = {"on_heap"} )
     @Param( {} )
     public String CreateManyPropertyKeysViaCypher_txMemory;
 

@@ -74,8 +74,8 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
     public PropertyLocality ReadMultipleNodeProperties_locality;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap", "default"},
-            base = {"default"} )
+            allowed = {"off_heap", "on_heap"},
+            base = {"on_heap"} )
     @Param( {} )
     public String ReadMultipleNodeProperties_txMemory;
 

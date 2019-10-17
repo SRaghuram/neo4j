@@ -69,8 +69,8 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     public IndexType FindNodeNonUnique_index;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap", "default"},
-            base = {"default"} )
+            allowed = {"off_heap", "on_heap"},
+            base = {"on_heap"} )
     @Param( {} )
     public String FindNodeNonUnique_txMemory;
 
