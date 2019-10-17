@@ -521,16 +521,16 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
     // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
     case LongSlot(offset, _, _) =>
-      codeGen.getLongAtNoSave(offset)
+      codeGen.getLongAt(offset)
     case RefSlot(offset, false, _) =>
       invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeIdOrNullFromAnyValue"),
-                   codeGen.getRefAtNoSave(offset))
+                   codeGen.getRefAt(offset))
     case RefSlot(offset, true, _) =>
       ternary(
-        equal(codeGen.getRefAtNoSave(offset), noValue),
+        equal(codeGen.getRefAt(offset), noValue),
         constant(-1L),
         invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeIdOrNullFromAnyValue"),
-                     codeGen.getRefAtNoSave(offset))
+                     codeGen.getRefAt(offset))
       )
     case _ =>
       throw new InternalException(s"Do not know how to get a node id for slot $slot")

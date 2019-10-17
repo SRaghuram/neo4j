@@ -386,21 +386,6 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   }
 
   /**
-   * Like getLongAt, this uses a local slot variable if one is already defined, otherwise gets the value directly from
-   * the input ExecutionContext without declaring a new local slot variable for it.
-   * This is useful to avoid creating unnecessary continuation state if only a single use of the value is known to be contained within a local scope.
-   */
-  final def getLongAtNoSave(offset: Int): IntermediateRepresentation = {
-    getLongAt(offset) // Do the same as getLongAt for now
-//    val local = locals.getLocalForLongSlot(offset)
-//    if (local == null) {
-//      getLongFromExecutionContext(offset, loadField(INPUT_MORSEL))
-//    } else {
-//      load(local)
-//    }
-  }
-
-  /**
    * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable
    */
   override final def getRefAt(offset: Int): IntermediateRepresentation = {
@@ -409,21 +394,6 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       local = locals.addLocalForRefSlot(offset)
     }
     load(local)
-  }
-
-  /**
-   * Like getRefAt, this uses a local slot variable if one is already defined, otherwise gets the value directly from
-   * the input ExecutionContext without declaring a new local slot variable for it.
-   * This is useful to avoid creating unnecessary continuation state if only a single use of the value is known to be contained within a local scope.
-   */
-  final def getRefAtNoSave(offset: Int): IntermediateRepresentation = {
-    getRefAt(offset) // Do the same as getRefAt for now
-//    val local = locals.getLocalForRefSlot(offset)
-//    if (local == null) {
-//      getRefFromExecutionContext(offset, loadField(INPUT_MORSEL))
-//    } else {
-//      load(local)
-//    }
   }
 
   override final def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation = {

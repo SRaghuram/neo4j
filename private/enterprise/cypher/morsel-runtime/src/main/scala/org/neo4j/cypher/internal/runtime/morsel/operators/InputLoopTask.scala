@@ -268,17 +268,6 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     block(localsState.assignments :+ body: _*)
   }
 
-  //override def genOperateExit: IntermediateRepresentation = {
-  //  assert(continuationState != null)
-  //  block(
-  //    // If we still have an ongoing inner loop we need to save the local slot variables to fields
-  //    condition(loadField(innerLoop))(
-  //      continuationState.saveStateIR
-  //    ),
-  //    inner.genOperateExit
-  //  )
-  //}
-
   /**
     * Responsible for generating method:
     * {{{
