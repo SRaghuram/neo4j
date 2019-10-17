@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -25,6 +26,7 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -82,6 +84,8 @@ class CoreDatabaseLifeTest
         var recoveryFacade = mock( RecoveryFacade.class );
         var internalOperator = new ClusterInternalDbmsOperator();
         var panicService = mock( PanicService.class );
+        var dbStartAborter = mock( DatabaseStartAborter.class );
+        when( dbStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
 
         return new CoreDatabaseLife( raftMachine, database, raftBinder, applicationProcess, messageHandler, snapshotService,
                 downloaderService, recoveryFacade, life, internalOperator, topologyService, panicService );

@@ -21,6 +21,8 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.DatabaseStartAbortedException;
+import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
 import java.util.List;
@@ -50,6 +52,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
     private final TimeoutStrategy syncRetryStrategy;
     private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final SimpleStorage<RaftId> raftIdStorage;
+    private final DatabaseStartAborter databaseStartAborter;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final TopologyService topologyService;
     private final Supplier<CatchupComponents> catchupComponentsSupplier;
@@ -59,8 +62,8 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
 
     ReadReplicaDatabaseLife( ReadReplicaDatabaseContext databaseContext, Lifecycle catchupProcess, UpstreamDatabaseStrategySelector selectionStrategy,
             LogProvider debugLogProvider, LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponents> catchupComponentsSupplier,
-            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator,
-            SimpleStorage<RaftId> raftIdStorage, PanicService panicService )
+            LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator, SimpleStorage<RaftId> raftIdStorage,
+            PanicService panicService, DatabaseStartAborter databaseStartAborter )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
@@ -68,6 +71,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
         this.selectionStrategy = selectionStrategy;
         this.panicService = panicService;
         this.raftIdStorage = raftIdStorage;
+        this.databaseStartAborter = databaseStartAborter;
         this.syncRetryStrategy = new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS );
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
@@ -112,6 +116,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
     private void bootstrap() throws Exception
     {
         var signal = clusterInternalOperator.bootstrap( databaseContext.databaseId() );
+        boolean shouldAbort = false;
         try
         {
             clusterComponentsLife.init();
@@ -121,7 +126,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
             clusterComponentsLife.start();
             TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
             boolean synced = false;
-            while ( !synced )
+            while ( !( synced || shouldAbort ) )
             {
                 try
                 {
@@ -136,6 +141,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
                         Thread.sleep( syncRetryWaitPeriod.getMillis() );
                         syncRetryWaitPeriod.increment();
                     }
+                    shouldAbort = databaseStartAborter.shouldAbort( databaseContext.databaseId() );
                 }
                 catch ( InterruptedException e )
                 {
@@ -153,6 +159,11 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
         finally
         {
             signal.bootstrapped();
+        }
+
+        if ( shouldAbort )
+        {
+            throw new DatabaseStartAbortedException( format( "Database %s was stopped before it finished starting!", databaseContext.databaseId().name() ) );
         }
     }
 

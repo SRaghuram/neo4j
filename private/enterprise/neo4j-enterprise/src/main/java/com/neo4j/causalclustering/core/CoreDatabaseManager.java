@@ -7,14 +7,14 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
-import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +62,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     @Override
     protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
-        LifeSupport coreDatabaseLife = new LifeSupport();
+        LifeSupport clusteredComponentsLife = new LifeSupport();
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
         Monitors coreDatabaseMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
@@ -72,14 +72,14 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
-        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, coreDatabaseLife,
-                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel );
+        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, clusteredComponentsLife,
+                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel, databaseStartAborter );
 
         var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();
         var kernelContext = edition.coreDatabaseFactory()
-                .createKernelComponents( databaseId, coreDatabaseLife, raftContext, kernelResolvers,
+                .createKernelComponents( databaseId, clusteredComponentsLife, raftContext, kernelResolvers,
                         coreDatabaseLogService, versionContextSupplier );
 
         var databaseCreationContext = newDatabaseCreationContext( databaseId, coreDatabaseDependencies,
@@ -88,8 +88,8 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator() );
 
-        var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, coreDatabaseLife, coreDatabaseMonitors, coreDatabaseDependencies,
-                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator() );
+        var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, clusteredComponentsLife, coreDatabaseMonitors, coreDatabaseDependencies,
+                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator(), databaseStartAborter );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
                 storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors );
@@ -127,11 +127,6 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         {
             throw new DatabaseManagementException( "Was unable to delete cluster state as part of drop. ", e );
         }
-    }
-
-    ClusterSystemGraphDbmsModel dbmsModel()
-    {
-        return dbmsModel;
     }
 
     /**

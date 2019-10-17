@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
+import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -88,18 +89,25 @@ class RaftBinderTest
         return systemGraph;
     }
 
+    private DatabaseStartAborter neverAbort()
+    {
+        var aborter = mock( DatabaseStartAborter.class );
+        when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+        return aborter;
+    }
+
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService )
     {
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_DATABASE_ID, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider(), neverAbort() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, DatabaseId databaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider(), neverAbort() );
     }
 
     @Test

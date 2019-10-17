@@ -142,5 +142,4 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     {
        return new DatabaseLogProvider( new DatabaseNameLogContext( databaseId ), this.logProvider );
     }
-
 }

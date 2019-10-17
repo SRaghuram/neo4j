@@ -7,16 +7,13 @@ package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockSettings;
-import org.mockito.Mockito;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 

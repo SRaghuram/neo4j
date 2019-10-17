@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.dbms.DatabaseStartAborter;
+import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.IOException;
@@ -56,12 +58,13 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final Duration timeout;
     private final int minCoreHosts;
     private final DatabaseLog log;
+    private final DatabaseStartAborter databaseStartAborter;
 
     private RaftId raftId;
 
     public RaftBinder( DatabaseId databaseId, MemberId myIdentity, SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService,
             ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter, Duration timeout,
-            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors, DatabaseLogProvider logProvider )
+            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors, DatabaseLogProvider logProvider, DatabaseStartAborter databaseStartAborter )
     {
         this.databaseId = databaseId;
         this.myIdentity = myIdentity;
@@ -75,6 +78,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         this.timeout = timeout;
         this.minCoreHosts = minCoreHosts;
         this.log = logProvider.getLog( getClass() );
+        this.databaseStartAborter = databaseStartAborter;
     }
 
     /**
@@ -133,6 +137,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         CoreSnapshot snapshot = null;
         DatabaseCoreTopology topology;
         long endTime = clock.millis() + timeout.toMillis();
+        boolean shouldAbort = false;
 
         do
         {
@@ -182,14 +187,18 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 monitor.bootstrapped( snapshot, databaseId, raftId );
             }
 
+            shouldAbort = databaseStartAborter.shouldAbort( databaseId );
             retryWaiter.apply();
         }
-        while ( raftId == null && clock.millis() < endTime );
+        while ( raftId == null && clock.millis() < endTime && !shouldAbort );
 
-        if ( raftId == null )
+        if ( shouldAbort )
         {
-            throw new TimeoutException( format(
-                    "Failed to join a cluster with members %s. Another member should have published " +
+            throw new DatabaseStartAbortedException( format( "Database %s was stopped before it finished starting!", databaseId.name() ) );
+        }
+        else if ( raftId == null )
+        {
+            throw new TimeoutException( format( "Failed to join a cluster with members %s. Another member should have published " +
                     "a raftId but none was detected. Please restart the cluster.", topology ) );
         }
 

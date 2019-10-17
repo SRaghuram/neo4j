@@ -8,6 +8,7 @@ package com.neo4j.dbms;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -83,6 +84,23 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
 
         // TODO: Declare exceptions!
         return databases;
+    }
+
+    Optional<OperatorState> getStatus( DatabaseId databaseId )
+    {
+        Optional<OperatorState> result;
+        try ( var tx = systemDatabase.get().beginTx() )
+        {
+            var uuid = databaseId.uuid().toString();
+            var nonDroppedDb = Optional.ofNullable( tx.findNode( DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid ) )
+                    .map( this::getOnlineStatus );
+            Supplier<Optional<OperatorState>> droppbedDb = () -> Optional.ofNullable( tx.findNode( DELETED_DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid ) )
+                    .map( ignored -> DROPPED );
+
+            result = nonDroppedDb.or( droppbedDb );
+            tx.commit();
+        }
+        return result;
     }
 
     private OperatorState getOnlineStatus( Node node )

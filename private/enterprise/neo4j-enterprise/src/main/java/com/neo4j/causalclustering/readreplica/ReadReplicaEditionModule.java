@@ -196,12 +196,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         dependencies.satisfyDependency( reconciledTxTracker );
         dependencies.satisfyDependencies( databaseEventService );
 
-        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( SYSTEM_DATABASE_ID )
-                .orElseThrow()
-                .databaseFacade();
-        var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
         var reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
-                databaseEventService, storageFactory, reconciledTxTracker, panicService, dbmsModel );
+                databaseEventService, storageFactory, reconciledTxTracker, panicService, databaseManager.dbmsModel() );
 
         topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
         globalLife.add( dependencies.satisfyDependency( topologyService ) );

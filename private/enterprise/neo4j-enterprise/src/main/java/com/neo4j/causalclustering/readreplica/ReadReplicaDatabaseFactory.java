@@ -22,6 +22,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
@@ -76,7 +77,8 @@ class ReadReplicaDatabaseFactory
         this.clusterStateFactory = clusterStateFactory;
     }
 
-    ReadReplicaDatabaseLife createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
+    ReadReplicaDatabaseLife createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator,
+            DatabaseStartAborter databaseStartAborter )
     {
         DatabaseId databaseId = databaseContext.databaseId();
         DatabaseLogService databaseLogService = databaseContext.database().getLogService();
@@ -107,7 +109,7 @@ class ReadReplicaDatabaseFactory
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseId.name() ) ) );
 
         return new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
-                topologyService, catchupComponentsSupplier, life, clusterInternalOperator, raftIdStorage, panicService );
+                topologyService, catchupComponentsSupplier, life, clusterInternalOperator, raftIdStorage, panicService, databaseStartAborter );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

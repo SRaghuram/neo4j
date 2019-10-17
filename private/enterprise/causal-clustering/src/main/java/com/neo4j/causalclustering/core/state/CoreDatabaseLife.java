@@ -20,7 +20,6 @@ import java.util.Optional;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.scheduler.JobHandle;
 
@@ -146,4 +145,5 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
     {
         panicService.removePanicEventHandlers( kernelDatabase.getDatabaseId() );
     }
+
 }

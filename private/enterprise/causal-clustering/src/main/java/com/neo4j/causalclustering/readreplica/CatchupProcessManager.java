@@ -109,26 +109,6 @@ public class CatchupProcessManager extends SafeLifecycle
         catchupProcess = createCatchupProcess( databaseContext );
         txPulling.start();
         initTimer();
-
-        // TODO: Commenting this out since it is problematic to have it in the lifecycle.
-        // waitForUpToDateStore( catchupProcess );
-    }
-
-    private void waitForUpToDateStore( CatchupPollingProcess catchupProcess ) throws InterruptedException, ExecutionException
-    {
-        boolean upToDate = false;
-        do
-        {
-            try
-            {
-                upToDate = catchupProcess.upToDateFuture().get( 1, MINUTES );
-            }
-            catch ( TimeoutException e )
-            {
-                log.warn( "Waiting for up-to-date store. State: " + catchupProcess.describeState() );
-            }
-        }
-        while ( !upToDate );
     }
 
     @Override

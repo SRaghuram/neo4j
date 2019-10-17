@@ -9,8 +9,14 @@ import com.neo4j.causalclustering.core.CoreState;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import com.neo4j.dbms.DatabaseStartAborter;
+import com.neo4j.dbms.DatabaseStartAbortedException;
 
 import java.io.IOException;
+
+import org.neo4j.kernel.database.DatabaseId;
+
+import static java.lang.String.format;
 
 public class CoreSnapshotService
 {
@@ -20,13 +26,18 @@ public class CoreSnapshotService
     private final CoreState coreState;
     private final RaftLog raftLog;
     private final RaftMachine raftMachine;
+    private final DatabaseStartAborter databaseStartAborter;
+    private final DatabaseId databaseId;
 
-    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState, RaftMachine raftMachine )
+    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState, RaftMachine raftMachine,
+            DatabaseStartAborter databaseStartAborter, DatabaseId databaseId )
     {
         this.applicationProcess = applicationProcess;
         this.coreState = coreState;
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
+        this.databaseStartAborter = databaseStartAborter;
+        this.databaseId = databaseId;
     }
 
     public synchronized CoreSnapshot snapshot() throws Exception
@@ -63,10 +74,14 @@ public class CoreSnapshotService
         notifyAll();
     }
 
-    synchronized void awaitState() throws InterruptedException
+    synchronized void awaitState() throws InterruptedException, DatabaseStartAbortedException
     {
         while ( raftMachine.state().appendIndex() < 0 )
         {
+            if ( databaseStartAborter.shouldAbort( databaseId ) )
+            {
+                throw new DatabaseStartAbortedException( format( "Database %s was stopped before it finished starting!", databaseId.name() ) );
+            }
             wait();
         }
     }

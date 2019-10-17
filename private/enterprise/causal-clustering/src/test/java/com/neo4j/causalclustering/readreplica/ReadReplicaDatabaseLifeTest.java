@@ -23,6 +23,7 @@ import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
@@ -37,7 +38,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -92,6 +92,13 @@ class ReadReplicaDatabaseLifeTest
         return new UpstreamDatabaseStrategySelector( firstMember );
     }
 
+    private DatabaseStartAborter neverAbort()
+    {
+        var aborter = mock( DatabaseStartAborter.class );
+        when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+        return aborter;
+    }
+
     private ReadReplicaDatabaseLife createReadReplicaDatabaseLife( TopologyService topologyService, CatchupComponents catchupComponents,
             ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess )
     {
@@ -103,7 +110,7 @@ class ReadReplicaDatabaseLifeTest
     {
         return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(),
                 nullLogProvider(), topologyService, () -> catchupComponents, mock( LifeSupport.class ),
-                new ClusterInternalDbmsOperator(), raftIdStorage, mock( PanicService.class ) );
+                new ClusterInternalDbmsOperator(), raftIdStorage, mock( PanicService.class ), neverAbort() );
     }
 
     private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException

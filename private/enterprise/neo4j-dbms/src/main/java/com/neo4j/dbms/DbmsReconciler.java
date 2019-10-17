@@ -33,6 +33,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -333,31 +334,8 @@ public class DbmsReconciler implements DatabaseStateService
         {
             currentStates.compute( databaseName, ( name, previousState ) ->
             {
-                if ( throwable != null )
-                {
-                    var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
-                    if ( previousState == null )
-                    {
-                        log.error( message, throwable );
-                        return DatabaseState.initial( null ).failed( throwable );
-                    }
-                    else
-                    {
-                        reportErrorAndPanicDatabase( previousState.databaseId(), message, throwable );
-                        return previousState.failed( throwable );
-                    }
-                }
-                else if ( result.error() != null )
-                {
-                    var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
-                            databaseName, result.state(), result.desiredState().operationalState().description() );
-                    reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
-                    return result.state().failed( result.error() );
-                }
-
-                var nextState = result.state();
-                var failure = shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
-                return failure.map( nextState::failed ).orElse( nextState );
+                var failedState = handleReconciliationErrors( throwable, request, result, databaseName, previousState );
+                return failedState.orElse( result.state() );
             } );
         }
         finally
@@ -367,6 +345,49 @@ public class DbmsReconciler implements DatabaseStateService
             var outcome = errorExists ? "failed" : "succeeded";
             log.debug( "Released lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
                     result.desiredState().operationalState().description() );
+        }
+    }
+
+    private Optional<DatabaseState> handleReconciliationErrors( Throwable throwable, ReconcilerRequest request, ReconcilerStepResult result,
+            String databaseName, DatabaseState previousState )
+    {
+        if ( throwable != null )
+        {
+            // An exception which was not wrapped in a DatabaseManagementException has occured. E.g. an InterruptedException in the reconciler itself
+            var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
+            if ( previousState == null )
+            {
+                log.error( message, throwable );
+                return Optional.of( DatabaseState.failedUnknownId( throwable ) ) ;
+            }
+            else
+            {
+                reportErrorAndPanicDatabase( previousState.databaseId(), message, throwable );
+                return Optional.of( previousState.failed( throwable ) );
+            }
+        }
+        else if ( result.error() != null && Exceptions.contains( result.error(), e -> e instanceof DatabaseStartAbortedException ) )
+        {
+            // The current transition was aborted because some internal component detected that the desired state of this database has changed underneath us
+            var message = format( "Attempt to reconcile database %s from %s to %s was aborted, likely due to %s being stopped or dropped meanwhile.",
+                    databaseName, result.state(), result.desiredState().operationalState().description(), databaseName );
+            log.warn( message );
+            return Optional.of( result.state() );
+        }
+        else if ( result.error() != null )
+        {
+            // An exception occured somewhere in the internal machinery of the database and was caught by the DatabaseManager
+            var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
+                    databaseName, result.state(), result.desiredState().operationalState().description() );
+            reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
+            return Optional.of( result.state().failed( result.error() ) );
+        }
+        else
+        {
+            // No exception occurred during this transition, but the request may still panic the database and mark it as failed anyway
+            var nextState = result.state();
+            return shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request )
+                    .map( nextState::failed );
         }
     }
 
@@ -416,7 +437,7 @@ public class DbmsReconciler implements DatabaseStateService
 
     private boolean isTransientError( Throwable t )
     {
-        return canRetry && !( t instanceof Error );
+        return canRetry && !( t instanceof Error || t instanceof DatabaseStartAbortedException );
     }
 
     /**
@@ -469,7 +490,7 @@ public class DbmsReconciler implements DatabaseStateService
         return new DatabaseState( databaseId, DROPPED );
     }
 
-    protected final DatabaseState start( DatabaseId databaseId )
+    protected DatabaseState start( DatabaseId databaseId )
     {
         databaseManager.startDatabase( databaseId );
         return new DatabaseState( databaseId, STARTED );

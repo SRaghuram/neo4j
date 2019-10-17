@@ -120,7 +120,6 @@ class ClusterDatabaseManagementWithReducedAvailabilityIT
         assertDatabaseEventuallyStarted( "foo", cluster );
     }
 
-    @Disabled( "Failing to start when other members are unavailable" )
     @ParameterizedTest( name = "initialCores={0} coresToShutdown={1} initialReplicas={2} replicasToShutdown={3}" )
     @MethodSource( "clusterConfig" )
     void shouldStopDatabaseWithReducedAvailability( int initialCores, int coresToShutdown, int initialReplicas, int replicasToShutdown ) throws Exception
@@ -147,7 +146,6 @@ class ClusterDatabaseManagementWithReducedAvailabilityIT
         assertDatabaseEventuallyStopped( "foo", cluster );
     }
 
-    @Disabled( "Failing to start when other members are unavailable" )
     @ParameterizedTest( name = "initialCores={0} coresToShutdown={1} initialReplicas={2} replicasToShutdown={3}" )
     @MethodSource( "clusterConfig" )
     void shouldDropDatabaseWithReducedAvailability( int initialCores, int coresToShutdown, int initialReplicas, int replicasToShutdown ) throws Exception

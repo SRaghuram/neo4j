@@ -92,7 +92,6 @@ class ClusterDatabaseManagementIT
     }
 
     @Test
-    @Disabled( "Failing to start when other members are unavailable" )
     void shouldStopDatabaseOnRejoiningMembers() throws Exception
     {
         // given
@@ -333,7 +332,6 @@ class ClusterDatabaseManagementIT
     }
 
     @Test
-    @Disabled( "Failing to start when other members are unavailable" )
     void shouldDropDatabaseOnRejoiningMembers() throws Exception
     {
         // given
