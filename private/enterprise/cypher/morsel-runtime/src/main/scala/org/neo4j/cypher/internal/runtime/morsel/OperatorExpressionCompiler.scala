@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
-import org.neo4j.internal.kernel.api.{NodeCursor, Read}
+import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
 import org.neo4j.values.storable.Value
 
 import scala.collection.mutable.ArrayBuffer
@@ -224,6 +224,24 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       ExpressionCompiler.NODE_CURSOR,
       getLongAt(offset),
       labelToken)
+
+  override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invokeStatic(
+          method[CompiledCursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
+          loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+          ExpressionCompiler.NODE_CURSOR,
+          getLongAt(offset),
+          ExpressionCompiler.PROPERTY_CURSOR,
+          propertyToken)
+
+  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invokeStatic(
+      method[CompiledCursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
+      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      ExpressionCompiler.RELATIONSHIP_CURSOR,
+      getLongAt(offset),
+      ExpressionCompiler.PROPERTY_CURSOR,
+      propertyToken)
 
   def writeLocalsToSlots(): IntermediateRepresentation = {
     val writeLongs = locals.getAllLocalsForLongSlots.map { case (offset, local) =>

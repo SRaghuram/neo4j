@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExp
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.{DB_ACCESS, NODE_CURSOR}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler._
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -1252,8 +1252,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case NodeProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        invoke(DB_ACCESS, NODE_PROPERTY,
-               getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR, constant(true))))
+        getNodeProperty(constant(token), offset)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1314,8 +1313,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,  block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, NODE_PROPERTY,
-                 getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR, constant(true)))))
+          getNodeProperty(loadField(f), offset))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1397,8 +1395,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case RelationshipProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty"),
-          getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))))
+        getRelationshipProperty(constant(token), offset)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1408,10 +1405,9 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
-          condition(equal(loadField(f), constant(-1)))(
-            setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty"),
-                 getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true)))))
+        condition(equal(loadField(f), constant(-1)))(
+          setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
+        getRelationshipProperty(loadField(f), offset))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -2100,6 +2096,10 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   protected def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation
 
   protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
+  protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
+  protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
   def getArgumentAt(offset: Int): IntermediateRepresentation =
     if (offset == TopLevelArgument.SLOT_OFFSET) {
@@ -2937,10 +2937,10 @@ object ExpressionCompiler {
   val NODE_CURSOR: IntermediateRepresentation = load("nodeCursor")
   val vNODE_CURSOR: LocalVariable = cursorVariable[NodeCursor]("nodeCursor")
 
-  private val RELATIONSHIP_CURSOR = load("relationshipScanCursor")
+  val RELATIONSHIP_CURSOR: IntermediateRepresentation = load("relationshipScanCursor")
   val vRELATIONSHIP_CURSOR: LocalVariable = cursorVariable[RelationshipScanCursor]("relationshipScanCursor")
 
-  private val PROPERTY_CURSOR = load("propertyCursor")
+  val PROPERTY_CURSOR: IntermediateRepresentation = load("propertyCursor")
   val vPROPERTY_CURSOR: LocalVariable = cursorVariable[PropertyCursor]("propertyCursor")
 
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
@@ -2952,8 +2952,8 @@ object ExpressionCompiler {
   private val HAS_TX_STATE_NODE_PROP: Method = method[DbAccess, Optional[_], Long, Int]("hasTxStatePropertyForCachedNodeProperty")
   private val HAS_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Optional[_], Long, Int]("hasTxStatePropertyForCachedRelationshipProperty")
 
-  private val NODE_PROPERTY: Method = method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty")
-  private val RELATIONSHIP_PROPERTY: Method = method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty")
+  val NODE_PROPERTY: Method = method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty")
+  val RELATIONSHIP_PROPERTY: Method = method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty")
 
   private val PACKAGE_NAME = "org.neo4j.codegen"
 
@@ -3013,4 +3013,12 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
            labelToken,
            getLongAt(offset),
            NODE_CURSOR)
+
+  override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invoke(DB_ACCESS, NODE_PROPERTY,
+           getLongAt(offset), propertyToken, NODE_CURSOR, PROPERTY_CURSOR, constant(true))
+
+  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invoke(DB_ACCESS, RELATIONSHIP_PROPERTY,
+           getLongAt(offset), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))
 }

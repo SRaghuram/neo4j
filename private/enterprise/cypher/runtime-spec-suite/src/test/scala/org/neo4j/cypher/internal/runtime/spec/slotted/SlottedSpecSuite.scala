@@ -70,3 +70,4 @@ class SlottedMemoryManagementTest extends MemoryManagementTestBase(ENTERPRISE.DE
 class SlottedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedExpressionTest extends ExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)

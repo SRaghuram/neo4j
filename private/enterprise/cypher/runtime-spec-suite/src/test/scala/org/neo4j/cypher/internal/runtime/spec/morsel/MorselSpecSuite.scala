@@ -163,6 +163,8 @@ class MorselCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUS
 // GENERAL
 class MorselMiscTest extends MiscTestBase(FUSING, MORSEL)
 class MorselMiscNoFusingTest extends MiscTestBase(NO_FUSING, MORSEL)
+class MorselExpressionTest extends ExpressionTestBase(FUSING, MORSEL)
+class MorselExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, MORSEL)
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL)
 class MorselMemoryManagementTest extends MemoryManagementTestBase(FUSING, MORSEL)
                                  with WithSlotsMemoryManagementTestBase

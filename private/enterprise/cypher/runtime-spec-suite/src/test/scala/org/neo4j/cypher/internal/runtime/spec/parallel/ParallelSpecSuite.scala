@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
-import org.neo4j.cypher.internal.MorselRuntime.{MORSEL, PARALLEL}
+import org.neo4j.cypher.internal.MorselRuntime.PARALLEL
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.{MorselDbHitsTestBase, ProfileNoTimeTestBase, SchedulerTracerTestBase}
@@ -192,6 +192,8 @@ class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBa
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeNoFusingMiscTest extends MiscTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
+class ParallelRuntimeExpressionTest extends ExpressionTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
+class ParallelRuntimeNoFusingExpressionTest extends ExpressionTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeSchedulerTracerTest extends SchedulerTracerTestBase(PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
 class ParallelRuntimeSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
