@@ -41,7 +41,8 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
       tx.createNode()
 
       // We need two node vars to have one non-pooled cursor
-      val r = tx.execute("MATCH (n), (m) WHERE true RETURN n, m, n.name, m.name")
+      val r = tx.execute("CYPHER runtime=slotted MATCH (n), (m) WHERE true RETURN n, m, n.name, m.name")
+      // We use slotted runtime. Pipelined will execute too much on `r.next` and everything will be closed already
       r.next()
       tx.rollback() // This should close all cursors
     } finally {
