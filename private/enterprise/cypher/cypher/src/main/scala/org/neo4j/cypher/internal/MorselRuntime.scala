@@ -172,7 +172,14 @@ class MorselRuntime(parallelExecution: Boolean,
 
       val morselSize = selectMorselSize(query, context)
 
-      val maybeThreadSafeCursors = if (parallelExecution) Some(context.runtimeEnvironment.cursors) else None
+      val maybeThreadSafeExecutionResources =
+        if (parallelExecution) {
+          val resourceManagerFactory: ResourceManagerFactory = new ThreadSafeResourceManager(_)
+          Some((context.runtimeEnvironment.cursors, resourceManagerFactory))
+        }
+        else {
+          None
+        }
 
       val metadata = CodeGenPlanDescriptionHelper.metadata(codeGenerationMode.saver)
 
@@ -196,7 +203,7 @@ class MorselRuntime(parallelExecution: Boolean,
                               context.runtimeEnvironment.tracer,
                               morselSize,
                               context.config.memoryTrackingController,
-                              maybeThreadSafeCursors,
+                              maybeThreadSafeExecutionResources,
                               metadata,
                               executionGraphSchedulingPolicy)
     } catch {
@@ -228,7 +235,7 @@ class MorselRuntime(parallelExecution: Boolean,
                             schedulerTracer: SchedulerTracer,
                             morselSize: Int,
                             memoryTrackingController: MemoryTrackingController,
-                            maybeThreadSafeCursors: Option[CursorFactory],
+                            maybeThreadSafeExecutionResources: Option[(CursorFactory, ResourceManagerFactory)],
                             override val metadata: Seq[Argument],
                             executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
 
@@ -266,7 +273,7 @@ class MorselRuntime(parallelExecution: Boolean,
           "The parallel runtime is experimental and might suffer from instability and potentially correctness issues."))
       else Set.empty
 
-    override def threadSafeCursorFactory(): Option[CursorFactory] = maybeThreadSafeCursors
+    override def threadSafeExecutionResources(): Option[(CursorFactory, ResourceManagerFactory)] = maybeThreadSafeExecutionResources
   }
 
   class MorselRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
