@@ -155,7 +155,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   }
 
   /**
-    * Allocate a cursor of type `CURSOR`.
+    * Allocate and trace a cursor of type `CURSOR`.
     */
   def allocateAndTrace(): CURSOR = {
     val cursor = allocateCursor()
@@ -163,7 +163,24 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     cursor
   }
 
+  /**
+    * Allocate a cursor of type `CURSOR`.
+    */
   def allocate(): CURSOR = allocateCursor()
+
+  /**
+    * Free the given cursor. NOOP if `null`.
+    */
+  def free(cursor: CURSOR): Unit = {
+    freeCursor(cursor)
+  }
+
+  /**
+    * Free the given cursor. If the cursor is `null` it should still count as if released.
+    */
+  def forceFree(cursor: CURSOR): Unit = {
+    freeCursor(cursor)
+  }
 
   private final def allocateCursor(): CURSOR = {
     if (DebugSupport.CURSORS.enabled) {
@@ -176,17 +193,6 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
       cursor = cursorFactory()
     }
     cursor
-  }
-
-  /**
-    * Free the given cursor. NOOP if `null`.
-    */
-  def free(cursor: CURSOR): Unit = {
-    freeCursor(cursor)
-  }
-
-  def forceFree(cursor: CURSOR): Unit = {
-    freeCursor(cursor)
   }
 
   private def freeCursor(cursor: CURSOR): Unit = {
