@@ -7,8 +7,10 @@ package org.neo4j.internal.cypher.debug
 
 import java.io.File
 
+import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
+import org.neo4j.cypher.internal.logical.plans.{CypherValue, FieldSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
@@ -17,7 +19,6 @@ import org.neo4j.internal.collector.DataCollectorMatchers._
 import org.neo4j.internal.collector.SampleGraphs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
-import scala.collection.immutable
 
 class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
                                with QueryStatisticsTestSupport
@@ -27,18 +28,71 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
 
   ignore("template for support cases") {
     val file = new File("/.../graphCounts.json")
-    val graphCounts = GraphCountsJson.parse(file)
-    val row = graphCounts.results.head.data.head.row
+
+    // If your json has the correct format including boiler plate:
+    val graphCounts = GraphCountsJson.parseAsGraphCountsJson(file)
+    val graphCountData = graphCounts.results.head.data.head.row.data
+
+    // If your json is missing the boiler plate, you can try this instead:
+    //val graphCountData = GraphCountsJson.parseAsGraphCountData(file)
 
     def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger): GraphCountsPlanContext = {
-      val context = new GraphCountsPlanContext(row)(tc, logger)
+      val context = new GraphCountsPlanContext(graphCountData)(tc, logger)
       // Add UDFs here, if you have any in your query
+
+      // Add UDFs for temporal functions
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "datetime"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTDateTime, None, Array.empty, Some("Create a DateTime instant"), isAggregate = false,
+        getUserFunctionHandle("datetime").id())
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "date"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTDate, None, Array.empty, Some("Create a Date instant"), isAggregate = false,
+        getUserFunctionHandle("date").id())
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "time"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTTime, None, Array.empty, Some("Create a Time instant"), isAggregate = false,
+        getUserFunctionHandle("time").id())
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "localdatetime"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTLocalDateTime, None, Array.empty, Some("Create a LocalDateTime instant"), isAggregate = false,
+        getUserFunctionHandle("localdatetime").id())
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "localtime"),
+        IndexedSeq(FieldSignature("Input", CTAny,
+          Some(CypherValue( "DEFAULT_TEMPORAL_ARGUMENT", CTAny))
+        )),
+        CTLocalTime, None, Array.empty, Some("Create a LocalTime instant"), isAggregate = false,
+        getUserFunctionHandle("localtime").id())
+      )
+
+      context.addUDF( UserFunctionSignature(QualifiedName(Seq.empty, "duration"),
+        IndexedSeq(FieldSignature("Input", CTAny)),
+        CTDuration, None, Array.empty, Some("Construct a Duration value"), isAggregate = false,
+        getUserFunctionHandle("duration").id())
+      )
+
       context
     }
 
     CypherPlanner.customPlanContextCreator = Some(getPlanContext)
 
-    createGraph(graphCounts)
+    createGraph(graphCountData)
 
     // Modify graph to account for predicates in the query, add relationships, etc.
 
