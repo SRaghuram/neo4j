@@ -43,10 +43,9 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   class CompiledExecutionPlan(val compiled: CompiledPlan) extends ExecutionPlanv3_5 {
 
     override def run(queryContext: QueryContext,
-                     doProfile: Boolean,
+                     executionMode: ExecutionMode,
                      params: MapValue): RuntimeResult = {
-
-      val executionMode = if (doProfile) ProfileMode else NormalMode
+      val doProfile = executionMode == ProfileMode
       val tracer =
         if (doProfile) Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
         else None
