@@ -77,6 +77,10 @@ object OperatorExpressionCompiler {
       refSlotToLocalModified(offset) = true
     }
 
+    def markInitializedLocalForLongSlot(offset: Int): Unit = {
+      longSlotToLocalInitialized(offset) = true
+    }
+
     def markInitializedLocalForRefSlot(offset: Int): Unit = {
       refSlotToLocalInitialized(offset) = true
     }
@@ -134,7 +138,7 @@ object OperatorExpressionCompiler {
       foreachLocalForLongSlot { case (slot, name, modified) =>
         val initialized = longSlotToLocalInitialized(slot)
         val initValueIR =
-          if (modified || initialized) {
+          if (initialized) {
             // This value will be overwritten within this scope or a child scope
             UNINITIALIZED_LONG_SLOT_VALUE
           } else {
@@ -147,7 +151,7 @@ object OperatorExpressionCompiler {
       foreachLocalForRefSlot { case (slot, name, modified) =>
         val initialized = refSlotToLocalInitialized(slot)
         val initValueIR =
-          if (modified || initialized) {
+          if (initialized) {
             // This value will be overwritten within this scope or a child scope
             UNINITIALIZED_REF_SLOT_VALUE
           } else {
@@ -313,6 +317,10 @@ object OperatorExpressionCompiler {
       scopeStack.head.markModifiedLocalForRefSlot(offset)
     }
 
+    def markInitializedLocalForLongSlot(offset: Int): Unit = {
+      scopeStack.head.markInitializedLocalForLongSlot(offset)
+    }
+
     def markInitializedLocalForRefSlot(offset: Int): Unit = {
       scopeStack.head.markInitializedLocalForRefSlot(offset)
     }
@@ -400,6 +408,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     var local = locals.getLocalForLongSlot(offset)
     if (local == null) {
       local = locals.addLocalForLongSlot(offset)
+      // We set this slot before reading it, so we can mark it as not needing initialization from input context
+      locals.markInitializedLocalForLongSlot(offset)
     }
     locals.markModifiedLocalForLongSlot(offset)
     assign(local, value)
@@ -409,6 +419,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addLocalForRefSlot(offset)
+      // We set this slot before reading it, so we can mark it as not needing initialization from input context
+      locals.markInitializedLocalForRefSlot(offset)
     }
     locals.markModifiedLocalForRefSlot(offset)
     assign(local, value)
@@ -499,6 +511,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     var local = locals.getLocalForRefSlot(offset)
     if (local == null) {
       local = locals.addCachedProperty(offset)
+      // We set this slot before reading it, so we can mark it as not needing initialization from input context
+      locals.markInitializedLocalForRefSlot(offset)
     }
     locals.markModifiedLocalForRefSlot(offset)
     assign(local, value)
