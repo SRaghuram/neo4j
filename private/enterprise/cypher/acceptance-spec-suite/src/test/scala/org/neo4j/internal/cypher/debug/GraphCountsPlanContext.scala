@@ -22,12 +22,12 @@ import scala.collection.mutable
   * product, _temporarily_, overriding the var [[org.neo4j.cypher.internal.compatibility.v3_5.Cypher35Planner]].customPlanContextCreator
   * with an instance of this class in your test.
   *
-  * @param row The parsed graph counts data.
+  * @param data The parsed graph counts data.
   */
-class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: InternalNotificationLogger)
+class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapper, logger: InternalNotificationLogger)
   extends TransactionBoundTokenContext(tc.kernelTransaction) with PlanContext {
 
-  private val indexes = row.data.indexes
+  private val indexes = data.indexes
   private val userDefinedFunctions = mutable.Map.empty[QualifiedName, UserFunctionSignature]
 
   def addUDF(udf: UserFunctionSignature): Unit = {
@@ -35,7 +35,7 @@ class GraphCountsPlanContext(row: Row)(tc: TransactionalContextWrapper, logger: 
   }
 
   override val statistics: InstrumentedGraphStatistics = InstrumentedGraphStatistics(
-    new StatisticsCompletingGraphStatistics(Stats(row.data.nodes, row.data.relationships)),
+    new StatisticsCompletingGraphStatistics(Stats(data.nodes, data.relationships)),
     new MutableGraphStatisticsSnapshot())
 
   override def indexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
