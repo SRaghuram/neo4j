@@ -202,7 +202,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     val fromNode = codeGen.namer.nextVariableName() + "fromNode"
 
     block(
-      declareAndAssign(typeRefOf[Boolean],resultBoolean,  constant(false)),
+      declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
       setField(canContinue, constant(false)),
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
       condition(notEqual(load(fromNode), constant(-1L))){

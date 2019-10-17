@@ -945,13 +945,15 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case expressions.IsNull(test) =>
       for (e <- intermediateCompileExpression(test)) yield {
         IntermediateExpression(
-          ternary(equal(nullCheckIfRequired(e), noValue), trueValue, falseValue), e.fields, e.variables, Set.empty)
+          nullCheck(e)(trueValue)(falseValue), e.fields, e.variables, Set.empty
+        )
       }
 
     case expressions.IsNotNull(test) =>
       for (e <- intermediateCompileExpression(test)) yield {
         IntermediateExpression(
-          ternary(notEqual(nullCheckIfRequired(e), noValue), trueValue, falseValue), e.fields, e.variables, Set.empty)
+          nullCheck(e)(falseValue)(trueValue), e.fields, e.variables, Set.empty
+        )
       }
 
     case LessThan(lhs, rhs) =>
