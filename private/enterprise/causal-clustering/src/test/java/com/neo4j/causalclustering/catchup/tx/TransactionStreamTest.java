@@ -124,7 +124,7 @@ class TransactionStreamTest
         if ( firstTxId <= lastTxId )
         {
             final Object actual = txStream.readChunk( allocator );
-            assertEquals( TxPullResponse.V3_END_OF_STREAM_RESPONSE, actual );
+            assertEquals( TxPullResponse.EMPTY, actual );
         }
 
         assertEquals( ResponseMessageType.TX_STREAM_FINISHED, txStream.readChunk( allocator ) );

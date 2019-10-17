@@ -12,7 +12,7 @@ import org.neo4j.storageengine.api.StoreId;
 
 public class TxPullResponse
 {
-    public static final TxPullResponse V3_END_OF_STREAM_RESPONSE = new TxPullResponse( null, null );
+    public static final TxPullResponse EMPTY = new TxPullResponse( null, null );
     private final StoreId storeId;
     private final CommittedTransactionRepresentation tx;
 

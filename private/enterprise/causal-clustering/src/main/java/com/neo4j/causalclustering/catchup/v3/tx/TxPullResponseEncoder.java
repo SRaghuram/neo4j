@@ -104,6 +104,7 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
         {
             new LogEntryWriter( channel ).serialize( msg.tx() );
         }
+        // the size is only required if the tx stretches over multiple chunks
         if ( !pendingChunks.isEmpty() )
         {
             replacePlaceholderSize( metadataIndex );
@@ -113,19 +114,20 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
         {
             channel.flush();
         }
-        if ( !pendingChunks.isEmpty() )
+        if ( pendingChunks.isEmpty() )
         {
-            while ( !pendingChunks.isEmpty() )
+            promise.setSuccess();
+        }
+        else
+        {
+            do
             {
                 final var nextChunk = pendingChunks.poll();
                 // pass in promise on last write
                 var nextPromise = pendingChunks.isEmpty() ? promise : ctx.voidPromise();
                 ctx.write( nextChunk, nextPromise );
             }
-        }
-        else
-        {
-            promise.setSuccess();
+            while ( !pendingChunks.isEmpty() );
         }
     }
 
@@ -157,7 +159,7 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
 
     private boolean isEndOfTxStream( TxPullResponse msg )
     {
-        return msg.equals( TxPullResponse.V3_END_OF_STREAM_RESPONSE );
+        return msg.equals( TxPullResponse.EMPTY );
     }
 
     private boolean isFirstTx()

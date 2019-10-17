@@ -27,7 +27,7 @@ public class TxPullResponseHandler extends SimpleChannelInboundHandler<TxPullRes
     {
         if ( protocol.isExpecting( CatchupClientProtocol.State.TX_PULL_RESPONSE ) )
         {
-            if ( msg.equals( TxPullResponse.V3_END_OF_STREAM_RESPONSE ) )
+            if ( msg.equals( TxPullResponse.EMPTY ) )
             {
                 protocol.expect( CatchupClientProtocol.State.MESSAGE_TYPE );
             }

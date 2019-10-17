@@ -105,7 +105,7 @@ class TxPullResponseEncodeDecodeV3Test
             channel.checkException();
         }
 
-        assertEquals( TxPullResponse.V3_END_OF_STREAM_RESPONSE, channel.readInbound() );
+        assertEquals( TxPullResponse.EMPTY, channel.readInbound() );
     }
 
     private void writeTx( EmbeddedChannel channel, TxPullResponse... sent )
@@ -114,7 +114,7 @@ class TxPullResponseEncodeDecodeV3Test
         {
             channel.writeOutbound( txPullResponse );
         }
-        channel.writeOutbound( TxPullResponse.V3_END_OF_STREAM_RESPONSE );
+        channel.writeOutbound( TxPullResponse.EMPTY );
         ByteBuf chunk;
         while ( (chunk = channel.readOutbound()) != null )
         {
@@ -126,7 +126,7 @@ class TxPullResponseEncodeDecodeV3Test
     {
         EmbeddedChannel embeddedChannel = new EmbeddedChannel( new TxPullResponseEncoder() );
         embeddedChannel.writeOutbound( new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() ),
-                TxPullResponse.V3_END_OF_STREAM_RESPONSE );
+                TxPullResponse.EMPTY );
         ByteBuf byteBuf = embeddedChannel.readOutbound();
         // remove tailing metadata
         var txSize = byteBuf.writerIndex() - 4;

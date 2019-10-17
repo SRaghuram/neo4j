@@ -106,8 +106,8 @@ public class TransactionStream implements ChunkedInput<Object>
 
             if ( lastTxId != 0 )
             {
-                // only send if at least one tx was sent
-                pending.add( TxPullResponse.V3_END_OF_STREAM_RESPONSE );
+                // only send if at least one tx was sent. This lets the encoder know that all txs have been sent.
+                pending.add( TxPullResponse.EMPTY );
             }
             noMoreTransactions = true;
             protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );

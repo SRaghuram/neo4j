@@ -27,8 +27,7 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
 {
 
     private PhysicalTransactionCursor<ReadableNetworkChannelDelegator> transactionCursor;
-    private int nextTxSize;
-    private boolean readNextTxSize;
+    private NextTxInfo nextTxInfo;
     private StoreId storeId;
     private LogEntryReader<ReadableNetworkChannelDelegator> reader =
             new VersionAwareLogEntryReader<>( new ServiceLoadingCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
@@ -42,43 +41,59 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
         {
             storeId = StoreIdMarshal.INSTANCE.unmarshal( delegatingChannel );
             transactionCursor = new PhysicalTransactionCursor<>( delegatingChannel, reader );
-            readNextTxSize = true;
+            nextTxInfo = new NextTxInfo();
         }
 
-        if ( readNextTxSize )
-        {
-            nextTxSize = in.readInt();
-            readNextTxSize = false;
-        }
-        while ( nextTxSize < in.readableBytes() )
+        while ( nextTxInfo.canReadNextTx( in ) )
         {
             transactionCursor.next();
             CommittedTransactionRepresentation tx = transactionCursor.get();
             out.add( new TxPullResponse( storeId, tx ) );
-            // More data is coming in next buffer. Avoid reading out of bounds.
-            if ( !in.isReadable() )
-            {
-                readNextTxSize = true;
-                return;
-            }
-            nextTxSize = in.readInt();
+            nextTxInfo.update( in );
         }
 
-        if ( noMoreTransactions() )
+        if ( nextTxInfo.noMoreTx() )
         {
             transactionCursor.close();
             transactionCursor = null;
-            out.add( TxPullResponse.V3_END_OF_STREAM_RESPONSE );
+            nextTxInfo = null;
+            out.add( TxPullResponse.EMPTY );
         }
-    }
-
-    private boolean noMoreTransactions()
-    {
-        return nextTxSize == 0;
     }
 
     private boolean isFirstChunk()
     {
         return transactionCursor == null;
+    }
+
+    private static class NextTxInfo
+    {
+        private boolean unknown;
+        private int nextSize;
+
+        private NextTxInfo()
+        {
+            this.unknown = true;
+        }
+
+        boolean canReadNextTx( ByteBuf byteBuf )
+        {
+            if ( unknown )
+            {
+                update( byteBuf );
+            }
+            return !unknown && nextSize < byteBuf.readableBytes();
+        }
+
+        void update( ByteBuf byteBuf )
+        {
+            unknown = !byteBuf.isReadable();
+            nextSize = unknown ? 0 : byteBuf.readInt();
+        }
+
+        boolean noMoreTx()
+        {
+            return !unknown && nextSize == 0;
+        }
     }
 }
