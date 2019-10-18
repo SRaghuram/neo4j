@@ -19,6 +19,7 @@ class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory)
   val cursorPools: CursorPools = new CursorPools(cursorFactory)
   private var _expressionVariables = new Array[AnyValue](8)
+  private var _tracer = KernelReadTracer.NONE
 
   def expressionVariables(nExpressionSlots: Int): Array[AnyValue] = {
     if (_expressionVariables.length < nExpressionSlots)
@@ -27,11 +28,14 @@ class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
   }
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
+    this._tracer = tracer
     expressionCursors.nodeCursor.setTracer(tracer)
     expressionCursors.relationshipScanCursor.setTracer(tracer)
     expressionCursors.propertyCursor.setTracer(tracer)
     cursorPools.setKernelTracer(tracer)
   }
+
+  def getKernelTracer: KernelReadTracer = _tracer
 
   override def close(): Unit = {
     IOUtils.closeAll(expressionCursors, cursorPools)

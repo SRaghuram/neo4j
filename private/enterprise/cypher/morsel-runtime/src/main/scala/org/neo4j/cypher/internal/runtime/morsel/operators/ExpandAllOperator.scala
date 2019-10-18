@@ -77,6 +77,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
         val pools: CursorPools = resources.cursorPools
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
         relationships = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
+        relationships.setTracer(resources.getKernelTracer)
         true
       }
     }
