@@ -35,7 +35,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.internal.kernel.api.Transaction.Type.explicit;
 
-public class SystemGraphAuraUserManagementIT
+public class SystemGraphRestrictedUserManagementIT
 {
     private TestDirectory testDirectory = TestDirectory.testDirectory( getClass() );
 
@@ -88,7 +88,7 @@ public class SystemGraphAuraUserManagementIT
     @Test
     public void shouldOnlyHaveUserManagementProceduresWithRBACDisabled()
     {
-        dbRule.withSetting( SecuritySettings.aura_restrict_rbac, "true" );
+        dbRule.withSetting( SecuritySettings.restrict_rbac, "true" );
         try ( Transaction transaction = dbRule.beginTx() )
         {
             Result result = dbRule.execute( "CALL dbms.procedures() YIELD name WHERE name STARTS WITH 'dbms.security' RETURN name" );
@@ -128,7 +128,7 @@ public class SystemGraphAuraUserManagementIT
     @Test
     public void shouldCreateUserAsAdminWithRBACDisabled() throws InvalidAuthTokenException
     {
-        dbRule.withSetting( SecuritySettings.aura_restrict_rbac, "true" );
+        dbRule.withSetting( SecuritySettings.restrict_rbac, "true" );
         try ( Transaction transaction = dbRule.beginTx() )
         {
             dbRule.execute( "CALL dbms.security.createUser('foo', 'bar', false)" ).close();

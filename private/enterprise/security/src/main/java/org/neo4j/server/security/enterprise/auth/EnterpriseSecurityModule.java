@@ -101,9 +101,9 @@ public class EnterpriseSecurityModule extends SecurityModule
 
             String warning = config.get( SecuritySettings.auth_providers ).size() > 1 ? "%s only applies to native users." : null;
             procedures.registerProcedure( UserManagementProcedures.class, true, warning );
-            if ( config.get( SecuritySettings.aura_restrict_rbac ) )
+            if ( config.get( SecuritySettings.restrict_rbac ) )
             {
-                procedures.registerProcedure( AuraUserManagementProcedures.class, true, warning );
+                procedures.registerProcedure( RestrictedUserManagementProcedures.class, true, warning );
             }
             else
             {

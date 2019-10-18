@@ -18,7 +18,7 @@ import org.neo4j.string.UTF8;
 
 import static org.neo4j.procedure.Mode.DBMS;
 
-public class AuraUserManagementProcedures
+public class RestrictedUserManagementProcedures
 {
     @Context
     public EnterpriseUserManager userManager;
