@@ -14,6 +14,7 @@
     <name>Neo4j - LDBC Social Network Benchmarks Implementations</name>
 
     <properties>
+        <hamcrest.version>2.0.0.0</hamcrest.version>
         <ldbc-driver-version>0.3.2</ldbc-driver-version>
         <fastutil.version>7.0.10</fastutil.version>
         <commons-math3.version>3.6.1</commons-math3.version>
@@ -94,10 +95,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>${commons-math3.version}</version>
             <!-- I am overwriting scope here, this artifact scope
@@ -108,25 +105,24 @@
                  this change is only required for ldbc module -->
             <scope>runtime</scope>
         </dependency>
-        
+
         <!-- overwrite ldbc driver jackson versions -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-core</artifactId>
-			<version>${jackson2.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>${jackson2.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-annotations</artifactId>
-			<version>${jackson2.version}</version>
-		</dependency>
-		
-        <!--git sub-module libraries -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>com.ldbc.driver</groupId>
             <artifactId>jeeves</artifactId>
@@ -141,6 +137,30 @@
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-neo4j-common</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-neo4j-common-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>java-hamcrest</artifactId>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.test</groupId>
+            <artifactId>neo4j-harness-enterprise</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.findify</groupId>
+            <artifactId>s3mock_2.11</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

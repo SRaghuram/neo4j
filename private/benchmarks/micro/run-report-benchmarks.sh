@@ -8,10 +8,11 @@
 
 set -e
 set -u
+set -x
 
-if [ $# -lt 19 ] ; then
+if [ $# -lt 20 ] ; then
     echo "Expected at least 20 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path profilers triggered_by"
+    echo "usage: ./run-report-benchmarks.sh neo4j_version neo4j_commit neo4j_branch neo4j_branch_owner tool_branch tool_branch_owner tool_commit results_store_uri results_store_user results_store_password benchmark_config teamcity_build_id jvm_args jmh_args neo4j_config_path jvm_path profilers triggered_by work_dir"
     exit 1
 fi
 
@@ -34,14 +35,15 @@ neo4j_config_path="${16}"
 jvm_path="${17}"
 profilers="${18}"
 triggered_by="${19}"
+work_dir="${20}"
 micro_benchmarks_dir=$(pwd)
 json_path=${micro_benchmarks_dir}/results.json
 
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
-if [[ $# -eq 20 ]]; then
-	AWS_EXTRAS="--endpoint-url=${20}"
+if [[ $# -eq 21 ]]; then
+	AWS_EXTRAS="--endpoint-url=${21}"
 fi
 
 if [[ -z "$JAVA_HOME" ]]; then
@@ -74,8 +76,11 @@ echo "JSON Path : ${json_path}"
 echo "Profiler Recordings dir: ${profiler_recording_output_dir}"
 echo "Profilers: ${profilers}"
 echo "Build triggered by : ${triggered_by}"
+echo "Work directory : ${work_dir}"
 
-${jvm_path} -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run-export  \
+jar_path="${micro_benchmarks_dir}/target/micro-benchmarks.jar"
+
+${jvm_path} -jar "${jar_path}" run-export  \
         --jvm "${jvm_path}" \
         --jvm_args "${jvm_args}" \
         --jmh "${jmh_args}" \
@@ -92,6 +97,7 @@ ${jvm_path} -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run
         --tool_branch_owner "${tool_branch_owner}" \
         --config "${benchmark_config}" \
         --triggered-by "${triggered_by}" \
+        --stores-dir "${work_dir}" \
         --profiles-dir "${profiler_recording_output_dir}" \
         --profilers "${profilers}"
 
@@ -108,14 +114,14 @@ aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 cp "${archive}" s3://ben
 aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
 
 # --- enrich results file with profiler recording information (locations in S3) ---
-${jvm_path} -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main add-profiles \
+${jvm_path} -cp "${jar_path}" com.neo4j.bench.client.Main add-profiles \
     --dir "${profiler_recording_output_dir}"  \
     --s3-bucket benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}" \
     --archive benchmarking.neo4j.com/recordings/"${archive}"  \
     --test_run_report "${json_path}" \
     --ignore_unrecognized_files
 
-${jvm_path} -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main report \
+${jvm_path} -cp "${jar_path}" com.neo4j.bench.client.Main report \
             --results_store_uri "${results_store_uri}"  \
             --results_store_user "${results_store_user}"  \
             --results_store_pass "${results_store_password}" \

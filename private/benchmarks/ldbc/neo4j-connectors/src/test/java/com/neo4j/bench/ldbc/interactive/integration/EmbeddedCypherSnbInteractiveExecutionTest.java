@@ -8,12 +8,12 @@ package com.neo4j.bench.ldbc.interactive.integration;
 import com.ldbc.driver.control.DriverConfiguration;
 import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 public class EmbeddedCypherSnbInteractiveExecutionTest extends SnbInteractiveExecutionTest
 {
@@ -24,8 +24,8 @@ public class EmbeddedCypherSnbInteractiveExecutionTest extends SnbInteractiveExe
                 CsvSchema.CSV_REGULAR,
                 Neo4jSchema.NEO4J_REGULAR,
                 Neo4jApi.EMBEDDED_CYPHER,
-                PlannerType.DEFAULT,
-                RuntimeType.DEFAULT );
+                Planner.DEFAULT,
+                Runtime.DEFAULT );
     }
 
     @Override

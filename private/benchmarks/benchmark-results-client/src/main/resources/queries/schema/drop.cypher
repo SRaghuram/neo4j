@@ -1,5 +1,5 @@
 // Unique
-DROP CONSTRAINT ON ( annoation:Annoation ) ASSERT annoation.event_id IS UNIQUE
+DROP CONSTRAINT ON ( annotation:Annotation ) ASSERT annotation.event_id IS UNIQUE
 DROP CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name IS UNIQUE
 DROP CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE

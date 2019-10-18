@@ -18,6 +18,8 @@ import com.ldbc.driver.temporal.TimeSource;
 import com.ldbc.driver.validation.DbValidationResult;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
@@ -26,8 +28,6 @@ import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -61,8 +61,8 @@ public class IntegrationValidationTest
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
                         Neo4jApi.EMBEDDED_CYPHER,
-                        PlannerType.DEFAULT,
-                        RuntimeType.DEFAULT,
+                        Planner.DEFAULT,
+                        Runtime.DEFAULT,
                         LdbcDateCodec.Format.STRING_ENCODED,
                         LdbcDateCodec.Format.NUMBER_ENCODED,
                         LdbcDateCodec.Resolution.NOT_APPLICABLE
