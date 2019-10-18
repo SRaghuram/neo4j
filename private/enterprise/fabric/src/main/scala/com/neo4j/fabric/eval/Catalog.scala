@@ -60,13 +60,14 @@ object Catalog {
 
   private def fromDatabase(database: FabricConfig.Database): Catalog = {
 
+    val name = database.getName.name
     val direct = database.getGraphs.asScala
-      .map(fromGraph(database.getName, _))
+      .map(fromGraph(name, _))
       .foldLeft(empty)(merge)
 
     val functions = Catalog(Map(
-      CatalogName(database.getName, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(sid =>
-        direct.resolve(graphName(database.getName, sid.longValue()), Seq()))
+      CatalogName(name, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(sid =>
+        direct.resolve(graphName(name, sid.longValue()), Seq()))
     ))
 
     direct ++ functions

@@ -14,6 +14,7 @@ import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
 import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
+import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph
 import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.TestName
@@ -32,7 +33,7 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
 
   private val config = new FabricConfig(
     true,
-    new FabricConfig.Database("mega", util.Set.of(mega0, mega1, mega2)),
+    new FabricConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
     new FabricConfig.DataStream(300, 1000, 50)

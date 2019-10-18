@@ -23,6 +23,7 @@ import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
+import static org.neo4j.configuration.SettingValueParsers.DATABASENAME;
 import static org.neo4j.configuration.SettingValueParsers.DURATION;
 import static org.neo4j.configuration.SettingValueParsers.INT;
 import static org.neo4j.configuration.SettingValueParsers.STRING;
@@ -51,7 +52,7 @@ public class FabricSettings implements SettingsDeclaration
             .build();
 
     @Description( "Name of the Fabric database. Only one Fabric database is currently supported per Neo4j instance." )
-    static Setting<String> databaseName = newBuilder( "fabric.database.name", STRING, null ).build();
+    static Setting<String> databaseName = newBuilder( "fabric.database.name", DATABASENAME, null ).build();
 
     @Description( "The time to live (TTL) of a routing table for fabric routing group." )
     static Setting<Duration> routingTtlSetting = newBuilder( "fabric.routing.ttl", DURATION, ofMinutes( 1 )  ).build();

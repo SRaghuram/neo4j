@@ -16,6 +16,7 @@ import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.util.Errors.InvalidQueryException
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.Config
+import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
@@ -37,7 +38,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   private val shardBar0 = new Graph(2, URI.create("bolt://bar"), "neo4j", "shard-name-2", null)
   private val config = new FabricConfig(
     true,
-    new Database("mega", util.Set.of(shardFoo0, shardFoo1, shardBar0)),
+    new Database(new NormalizedDatabaseName("mega"), util.Set.of(shardFoo0, shardFoo1, shardBar0)),
     util.List.of(), Duration.ZERO, Duration.ZERO, new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 1, null), new FabricConfig.DataStream(300, 1000, 50)
   )
   private val params = MapValue.EMPTY

@@ -32,7 +32,7 @@ public class GraphIdsFunction implements CallableUserFunction
     public GraphIdsFunction( FabricConfig fabricConfig )
     {
         this.fabricConfig = fabricConfig;
-        String namespace = fabricConfig.getDatabase().getName();
+        String namespace = fabricConfig.getDatabase().getName().name();
         this.signature = new UserFunctionSignature(
                 new QualifiedName( new String[]{namespace}, NAME ),
                 ARGUMENT_TYPES, RESULT_TYPE, null, new String[0],

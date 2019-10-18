@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -71,20 +72,21 @@ public class FabricDatabaseManager extends LifecycleAdapter
         }
     }
 
-    public boolean isFabricDatabase( String databaseName )
+    public boolean isFabricDatabase( String databaseNameRaw )
     {
+        var databaseName = new NormalizedDatabaseName( databaseNameRaw );
         return fabricConfig.isEnabled() && fabricConfig.getDatabase().getName().equals( databaseName );
     }
 
-    public GraphDatabaseFacade getDatabase( String databaseName ) throws UnavailableException
+    public GraphDatabaseFacade getDatabase( String databaseNameRaw ) throws UnavailableException
     {
-        var graphDatabaseFacade = databaseIdRepository.getByName( databaseName )
+        var graphDatabaseFacade = databaseIdRepository.getByName( databaseNameRaw )
                 .flatMap( databaseId -> databaseManager.getDatabaseContext( databaseId ) )
-                .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseName + " not found" ) )
+                .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseNameRaw + " not found" ) )
                 .databaseFacade();
         if ( !graphDatabaseFacade.isAvailable( 0 ) )
         {
-            throw new UnavailableException( "Database %s not available " + databaseName );
+            throw new UnavailableException( "Database %s not available " + databaseNameRaw );
         }
 
         return graphDatabaseFacade;
@@ -100,7 +102,7 @@ public class FabricDatabaseManager extends LifecycleAdapter
                 Node fabricDb = nodes.next();
                 var dbName = fabricDb.getProperty( "name" );
 
-                if ( !fabricConfig.isEnabled() || !fabricConfig.getDatabase().getName().equals( dbName ) )
+                if ( !fabricConfig.isEnabled() || !fabricConfig.getDatabase().getName().name().equals( dbName ) )
                 {
                     fabricDb.setProperty( "status", "offline" );
                 }
@@ -117,12 +119,12 @@ public class FabricDatabaseManager extends LifecycleAdapter
         return iterator.apply( tx.findNodes( DATABASE_LABEL, "fabric", true ) );
     }
 
-    private void newFabricDb( Transaction tx, String dbName )
+    private void newFabricDb( Transaction tx, NormalizedDatabaseName dbName )
     {
         try
         {
             Node node = tx.createNode( DATABASE_LABEL );
-            node.setProperty( DATABASE_NAME_PROPERTY, dbName );
+            node.setProperty( DATABASE_NAME_PROPERTY, dbName.name() );
             node.setProperty( DATABASE_UUID_PROPERTY, UUID.randomUUID().toString() );
             node.setProperty( DATABASE_STATUS_PROPERTY, "online" );
             node.setProperty( DATABASE_DEFAULT_PROPERTY, false );
@@ -130,7 +132,7 @@ public class FabricDatabaseManager extends LifecycleAdapter
         }
         catch ( ConstraintViolationException e )
         {
-            throw new IllegalStateException( "The specified database '" + dbName + "' already exists." );
+            throw new IllegalStateException( "The specified database '" + dbName.name() + "' already exists." );
         }
     }
 }

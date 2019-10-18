@@ -5,9 +5,11 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.eval.UseEvaluation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import scala.collection.Seq;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,11 +20,15 @@ import java.util.Map;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.v4_0.ast.CatalogName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.values.storable.Values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
+import static scala.collection.JavaConverters.asScalaBuffer;
 
 class FabricDatabaseManagementTest
 {
@@ -54,7 +61,10 @@ class FabricDatabaseManagementTest
         Map<String,String> configProperties = Map.of();
         if ( fabricDatabaseName != null )
         {
-            configProperties = Map.of( "fabric.database.name", fabricDatabaseName );
+            configProperties = Map.of(
+                    "fabric.database.name", fabricDatabaseName,
+                    "fabric.graph.0.uri", "neo4j://foo.com"
+            );
         }
 
         var config = Config.newBuilder().setRaw( configProperties ).build();
@@ -139,6 +149,39 @@ class FabricDatabaseManagementTest
         }
 
         stopServer();
+    }
+
+    @Test
+    void testDatabaseNameNormalization()
+    {
+        createServer( "MEGA" );
+
+        try ( var tx = openSystemDbTransaction() )
+        {
+            var fabricDatabases = getFabricDatabases( tx );
+            assertEquals( 1, fabricDatabases.size() );
+            var mega = getDb( fabricDatabases, "mega" );
+            assertNotNull( mega );
+            assertEquals( "online", mega.getProperty( DATABASE_STATUS_PROPERTY ) );
+        }
+
+        GlobalProcedures procedures = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
+        UseEvaluation useEvaluation = testServer.getDependencies().resolveDependency( UseEvaluation.class );
+
+        assertNotNull(
+                procedures.function( new QualifiedName( List.of( "mega" ), "graphIds" ) )
+        );
+
+        assertNotNull(
+                useEvaluation.catalog().resolve( CatalogName.apply( seq( "mega", "graph" ) ), seq( Values.longValue( 0 ) ) )
+        );
+
+        stopServer();
+    }
+
+    private <T> Seq<T> seq( T... elements )
+    {
+        return asScalaBuffer( List.of( elements ) );
     }
 
     private Node getDb( List<Node> fabricDatabases, String name )

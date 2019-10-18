@@ -15,6 +15,7 @@ import org.neo4j.configuration.Config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,11 +41,29 @@ class FabricConfigTest
         assertTrue( fabricConfig.isEnabled() );
 
         var database = fabricConfig.getDatabase();
-        assertEquals( "mega", database.getName() );
+        assertEquals( "mega", database.getName().name() );
         assertEquals( Set.of(
                 new FabricConfig.Graph( 0L, URI.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
                 new FabricConfig.Graph( 1L, URI.create( "bolt://mega:2222" ), "db0", "source-of-all-wisdom", emptyDriverConfig() )
-                ), database.getGraphs() );
+        ), database.getGraphs() );
+    }
+
+    @Test
+    void testDatabaseNameNormalization()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "MeGa"
+        );
+
+        var config = Config.newBuilder()
+                .setRaw( properties )
+                .build();
+
+        var fabricConfig = FabricConfig.from( config );
+        assertTrue( fabricConfig.isEnabled() );
+
+        var database = fabricConfig.getDatabase();
+        assertEquals( "mega", database.getName().name() );
     }
 
     @Test
@@ -65,6 +84,20 @@ class FabricConfigTest
     }
 
     @Test
+    void testInvalidDatabaseName()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega!"
+        );
+
+        assertThrows( IllegalArgumentException.class,
+                () -> Config.newBuilder()
+                        .setRaw( properties )
+                        .build()
+        );
+    }
+
+    @Test
     void testNoFabricDb()
     {
         var properties = Map.of(
@@ -81,6 +114,20 @@ class FabricConfigTest
     }
 
     @Test
+    void testEmptyConfig()
+    {
+        var properties = Map.<String,String>of();
+
+        var config = Config.newBuilder()
+                .setRaw( properties )
+                .build();
+
+        var fabricConfig = FabricConfig.from( config );
+        assertFalse( fabricConfig.isEnabled() );
+        assertNull( fabricConfig.getDatabase() );
+    }
+
+    @Test
     void testRequired()
     {
         var properties = Map.of(
@@ -93,7 +140,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ));
+        assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ) );
     }
 
     private FabricConfig.DriverConfig emptyDriverConfig()

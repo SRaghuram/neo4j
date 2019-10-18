@@ -685,6 +685,24 @@ class EndToEndTest
     }
 
     @Test
+    void testNameNormalization()
+    {
+        List<Record> r;
+
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "MeGa" ).build() ).beginTransaction() )
+        {
+            var query = "USE mega.graph(0) RETURN 1 AS x";
+
+            r = tx.run( query ).list();
+            tx.success();
+        }
+
+        assertThat( r.size(), equalTo( 1 ) );
+        assertThat( r.get( 0 ).keys(), contains( "x" ) );
+        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ) ) );
+    }
+
+    @Test
     void testCorrelatedRemoteSubquery()
     {
         List<Record> r;

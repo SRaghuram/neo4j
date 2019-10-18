@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Level;
 
@@ -140,9 +141,10 @@ public class FabricConfig
         var driverEventLoopCount = config.get( FabricSettings.driverEventLoopCount );
 
         var driverConfig = new DriverConfig( config.get( FabricSettings.driverLoggingLevel ), config.get( FabricSettings.driverLogLeakedSessions ),
-                config.get(FabricSettings.driverMaxConnectionPoolSize), config.get(FabricSettings.driverIdleTimeBeforeConnectionTest),
-                config.get(FabricSettings.driverMaxConnectionLifetime), config.get(FabricSettings.driverConnectionAcquisitionTimeout),
-                config.get(FabricSettings.driverEncrypted), config.get(FabricSettings.driverTrustStrategy), config.get(FabricSettings.driverConnectTimeout),
+                config.get( FabricSettings.driverMaxConnectionPoolSize ), config.get( FabricSettings.driverIdleTimeBeforeConnectionTest ),
+                config.get( FabricSettings.driverMaxConnectionLifetime ), config.get( FabricSettings.driverConnectionAcquisitionTimeout ),
+                config.get( FabricSettings.driverEncrypted ), config.get( FabricSettings.driverTrustStrategy ),
+                config.get( FabricSettings.driverConnectTimeout ),
                 config.get( FabricSettings.driverApi ) );
 
         var remoteGraphDriver = new GlobalDriverConfig( driverIdleTimeout, driverIdleCheckInterval, driverEventLoopCount, driverConfig );
@@ -158,21 +160,22 @@ public class FabricConfig
 
     private static Optional<Database> parseDatabase( Config config )
     {
-        var databaseName = config.get( FabricSettings.databaseName );
+        var databaseNameRaw = config.get( FabricSettings.databaseName );
 
-        if ( databaseName == null )
+        if ( databaseNameRaw == null )
         {
             return Optional.empty();
         }
 
+        var databaseName = new NormalizedDatabaseName( databaseNameRaw );
         var graphSettings = config.getGroups( FabricSettings.GraphSetting.class ).entrySet().stream().map( entry ->
         {
             var graphId = parseGraphId( entry.getKey() );
             var graphSetting = entry.getValue();
             var driverConfig = new DriverConfig( config.get( graphSetting.driverLoggingLevel ), config.get( graphSetting.driverLogLeakedSessions ),
-                    config.get(graphSetting.driverMaxConnectionPoolSize), config.get(graphSetting.driverIdleTimeBeforeConnectionTest),
-                    config.get(graphSetting.driverMaxConnectionLifetime), config.get(graphSetting.driverConnectionAcquisitionTimeout),
-                    config.get(graphSetting.driverEncrypted), config.get(graphSetting.driverTrustStrategy), config.get(graphSetting.driverConnectTimeout),
+                    config.get( graphSetting.driverMaxConnectionPoolSize ), config.get( graphSetting.driverIdleTimeBeforeConnectionTest ),
+                    config.get( graphSetting.driverMaxConnectionLifetime ), config.get( graphSetting.driverConnectionAcquisitionTimeout ),
+                    config.get( graphSetting.driverEncrypted ), config.get( graphSetting.driverTrustStrategy ), config.get( graphSetting.driverConnectTimeout ),
                     config.get( graphSetting.driverApi ) );
             return new Graph( graphId, config.get( graphSetting.uri ), config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
         } ).collect( Collectors.toSet() );
@@ -194,16 +197,16 @@ public class FabricConfig
 
     public static class Database
     {
-        private final String name;
+        private final NormalizedDatabaseName name;
         private final Set<Graph> graphs;
 
-        public Database( String name, Set<Graph> graphs )
+        public Database( NormalizedDatabaseName name, Set<Graph> graphs )
         {
             this.name = name;
             this.graphs = graphs;
         }
 
-        public String getName()
+        public NormalizedDatabaseName getName()
         {
             return name;
         }
