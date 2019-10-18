@@ -1239,9 +1239,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case Property(targetExpression, PropertyKeyName(key)) =>
       for (map <- intermediateCompileExpression(targetExpression)) yield {
         val variableName = namer.nextVariableName()
-        val propertyGet = invokeStatic(method[CypherFunctions, AnyValue, String, AnyValue, DbAccess,
-          NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
-                                       constant(key), map.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
+        val propertyGet = getProperty(key, nullCheckIfRequired(map))
         val call = noValueOr(map)(propertyGet)
         val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, call))
         val ops = block(lazySet, load(variableName))
@@ -2100,6 +2098,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
   protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
+  protected def getProperty(key: String, container: IntermediateRepresentation): IntermediateRepresentation
 
   def getArgumentAt(offset: Int): IntermediateRepresentation =
     if (offset == TopLevelArgument.SLOT_OFFSET) {
@@ -3021,4 +3021,14 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
   override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invoke(DB_ACCESS, RELATIONSHIP_PROPERTY,
            getLongAt(offset), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))
+
+  override protected def getProperty(key: String, container: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(
+      method[CypherFunctions, AnyValue, String, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
+      constant(key),
+      container,
+      DB_ACCESS,
+      NODE_CURSOR,
+      RELATIONSHIP_CURSOR,
+      PROPERTY_CURSOR)
 }

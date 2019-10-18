@@ -8,12 +8,14 @@ package org.neo4j.cypher.internal.runtime.morsel
 import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
+import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
 import org.neo4j.cypher.operations.CompiledCursorUtils
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
+import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
 import scala.collection.mutable.ArrayBuffer
@@ -242,6 +244,18 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       getLongAt(offset),
       ExpressionCompiler.PROPERTY_CURSOR,
       propertyToken)
+
+  override protected def getProperty(key: String,
+                                     container: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(
+      method[CompiledCursorUtils, AnyValue, String, AnyValue, Read, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
+      constant(key),
+      container,
+      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      ExpressionCompiler.DB_ACCESS,
+      ExpressionCompiler.NODE_CURSOR,
+      ExpressionCompiler.RELATIONSHIP_CURSOR,
+      ExpressionCompiler.PROPERTY_CURSOR)
 
   def writeLocalsToSlots(): IntermediateRepresentation = {
     val writeLongs = locals.getAllLocalsForLongSlots.map { case (offset, local) =>
