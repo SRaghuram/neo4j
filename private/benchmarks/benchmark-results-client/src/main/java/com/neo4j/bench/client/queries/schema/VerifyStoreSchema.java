@@ -98,9 +98,6 @@ public class VerifyStoreSchema implements Query<Void>
             assertManyToOne( "Plan nodes connect to PlanTree nodes correctly",
                              "(:Plan)", "-[:HAS_PLAN_TREE]->", "(:PlanTree)", session );
 
-            assertOneToOne( "Plan nodes connect to CompilationMetrics nodes correctly",
-                            "(:Plan)", "-[:HAS_COMPILATION_METRICS]->", "(:CompilationMetrics)", session );
-
             assertManyToOne( "PlanTree nodes connect to Operator nodes correctly",
                              "(:PlanTree)", "-[:HAS_OPERATORS]->", "(:Operator)", session );
 

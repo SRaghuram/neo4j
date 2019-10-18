@@ -26,7 +26,6 @@ import com.neo4j.bench.common.model.Java;
 import com.neo4j.bench.common.model.Metrics;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.model.Plan;
-import com.neo4j.bench.common.model.PlanCompilationMetrics;
 import com.neo4j.bench.common.model.PlanOperator;
 import com.neo4j.bench.common.model.PlanTree;
 import com.neo4j.bench.common.model.Project;
@@ -178,7 +177,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
-            assertLabelCount( "CompilationMetrics", 0, client );
             assertLabelCount( "PlanTree", 0, client );
             assertLabelCount( "Operator", 0, client );
             // Annotation specific
@@ -222,7 +220,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
-            assertLabelCount( "CompilationMetrics", 0, client );
             assertLabelCount( "PlanTree", 0, client );
             assertLabelCount( "Operator", 0, client );
             // Annotation specific
@@ -256,7 +253,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
-            assertLabelCount( "CompilationMetrics", 0, client );
             assertLabelCount( "PlanTree", 0, client );
             assertLabelCount( "Operator", 0, client );
             // Annotation specific
@@ -299,7 +295,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 0, client );
-            assertLabelCount( "CompilationMetrics", 0, client );
             assertLabelCount( "PlanTree", 0, client );
             assertLabelCount( "Operator", 0, client );
             // Annotation specific
@@ -370,7 +365,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 2, client );
-            assertLabelCount( "CompilationMetrics", 2, client );
             assertLabelCount( "PlanTree", 1, client );
             assertLabelCount( "Operator", 7, client );
             // Annotation specific
@@ -426,7 +420,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 5, client );
-            assertLabelCount( "CompilationMetrics", 5, client );
             assertLabelCount( "PlanTree", 3, client );
             assertLabelCount( "Operator", 21, client );
             // Annotation specific
@@ -449,7 +442,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 5, client );
-            assertLabelCount( "CompilationMetrics", 5, client );
             assertLabelCount( "PlanTree", 3, client );
             assertLabelCount( "Operator", 21, client );
             // Annotation specific
@@ -525,7 +517,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 2, client );
-            assertLabelCount( "CompilationMetrics", 2, client );
             assertLabelCount( "PlanTree", 2, client );
             assertLabelCount( "Operator", 14, client );
             // Annotation specific
@@ -548,7 +539,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 2, client );
-            assertLabelCount( "CompilationMetrics", 2, client );
             assertLabelCount( "PlanTree", 2, client );
             assertLabelCount( "Operator", 14, client );
             // Annotation specific
@@ -624,7 +614,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 2, client );
-            assertLabelCount( "CompilationMetrics", 2, client );
             assertLabelCount( "PlanTree", 1, client );
             assertLabelCount( "Operator", 7, client );
             // Annotation specific
@@ -647,7 +636,6 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkTool", 1, client );
             // plan specific
             assertLabelCount( "Plan", 2, client );
-            assertLabelCount( "CompilationMetrics", 2, client );
             assertLabelCount( "PlanTree", 1, client );
             assertLabelCount( "Operator", 7, client );
             // Annotation specific
@@ -671,7 +659,6 @@ public class SubmitTestRunsAndPlansIT
         assertLabelCount( "BenchmarkTool", 0, client );
         // plan specific
         assertLabelCount( "Plan", 0, client );
-        assertLabelCount( "CompilationMetrics", 0, client );
         assertLabelCount( "PlanTree", 0, client );
         assertLabelCount( "Operator", 0, client );
         // Annotation specific
@@ -793,9 +780,6 @@ public class SubmitTestRunsAndPlansIT
         root.addChild( left );
         root.addChild( right );
 
-        Map<String,Long> planCompilationMetricsMap = new HashMap<>();
-        planCompilationMetricsMap.put( "total", 9L );
-
         return new Plan(
                 "cost",
                 "cost",
@@ -804,7 +788,6 @@ public class SubmitTestRunsAndPlansIT
                 "legacy_compiled",
                 "legacy_compiled",
                 "3.2",
-                new PlanCompilationMetrics( planCompilationMetricsMap ),
                 new PlanTree( description, root )
         );
     }

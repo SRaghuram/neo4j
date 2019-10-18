@@ -7,7 +7,6 @@ package com.neo4j.bench.macro.execution.database;
 
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Plan;
-import com.neo4j.bench.common.model.PlanCompilationMetrics;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
@@ -19,7 +18,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.QueryString;
 
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
@@ -30,8 +28,6 @@ import static com.neo4j.bench.common.tool.macro.ExecutionMode.PROFILE;
 
 public class PlanCreator
 {
-    private static final PlanCompilationMetrics NO_PLAN_COMPILATION_METRICS = new PlanCompilationMetrics( new HashMap<>() );
-
     public static Path exportPlan( ForkDirectory forkDirectory,
                                    Store store,
                                    Edition edition,
@@ -95,7 +91,7 @@ public class PlanCreator
                                                                                 queryString.planner().name(),
                                                                                 queryString.runtime().name() );
 
-        return plannerDescription.toPlan( NO_PLAN_COMPILATION_METRICS );
+        return plannerDescription.toPlan();
     }
 
     private static ExecutionPlanDescription getPlanDescriptionFor( GraphDatabaseService db,
