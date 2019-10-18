@@ -58,6 +58,8 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate5AddForumMembers
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate6AddPost;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.Neo4jQuery;
@@ -93,8 +95,6 @@ import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate5Embe
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate6EmbeddedCypher;
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate7EmbeddedCypher;
 import com.neo4j.bench.ldbc.interactive.embedded_cypher_regular.Neo4jUpdate8EmbeddedCypher;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 import java.io.File;
 import java.util.List;
@@ -166,7 +166,7 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCypherDefaultTest
                 null,
                 new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
                 // TODO create tests for Interpreted/Compiled too
-                SnbInteractiveCypherQueries.createWith( PlannerType.DEFAULT, RuntimeType.DEFAULT ),
+                SnbInteractiveCypherQueries.createWith( Planner.DEFAULT, Runtime.DEFAULT ),
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE
         );

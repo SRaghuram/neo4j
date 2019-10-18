@@ -9,14 +9,14 @@ import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.help.Help;
 import com.google.common.base.Charsets;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 import java.io.File;
 import java.nio.charset.Charset;
@@ -143,8 +143,8 @@ public class LdbcCli
                                 writeParametersDir,
                                 readParametersDir,
                                 neo4jApi,
-                                PlannerType.valueOf( ldbcDriverConfig.asMap().getOrDefault( "neo4j.planner", PlannerType.DEFAULT.name() ) ),
-                                RuntimeType.valueOf( ldbcDriverConfig.asMap().getOrDefault( "neo4j.runtime", RuntimeType.DEFAULT.name() ) ),
+                                Planner.valueOf( ldbcDriverConfig.asMap().getOrDefault( "neo4j.planner", Planner.DEFAULT.name() ) ),
+                                Runtime.valueOf( ldbcDriverConfig.asMap().getOrDefault( "neo4j.runtime", Runtime.DEFAULT.name() ) ),
                                 ldbcConfig,
                                 neo4jConfig,
                                 readThreads,

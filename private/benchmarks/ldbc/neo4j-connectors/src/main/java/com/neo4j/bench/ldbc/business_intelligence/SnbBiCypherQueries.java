@@ -32,6 +32,8 @@ import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery6ActivePosters;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery7AuthoritativeUsers;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery8RelatedTopics;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery9RelatedForums;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.business_intelligence.queries.Neo4jSnbBiQuery1;
 import com.neo4j.bench.ldbc.business_intelligence.queries.Neo4jSnbBiQuery10;
 import com.neo4j.bench.ldbc.business_intelligence.queries.Neo4jSnbBiQuery11;
@@ -59,8 +61,6 @@ import com.neo4j.bench.ldbc.business_intelligence.queries.Neo4jSnbBiQuery8;
 import com.neo4j.bench.ldbc.business_intelligence.queries.Neo4jSnbBiQuery9;
 import com.neo4j.bench.ldbc.utils.AnnotatedQueries;
 import com.neo4j.bench.ldbc.utils.AnnotatedQuery;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -73,7 +73,7 @@ public class SnbBiCypherQueries implements AnnotatedQueries
         return new SnbBiCypherQueries();
     }
 
-    public static SnbBiCypherQueries createWith( PlannerType plannerType, RuntimeType runtimeType )
+    public static SnbBiCypherQueries createWith( Planner plannerType, Runtime runtimeType )
     {
         return new SnbBiCypherQueries()
                 .withQuery(
@@ -213,8 +213,8 @@ public class SnbBiCypherQueries implements AnnotatedQueries
     private SnbBiCypherQueries withQuery(
             int operationType,
             String queryString,
-            RuntimeType runtimeType,
-            PlannerType plannerType )
+            Runtime runtimeType,
+            Planner plannerType )
     {
         annotatedQueries.put(
                 operationType,

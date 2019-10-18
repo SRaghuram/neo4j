@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j.bench</groupId>
@@ -15,6 +15,7 @@
 
     <properties>
         <moduleName>com.neo4j.bench.ldbc</moduleName>
+        <java.hamcrest.version>2.0.0.0</java.hamcrest.version>
         <ldbc-driver-version>0.3.2</ldbc-driver-version>
         <fastutil.version>7.0.10</fastutil.version>
         <uberjar.name>ldbc</uberjar.name>
@@ -111,23 +112,22 @@
         </dependency>
 
         <!-- overwrite ldbc driver jackson versions -->
-    		<dependency>
-    			<groupId>com.fasterxml.jackson.core</groupId>
-    			<artifactId>jackson-core</artifactId>
-    			<version>${jackson.version}</version>
-    		</dependency>
-    		<dependency>
-    			<groupId>com.fasterxml.jackson.core</groupId>
-    			<artifactId>jackson-databind</artifactId>
-    			<version>${jackson.version}</version>
-    		</dependency>
-    		<dependency>
-    			<groupId>com.fasterxml.jackson.core</groupId>
-    			<artifactId>jackson-annotations</artifactId>
-    			<version>${jackson.version}</version>
-    		</dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
 
-        <!--git sub-module libraries -->
         <dependency>
             <groupId>com.ldbc.driver</groupId>
             <artifactId>jeeves</artifactId>
@@ -142,6 +142,30 @@
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-neo4j-common</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-neo4j-common-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>java-hamcrest</artifactId>
+            <version>${java.hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j.test</groupId>
+            <artifactId>neo4j-harness-enterprise</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.findify</groupId>
+            <artifactId>s3mock_${scala.binary.version}</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

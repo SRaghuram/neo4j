@@ -22,7 +22,7 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.oneOf;
+import static org.hamcrest.Matchers.isOneOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -103,7 +103,7 @@ class ValueGeneratorUtilTest
         assertThat( withPad, equalTo( "0000012345" ) );
 
         String withPadSmall = prefixPad( "12345", '0', 5 );
-        assertThat( withPadSmall, is( oneOf( "12345", "12345" ) ) );
+        assertThat( withPadSmall, is( isOneOf( "12345", "12345" ) ) );
     }
 
     @Test
@@ -122,7 +122,7 @@ class ValueGeneratorUtilTest
         assertThat( withPad, equalTo( "1234500000" ) );
 
         String withPadSmall = suffixPad( "12345", '0', 5 );
-        assertThat( withPadSmall, is( oneOf( "12345", "12345" ) ) );
+        assertThat( withPadSmall, is( isOneOf( "12345", "12345" ) ) );
     }
 
     @Test
@@ -138,10 +138,10 @@ class ValueGeneratorUtilTest
     void shouldMiddlePad() throws IOException
     {
         String withPadRegular = middlePad( "12345", '0', 10 );
-        assertThat( withPadRegular, is( oneOf( "0012345000", "0001234500" ) ) );
+        assertThat( withPadRegular, is( isOneOf( "0012345000", "0001234500" ) ) );
 
         String withPadSmall = middlePad( "12345", '0', 6 );
-        assertThat( withPadSmall, is( oneOf( "012345", "123450" ) ) );
+        assertThat( withPadSmall, is( isOneOf( "012345", "123450" ) ) );
     }
 
     @Test

@@ -15,7 +15,6 @@
     <name>Neo4j - LDBC Social Network Benchmarks</name>
 
     <properties>
-        <neo4j.version>${project.version}</neo4j.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
 

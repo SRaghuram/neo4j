@@ -7,9 +7,9 @@ package com.neo4j.bench.ldbc;
 
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.db.DummyLdbcSnbInteractiveOperationInstances;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveCypherQueries;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
 
 import java.io.BufferedWriter;
@@ -41,8 +41,8 @@ public class QueryPrinter
     private static void writeQueriesToFile( File dir ) throws IOException, DbException
     {
         SnbInteractiveCypherQueries queries = SnbInteractiveCypherQueries.createWith(
-                PlannerType.DEFAULT,
-                RuntimeType.DEFAULT );
+                Planner.DEFAULT,
+                Runtime.DEFAULT );
         File file = new File( dir, "queries.txt" );
         if ( file.exists() )
         {
