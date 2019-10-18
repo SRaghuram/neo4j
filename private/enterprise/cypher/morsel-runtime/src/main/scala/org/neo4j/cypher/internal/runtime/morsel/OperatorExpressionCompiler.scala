@@ -6,13 +6,13 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.codegen.api.{CodeGeneration, IntermediateRepresentation}
-import org.neo4j.cypher.internal.codegen.CompiledCursorUtils
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
+import org.neo4j.cypher.operations.CompiledCursorUtils
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
 import org.neo4j.values.storable.Value
 

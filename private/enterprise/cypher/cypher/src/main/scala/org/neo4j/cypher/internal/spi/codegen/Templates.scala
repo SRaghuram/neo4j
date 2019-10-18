@@ -22,10 +22,9 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeEntityById, newRelationshipEntityById}
 import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
-import org.neo4j.exceptions.{CypherExecutionException, KernelException}
+import org.neo4j.exceptions.{CypherExecutionException, EntityNotFoundException, KernelException}
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.kernel.api._
-import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException
 import org.neo4j.io.IOUtils
 import org.neo4j.kernel.api.SilentTokenNameLookup
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor

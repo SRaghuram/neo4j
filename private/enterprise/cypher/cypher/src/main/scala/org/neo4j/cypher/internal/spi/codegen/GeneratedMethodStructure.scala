@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.v4_0.frontend.helpers._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}
+import org.neo4j.cypher.operations.CompiledCursorUtils
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
