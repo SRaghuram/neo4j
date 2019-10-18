@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler.LocalVariableSlotMapper
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE}
-import org.neo4j.cypher.operations.CompiledCursorUtils
+import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
@@ -221,7 +221,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invokeStatic(
-      method[CompiledCursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
+      method[CursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
       loadField(OperatorCodeGenHelperTemplates.DATA_READ),
       ExpressionCompiler.NODE_CURSOR,
       getLongAt(offset),
@@ -229,16 +229,16 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invokeStatic(
-          method[CompiledCursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
-          loadField(OperatorCodeGenHelperTemplates.DATA_READ),
-          ExpressionCompiler.NODE_CURSOR,
-          getLongAt(offset),
-          ExpressionCompiler.PROPERTY_CURSOR,
-          propertyToken)
+      method[CursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
+      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      ExpressionCompiler.NODE_CURSOR,
+      getLongAt(offset),
+      ExpressionCompiler.PROPERTY_CURSOR,
+      propertyToken)
 
   override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invokeStatic(
-      method[CompiledCursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
+      method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
       loadField(OperatorCodeGenHelperTemplates.DATA_READ),
       ExpressionCompiler.RELATIONSHIP_CURSOR,
       getLongAt(offset),
@@ -248,7 +248,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   override protected def getProperty(key: String,
                                      container: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
-      method[CompiledCursorUtils, AnyValue, String, AnyValue, Read, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
+      method[CursorUtils, AnyValue, String, AnyValue, Read, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
       constant(key),
       container,
       loadField(OperatorCodeGenHelperTemplates.DATA_READ),

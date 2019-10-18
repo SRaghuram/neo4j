@@ -29,7 +29,7 @@ import org.neo4j.cypher.internal.v4_0.frontend.helpers._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}
-import org.neo4j.cypher.operations.CompiledCursorUtils
+import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
@@ -544,8 +544,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def nodeGetRelationshipsWithDirection(iterVar: String, nodeVar: String, nodeVarType: CodeGenType, direction: SemanticDirection) = {
     generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
                      invoke(
-                       methodReference(typeRef[CompiledCursorUtils], typeRef[RelationshipSelectionCursor],
-                                       "nodeGetRelationships",  typeRef[Read], typeRef[CursorFactory],
+                       methodReference(typeRef[CursorUtils], typeRef[RelationshipSelectionCursor],
+                                       "nodeGetRelationships", typeRef[Read], typeRef[CursorFactory],
                                        typeRef[NodeCursor], typeRef[Long], typeRef[Direction]),
                        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction))
                      )
@@ -558,8 +558,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                                          typeVars: Seq[String]) = {
     generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
                      invoke(
-                       methodReference(typeRef[CompiledCursorUtils], typeRef[RelationshipSelectionCursor],
-                                       "nodeGetRelationships",  typeRef[Read], typeRef[CursorFactory],
+                       methodReference(typeRef[CursorUtils], typeRef[RelationshipSelectionCursor],
+                                       "nodeGetRelationships", typeRef[Read], typeRef[CursorFactory],
                                        typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[Array[Int]]),
                        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction),
                        newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)) )
@@ -1359,7 +1359,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     handleEntityNotFound(generator, fields, context.namer) { inner =>
       val invoked =
         invoke(
-          methodReference(typeRef[CompiledCursorUtils],
+          methodReference(typeRef[CursorUtils],
                           typeRef[Boolean], "nodeHasLabel",
                           typeRef[Read], typeRef[NodeCursor], typeRef[Long],
                           typeRef[Int]),
@@ -1406,7 +1406,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     handleEntityNotFound(generator, fields, context.namer) { body =>
       body.assign(local,
                     invoke(
-                      methodReference(typeRef[CompiledCursorUtils],
+                      methodReference(typeRef[CursorUtils],
                                       typeRef[Value], "nodeGetProperty",
                                       typeRef[Read], typeRef[NodeCursor], typeRef[Long],
                                       typeRef[PropertyCursor], typeRef[Int]),
@@ -1422,7 +1422,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     handleEntityNotFound(generator, fields, context.namer) { body =>
       body.assign(local,
                     invoke(
-                      methodReference(typeRef[CompiledCursorUtils],
+                      methodReference(typeRef[CursorUtils],
                                       typeRef[Value], "nodeGetProperty",
                                       typeRef[Read], typeRef[NodeCursor], typeRef[Long],
                                       typeRef[PropertyCursor], typeRef[Int]),
@@ -1457,7 +1457,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     handleEntityNotFound(generator, fields, context.namer) { body =>
       body.assign(local,
                     invoke(
-                      methodReference(typeRef[CompiledCursorUtils],
+                      methodReference(typeRef[CursorUtils],
                                       typeRef[Value], "relationshipGetProperty",
                                       typeRef[Read], typeRef[RelationshipScanCursor], typeRef[Long],
                                       typeRef[PropertyCursor], typeRef[Int]),
@@ -1473,7 +1473,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     handleEntityNotFound(generator, fields, context.namer) { body =>
       body.assign(local,
                     invoke(
-                      methodReference(typeRef[CompiledCursorUtils],
+                      methodReference(typeRef[CursorUtils],
                                       typeRef[Value], "relationshipGetProperty",
                                       typeRef[Read], typeRef[RelationshipScanCursor], typeRef[Long],
                                       typeRef[PropertyCursor], typeRef[Int]),
