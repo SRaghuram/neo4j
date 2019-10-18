@@ -7,17 +7,19 @@ package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeGenerationMode, CodeSaver}
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Block, IntermediateRepresentation, Load}
+import org.neo4j.codegen.api.{IntermediateRepresentation, Load}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.{SlottedCachedProperty, SlottedCachedPropertyWithoutPropertyToken}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
+import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompilerTest.matchIR
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselUnitTest
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
-import org.scalatest.matchers.{MatchResult, Matcher}
-import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompilerTest.{matchBeginsWithIR, matchIR}
+import org.neo4j.cypher.internal.runtime.morsel.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE, UNINITIALIZED_REF_SLOT_VALUE}
 import org.neo4j.cypher.internal.v4_0.expressions.{NODE_TYPE, PropertyKeyName}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition.NONE
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
+import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
+import org.scalatest.matchers.{MatchResult, Matcher}
 
 class OperatorExpressionCompilerTest extends MorselUnitTest {
 
@@ -39,6 +41,8 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     )
 
   val getFromStoreIr = print(constant("getFromStore"))
+  val setLongIr = constant(42L)
+  val setRefIr = constant("hello")
 
   val aSlotConfiguration =
     SlotConfiguration.empty
@@ -115,7 +119,6 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       val local = refSlotLocal(i)
       oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
-      getFirstTimeIr should not (matchIR(block(assign(local, getFromStoreIr), cast[Value](load(local)))))
     }
   }
 
@@ -191,7 +194,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState = oec.endInitializationScope(mergeIntoParentScope = false)
 
-    // Then coninuationState should have 3 fields
+    // Then continuationState should have 3 fields
     continuationState.fields should have size 3 // long1 + ref1 + boolean state flag
 
     // Then getAll... should _only_ return locals in root scope
@@ -234,7 +237,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState = oec.endInitializationScope(mergeIntoParentScope = true)
 
-    // Then coninuationState should have 3 fields
+    // Then continuationState should have 3 fields
     continuationState.fields should have size 3 // long1 + ref1 + boolean state flag
 
     // Then getAll... should return locals from root scope _and_ scope1
@@ -296,7 +299,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
 
-    // Then coninuationState2 should have 3 fields
+    // Then continuationState2 should have 3 fields
     continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
 
     // Then getAll... should _only_ return locals in scope1 + scope2
@@ -306,7 +309,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState1 = oec.endInitializationScope(mergeIntoParentScope = false)
 
-    // Then coninuationState1 should have 5 fields
+    // Then continuationState1 should have 5 fields
     continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag
 
     // Then getAll... should _only_ return locals in root scope
@@ -368,7 +371,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
 
-    // Then coninuationState2 should have 3 fields
+    // Then continuationState2 should have 3 fields
     continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
 
     // Then getAll... should _only_ return locals in scope1 + scope2
@@ -378,7 +381,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState1 = oec.endInitializationScope(mergeIntoParentScope = true)
 
-    // Then coninuationState1 should have 5 fields
+    // Then continuationState1 should have 5 fields
     continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag
 
     // Then getAll... should return locals from all scopes
@@ -452,7 +455,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState2 = oec.endInitializationScope(mergeIntoParentScope = true)
 
-    // Then coninuationState2 should have 3 fields
+    // Then continuationState2 should have 3 fields
     continuationState2.fields should have size 3 // long2 + ref2 + boolean state flag
 
     // Then getAll... should _only_ return locals in scope1 + scope2
@@ -463,13 +466,137 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
     // When
     val continuationState1 = oec.endInitializationScope(mergeIntoParentScope = true)
 
-    // Then coninuationState1 should have 5 fields
+    // Then continuationState1 should have 5 fields
     continuationState1.fields should have size 5 // long1 + ref1 + long2 + ref2 + boolean state flag
 
     // Then getAll... should return locals from all scopes
     oec.getAllLocalsForLongSlots shouldEqual Seq((0, long0), (1, long1), (2, long2))
     oec.getAllLocalsForRefSlots shouldEqual Seq((0, ref0), (1, ref1), (2, ref2))
     oec.getAllLocalsForCachedProperties shouldEqual Seq((2, ref2))
+  }
+
+  test("should handle writeLocalsToSlots in nested scope") {
+    val cachedProp9 = SlottedCachedPropertyWithoutPropertyToken("r9", PropertyKeyName("prop")(NONE), 9, false, "prop", 9, NODE_TYPE)
+
+    // Given
+    val slots = SlotConfiguration.empty
+      .newLong("l0", nullable = false, CTNode)
+      .newLong("l1", nullable = false, CTRelationship)
+      .newLong("l2", nullable = true, CTNode)
+      .newLong("l3", nullable = false, CTNode)
+      .newLong("l4", nullable = false, CTRelationship)
+      .newLong("l5", nullable = true, CTNode)
+      .newLong("l6", nullable = false, CTNode)
+      .newLong("l7", nullable = false, CTRelationship)
+      .newLong("l8", nullable = true, CTNode)
+      .newReference("r0", nullable = false, CTInteger)
+      .newReference("r1", nullable = false, CTString)
+      .newReference("r2", nullable = true, CTAny)
+      .newReference("r3", nullable = false, CTInteger)
+      .newReference("r4", nullable = false, CTString)
+      .newReference("r5", nullable = true, CTAny)
+      .newReference("r6", nullable = false, CTInteger)
+      .newReference("r7", nullable = false, CTString)
+      .newReference("r8", nullable = true, CTAny)
+      .newCachedProperty(cachedProp9)
+
+    val oec = createOperatorExpressionCompiler(slots)
+
+    // When
+    oec.getLongAt(0)
+    oec.getLongAt(1)
+    oec.getRefAt(0)
+    oec.getRefAt(1)
+    oec.setLongAt(1, setLongIr)
+    oec.setLongAt(2, setLongIr)
+    oec.setRefAt(1, setRefIr)
+    oec.setRefAt(2, setRefIr)
+
+    oec.beginScope("scope1")
+
+    oec.getLongAt(3)
+    oec.getLongAt(4)
+    oec.getRefAt(3)
+    oec.getRefAt(4)
+    oec.setLongAt(5, setLongIr)
+    oec.setLongAt(4, setLongIr)
+    oec.setRefAt(5, setRefIr)
+    oec.setRefAt(4, setRefIr)
+
+    oec.getLongAt(5)
+
+    oec.beginScope("scope2")
+
+    oec.getLongAt(6)
+    oec.getLongAt(7)
+    oec.getRefAt(7)
+    oec.getRefAt(6)
+    oec.setLongAt(7, setLongIr)
+    oec.setLongAt(8, setLongIr)
+    oec.setRefAt(7, setRefIr)
+    oec.setRefAt(8, setRefIr)
+
+    oec.getRefAt(8)
+    oec.getCachedPropertyAt(cachedProp9, getFromStoreIr)
+
+    // When
+    val writeIR = oec.writeLocalsToSlots()
+
+    // Then
+    writeIR shouldEqual block(
+      oec.setLongInExecutionContext(1, load(longSlotLocal(1))),
+      oec.setLongInExecutionContext(2, load(longSlotLocal(2))),
+      oec.setLongInExecutionContext(4, load(longSlotLocal(4))),
+      oec.setLongInExecutionContext(5, load(longSlotLocal(5))),
+      oec.setLongInExecutionContext(7, load(longSlotLocal(7))),
+      oec.setLongInExecutionContext(8, load(longSlotLocal(8))),
+      oec.setRefInExecutionContext(1, load(refSlotLocal(1))),
+      oec.setRefInExecutionContext(2, load(refSlotLocal(2))),
+      oec.setRefInExecutionContext(4, load(refSlotLocal(4))),
+      oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
+      oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
+      oec.setRefInExecutionContext(8, load(refSlotLocal(8)))
+    )
+
+    // When
+    val localState2 = oec.endScope()
+
+    // Then
+    localState2.locals shouldEqual List(
+      variable[Long]("longSlot6", oec.getLongFromExecutionContext(6, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot7", oec.getLongFromExecutionContext(7, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot8", UNINITIALIZED_LONG_SLOT_VALUE),
+      variable[AnyValue]("refSlot6", oec.getRefFromExecutionContext(6, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot7", oec.getRefFromExecutionContext(7, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot8", UNINITIALIZED_REF_SLOT_VALUE),
+      variable[AnyValue]("refSlot9", UNINITIALIZED_REF_SLOT_VALUE), // Cached properties are currently always initialized at runtime
+    )
+
+    // When
+    val localState1 = oec.endScope()
+
+    // Then
+    localState1.locals shouldEqual List(
+      variable[Long]("longSlot3", oec.getLongFromExecutionContext(3, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot4", oec.getLongFromExecutionContext(4, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot5", UNINITIALIZED_LONG_SLOT_VALUE),
+      variable[AnyValue]("refSlot3", oec.getRefFromExecutionContext(3, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot4", oec.getRefFromExecutionContext(4, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot5", UNINITIALIZED_REF_SLOT_VALUE),
+    )
+
+    // When
+    val localState0 = oec.endScope()
+
+    // Then
+    localState0.locals shouldEqual List(
+      variable[Long]("longSlot0", oec.getLongFromExecutionContext(0, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot1", oec.getLongFromExecutionContext(1, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot2", UNINITIALIZED_LONG_SLOT_VALUE),
+      variable[AnyValue]("refSlot0", oec.getRefFromExecutionContext(0, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot1", oec.getRefFromExecutionContext(1, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot2", UNINITIALIZED_REF_SLOT_VALUE),
+    )
   }
 
   private def longSlotLocal(offset: Int): String =

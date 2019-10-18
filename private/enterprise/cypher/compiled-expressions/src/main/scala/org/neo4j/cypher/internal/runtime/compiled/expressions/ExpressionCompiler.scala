@@ -2119,7 +2119,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
     invoke(context, method[ExecutionContext, Value, Int]("getCachedPropertyAt"), constant(offset))
 
-  protected final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+  final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
