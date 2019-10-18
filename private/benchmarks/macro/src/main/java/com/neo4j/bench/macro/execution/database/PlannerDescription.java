@@ -8,7 +8,6 @@ package com.neo4j.bench.macro.execution.database;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.model.Plan;
-import com.neo4j.bench.common.model.PlanCompilationMetrics;
 import com.neo4j.bench.common.model.PlanOperator;
 import com.neo4j.bench.common.model.PlanTree;
 
@@ -145,7 +144,7 @@ public class PlannerDescription
         return dbHits;
     }
 
-    public Plan toPlan( PlanCompilationMetrics compilationMetrics )
+    public Plan toPlan()
     {
         String version = (String) planDescription.getArguments().get( VERSION );
         return new Plan(
@@ -156,7 +155,6 @@ public class PlannerDescription
                 usedRuntime,
                 defaultRuntime,
                 version,
-                compilationMetrics,
                 new PlanTree(
                         asciiPlanDescription(),
                         toPlanOperator( planDescription ) )

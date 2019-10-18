@@ -49,7 +49,7 @@ public class SerializationTest
         Environment environment = new Environment( "operating system", "server" );
         BenchmarkTool benchmarkTool = new BenchmarkTool( Repository.LDBC_BENCH, "commit", "neo-technology", "3.2" );
         Java java = new Java( "jvm", "version", "jvm args" );
-        Plan plan = testPlan( "plan description" );
+        Plan plan = testPlan();
 
         BenchmarkGroup benchmarkGroup1 = new BenchmarkGroup( "name1" );
         BenchmarkGroup benchmarkGroup2 = new BenchmarkGroup( "name2" );
@@ -106,7 +106,7 @@ public class SerializationTest
         Map<String,String> params = new HashMap<>();
         params.put( "key", "value" );
         Benchmark benchmark = Benchmark.benchmarkFor( "desc", "name", LATENCY, params );
-        Plan plan = testPlan( "plan description" );
+        Plan plan = testPlan();
         BenchmarkPlan before = new BenchmarkPlan( new BenchmarkGroup( "name_full" ), benchmark, plan );
         // then
         shouldSerializeAndDeserialize( before );
@@ -116,7 +116,7 @@ public class SerializationTest
     public void shouldSerializePlan() throws IOException
     {
         // given
-        Plan before = testPlan( "plan description" );
+        Plan before = testPlan();
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -125,7 +125,7 @@ public class SerializationTest
     public void shouldSerializePlanTree() throws IOException
     {
         // given
-        PlanTree before = testPlan( "plan description" ).planTree();
+        PlanTree before = testPlan().planTree();
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -139,7 +139,7 @@ public class SerializationTest
         HashMap<String,String> params = new HashMap<>();
         params.put( "key", "value" );
         Benchmark benchmark = Benchmark.benchmarkFor( "desc", "name", LATENCY, params );
-        Plan plan = testPlan( "plan description" );
+        Plan plan = testPlan();
         before.add( benchmarkGroup, benchmark, plan );
         assertThat( before.benchmarkPlans().size(), equalTo( 1 ) );
         assertThat( before.benchmarkPlans().get( 0 ).benchmarkGroup(), equalTo( benchmarkGroup ) );
@@ -318,18 +318,6 @@ public class SerializationTest
     }
 
     @Test
-    public void shouldSerializePlanCompilationMetrics() throws IOException
-    {
-        // given
-        Map<String,Long> compilationTimes = new HashMap<>();
-        compilationTimes.put( "AST_REWRITE", 1L );
-        compilationTimes.put( "SEMANTIC_CHECK", 2L );
-        PlanCompilationMetrics before = new PlanCompilationMetrics( compilationTimes );
-        // then
-        shouldSerializeAndDeserialize( before );
-    }
-
-    @Test
     public void shouldSerializePlanOperator() throws IOException
     {
         // given
@@ -421,7 +409,7 @@ public class SerializationTest
         return after;
     }
 
-    private static Plan testPlan( String description )
+    private static Plan testPlan()
     {
         PlanOperator leftLeaf1 = new PlanOperator( 0, "left-leaf", 1, 2.0, 3 );
         leftLeaf1.addArgument( "a", "b" );
@@ -448,9 +436,6 @@ public class SerializationTest
         root.addChild( left );
         root.addChild( right );
 
-        Map<String,Long> planCompilationMetricsMap = new HashMap<>();
-        planCompilationMetricsMap.put( "total", 9L );
-
         return new Plan(
                 "cost",
                 "cost",
@@ -459,8 +444,7 @@ public class SerializationTest
                 "compiled",
                 "compiled",
                 "3.2",
-                new PlanCompilationMetrics( planCompilationMetricsMap ),
-                new PlanTree( description, root )
+                new PlanTree( "plan description", root )
         );
     }
 }

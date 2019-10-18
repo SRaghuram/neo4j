@@ -23,8 +23,6 @@
     <span class="caption">:BenchmarkParams</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="12" data-x="-2413.891475193943" data-y="-1284.717100438939">
     <span class="caption">:BenchmarkConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
-  <li class="node" data-node-id="13" data-x="-2821.832840879205" data-y="715.3919714269505">
-    <span class="caption">:CompilationMetrics</span><dl class="properties"><dt>ast_rewrite</dt><dd>.</dd><dt>semantic_check</dt><dd>.</dd><dt>parsing</dt><dd>.</dd><dt>pipe_building</dt><dd>.</dd><dt>logical_planning</dt><dd>.</dd><dt>overhead</dt><dd>.</dd><dt>total</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="14" data-x="-2821.832840879205" data-y="46.48105235167004">
     <span class="caption">:PlanTree</span><dl class="properties"><dt>description_hash</dt><dd>.</dd><dt>description</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="15" data-x="-3409.1770373599666" data-y="46.48105235167004">
@@ -71,9 +69,6 @@
   </li>
   <li class="relationship" data-from="6" data-to="9">
     <span class="type">:HAS_PLAN ([0,1]..1)</span>
-  </li>
-  <li class="relationship" data-from="9" data-to="13">
-    <span class="type">:HAS_COMPILATION_METRICS</span>
   </li>
   <li class="relationship" data-from="9" data-to="14">
     <span class="type">:HAS_PLAN_TREE (1..1+)</span>
