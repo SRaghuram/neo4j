@@ -26,9 +26,8 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
     {
         NetworkReadableClosableChannelNetty4 logChannel = new NetworkReadableClosableChannelNetty4( msg );
         StoreId storeId = StoreIdMarshal.INSTANCE.unmarshal( logChannel );
-        LogEntryReader<NetworkReadableClosableChannelNetty4> reader = new VersionAwareLogEntryReader<>();
-        PhysicalTransactionCursor<NetworkReadableClosableChannelNetty4> transactionCursor =
-                new PhysicalTransactionCursor<>( logChannel, reader );
+        LogEntryReader reader = new VersionAwareLogEntryReader();
+        PhysicalTransactionCursor transactionCursor = new PhysicalTransactionCursor( logChannel, reader );
 
         transactionCursor.next();
         CommittedTransactionRepresentation tx = transactionCursor.get();

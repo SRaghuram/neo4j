@@ -14,7 +14,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
-import org.neo4j.io.fs.ReadableClosableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 
 class RelationshipTypeDistributionStorage
 {
@@ -46,7 +46,7 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.read( file ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ) ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();

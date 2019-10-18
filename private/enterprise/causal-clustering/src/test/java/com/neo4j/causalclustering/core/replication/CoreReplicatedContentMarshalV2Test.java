@@ -124,7 +124,7 @@ class CoreReplicatedContentMarshalV2Test
         }
         TransactionRepresentation representation =
                 ReplicatedTransactionFactory.extractTransactionRepresentation( (ReplicatedTransaction) unmarshal, extraHeader,
-                        new VersionAwareLogEntryReader<>() );
+                        new VersionAwareLogEntryReader() );
         assertThat( representation, equalTo( tx ) );
     }
 }

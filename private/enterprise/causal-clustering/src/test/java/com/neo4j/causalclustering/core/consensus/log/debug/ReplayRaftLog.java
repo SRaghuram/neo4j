@@ -19,7 +19,6 @@ import java.io.IOException;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.logging.LogProvider;
@@ -61,7 +60,7 @@ public class ReplayRaftLog
                     Clocks.systemClock(), new ThreadPoolJobScheduler(), pruningStrategy );
 
             long totalCommittedEntries = log.appendIndex(); // Not really, but we need to have a way to pass in the commit index
-            LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
+            LogEntryReader reader = new VersionAwareLogEntryReader();
             for ( int i = 0; i <= totalCommittedEntries; i++ )
             {
                 ReplicatedContent content = readLogEntry( log, i ).content();

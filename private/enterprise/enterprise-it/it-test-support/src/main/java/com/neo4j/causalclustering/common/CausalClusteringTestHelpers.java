@@ -418,7 +418,7 @@ public final class CausalClusteringTestHelpers
 
     private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs ) throws IOException
     {
-        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader<>(), new Monitors() );
+        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader(), new Monitors() );
         var logTailInformation = logTailScanner.getTailInformation();
 
         if ( logTailInformation.commitsAfterLastCheckpoint() )

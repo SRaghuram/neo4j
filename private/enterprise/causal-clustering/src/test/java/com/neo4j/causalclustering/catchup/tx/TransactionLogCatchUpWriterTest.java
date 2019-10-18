@@ -35,10 +35,8 @@ import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
-import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
@@ -250,8 +248,7 @@ public class TransactionLogCatchUpWriterTest
 
     private void verifyCheckpointInLog( LogFiles logFiles, boolean shouldExist )
     {
-        LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = logEntryReader();
-        final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
+        final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader(), new Monitors() );
 
         LogTailInformation tailInformation = logTailScanner.getTailInformation();
 
@@ -275,7 +272,7 @@ public class TransactionLogCatchUpWriterTest
         try ( ReadableLogChannel channel =
                       new ReadAheadLogChannel( versionedStoreChannel, LogVersionBridge.NO_MORE_CHANNELS, 1024 ) )
         {
-            try ( PhysicalTransactionCursor<ReadableLogChannel> txCursor = new PhysicalTransactionCursor<>( channel, logEntryReader() ) )
+            try ( PhysicalTransactionCursor txCursor = new PhysicalTransactionCursor( channel, logEntryReader() ) )
             {
                 while ( txCursor.next() )
                 {

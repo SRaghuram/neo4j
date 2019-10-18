@@ -27,7 +27,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
-import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
@@ -56,8 +55,7 @@ public class DumpLogicalLog
     }
 
     public void dump( String filenameOrDirectory, PrintStream out,
-            Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer,
-            InvalidLogEntryHandler invalidLogEntryHandler ) throws IOException
+            Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer ) throws IOException
     {
         TransactionLogAnalyzer.analyze( fileSystem, new File( filenameOrDirectory ), new Monitor()
         {
@@ -217,7 +215,7 @@ public class DumpLogicalLog
     }
 
     /**
-     * Usage: [--txfilter "regex"] [--ccfilter cc-report-file] [--tofile] [--lenient] storeDirOrFile1 storeDirOrFile2 ...
+     * Usage: [--txfilter "regex"] [--ccfilter cc-report-file] [--tofile] storeDirOrFile1 storeDirOrFile2 ...
      *
      * --txfilter
      * Will match regex against each {@link LogEntry} and if there is a match,
@@ -230,9 +228,6 @@ public class DumpLogicalLog
      *
      * --tofile
      * Redirects output to dump-logical-log.txt in the store directory
-     *
-     * --lenient
-     * Will attempt to read log entries even if some look broken along the way
      */
     public static void main( String[] args ) throws IOException
     {
@@ -240,26 +235,15 @@ public class DumpLogicalLog
         TimeZone timeZone = parseTimeZoneConfig( arguments );
         Predicate<LogEntry[]> filter = parseFilter( arguments, timeZone );
         Function<LogEntry,String> serializer = parseSerializer( filter, timeZone );
-        Function<PrintStream,InvalidLogEntryHandler> invalidLogEntryHandler = parseInvalidLogEntryHandler( arguments );
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
               Printer printer = getPrinter( arguments ) )
         {
             for ( String fileAsString : arguments.orphans() )
             {
                 PrintStream out = printer.getFor( fileAsString );
-                new DumpLogicalLog( fileSystem ).dump( fileAsString, out, filter, serializer,
-                        invalidLogEntryHandler.apply( out ) );
+                new DumpLogicalLog( fileSystem ).dump( fileAsString, out, filter, serializer );
             }
         }
-    }
-
-    private static Function<PrintStream,InvalidLogEntryHandler> parseInvalidLogEntryHandler( Args arguments )
-    {
-        if ( arguments.getBoolean( LENIENT ) )
-        {
-            return LenientInvalidLogEntryHandler::new;
-        }
-        return out -> InvalidLogEntryHandler.STRICT;
     }
 
     @SuppressWarnings( "unchecked" )

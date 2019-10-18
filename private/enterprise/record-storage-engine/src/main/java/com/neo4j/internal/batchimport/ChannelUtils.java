@@ -8,7 +8,7 @@ package com.neo4j.internal.batchimport;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FlushableChannel;
-import org.neo4j.io.fs.ReadableClosableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.string.UTF8;
 
 class ChannelUtils
@@ -20,7 +20,7 @@ class ChannelUtils
         channel.put( bytes, bytes.length );
     }
 
-    static String readString( ReadableClosableChannel channel ) throws IOException
+    static String readString( ReadableChannel channel ) throws IOException
     {
         byte[] bytes = new byte[channel.getInt()];
         channel.get( bytes, bytes.length );

@@ -15,7 +15,7 @@ import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
-import org.neo4j.io.fs.ReadableClosableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
 import static com.neo4j.internal.batchimport.ChannelUtils.writeString;
@@ -44,7 +44,7 @@ public class StateStorage
         {
             return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ) ) )
         {
             String name = readString( channel );
             byte[] checkPoint = new byte[channel.getInt()];

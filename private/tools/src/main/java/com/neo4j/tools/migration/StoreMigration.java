@@ -110,7 +110,7 @@ public class StoreMigration
 
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
                     .withConfig( config ).build();
-            LogTailScanner tailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader<>(), monitors );
+            LogTailScanner tailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader(), monitors );
 
             DefaultIndexProviderMap indexProviderMap = life.add( new DefaultIndexProviderMap( databaseExtensions, config ) );
 

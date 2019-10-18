@@ -18,7 +18,6 @@ import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.StorageCommandSerializer;
@@ -32,7 +31,7 @@ public class ReplicatedTransactionFactory
     }
 
     public static TransactionRepresentation extractTransactionRepresentation( ReplicatedTransaction transactionCommand, byte[] extraHeader,
-            LogEntryReader<ReadableClosablePositionAwareChannel> reader )
+            LogEntryReader reader )
     {
         return transactionCommand.extract( new TransactionRepresentationReader( extraHeader, reader ) );
     }
@@ -45,9 +44,9 @@ public class ReplicatedTransactionFactory
     private static class TransactionRepresentationReader implements TransactionRepresentationExtractor
     {
         private final byte[] extraHeader;
-        private final LogEntryReader<ReadableClosablePositionAwareChannel> reader;
+        private final LogEntryReader reader;
 
-        TransactionRepresentationReader( byte[] extraHeader, LogEntryReader<ReadableClosablePositionAwareChannel> reader )
+        TransactionRepresentationReader( byte[] extraHeader, LogEntryReader reader )
         {
             this.extraHeader = extraHeader;
             this.reader = reader;

@@ -50,7 +50,6 @@ import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
@@ -212,9 +211,8 @@ class RebuildFromLogs
             long txId = BASE_TX_ID;
             TransactionQueue queue = new TransactionQueue( 10_000,
                     ( tx, last ) -> commitProcess.commit( tx, NULL, EXTERNAL ) );
-            LogEntryReader<ReadableClosablePositionAwareChannel> entryReader = new VersionAwareLogEntryReader<>();
-            try ( IOCursor<CommittedTransactionRepresentation> cursor =
-                    new PhysicalTransactionCursor<>( channel, entryReader ) )
+            LogEntryReader entryReader = new VersionAwareLogEntryReader();
+            try ( IOCursor<CommittedTransactionRepresentation> cursor = new PhysicalTransactionCursor( channel, entryReader ) )
             {
                 while ( cursor.next() )
                 {

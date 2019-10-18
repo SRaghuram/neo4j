@@ -15,7 +15,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
-import org.neo4j.io.fs.ReadableClosableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -43,7 +43,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
         {
             return marshal.unmarshal( channel );
         }

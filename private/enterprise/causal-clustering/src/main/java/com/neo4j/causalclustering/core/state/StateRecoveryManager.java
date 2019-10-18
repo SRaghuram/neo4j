@@ -13,7 +13,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadAheadChannel;
-import org.neo4j.io.fs.ReadableClosableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 
 public class StateRecoveryManager<STATE>
 {
@@ -86,7 +86,7 @@ public class StateRecoveryManager<STATE>
 
     private STATE readLastEntryFrom( File file ) throws IOException
     {
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
         {
             STATE result = null;
             STATE lastRead;

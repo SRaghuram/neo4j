@@ -19,7 +19,6 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.logging.Log;
@@ -35,7 +34,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     private final ReplicatedBarrierTokenStateMachine lockTokenStateMachine;
     private final int maxBatchSize;
     private final Log log;
-    private final LogEntryReader<ReadableClosablePositionAwareChannel> reader = new VersionAwareLogEntryReader<>();
+    private final LogEntryReader reader = new VersionAwareLogEntryReader();
 
     private TransactionQueue queue;
     private long lastCommittedIndex = -1;

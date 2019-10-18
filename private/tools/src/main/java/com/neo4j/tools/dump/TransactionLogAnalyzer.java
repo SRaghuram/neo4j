@@ -18,7 +18,6 @@ import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
@@ -101,7 +100,7 @@ public class TransactionLogAnalyzer
         File firstFile;
         LogVersionBridge bridge;
         ReadAheadLogChannel channel;
-        LogEntryReader<ReadableClosablePositionAwareChannel> entryReader;
+        LogEntryReader entryReader;
         LogPositionMarker positionMarker;
         if ( storeDirOrLogFile.isDirectory() )
         {
@@ -139,7 +138,7 @@ public class TransactionLogAnalyzer
         }
 
         channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile ), bridge );
-        entryReader = new VersionAwareLogEntryReader<>();
+        entryReader = new VersionAwareLogEntryReader();
         positionMarker = new LogPositionMarker();
         try ( TransactionLogEntryCursor cursor = new TransactionLogEntryCursor( new LogEntryCursor( entryReader, channel ) ) )
         {
