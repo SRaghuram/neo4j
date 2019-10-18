@@ -26,7 +26,8 @@
         <license-text.header>build/license-header.txt</license-text.header>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
-		<neo4j.version>${project.version}</neo4j.version>
+        <neo4j.version>${project.version}</neo4j.version>
+        <s3mock.version>0.2.4</s3mock.version>
     </properties>
 
     <licenses>
@@ -42,6 +43,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson2.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.github.rvesse</groupId>
                 <artifactId>airline</artifactId>
@@ -93,6 +99,12 @@
                 <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>io.findify</groupId>
+                <artifactId>s3mock_2.11</artifactId>
+                <version>${s3mock.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -107,6 +119,7 @@
         <module>import</module>
         <module>benchmark-infra</module>
         <module>benchmark-neo4j-common</module>
+        <module>benchmark-neo4j-common-test</module>
     </modules>
 
     <profiles>

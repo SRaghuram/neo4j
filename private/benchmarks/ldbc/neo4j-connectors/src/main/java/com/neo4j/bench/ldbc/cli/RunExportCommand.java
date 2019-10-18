@@ -43,6 +43,8 @@ import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
@@ -61,10 +63,6 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
-import com.neo4j.bench.ldbc.utils.Neo4jArchive;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
-import com.neo4j.bench.ldbc.utils.StoreFormat;
 
 import java.io.File;
 import java.io.IOException;
@@ -93,11 +91,11 @@ import static com.neo4j.bench.common.util.BenchmarkUtil.lessWhiteSpace;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertDisallowFormatMigration;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertStoreFormatIsSet;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.extractScaleFactor;
+import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.extractStoreFormat;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.toBenchmarkGroupName;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 @Command(
         name = "run-export",
@@ -293,13 +291,6 @@ public class RunExportCommand implements Runnable
             title = "JVM Args" )
     private String jvmArgs = "";
 
-    private static final String CMD_NEO4J_PACKAGE_FOR_JVM_ARGS = "--neo4j-package-for-jvm-args";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_PACKAGE_FOR_JVM_ARGS},
-            description = "Extract default product JVM args from Neo4j tar.gz package",
-            title = "Neo4j package containing JVM args" )
-    private File neo4jPackageForJvmArgs;
-
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
@@ -314,14 +305,14 @@ public class RunExportCommand implements Runnable
             name = {CMD_CYPHER_PLANNER},
             description = "Cypher Planner: DEFAULT, RULE, COST",
             title = "Cypher Planner" )
-    private PlannerType planner = PlannerType.DEFAULT;
+    private Planner planner = Planner.DEFAULT;
 
     private static final String CMD_CYPHER_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_RUNTIME},
             description = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
             title = "Cypher Runtime" )
-    private RuntimeType runtime = RuntimeType.DEFAULT;
+    private Runtime runtime = Runtime.DEFAULT;
 
     private static final String CMD_NEO4J_API = "--neo4j-api";
     @Option( type = OptionType.COMMAND,
@@ -375,33 +366,19 @@ public class RunExportCommand implements Runnable
     @Required
     private File workingDir;
 
+    private static final String CMD_PROFILERS = "--profilers";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_PROFILERS},
+             description = "Comma separated list of profilers to run with",
+             title = "Profilers" )
+    private String profilerNames = "";
+
     private static final String CMD_TRACE = "--trace";
     @Option( type = OptionType.COMMAND,
             name = {CMD_TRACE},
             description = "Run with various monitoring tools: vmstat, iostat, mpstat, etc.",
             title = "Run with various monitoring tools" )
     private boolean doTrace;
-
-    private static final String CMD_PROFILE_JFR = "--profile-jfr";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILE_JFR},
-            description = "Run with JFR profiler",
-            title = "Run with JFR profiler" )
-    private boolean doJfrProfile;
-
-    private static final String CMD_PROFILE_ASYNC = "--profile-async";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILE_ASYNC},
-            description = "Run with Async profiler",
-            title = "Run with Async profiler" )
-    private boolean doAsyncProfile;
-
-    private static final String CMD_PROFILE_GC = "--profile-gc";
-    @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILE_GC},
-            description = "Run with GC logging",
-            title = "Run with GC logging" )
-    private boolean doGcProfile;
 
     private static final String CMD_PROFILES_DIR = "--profiles-dir";
     @Option( type = OptionType.COMMAND,
@@ -430,6 +407,20 @@ public class RunExportCommand implements Runnable
 
             Jvm jvm = Jvm.bestEffortOrFail( this.jvmFile );
 
+            // base profilers are run on every fork
+            ArrayList<ProfilerType> baseProfilers = Lists.newArrayList();
+            if ( doTrace )
+            {
+                baseProfilers.add( ProfilerType.JVM_LOGGING );
+            }
+            // additional profilers are run on one, profiling fork
+            List<ProfilerType> additionalProfilers = ProfilerType.deserializeProfilers( profilerNames );
+            for ( ProfilerType profiler : additionalProfilers )
+            {
+                boolean errorOnMissingSecondaryEnvironmentVariables = true;
+                profiler.assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
+            }
+
             System.out.println(
                     "==============================================================\n" +
                     CMD_JSON_OUTPUT + " : " + jsonOutput.getAbsolutePath() + "\n" +
@@ -455,7 +446,6 @@ public class RunExportCommand implements Runnable
                     CMD_NEO4J_BENCHMARK_CONFIG + " : " + neo4jBenchmarkConfigFile.getAbsolutePath() + "\n" +
                     CMD_JVM_PATH + " : " + jvm + "\n" +
                     CMD_JVM_ARGS + " : " + jvmArgs + "\n" +
-                    CMD_NEO4J_PACKAGE_FOR_JVM_ARGS + " : " + ((null == neo4jPackageForJvmArgs) ? null : neo4jPackageForJvmArgs.getAbsolutePath()) + "\n" +
                     CMD_DB + " : " + ((null == sourceDbDir) ? null : sourceDbDir.getAbsolutePath()) + "\n" +
                     CMD_CYPHER_PLANNER + " : " + planner + "\n" +
                     CMD_CYPHER_RUNTIME + " : " + runtime + "\n" +
@@ -466,45 +456,25 @@ public class RunExportCommand implements Runnable
                     CMD_PREFIX + " : " + cliPrefix + "\n" +
                     CMD_REUSE_DB + " : " + reuseDb + "\n" +
                     CMD_WORKING_DIR + " : " + ((null == workingDir) ? null : workingDir.getAbsolutePath()) + "\n" +
+                    CMD_PROFILERS + " : " + additionalProfilers + "\n" +
                     CMD_TRACE + " : " + doTrace + "\n" +
-                    CMD_PROFILE_JFR + " : " + doJfrProfile + "\n" +
-                    CMD_PROFILE_ASYNC + " : " + doAsyncProfile + "\n" +
-                    CMD_PROFILE_GC + " : " + doGcProfile + "\n" +
                     CMD_PROFILES_DIR + " : " + ((null == profilesDir) ? null : profilesDir.getAbsolutePath()) + "\n" +
                     "==============================================================\n"
             );
 
-            // base profilers are run on every fork
-            ArrayList<ProfilerType> baseProfilers = Lists.newArrayList();
-            if ( doTrace )
-            {
-                baseProfilers.add( ProfilerType.JVM_LOGGING );
-            }
-            // additional profilers are run on one, profiling fork
-            List<ProfilerType> additionalProfilers = new ArrayList<>();
-            if ( doJfrProfile )
-            {
-                additionalProfilers.add( ProfilerType.JFR );
-            }
-            if ( doAsyncProfile )
-            {
-                additionalProfilers.add( ProfilerType.ASYNC );
-            }
-            if ( doGcProfile )
-            {
-                additionalProfilers.add( ProfilerType.GC );
-            }
-
             assertFileNotEmpty( neo4jConfigFile.toPath() );
             assertFileNotEmpty( neo4jBenchmarkConfigFile.toPath() );
-            assertDisallowFormatMigration( neo4jBenchmarkConfigFile );
-            assertStoreFormatIsSet( neo4jBenchmarkConfigFile );
+            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.withDefaults()
+                                                        .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                                                        .mergeWith( Neo4jConfigBuilder.fromFile( neo4jBenchmarkConfigFile ).build() )
+                                                        .build();
+            assertDisallowFormatMigration( neo4jConfig );
+            assertStoreFormatIsSet( neo4jConfig );
 
             FileUtils.tryCreateDirs( resultsDir, false );
-            jvmArgs = buildJvmArgsString( jvmArgs, neo4jPackageForJvmArgs );
 
-            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                                                        .mergeWith( Neo4jConfigBuilder.fromFile( neo4jBenchmarkConfigFile ).build() ).build();
+            jvmArgs = buildJvmArgsString( jvmArgs, neo4jConfig );
+
             System.out.println( "Merged Neo4j config:\n" + neo4jConfig.toString() );
 
             Path mergedNeo4jConfigPath = new File( resultsDir, "merged-neo4j.conf" ).toPath();
@@ -555,7 +525,8 @@ public class RunExportCommand implements Runnable
                     benchmarkGroup,
                     summaryBenchmark,
                     neo4jConfig,
-                    triggeredBy );
+                    triggeredBy,
+                    ldbcConfig );
         }
         catch ( Exception e )
         {
@@ -572,14 +543,14 @@ public class RunExportCommand implements Runnable
             BenchmarkGroup benchmarkGroup,
             Benchmark summaryBenchmark,
             Neo4jConfig neo4jConfig,
-            String triggeredBy )
+            String triggeredBy,
+            DriverConfiguration ldbcDriverConfig )
     {
         System.out.println( "============================================" );
         System.out.println( "==== Aggregating & Reporting Statistics ====" );
         System.out.println( "============================================" );
         try
         {
-            DriverConfiguration ldbcDriverConfig = fromParamsMap( loadPropertiesToMap( ldbcConfigFile ) );
             Workload uninitializedWorkload = loadWorkload( ldbcDriverConfig.workloadClassName() );
             WorkloadResultsSnapshot workloadResults = aggregateResults( uninitializedWorkload, resultsDirectories );
 
@@ -712,7 +683,6 @@ public class RunExportCommand implements Runnable
 
             List<InternalProfiler> internalProfilers = new ArrayList<>();
             List<ExternalProfiler> externalProfilers = new ArrayList<>();
-            List<Profiler> profilers = new ArrayList<>();
             for ( ProfilerType profilerType : profilerTypes )
             {
                 Profiler profiler = profilerType.create();
@@ -724,7 +694,6 @@ public class RunExportCommand implements Runnable
                 {
                     externalProfilers.add( (ExternalProfiler) profiler );
                 }
-                profilers.add( profiler );
             }
 
             File waitForFile = forkDirectory.pathFor( "wait-for-file" ).toFile();
@@ -929,20 +898,6 @@ public class RunExportCommand implements Runnable
                 new ArrayList<>() );
     }
 
-    private static StoreFormat extractStoreFormat( Neo4jConfig neo4jConfig )
-    {
-        String formatString = neo4jConfig.toMap().get( record_format.name() );
-        switch ( formatString )
-        {
-        case Standard.LATEST_NAME:
-            return StoreFormat.STANDARD;
-        case HighLimit.NAME:
-            return StoreFormat.HIGH_LIMIT;
-        default:
-            throw new RuntimeException( "Unexpected record format found: " + formatString );
-        }
-    }
-
     private static List<String> buildCommandArgs(
             Jvm jvm,
             List<String> jvmInvokeArgs,
@@ -967,18 +922,10 @@ public class RunExportCommand implements Runnable
                           .collect( toList() );
     }
 
-    private static String buildJvmArgsString( String jvmArgs, File neo4jPackageForJvmArgs )
+    private static String buildJvmArgsString( String jvmArgs, Neo4jConfig neo4jConfig )
     {
-        String defaultJvmArgsString =
-                (null == neo4jPackageForJvmArgs)
-                ? ""
-                : String.join( " ", extractJvmArgs( neo4jPackageForJvmArgs ) );
+        String defaultJvmArgsString = String.join( " ", neo4jConfig.getJvmArgs() );
         return lessWhiteSpace( jvmArgs + " " + defaultJvmArgsString );
-    }
-
-    private static List<String> extractJvmArgs( File neo4jPackage )
-    {
-        return (null == neo4jPackage) ? Lists.newArrayList() : Neo4jArchive.extractJvmArgs( neo4jPackage );
     }
 
     private static File localDbDir( File workingDir )

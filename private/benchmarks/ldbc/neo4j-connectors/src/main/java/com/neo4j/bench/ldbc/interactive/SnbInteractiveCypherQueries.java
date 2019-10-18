@@ -36,10 +36,10 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate5AddForumMembers
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate6AddPost;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.utils.AnnotatedQueries;
 import com.neo4j.bench.ldbc.utils.AnnotatedQuery;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
@@ -53,7 +53,7 @@ public class SnbInteractiveCypherQueries implements AnnotatedQueries
         return new SnbInteractiveCypherQueries();
     }
 
-    public static SnbInteractiveCypherQueries createWith( PlannerType plannerType, RuntimeType runtimeType )
+    public static SnbInteractiveCypherQueries createWith( Planner plannerType, Runtime runtimeType )
     {
         return new SnbInteractiveCypherQueries()
                 .withQuery(
@@ -213,8 +213,8 @@ public class SnbInteractiveCypherQueries implements AnnotatedQueries
     private SnbInteractiveCypherQueries withQuery(
             int operationType,
             String queryString,
-            RuntimeType runtimeType,
-            PlannerType plannerType )
+            Runtime runtimeType,
+            Planner plannerType )
     {
         annotatedQueries.put(
                 operationType,

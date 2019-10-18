@@ -145,11 +145,16 @@
             <artifactId>benchmark-neo4j-common</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-neo4j-common-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.findify</groupId>
             <artifactId>s3mock_2.11</artifactId>
-            <version>0.2.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>

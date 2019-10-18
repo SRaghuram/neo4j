@@ -23,8 +23,8 @@ import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.utils.Utils;
 
 import java.io.File;
@@ -130,17 +130,17 @@ public class RunCommand implements Runnable
 
     public static final String CMD_CYPHER_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CYPHER_PLANNER},
-            description = "Cypher Planner: DEFAULT, RULE, COST",
-            title = "Cypher Planner" )
-    private PlannerType planner = PlannerType.DEFAULT;
+             name = {CMD_CYPHER_PLANNER},
+             description = "Cypher Planner: DEFAULT, RULE, COST",
+             title = "Cypher Planner" )
+    private Planner planner = Planner.DEFAULT;
 
     public static final String CMD_CYPHER_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_CYPHER_RUNTIME},
-            description = "Cypher Runtime",
-            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED" )
-    private RuntimeType runtime = RuntimeType.DEFAULT;
+             name = {CMD_CYPHER_RUNTIME},
+             description = "Cypher Runtime",
+             title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED" )
+    private Runtime runtime = Runtime.DEFAULT;
 
     public static final String CMD_WAIT_FOR_FILE = "--wait-for-file";
     @Option( type = OptionType.COMMAND,
@@ -398,8 +398,8 @@ public class RunCommand implements Runnable
         final File writeParams;
         final File readParams;
         final Neo4jApi neo4jApi;
-        final PlannerType planner;
-        final RuntimeType runtime;
+        final Planner planner;
+        final Runtime runtime;
         final File ldbcConfig;
         final File neo4jConfig;
         final int readThreads;
@@ -412,8 +412,8 @@ public class RunCommand implements Runnable
                 File writeParams,
                 File readParams,
                 Neo4jApi neo4jApi,
-                PlannerType planner,
-                RuntimeType runtime,
+                Planner planner,
+                Runtime runtime,
                 File ldbcConfig,
                 File neo4jConfig,
                 int readThreads,

@@ -12,6 +12,8 @@ import com.ldbc.driver.Workload;
 import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiCypherQueries;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiEmbeddedCypherRegularCommands;
@@ -22,8 +24,6 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCoreDense1Commands
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCoreRegularCommands;
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularCommands;
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 import java.io.File;
 import java.io.IOException;
@@ -300,18 +300,18 @@ public class Neo4jDb extends Db
         loggingService.info( "************************" );
     }
 
-    private PlannerType getCypherPlannerOrFail( String cypherPlannerString ) throws DbException
+    private Planner getCypherPlannerOrFail( String cypherPlannerString ) throws DbException
     {
         if ( null == cypherPlannerString )
         {
             throw new DbException( format( "No value provided for %s, expected one of: %s",
-                                           CYPHER_PLANNER_KEY, Arrays.toString( PlannerType.values() ) ) );
+                                           CYPHER_PLANNER_KEY, Arrays.toString( Planner.values() ) ) );
         }
         else
         {
             try
             {
-                return PlannerType.valueOf( cypherPlannerString.trim().toUpperCase() );
+                return Planner.valueOf( cypherPlannerString.trim().toUpperCase() );
             }
             catch ( Exception e )
             {
@@ -319,32 +319,32 @@ public class Neo4jDb extends Db
                         format( "Unknown value provided for %s: %s\nValid values are: %s",
                                 CYPHER_PLANNER_KEY,
                                 cypherPlannerString,
-                                Arrays.toString( PlannerType.values() ) ),
+                                Arrays.toString( Planner.values() ) ),
                         e
                 );
             }
         }
     }
 
-    private RuntimeType getCypherRuntimeOrFail( String cypherRuntimeString ) throws DbException
+    private Runtime getCypherRuntimeOrFail( String cypherRuntimeString ) throws DbException
     {
         if ( null == cypherRuntimeString )
         {
             throw new DbException( format( "No value provided for %s, expected one of: %s",
-                                           CYPHER_RUNTIME_KEY, Arrays.toString( RuntimeType.values() ) ) );
+                                           CYPHER_RUNTIME_KEY, Arrays.toString( Runtime.values() ) ) );
         }
         else
         {
             try
             {
-                return RuntimeType.valueOf( cypherRuntimeString.trim().toUpperCase() );
+                return Runtime.valueOf( cypherRuntimeString.trim().toUpperCase() );
             }
             catch ( Exception e )
             {
                 throw new DbException(
                         format( "Unknown cypher runtime: %s\nValid values are: %s",
                                 cypherRuntimeString,
-                                Arrays.toString( RuntimeType.values() ) ),
+                                Arrays.toString( Runtime.values() ) ),
                         e
                 );
             }
@@ -549,8 +549,8 @@ public class Neo4jDb extends Db
 
     public static Map<String,String> neo4jConnectorPropertiesFor(
             Neo4jApi neo4jApi,
-            PlannerType planner,
-            RuntimeType runtime,
+            Planner planner,
+            Runtime runtime,
             Neo4jSchema neo4jSchema,
             File dbDir,
             File dbConfig,
