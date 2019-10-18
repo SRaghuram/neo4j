@@ -64,7 +64,7 @@ public class FabricExecutor
     {
         FabricPlan plan = planner.plan( statement, params );
 
-        if (plan.debugOptions().logPlan())
+        if ( plan.debugOptions().logPlan() )
         {
             log.debug( String.format( "Fabric plan: %s", FabricQuery.pretty().asString( plan.query() ) ) );
         }
