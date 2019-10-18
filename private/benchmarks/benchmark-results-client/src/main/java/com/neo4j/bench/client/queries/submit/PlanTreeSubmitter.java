@@ -91,7 +91,6 @@ public class PlanTreeSubmitter
             params.put( "benchmark_name", benchmarkPlan.benchmark().name() );
             params.put( "benchmark_group_name", benchmarkPlan.benchmarkGroup().name() );
             params.put( "plan", benchmarkPlan.plan().asMap() );
-            params.put( "compilation_metrics", benchmarkPlan.plan().planCompilationMetrics().asMap() );
             params.put( "plan_description_hash", benchmarkPlan.plan().planTree().hashedPlanDescription() );
             tx.run( ATTACH_PLAN_TO_TEST_RUN, params );
         }

@@ -11,13 +11,13 @@ import java.util.Objects;
 
 public class Plan
 {
-    public static final String REQUESTED_PLANNER = "requested_planner";
-    public static final String USED_PLANNER = "used_planner";
-    public static final String DEFAULT_PLANNER = "default_planner";
-    public static final String REQUESTED_RUNTIME = "requested_runtime";
-    public static final String USED_RUNTIME = "used_runtime";
-    public static final String DEFAULT_RUNTIME = "default_runtime";
-    public static final String CYPHER_VERSION = "cypher_version";
+    private static final String REQUESTED_PLANNER = "requested_planner";
+    private static final String USED_PLANNER = "used_planner";
+    private static final String DEFAULT_PLANNER = "default_planner";
+    private static final String REQUESTED_RUNTIME = "requested_runtime";
+    private static final String USED_RUNTIME = "used_runtime";
+    private static final String DEFAULT_RUNTIME = "default_runtime";
+    private static final String CYPHER_VERSION = "cypher_version";
 
     private final String requestedPlanner; // e.g. 'idp'
     private final String usedPlanner;
@@ -26,7 +26,6 @@ public class Plan
     private final String usedRuntime;
     private final String defaultRuntime;
     private final String cypherVersion; // e.g. 'CYPHER 3.1'
-    private final PlanCompilationMetrics planCompilationMetrics;
     private final PlanTree planTree;
 
     /**
@@ -35,7 +34,7 @@ public class Plan
      */
     public Plan()
     {
-        this( "-1", "-1", "-1", "-1", "-1", "-1", "-1", new PlanCompilationMetrics(), new PlanTree() );
+        this( "-1", "-1", "-1", "-1", "-1", "-1", "-1", new PlanTree() );
     }
 
     public Plan(
@@ -46,7 +45,6 @@ public class Plan
             String usedRuntime,
             String defaultRuntime,
             String cypherVersion,
-            PlanCompilationMetrics planCompilationMetrics,
             PlanTree planTree )
     {
         this.requestedPlanner = requestedPlanner;
@@ -56,13 +54,7 @@ public class Plan
         this.usedRuntime = usedRuntime;
         this.defaultRuntime = defaultRuntime;
         this.cypherVersion = cypherVersion;
-        this.planCompilationMetrics = planCompilationMetrics;
         this.planTree = planTree;
-    }
-
-    public PlanCompilationMetrics planCompilationMetrics()
-    {
-        return planCompilationMetrics;
     }
 
     public PlanTree planTree()
@@ -102,7 +94,6 @@ public class Plan
                Objects.equals( usedRuntime, plan.usedRuntime ) &&
                Objects.equals( defaultRuntime, plan.defaultRuntime ) &&
                Objects.equals( cypherVersion, plan.cypherVersion ) &&
-               Objects.equals( planCompilationMetrics, plan.planCompilationMetrics ) &&
                Objects.equals( planTree, plan.planTree );
     }
 
@@ -111,7 +102,7 @@ public class Plan
     {
         return Objects
                 .hash( requestedPlanner, usedPlanner, defaultPlanner, requestedRuntime, usedRuntime, defaultRuntime,
-                        cypherVersion, planCompilationMetrics, planTree );
+                       cypherVersion, planTree );
     }
 
     @Override
@@ -125,7 +116,6 @@ public class Plan
                ", usedRuntime='" + usedRuntime + '\'' +
                ", defaultRuntime='" + defaultRuntime + '\'' +
                ", cypherVersion='" + cypherVersion + '\'' +
-               ", planCompilationMetrics=" + planCompilationMetrics +
                ", planTree=" + planTree +
                '}';
     }
