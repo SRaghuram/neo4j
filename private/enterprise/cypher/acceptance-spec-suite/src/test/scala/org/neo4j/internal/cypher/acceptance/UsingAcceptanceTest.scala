@@ -185,7 +185,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       db =>
         graph.withTx( tx => tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)"))
-        graph.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
+        graph.withTx( tx => tx.execute("CALL db.awaitIndexes()"))
         db.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
           )
@@ -197,7 +197,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       db =>
         graph.withTx( tx => tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)"))
-        graph.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
+        graph.withTx( tx => tx.execute("CALL db.awaitIndex('my_index')"))
         db.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
           )
@@ -420,7 +420,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       engine =>
         engine.withTx( tx => tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)"))
-        engine.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
+        engine.withTx( tx => tx.execute("CALL db.awaitIndexes()"))
         engine.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
           ))
@@ -431,7 +431,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     runWithConfig() {
       engine =>
         engine.withTx( tx => tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)"))
-        engine.withTx( tx => tx.execute("CALL db.awaitIndex(':Person(name)')"))
+        engine.withTx( tx => tx.execute("CALL db.awaitIndex('my_index')"))
         engine.withTx( tx => shouldHaveNoWarnings(
             tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
           ))

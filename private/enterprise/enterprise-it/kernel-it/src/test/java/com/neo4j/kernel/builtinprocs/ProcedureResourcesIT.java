@@ -235,7 +235,7 @@ class ProcedureResourcesIT
             proc.withParam( "'*:*'" );
             break;
         case "db.awaitIndex":
-            proc.withParam( "'" + indexDefinition + "'" );
+            proc.withParam( "'" + indexName + "'" );
             proc.withParam( 100 );
             break;
         case "db.createLabel":
