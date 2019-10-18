@@ -21,7 +21,7 @@ import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.causalclustering.discovery._
 import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.{CLUSTER_ID, METADATA}
-import org.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
+import org.neo4j.causalclustering.discovery.akka.monitoring.{ClusterSizeMonitor, ReplicatedDataMonitor}
 import org.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.neo4j.kernel.configuration.Config
 
@@ -178,7 +178,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorTest") {
       cluster,
       topologyBuilder,
       config,
-      mock[ReplicatedDataMonitor])
+      mock[ReplicatedDataMonitor],
+      mock[ClusterSizeMonitor])
 
     val topologyActorRef = system.actorOf(props)
 

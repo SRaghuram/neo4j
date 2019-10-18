@@ -52,7 +52,7 @@ public class CoreMetrics extends LifecycleAdapter
     @Documented( "Timer for RAFT message processing" )
     public static final String TIMER = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
     @Documented( "Size of replicated data structures" )
-    public static final String DISCOVERY_REPLICATED_DATA = name( CAUSAL_CLUSTERING_PREFIX, "discovery_replicated_data" );
+    public static final String DISCOVERY_REPLICATED_DATA = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "replicated_data" );
     @Documented( "Raft replication new request count" )
     public static final String REPLICATION_NEW = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
     @Documented( "Raft replication attempt count" )
@@ -61,6 +61,12 @@ public class CoreMetrics extends LifecycleAdapter
     public static final String REPLICATION_SUCCESS = name( CAUSAL_CLUSTERING_PREFIX, "replication_success" );
     @Documented( "Raft Replication fail count" )
     public static final String REPLICATION_FAIL = name( CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
+    @Documented( "Discovery cluster member size" )
+    public static final String DISCOVERY_CLUSTER_MEMBERS = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "members" );
+    @Documented( "Discovery cluster unreachable size" )
+    public static final String DISCOVERY_CLUSTER_UNREACHABLE = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "unreachable" );
+    @Documented( "Discovery cluster convergence" )
+    public static final String DISCOVERY_CLUSTER_CONVERGED = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "converged" );
 
     private Monitors monitors;
     private MetricRegistry registry;
@@ -75,6 +81,7 @@ public class CoreMetrics extends LifecycleAdapter
     private final RaftMessageProcessingMetric raftMessageProcessingMetric = RaftMessageProcessingMetric.create();
     private final ReplicationMetric replicationMetric = new ReplicationMetric();
     private final ReplicatedDataMetric discoveryReplicatedDataMetric = new ReplicatedDataMetric();
+    private final ClusterSizeMetric discoveryClusterSizeMetric = new ClusterSizeMetric();
 
     public CoreMetrics( Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
     {
@@ -95,6 +102,7 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.addMonitorListener( raftMessageProcessingMetric );
         monitors.addMonitorListener( replicationMetric );
         monitors.addMonitorListener( discoveryReplicatedDataMetric );
+        monitors.addMonitorListener( discoveryClusterSizeMetric );
 
         registry.register( COMMIT_INDEX, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
         registry.register( APPEND_INDEX, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
@@ -113,6 +121,9 @@ public class CoreMetrics extends LifecycleAdapter
         registry.register( REPLICATION_ATTEMPT, new MetricsCounter( replicationMetric::attemptCount ) );
         registry.register( REPLICATION_SUCCESS, new MetricsCounter( replicationMetric::successCount ) );
         registry.register( REPLICATION_FAIL, new MetricsCounter( replicationMetric::failCount ) );
+        registry.register( DISCOVERY_CLUSTER_MEMBERS, discoveryClusterSizeMetric.members() );
+        registry.register( DISCOVERY_CLUSTER_UNREACHABLE, discoveryClusterSizeMetric.unreachable() );
+        registry.register( DISCOVERY_CLUSTER_CONVERGED, discoveryClusterSizeMetric.converged() );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -146,6 +157,9 @@ public class CoreMetrics extends LifecycleAdapter
         registry.remove( REPLICATION_ATTEMPT );
         registry.remove( REPLICATION_SUCCESS );
         registry.remove( REPLICATION_FAIL );
+        registry.remove( DISCOVERY_CLUSTER_MEMBERS );
+        registry.remove( DISCOVERY_CLUSTER_UNREACHABLE );
+        registry.remove( DISCOVERY_CLUSTER_CONVERGED );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -167,6 +181,7 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.removeMonitorListener( raftMessageProcessingMetric );
         monitors.removeMonitorListener( replicationMetric );
         monitors.removeMonitorListener( discoveryReplicatedDataMetric );
+        monitors.removeMonitorListener( discoveryClusterSizeMetric );
     }
 
     private String messageTimerName( RaftMessages.Type type )
@@ -176,7 +191,7 @@ public class CoreMetrics extends LifecycleAdapter
 
     private String discoveryReplicatedDataName( ReplicatedDataIdentifier identifier, String visibility )
     {
-        return name( DISCOVERY_REPLICATED_DATA, identifier.keyName().replace( '-', '_' ) + "." + visibility );
+        return name( DISCOVERY_REPLICATED_DATA, identifier.keyName().replace( '-', '_' ), visibility );
     }
 
     private class LeaderGauge implements Gauge<Integer>

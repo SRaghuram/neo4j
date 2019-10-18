@@ -12,9 +12,11 @@ import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
+import com.neo4j.causalclustering.discovery.akka.Tick;
 
 import java.time.Duration;
 
+import org.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import org.neo4j.kernel.configuration.Config;
 
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.akka_failure_detector_acceptable_heartbeat_pause;
@@ -29,9 +31,9 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.akka_fail
  */
 public class ClusterStateActor extends AbstractActorWithTimersAndLogging
 {
-    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config )
+    static Props props( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config, ClusterSizeMonitor monitor )
     {
-        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config ) );
+        return Props.create( ClusterStateActor.class, () -> new ClusterStateActor( cluster, topologyActor, downingActor, metadataActor, config, monitor ) );
     }
 
     private final Cluster cluster;
@@ -39,17 +41,21 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
     private final ActorRef downingActor;
     private final ActorRef metadataActor;
     private final Duration clusterStabilityWait;
+    private final ClusterSizeMonitor monitor;
 
     private ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
-    private static String downingTimerKey = "downingTimerKey key";
+    private static String DOWNING_TIMER_KEY = "downingTimerKey";
+    private static String MONITOR_TICK_KEY = "monitor tick";
 
-    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor, Config config )
+    public ClusterStateActor( Cluster cluster, ActorRef topologyActor, ActorRef downingActor, ActorRef metadataActor,
+            Config config, ClusterSizeMonitor monitor )
     {
         this.cluster = cluster;
         this.topologyActor = topologyActor;
         this.downingActor = downingActor;
         this.metadataActor = metadataActor;
+        this.monitor = monitor;
 
         clusterStabilityWait = config.get( akka_failure_detector_heartbeat_interval )
                 .plus( config.get( akka_failure_detector_acceptable_heartbeat_pause ) );
@@ -59,6 +65,7 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
     public void preStart()
     {
         cluster.subscribe( getSelf(), ClusterEvent.initialStateAsSnapshot(), ClusterEvent.ClusterDomainEvent.class, ClusterEvent.UnreachableMember.class );
+        getTimers().startPeriodicTimer( MONITOR_TICK_KEY, Tick.getInstance(), Duration.ofMinutes( 1 ) );
     }
 
     @Override
@@ -80,6 +87,7 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
                 .match( ClusterEvent.LeaderChanged.class,       this::handleLeaderChanged )
                 .match( ClusterEvent.ClusterDomainEvent.class,  this::handleOtherClusterEvent )
                 .match( StabilityMessage.class,                 this::notifyDowningActor )
+                .match( Tick.class,                             ignored -> updateMonitor() )
                 .build();
     }
 
@@ -149,13 +157,21 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
     private void sendClusterView()
     {
         topologyActor.tell( clusterView, getSelf() );
+        updateMonitor();
         resetDowningTimer();
     }
 
     private void resetDowningTimer()
     {
         // will cancel previous timer
-        timers().startSingleTimer( downingTimerKey, StabilityMessage.INSTANCE, clusterStabilityWait );
+        timers().startSingleTimer( DOWNING_TIMER_KEY, StabilityMessage.INSTANCE, clusterStabilityWait );
+    }
+
+    private void updateMonitor()
+    {
+        monitor.setMembers( clusterView.members().size() );
+        monitor.setUnreachable( clusterView.unreachable().size() );
+        monitor.setConverged( clusterView.converged() );
     }
 
     private static class StabilityMessage
