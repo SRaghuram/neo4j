@@ -21,6 +21,8 @@ import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.validation.DbValidationResult;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
@@ -29,8 +31,6 @@ import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -67,8 +67,8 @@ public class IntegrationValidationTest
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
                         Neo4jApi.EMBEDDED_CORE,
-                        PlannerType.DEFAULT,
-                        RuntimeType.DEFAULT,
+                        Planner.DEFAULT,
+                        Runtime.DEFAULT,
                         LdbcDateCodec.Format.STRING_ENCODED,
                         LdbcDateCodec.Format.NUMBER_UTC,
                         LdbcDateCodec.Resolution.NOT_APPLICABLE
@@ -207,8 +207,8 @@ public class IntegrationValidationTest
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
                         Neo4jApi.EMBEDDED_CORE,
-                        PlannerType.DEFAULT,
-                        RuntimeType.DEFAULT )
+                        Planner.DEFAULT,
+                        Runtime.DEFAULT )
         );
     }
 
@@ -228,12 +228,12 @@ public class IntegrationValidationTest
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
                         Neo4jApi.EMBEDDED_CYPHER,
-                        PlannerType.DEFAULT,
-                        RuntimeType.DEFAULT,
+                        Planner.DEFAULT,
+                        Runtime.DEFAULT,
                         LdbcDateCodec.Format.NUMBER_UTC,
                         LdbcDateCodec.Format.NUMBER_ENCODED ),
-                PlannerType.DEFAULT,
-                RuntimeType.DEFAULT
+                Planner.DEFAULT,
+                Runtime.DEFAULT
         );
     }
 
@@ -247,22 +247,22 @@ public class IntegrationValidationTest
                         CsvSchema.CSV_REGULAR,
                         Neo4jSchema.NEO4J_REGULAR,
                         Neo4jApi.REMOTE_CYPHER,
-                        PlannerType.DEFAULT,
-                        RuntimeType.DEFAULT ),
-                PlannerType.DEFAULT,
-                RuntimeType.DEFAULT
+                        Planner.DEFAULT,
+                        Runtime.DEFAULT ),
+                Planner.DEFAULT,
+                Runtime.DEFAULT
         );
     }
 
     private void doShouldValidateAgainstPublicValidationSet( Scenario scenario ) throws Exception
     {
-        doShouldValidateAgainstPublicValidationSet( scenario, PlannerType.DEFAULT, RuntimeType.DEFAULT );
+        doShouldValidateAgainstPublicValidationSet( scenario, Planner.DEFAULT, Runtime.DEFAULT );
     }
 
     private void doShouldValidateAgainstPublicValidationSet(
             Scenario scenario,
-            PlannerType plannerType,
-            RuntimeType runtimeType ) throws Exception
+            Planner plannerType,
+            Runtime runtimeType ) throws Exception
     {
         assertThat(
                 "File is empty: " + scenario.validationParamsFile().getAbsolutePath(),

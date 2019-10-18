@@ -9,13 +9,13 @@ import com.ldbc.driver.DbException;
 import com.ldbc.driver.Workload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
-import com.neo4j.bench.ldbc.utils.PlannerType;
-import com.neo4j.bench.ldbc.utils.RuntimeType;
 
 import java.io.File;
 import java.util.Random;
@@ -46,8 +46,8 @@ public class Scenario
     private final CsvSchema csvSchema;
     private final Neo4jSchema neo4jSchema;
     private final Neo4jApi neo4JApi;
-    private final PlannerType planner;
-    private final RuntimeType runtime;
+    private final Planner planner;
+    private final Runtime runtime;
     private final LdbcDateCodec.Format csvFormat;
     private final LdbcDateCodec.Format neo4JFormat;
     private final LdbcDateCodec.Resolution timestampResolution;
@@ -60,8 +60,8 @@ public class Scenario
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
             Neo4jApi neo4JApi,
-            PlannerType planner,
-            RuntimeType runtime,
+            Planner planner,
+            Runtime runtime,
             LdbcDateCodec.Format csvFormat,
             LdbcDateCodec.Format neo4JFormat,
             LdbcDateCodec.Resolution timestampResolution )
@@ -115,12 +115,12 @@ public class Scenario
         return neo4JApi;
     }
 
-    public PlannerType planner()
+    public Planner planner()
     {
         return planner;
     }
 
-    public RuntimeType runtime()
+    public Runtime runtime()
     {
         return runtime;
     }
@@ -282,33 +282,33 @@ public class Scenario
         }
     }
 
-    public static PlannerType randomInteractivePlannerFor( Neo4jApi neo4jApi )
+    public static Planner randomInteractivePlannerFor( Neo4jApi neo4jApi )
     {
         switch ( neo4jApi )
         {
         case EMBEDDED_CORE:
-            return PlannerType.DEFAULT;
+            return Planner.DEFAULT;
         case EMBEDDED_CYPHER:
         case REMOTE_CYPHER:
             int random = Math.abs( RANDOM.nextInt() );
-            int plannerTypeIndex = random % PlannerType.values().length;
-            return PlannerType.values()[plannerTypeIndex];
+            int plannerTypeIndex = random % Planner.values().length;
+            return Planner.values()[plannerTypeIndex];
         default:
             throw new RuntimeException( format( "Unsupported Neo4j API: %s", neo4jApi ) );
         }
     }
 
-    public static RuntimeType randomInteractiveRuntimeFor( Neo4jApi neo4jApi )
+    public static Runtime randomInteractiveRuntimeFor( Neo4jApi neo4jApi )
     {
         switch ( neo4jApi )
         {
         case EMBEDDED_CORE:
-            return RuntimeType.DEFAULT;
+            return Runtime.DEFAULT;
         case EMBEDDED_CYPHER:
         case REMOTE_CYPHER:
             int random = Math.abs( RANDOM.nextInt() );
-            int runtimeTypeIndex = random % RuntimeType.values().length;
-            return RuntimeType.values()[runtimeTypeIndex];
+            int runtimeTypeIndex = random % Runtime.values().length;
+            return Runtime.values()[runtimeTypeIndex];
         default:
             throw new RuntimeException( format( "Unsupported Neo4j API: %s", neo4jApi ) );
         }
@@ -385,8 +385,8 @@ public class Scenario
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
             Neo4jApi neo4JApi,
-            PlannerType planner,
-            RuntimeType runtime )
+            Planner planner,
+            Runtime runtime )
     {
         return randomInteractiveFor(
                 csvSchema,
@@ -402,8 +402,8 @@ public class Scenario
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
             Neo4jApi neo4JApi,
-            PlannerType planner,
-            RuntimeType runtime,
+            Planner planner,
+            Runtime runtime,
             LdbcDateCodec.Format csvFormat,
             LdbcDateCodec.Format neo4JFormat )
     {
@@ -422,8 +422,8 @@ public class Scenario
             CsvSchema csvSchema,
             Neo4jSchema neo4jSchema,
             Neo4jApi neo4JApi,
-            PlannerType planner,
-            RuntimeType runtime,
+            Planner planner,
+            Runtime runtime,
             LdbcDateCodec.Format csvFormat,
             LdbcDateCodec.Format neo4JFormat,
             LdbcDateCodec.Resolution timestampResolution )
@@ -458,8 +458,8 @@ public class Scenario
                 csvSchema,
                 neo4jSchema,
                 neo4JApi,
-                PlannerType.DEFAULT,
-                RuntimeType.DEFAULT,
+                Planner.DEFAULT,
+                Runtime.DEFAULT,
                 csvFormat,
                 neo4JFormat,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );

@@ -1,5 +1,5 @@
 // Unique
-CREATE CONSTRAINT ON ( annoation:Annoation ) ASSERT annoation.event_id IS UNIQUE
+CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT annotation.event_id IS UNIQUE
 CREATE CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name IS UNIQUE
 CREATE CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE

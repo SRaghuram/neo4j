@@ -27,6 +27,7 @@
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
 		<neo4j.version>${project.version}</neo4j.version>
+        <s3mock.version>0.2.4</s3mock.version>
     </properties>
 
     <licenses>
@@ -93,6 +94,12 @@
                 <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>io.findify</groupId>
+                <artifactId>s3mock_2.11</artifactId>
+                <version>${s3mock.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -107,6 +114,7 @@
         <module>import</module>
         <module>benchmark-infra</module>
         <module>benchmark-neo4j-common</module>
+        <module>benchmark-neo4j-common-test</module>
     </modules>
 
     <profiles>
