@@ -168,18 +168,6 @@ public class RecordingChannel implements Channel
     }
 
     @Override
-    public boolean getUserDefinedWritability( int index )
-    {
-        return false;
-    }
-
-    @Override
-    public void setUserDefinedWritability( int index, boolean isWritable )
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Object getAttachment()
     {
         throw new UnsupportedOperationException(  );
@@ -290,6 +278,12 @@ public class RecordingChannel implements Channel
         @Override
         public void removeListener( ChannelFutureListener listener )
         {
+        }
+
+        @Override
+        public ChannelFuture rethrowIfFailed()
+        {
+            return null;
         }
 
         @Override

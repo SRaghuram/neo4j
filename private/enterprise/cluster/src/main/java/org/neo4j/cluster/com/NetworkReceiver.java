@@ -19,8 +19,6 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.serialization.ClassResolver;
-import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
@@ -290,9 +288,9 @@ public class NetworkReceiver
         public ChannelPipeline getPipeline()
         {
             ChannelPipeline pipeline = Channels.pipeline();
-            ClassLoader classLoader = NetworkNodePipelineFactory.this.getClass().getClassLoader();
-            ClassResolver resolver = ClassResolvers.weakCachingConcurrentResolver( classLoader );
-            pipeline.addLast( "frameDecoder", new ObjectDecoder( 1024 * 1000, resolver ) );
+            pipeline.addLast( "frameDecoder",
+                    new ObjectDecoder( 1024 * 1000,
+                            NetworkNodePipelineFactory.this.getClass().getClassLoader() ) );
             pipeline.addLast( "serverHandler", new MessageReceiver() );
             return pipeline;
         }
