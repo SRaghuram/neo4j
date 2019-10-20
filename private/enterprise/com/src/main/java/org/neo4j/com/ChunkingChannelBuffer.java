@@ -521,9 +521,21 @@ public class ChunkingChannelBuffer implements ChannelBuffer, ChannelFutureListen
     }
 
     @Override
+    public ChannelBuffer readBytes( ChannelBufferIndexFinder indexFinder )
+    {
+        return buffer.readBytes( indexFinder );
+    }
+
+    @Override
     public ChannelBuffer readSlice( int length )
     {
         return buffer.readSlice( length );
+    }
+
+    @Override
+    public ChannelBuffer readSlice( ChannelBufferIndexFinder indexFinder )
+    {
+        return buffer.readSlice( indexFinder );
     }
 
     @Override
@@ -578,6 +590,12 @@ public class ChunkingChannelBuffer implements ChannelBuffer, ChannelFutureListen
     public void skipBytes( int length )
     {
         buffer.skipBytes( length );
+    }
+
+    @Override
+    public int skipBytes( ChannelBufferIndexFinder indexFinder )
+    {
+        return buffer.skipBytes( indexFinder );
     }
 
     private void sendChunkIfNeeded( int bytesPlus )
@@ -913,6 +931,31 @@ public class ChunkingChannelBuffer implements ChannelBuffer, ChannelFutureListen
     public String toString( int index, int length, Charset charset )
     {
         return buffer.toString( index, length, charset );
+    }
+
+    @Override
+    public String toString( String charsetName )
+    {
+        return buffer.toString( charsetName );
+    }
+
+    @Override
+    public String toString( String charsetName, ChannelBufferIndexFinder terminatorFinder )
+    {
+        return buffer.toString( charsetName, terminatorFinder );
+    }
+
+    @Override
+    public String toString( int index, int length, String charsetName )
+    {
+        return buffer.toString( index, length, charsetName );
+    }
+
+    @Override
+    public String toString( int index, int length, String charsetName,
+            ChannelBufferIndexFinder terminatorFinder )
+    {
+        return buffer.toString( index, length, charsetName, terminatorFinder );
     }
 
     @Override
