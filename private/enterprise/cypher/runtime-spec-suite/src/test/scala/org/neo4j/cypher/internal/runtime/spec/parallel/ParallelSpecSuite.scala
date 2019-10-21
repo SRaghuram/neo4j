@@ -159,12 +159,12 @@ class ParallelRuntimeUnwindStressTest extends UnwindStressTestBase(ENTERPRISE.FU
 class ParallelRuntimeUnwindNoFusingStressTest extends UnwindStressTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 
 // SORT
-class ParallelRuntimeSortTest extends SortTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeSortNoFusingTest extends SortTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeSortTest extends SortTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeSortNoFusingTest extends SortTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // TOP
-class ParallelRuntimeTopTest extends TopTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeTopNoFusingTest extends TopTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeTopTest extends TopTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeTopNoFusingTest extends TopTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // AGGREGATION
 class ParallelRuntimeAggregationTest extends AggregationTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
@@ -190,14 +190,14 @@ class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(ENTERPRISE.NO
 
 
 // CARTESIAN PRODUCT
-class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)
-class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNoFusingMiscTest extends MiscTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
-class ParallelRuntimeExpressionTest extends ExpressionTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest
-class ParallelRuntimeNoFusingExpressionTest extends ExpressionTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with TimeLimitedCypherTest
+class ParallelRuntimeExpressionTest extends ExpressionTestBase(ENTERPRISE.FUSING, PARALLEL) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNoFusingExpressionTest extends ExpressionTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelFusingNotificationTest extends MorselFusingNotificationTestBase(ENTERPRISE.FUSING, PARALLEL) with TimeLimitedCypherTest // not ParallelRuntimeSpecSuite, since we expect fusing to fail
 class ParallelRuntimeSchedulerTracerTest extends SchedulerTracerTestBase(PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(ENTERPRISE.FUSING, PARALLEL) with ParallelRuntimeSpecSuite
