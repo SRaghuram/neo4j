@@ -13,6 +13,7 @@ import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
 import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
+import com.neo4j.fabric.util.Errors.EvaluationFailedException
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph
@@ -40,8 +41,6 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
   )
 
   "Correctly evaluates:" - {
-    "USE mega.graph0" in { eval() shouldEqual RemoteGraph(mega0) }
-    "USE mega.graph1" in { eval() shouldEqual RemoteGraph(mega1) }
     "USE mega.graph(0)" in { eval() shouldEqual RemoteGraph(mega0) }
     "USE mega.graph(1)" in { eval() shouldEqual RemoteGraph(mega1) }
     "USE mega.graph(const0())" in { eval() shouldEqual RemoteGraph(mega0) }
@@ -50,6 +49,12 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     "USE mega.graph(y)" in { eval("y" -> Values.intValue(1)) shouldEqual RemoteGraph(mega1) }
     "USE mega.source_of_all_truth" in { eval() shouldEqual RemoteGraph(mega0) }
     "USE mega.mega" in { eval() shouldEqual RemoteGraph(mega2) }
+  }
+
+  "Fails for:" - {
+    "USE mega.graph0" in { the[EvaluationFailedException].thrownBy(eval()).getMessage.should(include("not found: mega.graph0")) }
+    "USE mega.graph1" in { the[EvaluationFailedException].thrownBy(eval()).getMessage.should(include("not found: mega.graph1")) }
+    "USE mega.graph(10)" in { the[EvaluationFailedException].thrownBy(eval()).getMessage.should(include("not found: 10")) }
   }
 
   object eval {

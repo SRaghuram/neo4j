@@ -157,10 +157,10 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
         }
 
         verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
@@ -172,10 +172,10 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.WRITE ) )
         {
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
         }
 
         verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
@@ -187,8 +187,8 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
         }
 
         verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
@@ -200,13 +200,13 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.WRITE ) )
         {
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
 
             verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
             verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
 
-            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume() );
+            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume() );
         }
     }
 
@@ -215,18 +215,18 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume();
         }
 
         verifySessionConfig( 12, org.neo4j.bolt.runtime.AccessMode.READ );
@@ -238,21 +238,21 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.WRITE ) )
         {
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph0 CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
 
             verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
             verifySessionConfig( 6, org.neo4j.bolt.runtime.AccessMode.READ );
 
-            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph1 CREATE (n:Foo)" ).consume() );
+            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume() );
         }
     }
 

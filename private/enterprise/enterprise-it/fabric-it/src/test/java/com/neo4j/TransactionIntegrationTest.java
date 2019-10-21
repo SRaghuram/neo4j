@@ -166,7 +166,7 @@ class TransactionIntegrationTest
                 "}",
                 "WITH count(*) AS c",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
                 "  RETURN 2",
                 "}",
@@ -177,7 +177,7 @@ class TransactionIntegrationTest
                 "}",
                 "WITH count(*) AS c",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  MATCH (n)",
                 "  RETURN n",
                 "}",
@@ -189,7 +189,7 @@ class TransactionIntegrationTest
         var node = records.get( 0 ).get( 0 ).asNode();
         assertEquals( "someValue", node.get( "someProperty" ).asString() );
 
-        var records2 = Flux.from(tx.run( "USE mega.graph0 MATCH (n) RETURN n.someProperty AS val" ).records()).collectList().block();
+        var records2 = Flux.from(tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records()).collectList().block();
         assertEquals(1, records2.size());
         assertEquals( "someValue", records2.get( 0 ).get( 0 ).asString() );
 
@@ -206,17 +206,17 @@ class TransactionIntegrationTest
 
         var statement = String.join( "\n",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
                 "  RETURN 1",
                 "}",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  UNWIND range(1, 100) AS i",
                 "  RETURN i",
                 "}",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  WITH i",
                 "  CREATE (n {counter: i})",
                 "  RETURN n",
@@ -241,12 +241,12 @@ class TransactionIntegrationTest
 
         var statement = String.join( "\n",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  UNWIND range(0, 100) AS i",
                 "  RETURN i",
                 "}",
                 "CALL {",
-                "  USE mega.graph1",
+                "  USE mega.graph(1)",
                 "  WITH i",
                 "  RETURN 1/i AS x",
                 "}",
@@ -273,18 +273,18 @@ class TransactionIntegrationTest
 
         var statement = String.join( "\n",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  UNWIND range(0, 100) AS i",
                 "  RETURN i",
                 "}",
                 "CALL {",
-                "  USE mega.graph1",
+                "  USE mega.graph(1)",
                 "  WITH i",
                 "  CREATE (n {counter: i})",
                 "  RETURN n",
                 "}",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  WITH i",
                 "  RETURN 1/i AS x",
                 "}",
@@ -311,12 +311,12 @@ class TransactionIntegrationTest
 
         var statement = String.join( "\n",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
                 "  RETURN 1",
                 "}",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  UNWIND range(1, 1000) AS i",
                 "  RETURN i",
                 "}",
@@ -337,12 +337,12 @@ class TransactionIntegrationTest
 
         var statement = String.join( "\n",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
                 "  RETURN 1",
                 "}",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  UNWIND range(1, 1000) AS i",
                 "  RETURN i",
                 "}",
@@ -363,12 +363,12 @@ class TransactionIntegrationTest
 
         var statement = String.join( "\n",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
                 "  RETURN 1",
                 "}",
                 "CALL {",
-                "  USE mega.graph0",
+                "  USE mega.graph(0)",
                 "  UNWIND range(1, 1000) AS i",
                 "  RETURN i",
                 "}",
@@ -380,7 +380,7 @@ class TransactionIntegrationTest
         assertTrue( subscriber.latch.await( 1, TimeUnit.SECONDS ) );
 
         // the result stream is canceled, but the transaction should be still open with all its data
-        var records = Flux.from(tx.run( "USE mega.graph0 MATCH (n) RETURN n.someProperty AS val" ).records()).collectList().block();
+        var records = Flux.from(tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records()).collectList().block();
         assertEquals(1, records.size());
         assertEquals( "someValue", records.get( 0 ).get( 0 ).asString() );
 

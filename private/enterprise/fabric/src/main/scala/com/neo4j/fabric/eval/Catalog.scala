@@ -51,45 +51,30 @@ object Catalog {
 
   case class Arg[T <: AnyValue](name: String, tpe: Class[T])
 
-  val empty: Catalog = Catalog(Map.empty)
-
-  def merge(a: Catalog, b: Catalog): Catalog = Catalog(a.entries ++ b.entries)
-
   def fromConfig(config: FabricConfig): Catalog =
     fromDatabase(config.getDatabase)
 
   private def fromDatabase(database: FabricConfig.Database): Catalog = {
 
-    val name = database.getName.name
-    val direct = database.getGraphs.asScala
-      .map(fromGraph(name, _))
-      .foldLeft(empty)(merge)
+    val namespace = database.getName.name
+    val graphs = database.getGraphs.asScala
 
-    val functions = Catalog(Map(
-      CatalogName(name, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(sid =>
-        direct.resolve(graphName(name, sid.longValue()), Seq()))
+    val byName = Catalog((for {
+      graph <- graphs
+      name <- Option(graph.getName)
+    } yield CatalogName(namespace, name) -> RemoteGraph(graph)).toMap)
+
+    val byId = Catalog(Map(
+      CatalogName(namespace, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(sid =>
+        RemoteGraph(graphs
+          .find(_.getId == sid.longValue())
+          .getOrElse(Errors.notFound("Graph with id", show(sid), InputPosition.NONE))
+        )
+      )
     ))
 
-    direct ++ functions
+    byName ++ byId
   }
-
-  private def fromGraph(database: String, graph: FabricConfig.Graph): Catalog = {
-    val remoteGraph = RemoteGraph(graph)
-    val mapping = Map(graphName(database, graph.getId) -> remoteGraph)
-
-    val mappingWithGraphName =
-      if (graph.getName != null) {
-        mapping + (CatalogName(database, graph.getName) -> remoteGraph)
-      } else {
-        mapping
-      }
-
-    Catalog(mappingWithGraphName)
-  }
-
-  private def graphName(database: String, sid: Long) =
-    CatalogName(database, "graph" + sid)
-
 }
 
 case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
@@ -109,5 +94,5 @@ case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
     }
   }
 
-  def ++(that: Catalog): Catalog = Catalog.merge(this, that)
+  def ++(that: Catalog): Catalog = Catalog(this.entries ++ that.entries)
 }

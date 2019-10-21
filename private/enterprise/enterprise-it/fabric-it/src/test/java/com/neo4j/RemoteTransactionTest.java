@@ -466,17 +466,17 @@ class RemoteTransactionTest
 
     private void writeToShard1( Transaction tx )
     {
-        tx.run( "USE mega.graph1 CREATE(n) RETURN n" ).consume();
+        tx.run( "USE mega.graph(1) CREATE(n) RETURN n" ).consume();
     }
 
     private void readFromShard2( Transaction tx )
     {
-        tx.run( "USE mega.graph2 MATCH (n) RETURN n" ).consume();
+        tx.run( "USE mega.graph(2) MATCH (n) RETURN n" ).consume();
     }
 
     private void readFromShard3( Transaction tx )
     {
-        tx.run( "USE mega.graph3 MATCH (n) RETURN n" ).consume();
+        tx.run( "USE mega.graph(3) MATCH (n) RETURN n" ).consume();
     }
 
     private void verifyDriverReturned( PooledDriver... driver )

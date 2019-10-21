@@ -74,7 +74,9 @@ class EndToEndTest
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", shard0.boltURI().toString(),
+                "fabric.graph.0.name", "myGraph0",
                 "fabric.graph.1.uri", shard1.boltURI().toString(),
+                "fabric.graph.1.name", "myGraph1",
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
@@ -154,8 +156,24 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             result = Stream.concat(
-                    tx.run( "USE mega.graph0 MATCH (n) RETURN n.name AS name" ).stream(),
-                    tx.run( "USE mega.graph1 MATCH (n) RETURN n.name AS name" ).stream()
+                    tx.run( "USE mega.graph(0) MATCH (n) RETURN n.name AS name" ).stream(),
+                    tx.run( "USE mega.graph(1) MATCH (n) RETURN n.name AS name" ).stream()
+            ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
+            tx.success();
+        }
+
+        assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
+    }
+
+    @Test
+    void testNamedGraphs()
+    {
+        List<String> result;
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        {
+            result = Stream.concat(
+                    tx.run( "USE mega.myGraph0 MATCH (n) RETURN n.name AS name" ).stream(),
+                    tx.run( "USE mega.myGraph1 MATCH (n) RETURN n.name AS name" ).stream()
             ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -191,8 +209,8 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = Stream.concat(
-                    tx.run( "USE mega.graph0 MATCH (n) RETURN n" ).stream(),
-                    tx.run( "USE mega.graph1 MATCH (n) RETURN n" ).stream()
+                    tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).stream(),
+                    tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).stream()
             ).map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -211,8 +229,8 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "USE mega.graph0 CREATE (:Cat {name: 'Whiskers'})" );
-            tx.run( "USE mega.graph0 CREATE (:Cat {name: 'Charlie'})" );
+            tx.run( "USE mega.graph(0) CREATE (:Cat {name: 'Whiskers'})" );
+            tx.run( "USE mega.graph(0) CREATE (:Cat {name: 'Charlie'})" );
             tx.success();
         }
 
@@ -221,11 +239,11 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "USE mega.graph1 CREATE (:Cat {name: 'Misty'})" );
-            tx.run( "USE mega.graph1 CREATE (:Cat {name: 'Cupcake'})" );
+            tx.run( "USE mega.graph(1) CREATE (:Cat {name: 'Misty'})" );
+            tx.run( "USE mega.graph(1) CREATE (:Cat {name: 'Cupcake'})" );
             r = Stream.concat(
-                    tx.run( "USE mega.graph0 MATCH (c:Cat) RETURN c" ).stream(),
-                    tx.run( "USE mega.graph1 MATCH (c:Cat) RETURN c" ).stream()
+                    tx.run( "USE mega.graph(0) MATCH (c:Cat) RETURN c" ).stream(),
+                    tx.run( "USE mega.graph(1) MATCH (c:Cat) RETURN c" ).stream()
             ).map( c -> c.get( "c" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -266,9 +284,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "USE mega.graph0 MATCH (n) RETURN n",
+                    "USE mega.graph(0) MATCH (n) RETURN n",
                     "UNION ALL",
-                    "USE mega.graph1 MATCH (n) RETURN n"
+                    "USE mega.graph(1) MATCH (n) RETURN n"
             ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -289,9 +307,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "USE mega.graph0 MATCH (n) RETURN n",
+                    "USE mega.graph(0) MATCH (n) RETURN n",
                     "UNION",
-                    "USE mega.graph1 MATCH (n) RETURN n"
+                    "USE mega.graph(1) MATCH (n) RETURN n"
             ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -311,9 +329,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "USE mega.graph0 MATCH (n) RETURN n.age AS a",
+                    "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
                     "UNION ALL",
-                    "USE mega.graph1 MATCH (n) RETURN n.age AS a"
+                    "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
             ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -329,9 +347,9 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             r = tx.run( String.join( "\n",
-                    "USE mega.graph0 MATCH (n) RETURN n.age AS a",
+                    "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
                     "UNION",
-                    "USE mega.graph1 MATCH (n) RETURN n.age AS a"
+                    "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
             ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() );
             tx.success();
         }
@@ -345,14 +363,14 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "USE mega.graph0 CREATE (:User {id:1}) - [:FRIEND] -> (:User)" );
+            tx.run( "USE mega.graph(0) CREATE (:User {id:1}) - [:FRIEND] -> (:User)" );
             tx.success();
         }
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.READ ).withDatabase( "mega" ).build() )
                 .beginTransaction() )
         {
-            tx.run( "USE mega.graph0 MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" ).consume();
             tx.success();
         }
     }
