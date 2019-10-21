@@ -18,8 +18,8 @@ import java.util.concurrent.Executors;
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.core.NodeEntity;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -80,8 +80,8 @@ class MultiDatabaseLockManagerIT
 
             try ( Transaction transaction = database.beginTx() )
             {
-                NodeEntity nodeEntity = ((InternalTransaction) transaction).newNodeEntity( NODE_ID );
-                transaction.acquireWriteLock( nodeEntity );
+                Node node = ((InternalTransaction) transaction).newNodeEntity( NODE_ID );
+                transaction.acquireWriteLock( node );
                 lockNodeWithSameIdInAnotherDatabase( transactionExecutor, secondDatabase, lockAcquiredLatch );
                 lockAcquiredLatch.await();
             }
@@ -104,8 +104,8 @@ class MultiDatabaseLockManagerIT
         transactionExecutor.execute( () -> {
             try ( Transaction transaction = databaseService.beginTx() )
             {
-                NodeEntity nodeEntity = ((InternalTransaction) transaction).newNodeEntity( NODE_ID );
-                transaction.acquireWriteLock( nodeEntity );
+                Node node = ((InternalTransaction) transaction).newNodeEntity( NODE_ID );
+                transaction.acquireWriteLock( node );
                 latch.countDown();
             }
         } );
