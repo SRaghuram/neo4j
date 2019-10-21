@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.internal.kernel.api._
-import org.neo4j.internal.kernel.api.helpers.{RelationshipDenseSelectionCursor, RelationshipSelectionCursor, RelationshipSparseSelectionCursor}
 import org.neo4j.io.IOUtils
 
 class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoCloseable {
@@ -34,17 +33,6 @@ class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoC
     relationshipScanCursorPool.setKernelTracer(tracer)
     nodeValueIndexCursorPool.setKernelTracer(tracer)
     nodeLabelIndexCursorPool.setKernelTracer(tracer)
-  }
-
-  def free(selectionCursor: RelationshipSelectionCursor): Unit = selectionCursor match {
-    case dense: RelationshipDenseSelectionCursor =>
-      relationshipGroupCursorPool.forceFree(dense.groupCursor())
-      relationshipTraversalCursorPool.forceFree(dense.traversalCursor())
-    case sparse: RelationshipSparseSelectionCursor =>
-      relationshipTraversalCursorPool.forceFree(sparse.traversalCursor())
-
-    case _ => //either null or empty
-
   }
 
   override def close(): Unit = {
@@ -139,10 +127,6 @@ class TrackingCursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends 
     super.free(cursor)
   }
 
-  override def forceFree(cursor: CURSOR): Unit = {
-    liveCount -= 1L
-    super.forceFree(cursor)
-  }
   override def getLiveCount: Long = liveCount
 }
 
@@ -172,14 +156,18 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
     * Free the given cursor. NOOP if `null`.
     */
   def free(cursor: CURSOR): Unit = {
-    freeCursor(cursor)
-  }
-
-  /**
-    * Free the given cursor. If the cursor is `null` it should still count as if released.
-    */
-  def forceFree(cursor: CURSOR): Unit = {
-    freeCursor(cursor)
+    if (cursor != null) {
+      if (DebugSupport.CURSORS.enabled) {
+        DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString( s"""+ free $cursor
+        """, "\n        ", ""))
+      }
+      cursor.setTracer(KernelReadTracer.NONE)
+      //use local variable in order to avoid `cached()` multiple times
+      val c = cached
+      if (c != null)
+        c.close()
+      cached = cursor
+    }
   }
 
   private final def allocateCursor(): CURSOR = {
@@ -193,20 +181,6 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
       cursor = cursorFactory()
     }
     cursor
-  }
-
-  private def freeCursor(cursor: CURSOR): Unit = {
-    if (cursor != null) {
-      if (DebugSupport.CURSORS.enabled) {
-        DebugSupport.CURSORS.log(stackTraceSlice(4, 5).mkString(s"+ free $cursor\n        ", "\n        ", ""))
-      }
-      cursor.setTracer(KernelReadTracer.NONE)
-      //use local variable in order to avoid `cached()` multiple times
-      val c = cached
-      if (c != null)
-        c.close()
-      cached = cursor
-    }
   }
 
   override def close(): Unit = {

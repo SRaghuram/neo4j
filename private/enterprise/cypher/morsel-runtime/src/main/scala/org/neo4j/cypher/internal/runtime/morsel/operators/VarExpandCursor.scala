@@ -47,17 +47,17 @@ abstract class VarExpandCursor(val fromNode: Long,
   private var cursorPools: CursorPools = _
 
   protected def selectionCursor(groupCursor: RelationshipGroupCursor,
-                            traversalCursor: RelationshipTraversalCursor,
-                            node: NodeCursor,
-                            types: Array[Int]): RelationshipSelectionCursor
+                                traversalCursor: RelationshipTraversalCursor,
+                                node: NodeCursor,
+                                types: Array[Int]): RelationshipSelectionCursor
 
   //extension point
   protected def satisfyPredicates(executionContext: ExecutionContext,
-                                   dbAccess: DbAccess,
-                                   params: Array[AnyValue],
-                                   cursors: ExpressionCursors,
-                                   expressionVariables: Array[AnyValue],
-                                   selectionCursor: RelationshipSelectionCursor): Boolean
+                                  dbAccess: DbAccess,
+                                  params: Array[AnyValue],
+                                  cursors: ExpressionCursors,
+                                  expressionVariables: Array[AnyValue],
+                                  selectionCursor: RelationshipSelectionCursor): Boolean
 
   def enterWorkUnit(cursorPools: CursorPools): Unit = {
     this.cursorPools = cursorPools
@@ -120,25 +120,23 @@ abstract class VarExpandCursor(val fromNode: Long,
 
   private def expand(node: Long): Unit = {
 
-    val groupCursor = relGroupCursors.computeIfAbsent(pathLength, () => {
-      val cursor = cursorPools.relationshipGroupCursorPool.allocateAndTrace()
-      cursor.setTracer(event)
-      cursor
-    })
-    val traversalCursor = relTraCursors.computeIfAbsent(pathLength, () => {
-      val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()
-      cursor.setTracer(event)
-      cursor
-    })
-
     read.singleNode(node, nodeCursor)
-
     val cursor =
       if (!nodeCursor.next()) {
         RelationshipSelectionCursor.EMPTY
-      } else selectionCursor(groupCursor, traversalCursor, nodeCursor, relTypes)
-
-
+      } else {
+        val groupCursor = relGroupCursors.computeIfAbsent(pathLength, () => {
+          val cursor = cursorPools.relationshipGroupCursorPool.allocateAndTrace()
+          cursor.setTracer(event)
+          cursor
+        })
+        val traversalCursor = relTraCursors.computeIfAbsent(pathLength, () => {
+          val cursor = cursorPools.relationshipTraversalCursorPool.allocateAndTrace()
+          cursor.setTracer(event)
+          cursor
+        })
+        selectionCursor(groupCursor, traversalCursor, nodeCursor, relTypes)
+      }
     selectionCursors.set(pathLength, cursor)
   }
 
@@ -418,9 +416,12 @@ abstract class IncomingVarExpandCursor(fromNode: Long,
   override protected def selectionCursor(groupCursor: RelationshipGroupCursor,
                                          traversalCursor: RelationshipTraversalCursor,
                                          node: NodeCursor,
-                                         types: Array[Int]): RelationshipSelectionCursor = incomingCursor(groupCursor,
-                                                                                                          traversalCursor,
-                                                                                                          node, types)
+                                         types: Array[Int]): RelationshipSelectionCursor = {
+
+    incomingCursor(groupCursor,
+                   traversalCursor,
+                   node, types)
+  }
 }
 
 abstract class AllVarExpandCursor(fromNode: Long,
