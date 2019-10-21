@@ -67,7 +67,7 @@ class FabricExecutorTest
 
     private static final PortUtils.Ports ports = PortUtils.findFreePorts();
 
-    private static final Map<String, String> configProperties = Map.of(
+    private static final Map<String,String> configProperties = Map.of(
             "fabric.database.name", "mega",
             "fabric.graph.0.uri", "bolt://localhost:1111",
             "fabric.graph.1.uri", "bolt://localhost:2222",
@@ -77,7 +77,7 @@ class FabricExecutorTest
     );
 
     private static final Config config = Config.newBuilder()
-            .setRaw(configProperties)
+            .setRaw( configProperties )
             .build();
 
     private static TestServer testServer;
@@ -94,7 +94,7 @@ class FabricExecutorTest
     {
         testServer = new TestServer( config );
 
-        testServer.addMocks( driverPool  );
+        testServer.addMocks( driverPool );
         internalLogProvider = new AssertableLogProvider();
         testServer.setInternalLogProvider( internalLogProvider );
         testServer.start();
@@ -141,7 +141,7 @@ class FabricExecutorTest
         doReturn( graph1 ).when( driverPool ).getDriver( argThat( g -> g.getId() == 1 ), any() );
     }
 
-    private PooledDriver createMockDriver( AutoCommitStatementResult mockStatementResult  )
+    private PooledDriver createMockDriver( AutoCommitStatementResult mockStatementResult )
     {
         PooledDriver mockDriver = mock( PooledDriver.class );
 
@@ -151,7 +151,7 @@ class FabricExecutorTest
         when( tx.commit() ).thenReturn( Mono.empty() );
         when( tx.rollback() ).thenReturn( Mono.empty() );
 
-        when( mockDriver.beginTransaction(any(), accessModeArgument.capture(), any(), any() )).thenReturn( Mono.just( tx ) );
+        when( mockDriver.beginTransaction( any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( Mono.just( tx ) );
 
         when( mockDriver.run( any(), any(), any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( mockStatementResult );
         return mockDriver;
@@ -530,7 +530,8 @@ class FabricExecutorTest
                 inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 1" ), containsString( "RETURN 2 AS y" ) ) )
         );
         internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" ) ) )
+                inLog( FabricExecutor.class ).debug(
+                        allOf( containsString( "local" ), containsString( "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" ) ) )
         );
     }
 

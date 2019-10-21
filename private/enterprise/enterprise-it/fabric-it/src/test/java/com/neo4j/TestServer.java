@@ -56,11 +56,11 @@ public class TestServer implements AutoCloseable
         this.mocks.addAll( Arrays.asList( mocks ) );
     }
 
-
     public void setUserLogProvider( LogProvider userLogProvider )
     {
         this.userLogProvider = userLogProvider;
     }
+
     public void setInternalLogProvider( LogProvider internalLogProvider )
     {
         this.internalLogProvider = internalLogProvider;
