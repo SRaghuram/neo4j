@@ -119,7 +119,8 @@ object OperatorFusionPolicy {
              _: Projection |
              _: UnwindCollection |
              _: Limit |
-             _: VarExpand
+             _: VarExpand |
+             _: CacheProperties
         => true
 
         // two child operators
