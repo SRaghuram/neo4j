@@ -30,6 +30,7 @@ import org.neo4j.cursor.IOCursor;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -245,6 +246,7 @@ class RebuildFromLogs
         private final IndexProviderMap indexes;
         private final TokenHolders tokenHolders;
         private final IndexStatisticsStore indexStatisticsStore;
+        private final IdGeneratorFactory idGeneratorFactory;
 
         ConsistencyChecker( DatabaseLayout layout, PageCache pageCache )
         {
@@ -254,13 +256,14 @@ class RebuildFromLogs
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
             this.tokenHolders = resolver.resolveDependency( TokenHolders.class );
             this.indexStatisticsStore = resolver.resolveDependency( IndexStatisticsStore.class );
+            this.idGeneratorFactory = resolver.resolveDependency( IdGeneratorFactory.class );
         }
 
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore );
+            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore, idGeneratorFactory );
             FullCheck fullCheck = new FullCheck( ConsistencyFlags.DEFAULT, tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
                     Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
 
