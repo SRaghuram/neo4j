@@ -32,10 +32,11 @@ import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
+import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.query.ExecutingQuery
-import org.neo4j.kernel.api.{Kernel, Statement}
 import org.neo4j.kernel.database.Database
+import org.neo4j.kernel.impl.api.KernelStatement
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
@@ -185,7 +186,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val metaData = new util.HashMap[String, AnyRef]()
     val transactionFactory = dependencyResolver.provideDependency(classOf[KernelTransactionFactory]).get
     val databaseId = db.asInstanceOf[GraphDatabaseAPI].databaseId()
-    val initialStatement: Statement = tx.kernelTransaction().acquireStatement()
+    val initialStatement: KernelStatement = tx.kernelTransaction().acquireStatement().asInstanceOf[KernelStatement]
     val threadExecutingTheQuery = Thread.currentThread()
     val activeLockCount: LongSupplier = new LongSupplier {
       override def getAsLong = 0
