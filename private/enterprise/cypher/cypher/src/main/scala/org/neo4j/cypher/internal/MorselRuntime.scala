@@ -18,10 +18,10 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.execution.{ExecutionGraphSchedulingPolicy, LazyScheduling, ProfiledQuerySubscription, QueryExecutor}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselBlacklist
 import org.neo4j.cypher.internal.runtime.morsel.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InternalNotification}
@@ -42,8 +42,8 @@ object MorselRuntime {
   val CODE_GEN_FAILED_MESSAGE = "Code generation failed. Retrying physical planning."
 }
 
-class MorselRuntime(parallelExecution: Boolean,
-                    override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
+class MorselRuntime private(parallelExecution: Boolean,
+                            override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
 
   private val runtimeName = RuntimeName(name)
 
