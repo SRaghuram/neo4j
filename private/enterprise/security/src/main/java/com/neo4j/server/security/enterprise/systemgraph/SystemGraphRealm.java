@@ -19,10 +19,10 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.PasswordPolicy;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 

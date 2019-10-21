@@ -14,6 +14,8 @@ Apache Software License, Version 2.0
   akka-protobuf
   akka-remote
   akka-stream
+  Apache Commons BeanUtils
+  Apache Commons Collections
   Apache Commons Compress
   Apache Commons IO
   Apache Commons Lang

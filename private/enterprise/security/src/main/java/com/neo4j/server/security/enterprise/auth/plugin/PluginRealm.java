@@ -35,10 +35,10 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.Version;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 
 public class PluginRealm extends AuthorizingRealm implements RealmLifecycle, ShiroAuthorizationInfoProvider

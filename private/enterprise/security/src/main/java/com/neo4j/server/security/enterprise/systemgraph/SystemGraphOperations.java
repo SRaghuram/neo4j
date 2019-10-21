@@ -24,8 +24,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
 import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
 import org.neo4j.server.security.systemgraph.QueryExecutor;

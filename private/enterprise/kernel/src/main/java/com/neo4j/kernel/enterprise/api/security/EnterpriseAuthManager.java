@@ -11,7 +11,6 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
-import org.neo4j.kernel.impl.security.Credential;
 
 public interface EnterpriseAuthManager extends AuthManager
 {
@@ -55,18 +54,6 @@ public interface EnterpriseAuthManager extends AuthManager
         @Override
         public void clearAuthCache()
         {
-        }
-
-        @Override
-        public Credential createCredentialForPassword( byte[] password )
-        {
-            return Credential.INACCESSIBLE;
-        }
-
-        @Override
-        public Credential deserialize( String part )
-        {
-            return Credential.INACCESSIBLE;
         }
 
         @Override

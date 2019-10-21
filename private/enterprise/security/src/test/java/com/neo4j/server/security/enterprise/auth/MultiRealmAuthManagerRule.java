@@ -20,12 +20,12 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
-import org.neo4j.server.security.auth.SecureHasher;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;

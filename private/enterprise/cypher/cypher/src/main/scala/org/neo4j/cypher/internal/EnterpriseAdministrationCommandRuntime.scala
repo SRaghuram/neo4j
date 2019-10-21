@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.security.{SecureHasher, SystemGraphCredential}
 import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
@@ -96,7 +97,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
             Array(
               Values.stringValue(userName),
-              Values.stringValue(authManager.createCredentialForPassword(initialPassword).serialize()),
+              Values.stringValue(SystemGraphCredential.createCredentialForPassword(initialPassword, new SecureHasher).serialize()),
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
@@ -126,7 +127,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case None => Seq.empty
           case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
           case Some(value: Array[Byte]) =>
-            Seq((param._2, Values.stringValue(authManager.createCredentialForPassword(validatePassword(value)).serialize())))
+            Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(value), new SecureHasher).serialize())))
           case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
@@ -147,7 +148,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleResult((_, value) => {
             val maybeThrowable = initialPassword match {
               case Some(password) =>
-                val oldCredentials = authManager.deserialize(value.asInstanceOf[TextValue].stringValue())
+                val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), new SecureHasher)
                 if (oldCredentials.matchesPassword(password))
                   Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Old password and new password cannot be the same."))
                 else

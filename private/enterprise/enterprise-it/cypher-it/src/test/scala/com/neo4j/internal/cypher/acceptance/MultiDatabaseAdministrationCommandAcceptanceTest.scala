@@ -15,6 +15,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYS
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
@@ -22,7 +23,6 @@ import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.SecureHasher
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 import scala.collection.Map

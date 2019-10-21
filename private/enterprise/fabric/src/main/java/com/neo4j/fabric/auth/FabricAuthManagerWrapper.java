@@ -65,18 +65,6 @@ public class FabricAuthManagerWrapper implements EnterpriseAuthManager
     }
 
     @Override
-    public Credential createCredentialForPassword( byte[] password )
-    {
-        return wrappedAuthManager.createCredentialForPassword( password );
-    }
-
-    @Override
-    public Credential deserialize( String part ) throws Throwable
-    {
-        return wrappedAuthManager.deserialize( part );
-    }
-
-    @Override
     public void log( String message, SecurityContext securityContext )
     {
         wrappedAuthManager.log( message, securityContext );

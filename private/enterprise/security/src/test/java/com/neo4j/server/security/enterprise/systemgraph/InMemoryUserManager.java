@@ -25,13 +25,13 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.systemgraph.BasicInMemoryUserManager;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.time.Clocks;

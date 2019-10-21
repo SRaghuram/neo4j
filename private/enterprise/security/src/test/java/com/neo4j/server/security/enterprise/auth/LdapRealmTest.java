@@ -36,7 +36,7 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.server.security.auth.ShiroAuthToken;
 
 import static java.util.Arrays.asList;

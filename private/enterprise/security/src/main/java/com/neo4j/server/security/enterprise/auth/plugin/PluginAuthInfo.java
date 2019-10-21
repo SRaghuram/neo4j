@@ -17,8 +17,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.server.security.auth.SecureHasher;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 public class PluginAuthInfo extends ShiroAuthenticationInfo implements AuthorizationInfo

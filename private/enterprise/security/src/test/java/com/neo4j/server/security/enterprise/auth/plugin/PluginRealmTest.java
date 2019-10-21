@@ -12,8 +12,8 @@ import org.junit.Test;
 import java.time.Clock;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.server.security.auth.SecureHasher;
 
 import static java.lang.String.format;
 import static org.mockito.Mockito.mock;

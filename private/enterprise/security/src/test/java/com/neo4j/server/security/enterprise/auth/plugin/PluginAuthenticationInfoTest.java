@@ -13,7 +13,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import org.neo4j.server.security.auth.SecureHasher;
+import org.neo4j.cypher.internal.security.SecureHasher;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
