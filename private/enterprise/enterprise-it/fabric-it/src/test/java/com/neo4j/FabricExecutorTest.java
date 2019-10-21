@@ -453,7 +453,7 @@ class FabricExecutorTest
             Plan c0c0c0 = c0c0.children().get( 0 );
             assertThat( c0c0c0.operatorType(), is( "RemoteQuery" ) );
             assertThat( c0c0c0.identifiers(), containsInAnyOrder( "x" ) );
-            assertThat( c0c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "RETURN 1 AS x" ) ) );
+            assertThat( c0c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "RETURN 1 AS `x`" ) ) );
 
             Plan c1 = plan.children().get( 1 );
             assertThat( c1.operatorType(), is( "Apply" ) );
@@ -463,7 +463,7 @@ class FabricExecutorTest
             assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
             Plan c1c0c0 = c1c0.children().get( 0 );
             assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
-            assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( String.join( nl, "CREATE ()", "RETURN 1 AS y" ) ) ) );
+            assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( String.join( nl, "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
             assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
 
             Plan c2 = plan.children().get( 2 );

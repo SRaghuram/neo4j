@@ -5,9 +5,10 @@
  */
 package com.neo4j.fabric.transaction;
 
+import com.neo4j.fabric.executor.Exceptions;
+import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricException;
-import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.stream.StatementResult;
 
@@ -84,7 +85,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         {
             // the exception with stack trace will be logged by Bolt's ErrorReporter
             userLog.error( "Transaction {} start failed", id );
-            throw transform( Status.Transaction.TransactionStartFailed, e );
+            throw Exceptions.transform( Status.Transaction.TransactionStartFailed, e );
         }
     }
 
@@ -110,8 +111,8 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         {
             // the exception with stack trace will be logged by Bolt's ErrorReporter
             userLog.error( "Query execution in transaction %d failed", id );
-            doRollback();
-            throw transform( Status.Statement.ExecutionFailed, e );
+            rollback();
+            throw Exceptions.transform( Status.Statement.ExecutionFailed, e );
         }
     }
 
@@ -258,16 +259,6 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
 
         internalLog.debug( "Transaction %d rolled back", id );
-    }
-
-    private RuntimeException transform( Status defaultStatus, Throwable t )
-    {
-        if ( t instanceof Status.HasStatus )
-        {
-            return new FabricException( ((Status.HasStatus) t).status(), t );
-        }
-
-        return new FabricException( defaultStatus, t );
     }
 
     private void scheduleTimeout( FabricTransactionInfo transactionInfo )

@@ -6,6 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +31,17 @@ import org.neo4j.driver.Values;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.StatementResultCursor;
+import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
@@ -117,6 +123,106 @@ class AsyncPooledDriverTest
     void testRequestInBatches()
     {
         testRecordStream( 2 );
+    }
+
+    @Test
+    void testClientErrorWithKnownCode()
+    {
+        when( asyncTransaction.runAsync( any(), anyMap() ) )
+                .thenReturn( failedFuture( new ClientException( Status.Statement.SyntaxError.code().serialize(), "Something went wrong" ) ));
+
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
+
+        try
+        {
+            statementResult.columns().collectList().block();
+            fail( "Exception expected" );
+        }
+        catch ( FabricException e )
+        {
+            assertEquals( Status.Statement.SyntaxError, e.status() );
+            assertEquals( "Something went wrong", e.getMessage() );
+        }
+        catch ( Exception e )
+        {
+            fail( "Unexpected exception: " + e );
+        }
+    }
+
+    @Test
+    void testClientErrorWithUnknownCode()
+    {
+        when( asyncTransaction.runAsync( any(), anyMap() ) )
+                .thenReturn( failedFuture( new ClientException( "SomeCode", "Something went wrong" ) ));
+
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
+
+        try
+        {
+            statementResult.columns().collectList().block();
+            fail( "Exception expected" );
+        }
+        catch ( FabricException e )
+        {
+            assertEquals( Status.Fabric.RemoteExecutionFailed, e.status() );
+            assertEquals( "Remote execution failed with code SomeCode and message 'Something went wrong'", e.getMessage() );
+        }
+        catch ( Exception e )
+        {
+            fail( "Unexpected exception: " + e );
+        }
+    }
+
+    @Test
+    void testServerErrorWithKnownCode()
+    {
+        when( asyncTransaction.runAsync( any(), anyMap() ) )
+                .thenReturn( failedFuture( new DatabaseException( Status.Statement.ExecutionFailed.code().serialize(), "Something went wrong" ) ));
+
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
+
+        try
+        {
+            statementResult.columns().collectList().block();
+            fail( "Exception expected" );
+        }
+        catch ( FabricException e )
+        {
+            assertEquals( Status.Fabric.RemoteExecutionFailed, e.status() );
+            assertEquals( "Remote execution failed with code Neo.DatabaseError.Statement.ExecutionFailed and message 'Something went wrong'", e.getMessage() );
+        }
+        catch ( Exception e )
+        {
+            fail( "Unexpected exception: " + e );
+        }
+    }
+
+    @Test
+    void testServerErrorWithUnknownCode()
+    {
+        when( asyncTransaction.runAsync( any(), anyMap() ) )
+                .thenReturn( failedFuture( new DatabaseException( "SomeCode", "Something went wrong" ) ));
+
+        var fabricTransaction = asyncPooledDriver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() ).block();
+        var statementResult = fabricTransaction.run( "Some query", MapValue.EMPTY );
+
+        try
+        {
+            statementResult.columns().collectList().block();
+            fail( "Exception expected" );
+        }
+        catch ( FabricException e )
+        {
+            assertEquals( Status.Fabric.RemoteExecutionFailed, e.status() );
+            assertEquals( "Remote execution failed with code SomeCode and message 'Something went wrong'", e.getMessage() );
+        }
+        catch ( Exception e )
+        {
+            fail( "Unexpected exception: " + e );
+        }
     }
 
     private void testRecordStream( int batchSize )

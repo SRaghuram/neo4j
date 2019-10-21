@@ -6,12 +6,11 @@
 package com.neo4j.fabric.bolt;
 
 import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.Exceptions;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.Summary;
-import reactor.core.Exceptions;
 
 import java.util.List;
 
@@ -138,15 +137,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
             }
             catch ( Exception e )
             {
-                var unwrapped = Exceptions.unwrap( e );
-                if ( unwrapped instanceof FabricException )
-                {
-                    throw (FabricException) unwrapped;
-                }
-                else
-                {
-                    throw new FabricException( Status.Statement.ExecutionFailed, e );
-                }
+                throw Exceptions.transform(Status.Statement.ExecutionFailed, e);
             }
         }
 

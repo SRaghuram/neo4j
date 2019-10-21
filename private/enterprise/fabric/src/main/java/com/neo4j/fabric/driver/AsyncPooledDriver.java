@@ -7,7 +7,6 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -69,7 +68,7 @@ public class AsyncPooledDriver extends PooledDriver
         return session.beginTransactionAsync( transactionConfig );
     }
 
-    private static class StatementResultImpl implements AutoCommitStatementResult
+    private static class StatementResultImpl extends AbstractRemoteStatementResult implements AutoCommitStatementResult
     {
 
         private final AsyncSession session;
@@ -78,28 +77,18 @@ public class AsyncPooledDriver extends PooledDriver
 
         StatementResultImpl( AsyncSession session, Mono<StatementResultCursor> statementResultCursor, long sourceTag )
         {
+            super( statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable ),
+                    statementResultCursor.map( StatementResultCursor::summaryAsync ).flatMap( Mono::fromCompletionStage ),
+                    sourceTag, session::closeAsync );
             this.session = session;
             this.statementResultCursor = statementResultCursor;
             this.recordConverter = new RecordConverter( sourceTag );
         }
 
         @Override
-        public Flux<String> columns()
+        protected Flux<Record> doGetRecords()
         {
-            return statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable );
-        }
-
-        @Override
-        public Flux<Record> records()
-        {
-            return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) )
-                    .doFinally( signalType -> session.closeAsync() );
-        }
-
-        @Override
-        public Mono<Summary> summary()
-        {
-            return Mono.empty();
+            return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) );
         }
 
         @Override

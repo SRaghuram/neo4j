@@ -13,7 +13,6 @@ import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.{Database, GlobalDriverConfig, Graph}
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.FabricQuery._
-import com.neo4j.fabric.util.Errors.InvalidQueryException
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
@@ -21,7 +20,7 @@ import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
-import org.neo4j.exceptions.SyntaxException
+import org.neo4j.exceptions.{InvalidSemanticsException, SyntaxException}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{MapValue, VirtualValues}
@@ -105,11 +104,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      the[InvalidQueryException].thrownBy(
+      the[SyntaxException].thrownBy(
         planner.init(q, params).fabricQuery
       )
-        .check(_.errors.size.shouldEqual(1))
-        .check(_.errors(0).msg.should(include("USE can only appear at the beginning of a (sub-)query")))
+        .check(_.getMessage.should(include("USE can only appear at the beginning of a (sub-)query")))
 
     }
 
@@ -123,11 +121,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      the[InvalidQueryException].thrownBy(
+      the[SyntaxException].thrownBy(
         planner.init(q, params).fabricQuery
       )
-        .check(_.errors.size.shouldEqual(1))
-        .check(_.errors(0).msg.should(include("USE can only appear at the beginning of a (sub-)query")))
+        .check(_.getMessage.should(include("USE can only appear at the beginning of a (sub-)query")))
     }
 
     "allow USE to reference outer variable" in {
@@ -615,23 +612,23 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN 1 AS x
           |""".stripMargin
 
-      the[NotImplementedError].thrownBy(planner.plan(q, params))
-        .check(_.getMessage.should(include("not implemented: PROFILE")))
+      the[InvalidSemanticsException].thrownBy(planner.plan(q, params))
+        .check(_.getMessage.should(include("Query option: 'PROFILE' not supported in Fabric database")))
     }
 
     "disallow options" in {
       def shouldFail(qry: String, error: String) =
-        the[NotImplementedError].thrownBy(planner.plan(qry, params))
+        the[InvalidSemanticsException].thrownBy(planner.plan(qry, params))
           .check(_.getMessage.should(include(error)))
 
-      shouldFail("CYPHER 3.5 RETURN 1", "not implemented: version")
-      shouldFail("CYPHER planner=cost RETURN 1", "not implemented: planner")
-      shouldFail("CYPHER runtime=parallel RETURN 1", "not implemented: runtime")
-      shouldFail("CYPHER updateStrategy=eager RETURN 1", "not implemented: updateStrategy")
-      shouldFail("CYPHER expressionEngine=compiled RETURN 1", "not implemented: expressionEngine")
-      shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "not implemented: operatorEngine")
-      shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "not implemented: interpretedPipesFallback")
-      shouldFail("CYPHER debug=foo RETURN 1", "not implemented: debug")
+      shouldFail("CYPHER 3.5 RETURN 1", "Query option 'version' not supported in Fabric database")
+      shouldFail("CYPHER planner=cost RETURN 1", "Query option 'planner' not supported in Fabric database")
+      shouldFail("CYPHER runtime=parallel RETURN 1", "Query option 'runtime' not supported in Fabric database")
+      shouldFail("CYPHER updateStrategy=eager RETURN 1", "Query option 'updateStrategy' not supported in Fabric database")
+      shouldFail("CYPHER expressionEngine=compiled RETURN 1", "Query option 'expressionEngine' not supported in Fabric database")
+      shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "Query option 'operatorEngine' not supported in Fabric database")
+      shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "Query option 'interpretedPipesFallback' not supported in Fabric database")
+      shouldFail("CYPHER debug=foo RETURN 1", "Query option 'debug' not supported in Fabric database")
     }
   }
 

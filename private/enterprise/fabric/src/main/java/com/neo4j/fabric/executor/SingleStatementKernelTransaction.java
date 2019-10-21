@@ -19,6 +19,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.query.QueryExecution;
+import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
@@ -60,9 +61,18 @@ public class SingleStatementKernelTransaction
             executionContext = transactionalContextFactory.newContext( internalTransaction, "", params );
             return queryExecutionEngine.executeQuery( query, params, executionContext, true, input, subscriber );
         }
-        catch ( Exception e )
+        catch ( QueryExecutionKernelException e )
         {
-            throw new FabricException( Status.Statement.ExecutionFailed, e );
+            // all exception thrown from execution engine are wrapped in QueryExecutionKernelException,
+            // let's see if there is something better hidden in it
+            if ( e.getCause() == null )
+            {
+                throw Exceptions.transform( Status.Statement.ExecutionFailed, e );
+            }
+            else
+            {
+                throw Exceptions.transform( Status.Statement.ExecutionFailed, e.getCause() );
+            }
         }
     }
 

@@ -14,7 +14,6 @@ import java.util.List;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -62,7 +61,6 @@ public class TestServer implements AutoCloseable
         }
         var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory.toFile(), mocks );
         this.dbms = dbmsBuilder.setConfig( config )
-                .setConfig( GraphDatabaseSettings.auth_enabled , false )
                 .build();
 
         dependencies = dbmsBuilder.getDependencies();

@@ -35,7 +35,7 @@ object Catalog {
     def cast[T <: AnyValue](a: Arg[T], v: AnyValue, args: Seq[AnyValue]): T =
       try a.tpe.cast(v)
       catch {
-        case e: ClassCastException => Errors.unexpected(show(signature), show(args), InputPosition.NONE)
+        case e: ClassCastException => Errors.wrongType(show(signature), show(args))
       }
   }
 
@@ -99,7 +99,7 @@ case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
 
   def resolve(name: CatalogName, args: Seq[AnyValue]): Catalog.Graph = {
     entries.get(name) match {
-      case None => Errors.notFound("Catalog entry", show(name), InputPosition.NONE)
+      case None => Errors.entityNotFound("Catalog entry", show(name))
 
       case Some(g: Catalog.Graph) =>
         if (args.nonEmpty) Errors.wrongArity(0, args.size, InputPosition.NONE)

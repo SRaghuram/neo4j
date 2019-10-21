@@ -85,6 +85,7 @@ case class FabricPlanner(
     val pipeline = Pipeline.Instance(monitors, query, signatures)
     val state = pipeline.parseAndPrepare.process(preParsed.statement)
     PlannerContext(
+      query = query,
       original = state.statement(),
       parameters = parameters,
       semantic = state.semantics(),
@@ -102,7 +103,7 @@ case class FabricPlanner(
 
   private def assertOptionsNotSet(options: QueryOptions): Unit = {
     def check[T](name: String, a: T, b: T): Unit =
-      if (a != b) Errors.unimplemented("Query option", name)
+      if (a != b) Errors.notSupported(s"Query option '$name'")
 
     check("version", options.version, cypherConfig.version)
     check("planner", options.planner, cypherConfig.planner)
@@ -115,6 +116,7 @@ case class FabricPlanner(
   }
 
   case class PlannerContext(
+    query: String,                       
     original: Statement,
     parameters: MapValue,
     semantic: SemanticState,
@@ -125,8 +127,8 @@ case class FabricPlanner(
 
     def fragment: Fragment = original match {
       case ast.Query(hint, part) => fragment(part, Seq.empty, Seq.empty, Option.empty)
-      case d: ast.CatalogDDL     => Errors.unimplemented("Support for DDL", d)
-      case c: ast.Command        => Errors.unimplemented("Support for commands", c)
+      case ddl: ast.CatalogDDL => Errors.ddlNotSupported(ddl)
+      case cmd: ast.Command => Errors.notSupported("Commands")
     }
 
     private def fragment(
@@ -226,11 +228,9 @@ case class FabricPlanner(
         case _                      => (None, clauses)
       }
 
-      Errors.invalidOnError(
-        rest.filter(_.isInstanceOf[ast.UseGraph])
-          .map(Errors.semantic("USE can only appear at the beginning of a (sub-)query", _))
-      )
-
+      rest.filter(_.isInstanceOf[ast.UseGraph])
+        .map(clause => Errors.syntax("USE can only appear at the beginning of a (sub-)query", query, clause.position))
+      
       use
     }
 
@@ -275,14 +275,14 @@ case class FabricPlanner(
           case false => FabricPlan.Read
         }
 
-        case d: ast.CatalogDDL => Errors.unimplemented("Support for DDL", d)
-        case c: ast.Command    => Errors.unimplemented("Support for commands", c)
+        case d: ast.CatalogDDL => Errors.ddlNotSupported(d)
+        case c: ast.Command    => Errors.notSupported("Commands")
       }
 
       val executionType: FabricPlan.ExecutionType = options.executionMode match {
         case CypherExecutionMode.normal  => FabricPlan.Execute
         case CypherExecutionMode.explain => FabricPlan.Explain
-        case CypherExecutionMode.profile => Errors.unimplemented("Query option", "PROFILE")
+        case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
       }
 
       FabricPlan(fabricQuery, queryType, executionType)

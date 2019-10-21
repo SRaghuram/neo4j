@@ -59,6 +59,7 @@ class ParameterConversionTest
         RxStatementResult mockDriverResult = mock( RxStatementResult.class);
         when(mockDriverResult.keys()).thenReturn( Flux.fromIterable( Arrays.asList("a", "b" )));
         when( mockDriverResult.records() ).thenReturn( Mono.empty() );
+        when( mockDriverResult.summary() ).thenReturn( Mono.empty() );
 
         when( tx.run( any(), parameterCaptor.capture() ) ).thenReturn( mockDriverResult );
         when( tx.commit() ).thenReturn( Mono.empty() );

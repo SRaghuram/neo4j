@@ -8,7 +8,6 @@ package com.neo4j.fabric.driver;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.Summary;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -54,7 +53,7 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
         return new StatementResultImpl( statementResultCursor, location.getId() );
     }
 
-    private static class StatementResultImpl implements StatementResult
+    private static class StatementResultImpl extends AbstractRemoteStatementResult
     {
 
         private final Mono<StatementResultCursor> statementResultCursor;
@@ -62,29 +61,16 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
 
         StatementResultImpl( Mono<StatementResultCursor> statementResultCursor, long sourceTag )
         {
+            super( statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable ),
+                    statementResultCursor.map( StatementResultCursor::summaryAsync ).flatMap( Mono::fromCompletionStage ), sourceTag );
             this.statementResultCursor = statementResultCursor;
             this.recordConverter = new RecordConverter( sourceTag );
         }
 
         @Override
-        public Flux<String> columns()
-        {
-            return statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable );
-        }
-
-        @Override
-        public Flux<Record> records()
+        protected Flux<Record> doGetRecords()
         {
             return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) );
-        }
-
-        @Override
-        public Mono<Summary> summary()
-        {
-            return statementResultCursor
-                    .map( StatementResultCursor::summaryAsync )
-                    .flatMap( Mono::fromCompletionStage )
-                    .map( ResultSummaryWrapper::new );
         }
     }
 }

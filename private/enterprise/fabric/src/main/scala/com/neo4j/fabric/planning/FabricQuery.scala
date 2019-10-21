@@ -40,7 +40,7 @@ sealed trait FabricQuery {
 
 object FabricQuery {
 
-  private val renderer = Prettifier(ExpressionStringifier())
+  private val renderer = Prettifier(ExpressionStringifier(alwaysParens = true, alwaysBacktick = true))
 
   case class Columns(
     incoming: Seq[String],

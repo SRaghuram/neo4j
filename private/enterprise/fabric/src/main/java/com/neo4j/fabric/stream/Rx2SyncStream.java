@@ -5,11 +5,10 @@
  */
 package com.neo4j.fabric.stream;
 
-import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.Exceptions;
 import com.neo4j.fabric.stream.summary.Summary;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Exceptions;
 
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -73,14 +72,7 @@ public class Rx2SyncStream
 
         if ( recordOrError.error != null )
         {
-            if ( recordOrError.error instanceof FabricException )
-            {
-                throw (FabricException) recordOrError.error;
-            }
-            else
-            {
-                throw new FabricException( Status.Statement.ExecutionFailed, recordOrError.error );
-            }
+            throw Exceptions.transform( Status.Statement.ExecutionFailed, recordOrError.error );
         }
 
         return recordOrError.record;

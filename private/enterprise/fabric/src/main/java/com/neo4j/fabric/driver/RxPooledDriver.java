@@ -7,8 +7,6 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -16,7 +14,6 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
@@ -70,47 +67,29 @@ class RxPooledDriver extends PooledDriver
         return Mono.from( session.beginTransaction( transactionConfig ) ).cache();
     }
 
-    private static class StatementResultImpl implements AutoCommitStatementResult
+    private static class StatementResultImpl extends AbstractRemoteStatementResult implements AutoCommitStatementResult
     {
 
         private final RxSession session;
         private final RxStatementResult rxStatementResult;
-        private final RecordConverter recordConverter;
 
         StatementResultImpl( RxSession session, RxStatementResult rxStatementResult, long sourceTag )
         {
+            super( Flux.from( rxStatementResult.keys() ), Mono.from( rxStatementResult.summary() ), sourceTag, session::close );
             this.session = session;
             this.rxStatementResult = rxStatementResult;
-            recordConverter = new RecordConverter( sourceTag );
-        }
-
-        @Override
-        public Flux<String> columns()
-        {
-            return Flux.from( rxStatementResult.keys() );
-        }
-
-        @Override
-        public Flux<Record> records()
-        {
-            return Flux.from( rxStatementResult.records() )
-                    .map( driverRecord -> Records.lazy( driverRecord.size(),
-                    () -> Records.of( driverRecord.values().stream()
-                            .map( recordConverter::convertValue )
-                            .collect( Collectors.toList() ) ) ) )
-                    .doFinally( signalType -> session.close() );
-        }
-
-        @Override
-        public Mono<Summary> summary()
-        {
-            return Mono.empty();
         }
 
         @Override
         public String getBookmark()
         {
             return session.lastBookmark();
+        }
+
+        @Override
+        protected Flux<Record> doGetRecords()
+        {
+            return convertRxRecords( Flux.from( rxStatementResult.records() ) );
         }
     }
 }

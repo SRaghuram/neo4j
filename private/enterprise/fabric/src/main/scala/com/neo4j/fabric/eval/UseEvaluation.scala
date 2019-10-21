@@ -31,17 +31,19 @@ case class UseEvaluation(
   private val evaluator = new StaticEvaluation.StaticEvaluator(proceduresSupplier)
 
   def evaluate(
+    originalStatement: String,
     use: UseGraph,
     parameters: MapValue,
     context: java.util.Map[String, AnyValue]
   ): Catalog.Graph =
-    evaluate(use, parameters, context.asScala)
+    evaluate(originalStatement, use, parameters, context.asScala)
 
   def evaluate(
+    originalStatement: String,
     use: UseGraph,
     parameters: MapValue,
     context: mutable.Map[String, AnyValue]
-  ): Catalog.Graph = Errors.errorContext(use) {
+  ): Catalog.Graph = Errors.errorContext(originalStatement, use) {
 
     use.expression match {
       case v: Variable =>
@@ -58,13 +60,20 @@ case class UseEvaluation(
         catalog.resolve(nameFromFunc(f), argValues)
 
       case x =>
-        Errors.unexpected("graph or view reference", x)
+        Errors.openCypherUnexpected("graph or view reference", x)
     }
   }
 
   def resolveFunctions(expr: Expression): Expression = expr.rewritten.bottomUp {
-    case f: FunctionInvocation if f.needsToBeResolved =>
-      ResolvedFunctionInvocation(signatureResolver.functionSignature)(f).coerceArguments
+    case f: FunctionInvocation if f.needsToBeResolved => {
+      val resolved = ResolvedFunctionInvocation(signatureResolver.functionSignature)(f).coerceArguments
+
+      if (resolved.fcnSignature.isEmpty) {
+        Errors.openCypherFailure(Errors.openCypherSemantic(s"Unknown function '${resolved.qualifiedName}'", resolved))
+      }
+      
+      return resolved
+    }
   }
 
   private def nameFromVar(variable: Variable): CatalogName =
@@ -74,7 +83,7 @@ case class UseEvaluation(
     def parts(expr: Expression): List[String] = expr match {
       case p: Property    => parts(p.map) :+ p.propertyKey.name
       case Variable(name) => List(name)
-      case x              => Errors.unexpected("Graph name segment", x)
+      case x              => Errors.openCypherUnexpected("Graph name segment", x)
     }
 
     CatalogName(parts(property))

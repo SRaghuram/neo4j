@@ -26,6 +26,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
@@ -57,20 +58,22 @@ public class FabricExecutor
         FabricPlan query = planner.plan( statement, params );
         return fabricTransaction.execute( ctx ->
         {
-            FabricStatementExecution execution = new FabricStatementExecution( query, params, ctx );
+            FabricStatementExecution execution = new FabricStatementExecution( statement, query, params, ctx );
             return execution.run();
         } );
     }
 
     class FabricStatementExecution
     {
+        private final String originalStatement;
         private final FabricPlan plan;
         private final MapValue params;
         private final FabricTransaction.FabricExecutionContext ctx;
         private final MergedSummary mergedSummary;
 
-        FabricStatementExecution( FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx )
+        FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx )
         {
+            this.originalStatement = originalStatement;
             this.plan = plan;
             this.params = params;
             this.ctx = ctx;
@@ -201,7 +204,7 @@ public class FabricExecutor
 
         private FabricConfig.Graph evalUse( UseGraph use, Map<String,AnyValue> record )
         {
-            Catalog.Graph graph = useEvaluation.evaluate( use, params, record );
+            Catalog.Graph graph = useEvaluation.evaluate( originalStatement, use, params, record );
             if ( graph instanceof Catalog.RemoteGraph )
             {
                 return ((Catalog.RemoteGraph) graph).graph();
@@ -249,14 +252,14 @@ public class FabricExecutor
             }
         }
 
-        private UnsupportedOperationException notImplemented( String msg, FabricQuery query )
+        private RuntimeException notImplemented( String msg, FabricQuery query )
         {
             return notImplemented( msg, query.toString() );
         }
 
-        private UnsupportedOperationException notImplemented( String msg, String info )
+        private RuntimeException notImplemented( String msg, String info )
         {
-            return new UnsupportedOperationException( msg + ": " + info );
+            return new InvalidSemanticsException( msg + ": " + info );
         }
 
         private Plan.QueryTask.QueryMode getMode( FabricQuery.RemoteQuery query )

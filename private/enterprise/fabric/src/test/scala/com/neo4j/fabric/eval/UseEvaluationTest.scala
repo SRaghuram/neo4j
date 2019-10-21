@@ -84,7 +84,7 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
       use: String,
       params: MapValue,
       context: mutable.Map[String, AnyValue]
-    ): Catalog.Graph = evaluation.evaluate(parse(use), params, context)
+    ): Catalog.Graph = evaluation.evaluate(use, parse(use), params, context)
   }
 
 

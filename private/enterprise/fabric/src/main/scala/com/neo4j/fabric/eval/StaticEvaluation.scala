@@ -11,16 +11,17 @@ import java.util.function.Supplier
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.common.DependencyResolver
-import org.neo4j.cypher.internal.evaluator.SimpleInternalExpressionEvaluator
+import org.neo4j.cypher.internal.evaluator.{EvaluationException, SimpleInternalExpressionEvaluator}
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, SemanticDirection}
 import org.neo4j.graphdb.{Entity, Path}
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{QueryContext => _, _}
 import org.neo4j.internal.schema.IndexDescriptor
+import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.procedure.{Context, GlobalProcedures}
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -45,6 +46,26 @@ object StaticEvaluation {
       subscriber = QuerySubscriber.DO_NOTHING_SUBSCRIBER,
       memoryTracker = null
     )
+
+    override def evaluate(expression: Expression, params: MapValue, context: ExecutionContext): AnyValue = {
+      try {
+        super.evaluate(expression, params, context)
+      } catch {
+        case e: EvaluationException =>
+          // all errors in expression evaluation are wrapped in generic EvaluationException,
+          // let's see if there is a more interesting error wrapped in it (interesting means an error with a status code in this context) .
+          var unwrapped: Throwable = e
+          while (unwrapped.isInstanceOf[EvaluationException])
+            unwrapped = unwrapped.getCause
+          if (unwrapped != null && unwrapped.isInstanceOf[HasStatus]) {
+            throw unwrapped
+          } else {
+            // there isn't an exception with a status wrapped in the EvaluationException,
+            // so let's throw the origin exception
+            throw e
+          }
+      }
+    }
   }
 
   private class StaticQueryContext(procedures: GlobalProcedures) extends EmptyQueryContext {
