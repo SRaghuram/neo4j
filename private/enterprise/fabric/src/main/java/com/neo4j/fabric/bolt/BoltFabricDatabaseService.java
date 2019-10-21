@@ -6,7 +6,6 @@
 package com.neo4j.fabric.bolt;
 
 import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransaction;
@@ -21,6 +20,7 @@ import java.util.Optional;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
+import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
@@ -33,7 +33,6 @@ import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.values.virtual.MapValue;
 
-import static org.neo4j.kernel.api.exceptions.Status.Transaction.InvalidBookmark;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 
 public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
@@ -56,8 +55,8 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     }
 
     @Override
-    public BoltTransaction beginTransaction( KernelTransaction.Type type, LoginContext loginContext, ClientConnectionInfo clientInfo, Duration txTimeout,
-            AccessMode accessMode, Map<String,Object> txMetadata )
+    public BoltTransaction beginTransaction( KernelTransaction.Type type, LoginContext loginContext, ClientConnectionInfo clientInfo, List<Bookmark> bookmarks,
+            Duration txTimeout, AccessMode accessMode, Map<String,Object> txMetadata )
     {
         if ( txTimeout == null )
         {
@@ -84,23 +83,6 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         // there is no special transaction handling needed from Bolt server.
         // If a periodic query is submitted, it will simply fail during planning
         return false;
-    }
-
-    @Override
-    public void awaitUpToDate( List<Bookmark> bookmarks, Duration perBookmarkTimeout )
-    {
-        if ( bookmarks.isEmpty() )
-        {
-            return;
-        }
-
-        throw new FabricException( InvalidBookmark, "Bookmarks are currently not supported by Fabric" );
-    }
-
-    @Override
-    public long newestEncounteredTxId()
-    {
-        return -1;
     }
 
     @Override
@@ -149,6 +131,12 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         public Optional<Status> getReasonIfTerminated()
         {
             return fabricTransaction.getReasonIfTerminated();
+        }
+
+        @Override
+        public BookmarkMetadata getBookmark()
+        {
+            return new FabricBookmark( databaseId, List.of() );
         }
 
         @Override

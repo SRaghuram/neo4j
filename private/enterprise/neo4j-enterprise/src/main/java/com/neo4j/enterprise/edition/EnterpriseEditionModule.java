@@ -44,6 +44,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
+import org.neo4j.bolt.dbapi.CustomBookmarkFormatParser;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
@@ -53,6 +55,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
@@ -68,6 +71,7 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
+import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -290,14 +294,25 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
 
         var fabricDatabaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, config, transactionManager, fabricDatabaseManager );
 
-        return databaseName ->
+        return new BoltGraphDatabaseManagementServiceSPI()
         {
-            if ( fabricDatabaseManager.isFabricDatabase( databaseName ) )
+
+            @Override
+            public BoltGraphDatabaseServiceSPI database( String databaseName ) throws UnavailableException, DatabaseNotFoundException
             {
-                return fabricDatabaseManagementService.database( databaseName );
+                if ( fabricDatabaseManager.isFabricDatabase( databaseName ) )
+                {
+                    return fabricDatabaseManagementService.database( databaseName );
+                }
+
+                return kernelDatabaseManagementService.database( databaseName );
             }
 
-            return kernelDatabaseManagementService.database( databaseName );
+            @Override
+            public CustomBookmarkFormatParser getCustomBookmarkFormatParser()
+            {
+                return fabricDatabaseManagementService.getCustomBookmarkFormatParser();
+            }
         };
     }
 

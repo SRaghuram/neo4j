@@ -43,6 +43,7 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.v3.messaging.BoltResponseMessageWriterV3;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -67,7 +68,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         SystemNanoClock clock = Clocks.nanoClock();
         ReconciledTransactionTracker reconciledTxTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
         BoltGraphDatabaseManagementServiceSPI databaseManagementService = new BoltKernelDatabaseManagementServiceProvider( managementService,
-                reconciledTxTracker, new Monitors(), clock );
+                reconciledTxTracker, new Monitors(), clock, config.get( GraphDatabaseSettings.bookmark_ready_timeout ) );
         return new BoltStateMachineFactoryImpl( databaseManagementService,
                 authentication,
                 clock,

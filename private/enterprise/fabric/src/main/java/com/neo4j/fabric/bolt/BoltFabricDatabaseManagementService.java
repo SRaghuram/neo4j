@@ -12,6 +12,7 @@ import com.neo4j.fabric.transaction.TransactionManager;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
+import org.neo4j.bolt.dbapi.CustomBookmarkFormatParser;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.availability.UnavailableException;
 
@@ -36,5 +37,11 @@ public class BoltFabricDatabaseManagementService implements BoltGraphDatabaseMan
     {
         var  database = fabricDatabaseManager.getDatabase( databaseName );
         return new BoltFabricDatabaseService( database.databaseId(), fabricExecutor, config, transactionManager );
+    }
+
+    @Override
+    public CustomBookmarkFormatParser getCustomBookmarkFormatParser()
+    {
+        return new FabricBookmarkParser();
     }
 }
