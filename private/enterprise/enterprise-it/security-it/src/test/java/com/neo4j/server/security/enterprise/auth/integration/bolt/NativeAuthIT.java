@@ -286,7 +286,7 @@ public class NativeAuthIT
     }
 
     @Test
-    public void shouldSetPasswordWithAuthDisabled() throws Exception
+    public void shouldCreateUserWithAuthDisabled() throws Exception
     {
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
         boltUri = DriverAuthHelper.boltUri( dbRule );
@@ -304,6 +304,41 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 session.run( "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'" ).consume();
+            }
+        }
+    }
+
+    @Test
+    public void shouldChangePasswordWithAuthDisabled() throws Exception
+    {
+        // GIVEN
+        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, getPassword() ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED" ).consume();
+            }
+        }
+        dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
+        boltUri = DriverAuthHelper.boltUri( dbRule );
+
+        // WHEN
+        try ( Driver driver = connectDriver( boltUri, AuthTokens.none() ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "ALTER USER foo SET PASSWORD 'abc' CHANGE NOT REQUIRED" ).consume();
+            }
+        }
+        dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, true ) );
+
+        // THEN
+        boltUri = DriverAuthHelper.boltUri( dbRule );
+        try ( Driver driver = connectDriver( boltUri, "foo", "abc" ) )
+        {
+            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+            {
+                session.run( "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO 'bar'" ).consume();
             }
         }
     }

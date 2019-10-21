@@ -66,6 +66,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     resolver.resolveDependency(classOf[EnterpriseAuthManager])
   }
 
+  private val secureHasher = new SecureHasher
+
   // This allows both community and enterprise commands to be considered together, and chained together
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
@@ -97,7 +99,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
             Array(
               Values.stringValue(userName),
-              Values.stringValue(SystemGraphCredential.createCredentialForPassword(initialPassword, new SecureHasher).serialize()),
+              Values.stringValue(SystemGraphCredential.createCredentialForPassword(initialPassword, secureHasher).serialize()),
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
@@ -127,7 +129,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case None => Seq.empty
           case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
           case Some(value: Array[Byte]) =>
-            Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(value), new SecureHasher).serialize())))
+            Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(value), secureHasher).serialize())))
           case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
@@ -148,7 +150,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleResult((_, value) => {
             val maybeThrowable = initialPassword match {
               case Some(password) =>
-                val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), new SecureHasher)
+                val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
                 if (oldCredentials.matchesPassword(password))
                   Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Old password and new password cannot be the same."))
                 else
