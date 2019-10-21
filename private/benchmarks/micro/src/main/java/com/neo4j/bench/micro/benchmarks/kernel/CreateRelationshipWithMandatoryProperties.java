@@ -23,8 +23,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.SplittableRandom;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -56,6 +54,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.stridingFor;
+import static org.apache.commons.lang3.ArrayUtils.shuffle;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 
 @BenchmarkEnabled( false )
@@ -168,7 +167,7 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractKernelBen
             nodes = nodeIds.toArray();
             // In threaded/concurrent scenario, each thread should access different parts of graph
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom
-            Collections.shuffle( Arrays.asList( nodes ), ThreadLocalRandom.current() );
+            shuffle( this.nodes, ThreadLocalRandom.current() );
             type = kernelTx.token.relationshipTypeGetOrCreateForName( TYPE.name() );
             key = kernelTx.token.propertyKeyGetOrCreateForName( KEY );
         }
