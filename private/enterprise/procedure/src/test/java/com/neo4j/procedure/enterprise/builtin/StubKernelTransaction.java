@@ -33,7 +33,6 @@ import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.ClockContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 
@@ -304,11 +303,5 @@ class StubKernelTransaction implements KernelTransaction
     public boolean isSchemaTransaction()
     {
         return false;
-    }
-
-    @Override
-    public DatabaseId getDatabaseId()
-    {
-        throw new UnsupportedOperationException( "not implemented" );
     }
 }
