@@ -635,7 +635,6 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       shouldFail("CYPHER expressionEngine=compiled RETURN 1", "Query option 'expressionEngine' not supported in Fabric database")
       shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "Query option 'operatorEngine' not supported in Fabric database")
       shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "Query option 'interpretedPipesFallback' not supported in Fabric database")
-      shouldFail("CYPHER debug=foo RETURN 1", "Query option 'debug' not supported in Fabric database")
     }
   }
 
