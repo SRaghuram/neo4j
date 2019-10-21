@@ -443,7 +443,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // WHEN
     initSystemGraph(defaultConfig)
-    // TODO: Create is not yet working since the new clustering reconciler - could this be a test setup or a race condition?
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:B {name:'b'})")
 
@@ -509,7 +508,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
-    // TODO: Create is not yet working since the new clustering reconciler - could this be a test setup or a race condition?
     selectDatabase("foo")
     execute("CREATE (:B {name:'b'})")
 
@@ -556,7 +554,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
-    // TODO: Create is not yet working since the new clustering reconciler - could this be a test setup or a race condition?
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:B {name:'b'})")
 
@@ -636,8 +633,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     testCreateDbWithInvalidName("me", "The provided database name must have a length between 3 and 63 characters.")
 
     // Too long name
-    val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
-    testCreateDbWithInvalidName("me", "The provided database name must have a length between 3 and 63 characters.")
+    val name = "ihaveallooootoflettersclearlymorethenishould_ihaveallooootoflettersclearlymorethenishould"
+    testCreateDbWithInvalidName(name, "The provided database name must have a length between 3 and 63 characters.")
   }
 
   private def testCreateDbWithInvalidName(name: String, expectedErrorMessage: String): Unit = {
