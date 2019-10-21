@@ -273,12 +273,13 @@ object LogicalPlanConverter {
     }
 
     override def consume(context: CodeGenContext, child: CodeGenPlan, cardinalities: Cardinalities) = {
+      val nodes = nodeHashJoin.nodes.toIndexedSeq
       if (child.logicalPlan eq logicalPlan.lhs.get) {
-        val joinNodes = nodeHashJoin.nodes.map(n => context.getVariable(n))
+        val joinNodes = nodes.map(n => context.getVariable(n))
         val probeTableName = context.namer.newVarName()
 
         val lhsSymbols = nodeHashJoin.left.availableSymbols
-        val nodeNames = nodeHashJoin.nodes
+        val nodeNames = nodeHashJoin.nodes // don't care about order here
         val notNodeSymbols = lhsSymbols intersect context.variableQueryVariables() diff nodeNames
         val symbols = notNodeSymbols.map(s => s -> context.getVariable(s)).toMap
 
@@ -294,7 +295,7 @@ object LogicalPlanConverter {
       }
       else if (child.logicalPlan eq logicalPlan.rhs.get) {
 
-        val joinNodes = nodeHashJoin.nodes.map(n => context.getVariable(n))
+        val joinNodes = nodes.map(n => context.getVariable(n))
         val joinData = context.getProbeTable(this)
         joinData.vars foreach { case (_, symbol) => context.addVariable(symbol.variable, symbol.outgoing) }
 

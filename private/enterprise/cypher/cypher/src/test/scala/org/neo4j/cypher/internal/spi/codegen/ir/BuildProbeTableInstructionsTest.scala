@@ -70,7 +70,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     // Given
     setUpNodeMocks(1, 2, 42)
     val nodeVar = "node"
-    val nodes = Set(Variable(nodeVar, CodeGenType.primitiveNode))
+    val nodes = IndexedSeq(Variable(nodeVar, CodeGenType.primitiveNode))
 
     val buildInstruction = BuildCountingProbeTable(id = "countingTable",
                                                    name = tableVarName,
@@ -90,7 +90,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
   test("should generate correct code for a counting probe table on multiple keys") {
     // Given
     setUpNodeMocks(1, 2)
-    val nodes = Set(Variable("node1",CodeGenType.primitiveNode), Variable("node2", CodeGenType.primitiveNode))
+    val nodes = IndexedSeq(Variable("node1",CodeGenType.primitiveNode), Variable("node2", CodeGenType.primitiveNode))
     val buildInstruction = BuildCountingProbeTable(id = "countingTable",
                                                    name = tableVarName,
                                                    nodes = nodes)
@@ -111,7 +111,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     // Given
     setUpNodeMocks(42, 4242)
     val nodeVar = "node"
-    val nodes = Set(Variable(nodeVar,CodeGenType.primitiveNode))
+    val nodes = IndexedSeq(Variable(nodeVar,CodeGenType.primitiveNode))
     val buildInstruction = BuildRecordingProbeTable(id = "recordingTable",
                                                     name = tableVarName,
                                                     nodes = nodes,
@@ -130,7 +130,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
   test("should generate correct code for recording probe table on multiple keys") {
     // Given
     setUpNodeMocks(42, 4242)
-    val joinNodes = Set(Variable("node1", CodeGenType.primitiveNode), Variable("node2", CodeGenType.primitiveNode))
+    val joinNodes = IndexedSeq(Variable("node1", CodeGenType.primitiveNode), Variable("node2", CodeGenType.primitiveNode))
     val buildInstruction = BuildRecordingProbeTable(id = "recordingTable",
       name = tableVarName,
       nodes = joinNodes,
@@ -201,13 +201,13 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     override def next() = inner.next()
   }
 
-  private def runTest(buildInstruction: BuildProbeTable, nodes: Set[Variable]): Seq[Map[String, Object]] = {
+  private def runTest(buildInstruction: BuildProbeTable, nodes: IndexedSeq[Variable]): Seq[Map[String, Object]] = {
     val instructions = buildProbeTableWithTwoAllNodeScans(buildInstruction, nodes)
     val ids: Map[String, Id] = instructions.flatMap(_.allOperatorIds.map(id => id -> Id.INVALID_ID)).toMap
     evaluate(instructions, queryContext, Seq(resultRowKey), EMPTY_MAP, ids)
   }
 
-  private def buildProbeTableWithTwoAllNodeScans(buildInstruction: BuildProbeTable, nodes: Set[Variable]): Seq[Instruction] = {
+  private def buildProbeTableWithTwoAllNodeScans(buildInstruction: BuildProbeTable, nodes: IndexedSeq[Variable]): Seq[Instruction] = {
     val counter = new AtomicInteger(0)
     val buildWhileLoop = nodes.foldRight[Instruction](buildInstruction){
       case (variable, instruction) => WhileLoop(variable, ScanAllNodes("scanOp" + counter.incrementAndGet()), instruction)
