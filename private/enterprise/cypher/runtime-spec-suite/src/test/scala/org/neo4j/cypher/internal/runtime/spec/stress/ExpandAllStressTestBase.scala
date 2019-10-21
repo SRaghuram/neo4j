@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.stress
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
-abstract class ExpandStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
+abstract class ExpandAllStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
     with RHSOfApplyOneChildStressSuite
     with OnTopOfParallelInputStressTest {

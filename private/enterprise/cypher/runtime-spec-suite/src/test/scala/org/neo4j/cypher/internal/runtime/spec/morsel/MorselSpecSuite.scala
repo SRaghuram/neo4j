@@ -91,19 +91,25 @@ class MorselArgumentNoFusingTest extends ArgumentTestBase(NO_FUSING, MORSEL, SIZ
 class MorselApplyStressTest extends ApplyStressTestBase(ENTERPRISE.FUSING, MORSEL) with MorselSpecSuite
 class MorselApplyNoFusingStressTest extends ApplyStressTestBase(ENTERPRISE.NO_FUSING, MORSEL) with MorselSpecSuite
 
-// EXPAND
+// EXPAND ALL
 class MorselExpandAllTest extends ExpandAllTestBase(FUSING, MORSEL, SIZE_HINT)
                           with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                           with MorselSpecSuite
 class MorselExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, MORSEL, SIZE_HINT)
                                   with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                   with MorselSpecSuite
+
+// EXPAND INTO
 class MorselExpandIntoTest extends ExpandIntoTestBase(FUSING, MORSEL, SIZE_HINT)
                            with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                            with MorselSpecSuite
 class MorselExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, MORSEL, SIZE_HINT)
                                    with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                    with MorselSpecSuite
+
+// OPTIONAL EXPAND ALL
+class MorselOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
 
 // VAR EXPAND
 class MorselVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite

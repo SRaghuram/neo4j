@@ -20,7 +20,7 @@ object ParallelStressSuite {
   * Here is a compilation of traits that exert stress on an operator in a given situation. Each trait represents one such situation,
   * and they abstract over the operator to test. The graph used is always the same to make reasoning about expected results easier.
   *
-  * To use this, implement a StressTest that extends this class and mixes in all the traits that makes sense, while overriding the required methods.
+  * To use this, implement a StressTest that extends this class and mixes in all the traits that make sense, while overriding the required methods.
   */
 abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
