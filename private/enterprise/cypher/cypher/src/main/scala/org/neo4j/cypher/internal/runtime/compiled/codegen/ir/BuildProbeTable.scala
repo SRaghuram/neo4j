@@ -23,13 +23,13 @@ sealed trait BuildProbeTable extends Instruction {
 
 object BuildProbeTable {
 
-  def apply(id: String, name: String, nodes: Set[Variable], valueSymbols: Map[String, Variable])(implicit context: CodeGenContext): BuildProbeTable = {
+  def apply(id: String, name: String, nodes: IndexedSeq[Variable], valueSymbols: Map[String, Variable])(implicit context: CodeGenContext): BuildProbeTable = {
     if (valueSymbols.isEmpty) BuildCountingProbeTable(id, name, nodes)
     else BuildRecordingProbeTable(id, name, nodes, valueSymbols)
   }
 }
 
-case class BuildRecordingProbeTable(id: String, name: String, nodes: Set[Variable], valueSymbols: Map[String, Variable])
+case class BuildRecordingProbeTable(id: String, name: String, nodes: IndexedSeq[Variable], valueSymbols: Map[String, Variable])
                                    (implicit context: CodeGenContext)
   extends BuildProbeTable {
 
@@ -39,7 +39,7 @@ case class BuildRecordingProbeTable(id: String, name: String, nodes: Set[Variabl
       fieldToVarName.foreach {
         case (fieldName, localName) => body.putField(tupleDescriptor, tuple, fieldName, localName.incoming.name)
       }
-      body.updateProbeTable(tupleDescriptor, name, tableType, keyVars = nodes.toIndexedSeq.map(_.name), tuple)
+      body.updateProbeTable(tupleDescriptor, name, tableType, keyVars = nodes.map(_.name), tuple)
     }
   }
 
@@ -61,11 +61,11 @@ case class BuildRecordingProbeTable(id: String, name: String, nodes: Set[Variabl
   val joinData: JoinData = JoinData(fieldToVarName, name, tableType, id)
 }
 
-case class BuildCountingProbeTable(id: String, name: String, nodes: Set[Variable]) extends BuildProbeTable {
+case class BuildCountingProbeTable(id: String, name: String, nodes: IndexedSeq[Variable]) extends BuildProbeTable {
 
   override def body[E](generator: MethodStructure[E])(implicit context: CodeGenContext) =
     generator.trace(id, Some(this.getClass.getSimpleName)) { body =>
-      body.updateProbeTableCount(name, tableType, nodes.toIndexedSeq.map(_.name))
+      body.updateProbeTableCount(name, tableType, nodes.map(_.name))
     }
 
   override protected def operatorId = Set(id)
