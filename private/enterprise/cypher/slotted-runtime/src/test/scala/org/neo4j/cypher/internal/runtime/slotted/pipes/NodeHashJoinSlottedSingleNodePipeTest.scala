@@ -19,26 +19,6 @@ import scala.collection.immutable
 
 class NodeHashJoinSlottedSingleNodePipeTest extends CypherFunSuite {
 
-  test("should support simple hash join over nodes") {
-    // given
-    val node1 = 1
-    val node2 = 2
-    val node3 = 3
-    val queryState = QueryStateHelper.empty
-
-    val slots = SlotConfiguration.empty.newLong("b", nullable = false, CTNode)
-
-    val left = mockPipeFor(slots, RowL(node1), RowL(node2))
-    val right = mockPipeFor(slots, RowL(node2), RowL(node3))
-
-    // when
-    val result = NodeHashJoinSlottedSingleNodePipe(0, 0, left, right, slots, Array(), Array(), Array())().createResults(queryState)
-
-    // then
-    val list: Iterator[ExecutionContext] = result
-    testableResult(list, slots) should equal(List(Map("b" -> node2)))
-  }
-
   test("should not fetch results from RHS if LHS is empty") {
     // given
     val queryState = QueryStateHelper.empty
