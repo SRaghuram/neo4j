@@ -25,8 +25,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -37,6 +35,7 @@ import org.neo4j.graphdb.Transaction;
 import static com.neo4j.bench.micro.data.NumberGenerator.stridingLong;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.apache.commons.lang3.ArrayUtils.shuffle;
 
 @BenchmarkEnabled( true )
 public class CreateRelationships extends AbstractCoreBenchmark
@@ -136,7 +135,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
             nodes = nodesList.toArray( new Node[0] );
             // access store in random/scattered pattern
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom
-            Collections.shuffle( Arrays.asList( nodes ), ThreadLocalRandom.current() );
+            shuffle( this.nodes, ThreadLocalRandom.current() );
             txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateRelationships_txSize );
         }
 

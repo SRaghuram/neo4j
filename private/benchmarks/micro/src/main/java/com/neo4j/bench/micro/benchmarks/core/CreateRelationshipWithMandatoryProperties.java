@@ -25,8 +25,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.ThreadLocalRandom;
@@ -57,6 +55,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.stridingFor;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
+import static org.apache.commons.lang3.ArrayUtils.shuffle;
 
 @BenchmarkEnabled( false )
 public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBenchmark
@@ -159,7 +158,7 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
             }
             // In threaded/concurrent scenario, each thread should access different parts of graph
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom
-            Collections.shuffle( Arrays.asList( nodes ), ThreadLocalRandom.current() );
+            shuffle( this.nodes, ThreadLocalRandom.current() );
             txBatch = new TxBatch(
                     benchmarkState.db(),
                     benchmarkState.CreateRelationshipWithMandatoryProperties_txSize );
