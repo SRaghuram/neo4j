@@ -10,7 +10,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.BasicContext;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
@@ -23,7 +22,6 @@ import org.neo4j.values.virtual.VirtualRelationshipValue;
 @State( Scope.Benchmark )
 public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
 {
-    static final ResourceTracker DUMMY_TRACKER = new DummyResourceTracker();
     GlobalProcedures procedures;
     int token;
     Context context;
@@ -73,20 +71,5 @@ public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
     public boolean isThreadSafe()
     {
         return false;
-    }
-
-    protected static class DummyResourceTracker implements ResourceTracker
-    {
-        @Override
-        public void registerCloseableResource( AutoCloseable autoCloseable )
-        {
-            // do nothing
-        }
-
-        @Override
-        public void unregisterCloseableResource( AutoCloseable autoCloseable )
-        {
-            // do nothing
-        }
     }
 }

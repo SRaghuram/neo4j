@@ -53,7 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
-import static org.neo4j.kernel.api.ResourceManager.EMPTY_RESOURCE_MANAGER;
+import static org.neo4j.kernel.api.ResourceTracker.EMPTY_RESOURCE_TRACKER;
 import static org.neo4j.values.storable.Values.stringValue;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
@@ -161,7 +161,7 @@ class GlobalMetricsExtensionFactoryIT
         JmxQueryProcedure procedure = new JmxQueryProcedure( qualifiedName, mBeanServer );
 
         TextValue jmxQuery = stringValue( "neo4j.metrics:*" );
-        RawIterator<AnyValue[],ProcedureException> result = procedure.apply( null, new AnyValue[]{jmxQuery}, EMPTY_RESOURCE_MANAGER );
+        RawIterator<AnyValue[],ProcedureException> result = procedure.apply( null, new AnyValue[]{jmxQuery}, EMPTY_RESOURCE_TRACKER );
 
         List<AnyValue[]> queryResult = asList( result );
         assertThat( queryResult, hasItem( new MetricsRecordMatcher() ) );

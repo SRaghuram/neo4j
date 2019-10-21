@@ -28,6 +28,7 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.values.AnyValue;
 
 import static com.neo4j.bench.micro.Main.run;
+import static org.neo4j.kernel.api.ResourceTracker.EMPTY_RESOURCE_TRACKER;
 import static org.neo4j.values.storable.Values.longValue;
 
 @OutputTimeUnit( TimeUnit.MICROSECONDS )
@@ -64,7 +65,7 @@ public class ProcedureCall extends AbstractProceduresBenchmark
                 context,
                 token,
                 new AnyValue[]{longValue( ProcedureCall_rows )},
-                DUMMY_TRACKER );
+                EMPTY_RESOURCE_TRACKER );
 
         int count = 0;
         while ( iterator.hasNext() )
