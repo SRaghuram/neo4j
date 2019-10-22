@@ -764,6 +764,47 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     graph.execute(query).columnAs[Int]("length(p)").next() should be (1)
   }
 
+  test("unbound node in shortest path in RETURN clause should fail in semantic checking") {
+    executeSingle("CREATE (:A)-[:REL]->(:B)")
+
+    val query =
+      """
+        |MATCH (bound:A)
+        |RETURN length(shortestpath((bound)-[*1..3]-(:B))) as dist
+      """.stripMargin
+
+    val errorMsg = "shortestPath(...) that is not part of a MATCH clause requires bound nodes"
+    failWithError(Configs.Version3_5, query, Seq(errorMsg), Seq("SyntaxException"))
+  }
+
+  test("unbound node in shortest path in WHERE clause should fail in semantic checking") {
+    executeSingle("CREATE (:A)-[:REL]->(:B)")
+
+    val query =
+      """
+        |MATCH (bound:A)
+        |WHERE length(shortestpath((bound)-[*1..3]-(:B))) < 3
+        |RETURN bound
+      """.stripMargin
+
+    val errorMsg = "shortestPath(...) that is not part of a MATCH clause requires bound nodes"
+    failWithError(Configs.Version3_5, query, Seq(errorMsg), Seq("SyntaxException"))
+  }
+
+  test("unbound node in shortest path in WITH clause should fail in semantic checking") {
+    executeSingle("CREATE (:A)-[:REL]->(:B)")
+
+    val query =
+      """
+        |MATCH (bound:A)
+        |WITH shortestpath((bound)-[*1..3]-(:B)) AS p
+        |RETURN length(p)
+      """.stripMargin
+
+    val errorMsg = "shortestPath(...) that is not part of a MATCH clause requires bound nodes"
+    failWithError(Configs.Version3_5, query, Seq(errorMsg), Seq("SyntaxException"))
+  }
+
   private def createLdbc14Model(): Unit = {
     def createPersonNode( id: Int ) = createLabeledNode(Map("id" -> id), "Person")
 
