@@ -226,7 +226,7 @@ class ProcedureResourcesIT
             proc.withParam( "'propKey'" );
             break;
         case "db.resampleIndex":
-            proc.withParam( "'" + indexDefinition + "'" );
+            proc.withParam( "'" + indexName + "'" );
             break;
         case "db.createRelationshipType":
             proc.withParam( "'RelType'" );
