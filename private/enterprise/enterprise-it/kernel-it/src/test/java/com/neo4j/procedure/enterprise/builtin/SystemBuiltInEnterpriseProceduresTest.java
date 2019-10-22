@@ -48,7 +48,7 @@ import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureNa
 import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 @EnterpriseDbmsExtension
-class SystemBuiltInEnterpriseProcedures implements ProcedureITBase
+class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
 {
     @Inject
     DatabaseManagementService databaseManagementService;

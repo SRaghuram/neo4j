@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @EnterpriseDbmsExtension
-class BuiltInEnterpriseProcedures extends SystemBuiltInEnterpriseProcedures
+class BuiltInEnterpriseProceduresTest extends SystemBuiltInEnterpriseProceduresTest
 {
     @Override
     public GraphDatabaseAPI getGraphDatabaseAPI()
