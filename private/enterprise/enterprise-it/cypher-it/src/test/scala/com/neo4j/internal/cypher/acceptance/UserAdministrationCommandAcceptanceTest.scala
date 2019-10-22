@@ -721,7 +721,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
-    the[QueryExecutionException] thrownBy {
+    the[AuthorizationViolationException] thrownBy {
       executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS SUSPENDED")
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
@@ -735,7 +735,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
-    the[QueryExecutionException] thrownBy {
+    the[AuthorizationViolationException] thrownBy {
       executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS ACTIVE")
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 

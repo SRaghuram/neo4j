@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
+import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
@@ -517,6 +518,20 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles -- Set(Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true)))
+  }
+
+  test("should not drop admin role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
+
+    // WHEN
+    an[AuthorizationViolationException] should be thrownBy {
+      execute(s"DROP ROLE ${PredefinedRoles.ADMIN}")
+    }
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should fail when dropping non-existing role") {
