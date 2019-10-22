@@ -7,6 +7,8 @@ package com.neo4j.bench.common.model;
 
 import java.util.Objects;
 
+import static java.lang.String.format;
+
 public class TestRunError
 {
     private final String groupName;
@@ -85,10 +87,7 @@ public class TestRunError
     @Override
     public String toString()
     {
-        return "TestRunError{" +
-               "groupName='" + groupName + '\'' +
-               ", benchmarkName='" + benchmarkName + '\'' +
-               ", message='" + message + '\'' +
-               '}';
+        return format( "%s.%s\n" +
+                       "%s", groupName, benchmarkName, message );
     }
 }

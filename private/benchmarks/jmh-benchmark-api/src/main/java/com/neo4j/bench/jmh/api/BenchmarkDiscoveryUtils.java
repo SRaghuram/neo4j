@@ -13,6 +13,7 @@ import com.neo4j.bench.common.model.Benchmarks;
 import com.neo4j.bench.common.model.Metrics;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.util.Statistics;
 
@@ -21,7 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.neo4j.bench.jmh.api.config.BenchmarkDescription.simplifyParamName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -43,7 +43,7 @@ public class BenchmarkDiscoveryUtils
         return new BenchmarkGroup( benchmarkGroup );
     }
 
-    public static Benchmarks toBenchmarks( BenchmarkParams benchmarkParams )
+    public static Benchmarks toBenchmarks( BenchmarkParams benchmarkParams, RunnerParams runnerParams )
     {
         // all benchmark methods in @Group have the same mode
         Mode mode = toNativeMode( benchmarkParams.getMode() );
@@ -61,7 +61,7 @@ public class BenchmarkDiscoveryUtils
                        .forEach( simpleBenchmarkNames::add );
 
         // all benchmark methods for a given class (regardless of @Group/non-@Group) have the same parameters
-        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams );
+        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams, runnerParams );
 
         Benchmarks benchmarks = new Benchmarks(
                 Benchmark.benchmarkFor( benchmarkDescription,
@@ -116,13 +116,12 @@ public class BenchmarkDiscoveryUtils
         return benchmarkName.substring( 0, classNameMethodNameSeparatorIndex );
     }
 
-    static List<ParameterValue> extractParameterValues( BenchmarkParams benchmarkParams )
+    static List<ParameterValue> extractParameterValues( BenchmarkParams benchmarkParams, RunnerParams runnerParams )
     {
         List<ParameterValue> parameterValues = benchmarkParams.getParamsKeys().stream()
-                                                              // TODO remove this once params no longer need an underscore/prefix
-                                                              .filter( param -> param.contains( "_" ) )
-                                                              .map( param -> new ParameterValue( simplifyParamName( param ),
-                                                                                                 benchmarkParams.getParam( param ) ) )
+                                                              // exclude runner parameters from benchmark name
+                                                              .filter( paramName -> !runnerParams.containsParam( paramName ) )
+                                                              .map( param -> new ParameterValue( param, benchmarkParams.getParam( param ) ) )
                                                               .collect( toList() );
         parameterValues.add( new ParameterValue( THREADS_PARAM, Integer.toString( benchmarkParams.getThreads() ) ) );
         return parameterValues;

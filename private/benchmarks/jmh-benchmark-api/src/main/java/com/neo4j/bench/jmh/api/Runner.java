@@ -21,6 +21,7 @@ import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.BenchmarksValidator.BenchmarkValidationResult;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
@@ -125,6 +126,7 @@ public abstract class Runner
             Path profilerRecordingsOutputDir )
     {
         BenchmarkUtil.assertDirectoryExists( workDir );
+        RunnerParams runnerParams = runnerParams( RunnerParams.create( workDir ) );
 
         Instant start = Instant.now();
 
@@ -144,7 +146,7 @@ public abstract class Runner
                 throw new RuntimeException( "Expected at least one benchmark description, but found none" );
             }
 
-            List<BenchmarkDescription> benchmarksAfterPrepare = prepare( enabledExplodedBenchmarks, workDir, jvm, errorReporter, jvmArgs );
+            List<BenchmarkDescription> benchmarksAfterPrepare = prepare( enabledExplodedBenchmarks, runnerParams, jvm, errorReporter, jvmArgs );
 
             if ( benchmarksAfterPrepare.isEmpty() )
             {
@@ -159,7 +161,7 @@ public abstract class Runner
                         jmhArgs,
                         threadCounts,
                         profilerTypes,
-                        workDir,
+                        runnerParams,
                         errorReporter );
 
                 if ( benchmarksAfterProfiling.isEmpty() )
@@ -175,7 +177,7 @@ public abstract class Runner
                             jvmArgs,
                             jmhArgs,
                             threadCounts,
-                            workDir,
+                            runnerParams,
                             errorReporter );
 
                     if ( !profilerTypes.isEmpty() )
@@ -214,7 +216,7 @@ public abstract class Runner
      */
     protected abstract List<BenchmarkDescription> prepare(
             List<BenchmarkDescription> benchmarks,
-            Path workDir,
+            RunnerParams runnerParams,
             Jvm jvm,
             ErrorReporter errorReporter,
             String[] jvmArgs );
@@ -228,7 +230,7 @@ public abstract class Runner
      */
     protected abstract ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
                                                                 ProfilerType profilerType,
-                                                                Path workDir,
+                                                                RunnerParams runnerParams,
                                                                 ChainedOptionsBuilder optionsBuilder );
 
     /**
@@ -236,7 +238,7 @@ public abstract class Runner
      */
     protected abstract void afterProfilerRun( BenchmarkDescription benchmark,
                                               ProfilerType profilerType,
-                                              Path workDir,
+                                              RunnerParams runnerParams,
                                               ErrorReporter errorReporter );
 
     /**
@@ -247,14 +249,14 @@ public abstract class Runner
      * @return possibly modified version of the input options builder
      */
     protected abstract ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
-                                                                   Path workDir,
+                                                                   RunnerParams runnerParams,
                                                                    ChainedOptionsBuilder optionsBuilder );
 
     /**
      * This method is invoked once for each benchmark that is executed, after execution of the benchmark completes.
      */
     protected abstract void afterMeasurementRun( BenchmarkDescription benchmark,
-                                                 Path workDir,
+                                                 RunnerParams runnerParams,
                                                  ErrorReporter errorReporter );
 
     /**
@@ -264,7 +266,14 @@ public abstract class Runner
      *
      * @return the configuration that was used to execute this benchmark
      */
-    protected abstract Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, Path workDir );
+    protected abstract Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams );
+
+    /**
+     * Runner parameters is the mechanism by which {@link Runner} implementations can share state (e.g., location of configuration files).
+     *
+     * @return tool-specific runner parameters
+     */
+    protected abstract RunnerParams runnerParams( RunnerParams baseRunnerParams );
 
     private List<BenchmarkDescription> profileBenchmarks(
             Collection<BenchmarkDescription> benchmarks,
@@ -273,7 +282,7 @@ public abstract class Runner
             String[] jmhArgs,
             int[] threadCounts,
             List<ProfilerType> profilerTypes,
-            Path workDir,
+            RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
         System.out.println( "\n\n" );
@@ -297,7 +306,7 @@ public abstract class Runner
                             Class<? extends AbstractMicroProfiler> profiler = AbstractMicroProfiler.toJmhProfiler( profilerType );
 
                             ChainedOptionsBuilder builder = baseBuilder(
-                                    workDir,
+                                    runnerParams,
                                     benchmark,
                                     threadCount,
                                     jvm,
@@ -306,14 +315,14 @@ public abstract class Runner
                             builder = builder.addProfiler( profiler )
                                              .forks( 1 );
                             // allow Runner implementation to override/enrich JMH configuration
-                            builder = beforeProfilerRun( benchmark, profilerType, workDir, builder );
+                            builder = beforeProfilerRun( benchmark, profilerType, runnerParams, builder );
                             // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
                             builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
                             Options options = builder.build();
                             // sanity check, make sure provided benchmarks were correctly exploded
                             JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-                            executeBenchmarksForConfig( options, new BenchmarkGroupBenchmarkMetrics(), workDir );
+                            executeBenchmarksForConfig( options, new BenchmarkGroupBenchmarkMetrics(), runnerParams );
                         }
                         catch ( Exception e )
                         {
@@ -324,7 +333,7 @@ public abstract class Runner
                         }
                         finally
                         {
-                            afterProfilerRun( benchmark, profilerType, workDir, errorReporter );
+                            afterProfilerRun( benchmark, profilerType, runnerParams, errorReporter );
                         }
                     }
                 }
@@ -340,7 +349,7 @@ public abstract class Runner
             String[] jvmArgs,
             String[] jmhArgs,
             int[] threadCounts,
-            Path workDir,
+            RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
         System.out.println( "\n\n" );
@@ -358,20 +367,20 @@ public abstract class Runner
                     try
                     {
                         ChainedOptionsBuilder builder = baseBuilder(
-                                workDir,
+                                runnerParams,
                                 benchmark,
                                 threadCount,
                                 jvm,
                                 jvmArgs );
                         // allow Runner implementation to override/enrich JMH configuration
-                        builder = beforeMeasurementRun( benchmark, workDir, builder );
+                        builder = beforeMeasurementRun( benchmark, runnerParams, builder );
                         // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
                         builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
                         Options options = builder.build();
                         // sanity check, make sure provided benchmarks were correctly exploded
                         JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-                        executeBenchmarksForConfig( options, benchmarkGroupBenchmarkMetrics, workDir );
+                        executeBenchmarksForConfig( options, benchmarkGroupBenchmarkMetrics, runnerParams );
                     }
                     catch ( Exception e )
                     {
@@ -379,7 +388,7 @@ public abstract class Runner
                     }
                     finally
                     {
-                        afterMeasurementRun( benchmark, workDir, errorReporter );
+                        afterMeasurementRun( benchmark, runnerParams, errorReporter );
                     }
                 }
             }
@@ -389,17 +398,16 @@ public abstract class Runner
     private void executeBenchmarksForConfig(
             Options options,
             BenchmarkGroupBenchmarkMetrics metrics,
-            Path workDir ) throws RunnerException
+            RunnerParams runnerParams ) throws RunnerException
     {
         for ( RunResult runResult : new org.openjdk.jmh.runner.Runner( options ).run() )
         {
-            // Neo4jConfig neo4jConfig = stores.neo4jConfigFor( benchmarkGroup, benchmarks.parentBenchmark() );
             BenchmarkParams params = runResult.getParams();
             BenchmarkGroup benchmarkGroup = BenchmarkDiscoveryUtils.toBenchmarkGroup( params );
-            Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( params );
+            Benchmarks benchmarks = BenchmarkDiscoveryUtils.toBenchmarks( params, runnerParams );
             Benchmark benchmark = benchmarks.parentBenchmark();
 
-            Neo4jConfig neo4jConfig = systemConfigFor( benchmarkGroup, benchmark, workDir );
+            Neo4jConfig neo4jConfig = systemConfigFor( benchmarkGroup, benchmark, runnerParams );
 
             if ( !benchmarks.isGroup() )
             {

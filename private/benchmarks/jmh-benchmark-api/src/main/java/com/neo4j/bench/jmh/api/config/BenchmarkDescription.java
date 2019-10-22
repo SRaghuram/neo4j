@@ -102,7 +102,7 @@ public class BenchmarkDescription
                                                        } )
                                                 .collect( toMap( BenchmarkParamDescription::name, p -> p.values().iterator().next() ) );
 
-        String simpleName = className().substring( className().lastIndexOf( "." ) ) + method.name();
+        String simpleName = className().substring( className().lastIndexOf( "." ) + 1 ) + "." + method.name();
 
         return Benchmark.benchmarkFor( description(), simpleName, mode, params ).name();
     }
