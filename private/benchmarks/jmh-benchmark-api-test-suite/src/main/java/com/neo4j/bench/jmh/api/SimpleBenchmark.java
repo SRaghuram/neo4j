@@ -22,7 +22,7 @@ public class SimpleBenchmark extends BaseBenchmark
             base = {"10000", "20000"}
     )
     @Param( {} )
-    public Integer SimpleBenchmark_range;
+    public Integer range;
 
     @Override
     public String description()
@@ -46,14 +46,14 @@ public class SimpleBenchmark extends BaseBenchmark
     @BenchmarkMode( Mode.AverageTime )
     public void count( Blackhole bh )
     {
-        bh.consume( IntStream.range( 0, SimpleBenchmark_range ).map( i -> i * i ).count() );
+        bh.consume( IntStream.range( 0, range ).map( i -> i * i ).count() );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.AverageTime )
     public void spin( Blackhole bh )
     {
-        for ( int i = 0; i < SimpleBenchmark_range; i++ )
+        for ( int i = 0; i < range; i++ )
         {
             bh.consume( i );
         }

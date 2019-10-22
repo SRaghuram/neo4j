@@ -166,11 +166,12 @@ public class BenchmarksFinder
         return benchmarkMethods;
     }
 
-    List<Field> getParamFieldsWithoutClassNamePrefix()
+    // NOTE: this is a sanity check, to make sure old cold is updated to remove the class name prefixes that used to be necessary
+    List<Field> getParamFieldsWithClassNamePrefix()
     {
         return getParamFields().stream()
-                               .filter( field -> !field.getName().startsWith(
-                                       field.getDeclaringClass().getSimpleName() + "_" ) )
+                               .filter( field -> field.getName().startsWith(
+                                       field.getDeclaringClass().getSimpleName() ) )
                                .collect( toList() );
     }
 

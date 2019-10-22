@@ -357,7 +357,7 @@ public class BenchmarkDescription
     {
         Map<String,BenchmarkParamDescription> parameters = benchmarksFinder.getParamFieldsFor( clazz ).stream()
                                                                            .collect( toMap(
-                                                                                   field -> simplifyParamName( field.getName() ),
+                                                                                   Field::getName,
                                                                                    field -> createBenchmarkParamDescriptionFor( field, validation, clazz ) ) );
         Map<String,BenchmarkMethodDescription> methods = benchmarksFinder.getBenchmarkMethodsFor( clazz ).stream()
                                                                          .map( method -> createBenchmarkMethodDescriptionFor( method,
@@ -381,8 +381,6 @@ public class BenchmarkDescription
 
     private static BenchmarkParamDescription createBenchmarkParamDescriptionFor( Field field, Validation validation, Class clazz )
     {
-        String paramName = simplifyParamName( field.getName() );
-
         Optional<ParamValues> paramValues = getAnnotationOrReport(
                 ParamValues.class,
                 field,
@@ -398,7 +396,7 @@ public class BenchmarkDescription
         if ( allowedValues.size() != allowed.length )
         {
             validation.duplicateAllowedValue( clazz.getName(),
-                                              paramName,
+                                              field.getName(),
                                               allowed );
         }
 
@@ -406,10 +404,10 @@ public class BenchmarkDescription
         if ( defaultValues.size() != base.length )
         {
             validation.duplicateBaseValue( clazz.getName(),
-                                           paramName,
+                                           field.getName(),
                                            base );
         }
-        return new BenchmarkParamDescription( paramName,
+        return new BenchmarkParamDescription( field.getName(),
                                               allowedValues,
                                               defaultValues );
     }
@@ -443,15 +441,6 @@ public class BenchmarkDescription
         {
             return Optional.of( valueFun.apply( annotation ) );
         }
-    }
-
-    public static String simplifyParamName( String jmhParamName )
-    {
-        if ( !jmhParamName.contains( "_" ) )
-        {
-            throw new RuntimeException( "Invalid JMH @param name, does not contain '_' character :" + jmhParamName );
-        }
-        return jmhParamName.substring( jmhParamName.indexOf( "_" ) + 1 );
     }
 
     @Override
