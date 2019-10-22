@@ -17,12 +17,12 @@ import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
-import org.neo4j.graphdb.Direction
+import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.helpers.collection.MapUtil
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{Read, TokenRead, _}
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
-import org.neo4j.kernel.impl.core.{NodeEntity, RelationshipEntity, TransactionalEntityFactory}
+import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{Value, Values}
@@ -91,8 +91,8 @@ object Methods {
   val countsForRel: MethodReference = method[Read, Long]("countsForRelationship", typeRef[Int], typeRef[Int], typeRef[Int])
   val nextLong: MethodReference = method[LongIterator, Long]("next")
   val fetchNextRelationship: MethodReference = method[RelationshipIterator, Long]("next")
-  val newNodeEntityById: MethodReference = method[TransactionalEntityFactory, NodeEntity]("newNodeEntity", typeRef[Long])
-  val newRelationshipEntityById: MethodReference = method[TransactionalEntityFactory, RelationshipEntity]("newRelationshipEntity", typeRef[Long])
+  val newNodeEntityById: MethodReference = method[TransactionalEntityFactory, Node]("newNodeEntity", typeRef[Long])
+  val newRelationshipEntityById: MethodReference = method[TransactionalEntityFactory, Relationship]("newRelationshipEntity", typeRef[Long])
   val materializeAnyResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyResult", typeRef[TransactionalEntityFactory], typeRef[Object])
   val materializeAnyValueResult: MethodReference = method[CompiledConversionUtils, AnyValue]("materializeAnyValueResult", typeRef[TransactionalEntityFactory], typeRef[Object])
   val materializeNodeValue: MethodReference = method[CompiledConversionUtils, NodeValue]("materializeNodeValue", typeRef[TransactionalEntityFactory], typeRef[Object])
