@@ -16,7 +16,7 @@ import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.ExternalProfiler;
@@ -81,7 +81,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
                                                         Benchmark benchmark,
                                                         BenchmarkParams benchmarkParams )
     {
-        Path workDir = Paths.get( benchmarkParams.getParam( JmhOptionsUtil.PARAM_WORK_DIR ) );
+        Path workDir = RunnerParams.extractFrom( benchmarkParams ).workDir();
         BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( workDir, benchmarkGroup );
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
         String forkName = "fork_" + profilerType.name();
@@ -94,7 +94,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         if ( profilerType.isExternal() )
         {
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
+            Benchmark benchmark = extractBenchmark( params );
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             return ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).invokeArgs( forkDir,
                                                                                                    benchmarkGroup,
@@ -113,7 +113,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         if ( profilerType.isExternal() )
         {
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
+            Benchmark benchmark = extractBenchmark( params );
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
             JvmVersion jvmVersion = jvm.version();
@@ -135,7 +135,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         if ( profilerType.isExternal() )
         {
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
+            Benchmark benchmark = extractBenchmark( params );
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).beforeProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
         }
@@ -148,7 +148,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         {
             BenchmarkParams params = benchmarkResult.getParams();
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
+            Benchmark benchmark = extractBenchmark( params );
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             ((com.neo4j.bench.common.profiling.ExternalProfiler) innerProfiler).afterProcess( forkDir, benchmarkGroup, benchmark, Parameters.NONE );
             forkDir.unsanitizeProfilerRecordingsFor( benchmarkGroup, benchmark, profilerType, Parameters.NONE );
@@ -181,7 +181,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         if ( profilerType.isInternal() && iterationParams.getType() == IterationType.MEASUREMENT && ++iteration == 1 )
         {
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
+            Benchmark benchmark = extractBenchmark( params );
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
             ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementBegin( jvm,
@@ -200,7 +200,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
         if ( profilerType.isInternal() && iterationParams.getType() == IterationType.MEASUREMENT && iteration == iterationParams.getCount() )
         {
             BenchmarkGroup benchmarkGroup = toBenchmarkGroup( params );
-            Benchmark benchmark = toBenchmarks( params ).parentBenchmark();
+            Benchmark benchmark = extractBenchmark( params );
             ForkDirectory forkDir = getForkDir( params, benchmarkGroup, benchmark );
             Jvm jvm = Jvm.bestEffortOrFail( Paths.get( params.getJvm() ) );
             ((com.neo4j.bench.common.profiling.InternalProfiler) innerProfiler).onMeasurementFinished( jvm,
@@ -217,5 +217,11 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
             }
         }
         return Collections.emptyList();
+    }
+
+    private static Benchmark extractBenchmark( BenchmarkParams params )
+    {
+        RunnerParams runnerParams = RunnerParams.extractFrom( params );
+        return toBenchmarks( params, runnerParams ).parentBenchmark();
     }
 }

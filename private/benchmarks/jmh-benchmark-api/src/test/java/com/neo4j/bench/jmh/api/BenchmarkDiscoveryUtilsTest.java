@@ -9,6 +9,7 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.infra.BenchmarkParams;
@@ -17,6 +18,7 @@ import org.openjdk.jmh.runner.IterationType;
 import org.openjdk.jmh.runner.WorkloadParams;
 import org.openjdk.jmh.runner.options.TimeValue;
 
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +27,7 @@ import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.THREADS_PARAM;
 import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.extractParameterValues;
 import static com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils.parametersAsMap;
+import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -114,10 +117,15 @@ class BenchmarkDiscoveryUtilsTest
         ParameterValue param3 = new ParameterValue( "param3", "value" );
         ParameterValue paramThreads = new ParameterValue( THREADS_PARAM, Integer.toString( threads ) );
 
+        RunnerParams runnerParams = RunnerParams.create( Paths.get( "work_dir" ) );
+        runnerParams.addParam( "system_param_1", "value_1" );
+
         WorkloadParams workloadParams = new WorkloadParams();
-        workloadParams.put( "class_" + param1.param(), param1.value(), 1 );
-        workloadParams.put( "class_" + param2.param(), param2.value(), 1 );
-        workloadParams.put( "class_" + param3.param(), param3.value(), 1 );
+        workloadParams.put( param1.param(), param1.value(), 1 );
+        workloadParams.put( param2.param(), param2.value(), 1 );
+        workloadParams.put( param3.param(), param3.value(), 1 );
+        runnerParams.asList()
+                    .forEach( runnerParam -> workloadParams.put( runnerParam.name(), runnerParam.value(), 1 ) );
 
         BenchmarkParams benchmarkParams = new BenchmarkParams(
                 "doThing", /* benchmark */
@@ -150,12 +158,15 @@ class BenchmarkDiscoveryUtilsTest
                 "1.19", /* jmh version */
                 TimeValue.NONE /* timeout */ );
 
-        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams );
+        List<ParameterValue> parameterValues = extractParameterValues( benchmarkParams, runnerParams );
 
         assertTrue( parameterValues.contains( param1 ) );
         assertTrue( parameterValues.contains( param2 ) );
         assertTrue( parameterValues.contains( param3 ) );
         assertTrue( parameterValues.contains( paramThreads ) );
-        assertThat( parameterValues.size(), CoreMatchers.equalTo( 4 ) );
+        assertThat(
+                parameterValues.stream().map( ParameterValue::toString ).collect( joining( "\n" ) ),
+                parameterValues.size(),
+                CoreMatchers.equalTo( 4 ) );
     }
 }

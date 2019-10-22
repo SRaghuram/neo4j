@@ -16,21 +16,18 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 import org.openjdk.jmh.runner.options.WarmupMode;
 
-import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
 public class JmhOptionsUtil
 {
-    public static final String PARAM_WORK_DIR = "workDir";
-
     public static final TimeValue DEFAULT_ITERATION_DURATION = TimeValue.seconds( 5 );
     public static final int DEFAULT_ITERATION_COUNT = 5;
     public static final int DEFAULT_FORK_COUNT = 3;
 
     public static ChainedOptionsBuilder baseBuilder(
-            Path workDir,
+            RunnerParams runnerParams,
             BenchmarkDescription benchmark,
             int threadCount,
             Jvm jvm,
@@ -66,15 +63,22 @@ public class JmhOptionsUtil
                 .forks( DEFAULT_FORK_COUNT )
                 .threads( threadCount )
                 // Do individual warmup for every benchmark (Default == WarmupMode.INDI)
-                .warmupMode( WarmupMode.INDI )
-                .param( PARAM_WORK_DIR, workDir.toAbsolutePath().toString() );
+                .warmupMode( WarmupMode.INDI );
+        for ( RunnerParams.RunnerParam runnerParam : runnerParams.asList() )
+        {
+            baseBuilder = baseBuilder.param( runnerParam.name(), runnerParam.value() );
+        }
 
         if ( benchmark.isEnabled() && (threadCount == 1 || benchmark.isThreadSafe()) )
         {
             for ( BenchmarkParamDescription param : benchmark.parameters().values() )
             {
-                String paramName = fullParamName( benchmark, param );
-                baseBuilder = baseBuilder.param( paramName, param.valuesArray() );
+                if ( runnerParams.containsParam( param.name() ) )
+                {
+                    throw new IllegalStateException( format( "Parameter name '%s' is already a system property, it can not be used as benchmark parameter.\n" +
+                                                             " * Rename parameter in: ", benchmark.className() ) );
+                }
+                baseBuilder = baseBuilder.param( param.name(), param.valuesArray() );
             }
             for ( BenchmarkMethodDescription method : benchmark.methods() )
             {
@@ -258,11 +262,6 @@ public class JmhOptionsUtil
         {
             throw new RuntimeException( "Expected one enabled benchmark but found: " + options.getIncludes() );
         }
-    }
-
-    private static String fullParamName( BenchmarkDescription benchmark, BenchmarkParamDescription param )
-    {
-        return format( "%s_%s", benchmark.simpleName(), param.name() );
     }
 
     private static String asRegex( String className, String methodName )
