@@ -773,7 +773,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN length(shortestpath((bound)-[*1..3]-(:B))) as dist
       """.stripMargin
 
-    val errorMsg = "shortestPath(...) that is not part of a MATCH clause requires bound nodes"
+    val errorMsg = "A shortestPath(...) requires bound nodes when not part of a MATCH clause."
     failWithError(Configs.Version3_5, query, Seq(errorMsg), Seq("SyntaxException"))
   }
 
@@ -787,7 +787,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN bound
       """.stripMargin
 
-    val errorMsg = "shortestPath(...) that is not part of a MATCH clause requires bound nodes"
+    val errorMsg = "A shortestPath(...) requires bound nodes when not part of a MATCH clause."
     failWithError(Configs.Version3_5, query, Seq(errorMsg), Seq("SyntaxException"))
   }
 
@@ -801,7 +801,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN length(p)
       """.stripMargin
 
-    val errorMsg = "shortestPath(...) that is not part of a MATCH clause requires bound nodes"
+    val errorMsg = "A shortestPath(...) requires bound nodes when not part of a MATCH clause."
     failWithError(Configs.Version3_5, query, Seq(errorMsg), Seq("SyntaxException"))
   }
 
