@@ -140,7 +140,7 @@ public class Neo4jConfigBuilder
         }
         else
         {
-            translatedValue = GraphDatabaseSettings.tx_state_memory_allocation.getDefaultValue();
+            translatedValue = GraphDatabaseSettings.tx_state_memory_allocation.defaultValue().name();
         }
         return withSetting( tx_state_memory_allocation, translatedValue );
     }
