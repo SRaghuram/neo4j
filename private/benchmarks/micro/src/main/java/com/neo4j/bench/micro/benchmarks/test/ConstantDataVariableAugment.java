@@ -43,7 +43,7 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
             allowed = {"1", "2"},
             base = {"1", "2"} )
     @Param( {} )
-    public int ConstantDataVariableAugment_extraNodes;
+    public int extraNodes;
 
     @Override
     public String description()

@@ -65,13 +65,13 @@ public class CreateNodeKey extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateNodeKey_type;
+    public String type;
 
     @ParamValues(
             allowed = {"2", "4", "8"},
             base = {"2", "8"} )
     @Param( {} )
-    public int CreateNodeKey_keys;
+    public int keys;
 
     @Override
     public String description()
@@ -90,19 +90,19 @@ public class CreateNodeKey extends AbstractCoreBenchmark
 
     private String[] keys()
     {
-        return IntStream.range( 0, CreateNodeKey_keys )
-                        .mapToObj( i -> CreateNodeKey_type + "_" + i )
+        return IntStream.range( 0, keys )
+                        .mapToObj( i -> type + "_" + i )
                         .toArray( String[]::new );
     }
 
     private PropertyDefinition[] propertyDefinitions()
     {
-        List<PropertyDefinition> propertyDefinitions = IntStream.range( 0, CreateNodeKey_keys - 1 )
-                                                                .mapToObj( i -> new PropertyDefinition( CreateNodeKey_type + "_" + i,
-                                                                                                        valuesFor( CreateNodeKey_type ) ) )
+        List<PropertyDefinition> propertyDefinitions = IntStream.range( 0, keys - 1 )
+                                                                .mapToObj( i -> new PropertyDefinition( type + "_" + i,
+                                                                                                        valuesFor( type ) ) )
                                                                 .collect( Collectors.toList() );
         ValueGeneratorFactory valueGeneratorFactory = discretePropertyValueGenerator();
-        propertyDefinitions.add( new PropertyDefinition( CreateNodeKey_type + "_" + (CreateNodeKey_keys - 1),
+        propertyDefinitions.add( new PropertyDefinition( type + "_" + (keys - 1),
                                                          valueGeneratorFactory ) );
         return propertyDefinitions.toArray( new PropertyDefinition[propertyDefinitions.size()] );
     }
@@ -120,7 +120,7 @@ public class CreateNodeKey extends AbstractCoreBenchmark
             totalNumberOfBuckets -= typicalBucketSize;
         }
         double[] ratiosArray = ratios.stream().mapToDouble( Integer::doubleValue ).toArray();
-        return discreteFor( CreateNodeKey_type, ratiosArray );
+        return discreteFor( type, ratiosArray );
     }
 
     private int addCustomRatio( int totalNumberOfBuckets, List<Integer> ratios, int customRatio )

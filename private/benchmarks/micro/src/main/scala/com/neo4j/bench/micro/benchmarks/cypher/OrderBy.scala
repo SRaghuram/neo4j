@@ -28,7 +28,7 @@ class OrderBy extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var OrderBy_runtime: String = _
+  var runtime: String = _
 
   /*
   Compiled runtime does not support Order By of Temporal/Spatial types
@@ -37,7 +37,7 @@ class OrderBy extends AbstractCypherBenchmark {
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(LNG, STR_SML))
   @Param(Array[String]())
-  var OrderBy_type: String = _
+  var propertyType: String = _
 
   override def description = "Order By, e.g., UNWIND $list AS x RETURN x ORDER BY x"
 
@@ -46,7 +46,7 @@ class OrderBy extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(OrderBy_type)
+    val listElementType = cypherTypeFor(propertyType)
 
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
@@ -78,10 +78,10 @@ class OrderByThreadState {
 
   @Setup
   def setUp(benchmarkState: OrderBy): Unit = {
-    val list = listOf(benchmarkState.OrderBy_type, benchmarkState.EXPECTED_ROW_COUNT)
+    val list = listOf(benchmarkState.propertyType, benchmarkState.EXPECTED_ROW_COUNT)
     Collections.shuffle(list)
     benchmarkState.params = mapValuesOfList("list", list)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.OrderBy_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

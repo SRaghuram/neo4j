@@ -26,19 +26,19 @@ class GroupingAndAggregation extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var GroupingAndAggregation_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("1", "100", "10000"),
     base = Array("1", "100", "10000"))
   @Param(Array[Int]())
-  var GroupingAndAggregation_distinctCount: Int = _
+  var distinctCount: Int = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(STR_SML))
   @Param(Array[String]())
-  var GroupingAndAggregation_type: String = _
+  var propertyType: String = _
 
   override def description = "Grouping & Aggregation, e.g., MATCH (n) RETURN n, count(n)"
 
@@ -47,7 +47,7 @@ class GroupingAndAggregation extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(GroupingAndAggregation_type)
+    val listElementType = cypherTypeFor(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -66,7 +66,7 @@ class GroupingAndAggregation extends AbstractCypherBenchmark {
   def executePlan(threadState: GroupingAndAggregationThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
     threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
-    assertExpectedRowCount(GroupingAndAggregation_distinctCount, visitor)
+    assertExpectedRowCount(distinctCount, visitor)
   }
 }
 
@@ -79,8 +79,8 @@ class GroupingAndAggregationThreadState {
   def setUp(benchmarkState: GroupingAndAggregation): Unit = {
     benchmarkState.params = mapValuesOfList(
       "list",
-      randomListOf(benchmarkState.GroupingAndAggregation_type, benchmarkState.VALUE_COUNT, benchmarkState.GroupingAndAggregation_distinctCount))
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.GroupingAndAggregation_runtime))
+      randomListOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT, benchmarkState.distinctCount))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

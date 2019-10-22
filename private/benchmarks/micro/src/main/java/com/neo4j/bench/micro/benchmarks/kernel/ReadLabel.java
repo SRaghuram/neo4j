@@ -42,17 +42,17 @@ public class ReadLabel extends AbstractKernelBenchmark
             allowed = {"4", "64"},
             base = {"4"} )
     @Param( {} )
-    public int ReadLabel_count;
+    public int count;
 
     @ParamValues(
             allowed = {"SCATTERED_BY_NODE", "CO_LOCATED_BY_NODE"},
             base = {"SCATTERED_BY_NODE"} )
     @Param( {} )
-    public LabelLocality ReadLabel_locality;
+    public LabelLocality locality;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation ReadLabel_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     public String description()
@@ -80,9 +80,9 @@ public class ReadLabel extends AbstractKernelBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
-                .withLabels( labels( ReadLabel_count ) )
+                .withLabels( labels( count ) )
                 .withLabelOrder( Order.ORDERED )
-                .withLabelLocality( ReadLabel_locality )
+                .withLabelLocality( locality )
                 .isReusableStore( true )
                 .build();
     }
@@ -90,7 +90,7 @@ public class ReadLabel extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return ReadLabel_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -108,7 +108,7 @@ public class ReadLabel extends AbstractKernelBenchmark
             initializeTx( benchmark );
             node = kernelTx.cursors.allocateNodeCursor();
             read = kernelTx.read;
-            labels = Stream.of( labels( benchmark.ReadLabel_count ) )
+            labels = Stream.of( labels( benchmark.count ) )
                            .mapToInt( this::labelToId )
                            .toArray();
 

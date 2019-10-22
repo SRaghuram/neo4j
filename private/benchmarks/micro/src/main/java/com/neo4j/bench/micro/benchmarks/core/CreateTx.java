@@ -35,7 +35,7 @@ public class CreateTx extends AbstractCoreBenchmark
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateTx_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -55,7 +55,7 @@ public class CreateTx extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( CreateTx_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .build();
     }
 

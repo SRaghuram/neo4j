@@ -52,13 +52,13 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
             allowed = {"1", "100"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateNodesWithProperty_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateNodesWithProperty_format;
+    public String format;
 
     @Override
     public String description()
@@ -90,7 +90,7 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
         @Setup
         public void setUp( CreateNodesWithProperty benchmarkState ) throws InterruptedException
         {
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNodesWithProperty_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
             valueGeneratorFun = Arrays.stream( propertyDefinitions )
                                       .map( pd -> pd.value().create() )
                                       .toArray( ValueGeneratorFun[]::new );

@@ -27,13 +27,13 @@ class Aggregation extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var Aggregation_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(STR_SML, LNG, DBL),
     base = Array(STR_SML))
   @Param(Array[String]())
-  var Aggregation_type: String = _
+  var propertyType: String = _
 
   override def description = "Aggregation only, e.g., MATCH (n) RETURN count(n)"
 
@@ -43,7 +43,7 @@ class Aggregation extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(Aggregation_type)
+    val listElementType = cypherTypeFor(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -75,8 +75,8 @@ class AggregationThreadState {
 
   @Setup
   def setUp(benchmarkState: Aggregation): Unit = {
-    benchmarkState.params = mapValuesOfList("list", listOf(benchmarkState.Aggregation_type, benchmarkState.VALUE_COUNT))
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Aggregation_runtime))
+    benchmarkState.params = mapValuesOfList("list", listOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

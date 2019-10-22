@@ -49,7 +49,7 @@ public class CreateUniqueConstraint extends AbstractCreateIndex
             allowed = {"UNIQUE"},
             base = {"UNIQUE"} )
     @Param( {} )
-    public IndexType CreateUniqueConstraint_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {
@@ -58,24 +58,24 @@ public class CreateUniqueConstraint extends AbstractCreateIndex
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML, DATE_TIME, POINT} )
     @Param( {} )
-    public String CreateUniqueConstraint_type;
+    public String type;
 
     @ParamValues(
             allowed = {"1000000"},
             base = {"1000000"} )
     @Param( {} )
-    public int CreateUniqueConstraint_nodeCount;
+    public int nodeCount;
 
     @Override
     int nodeCount()
     {
-        return CreateUniqueConstraint_nodeCount;
+        return nodeCount;
     }
 
     @Override
     String getType()
     {
-        return CreateUniqueConstraint_type;
+        return type;
     }
 
     @Override
@@ -96,14 +96,14 @@ public class CreateUniqueConstraint extends AbstractCreateIndex
     @TearDown( Level.Iteration )
     public void dropIndex()
     {
-        dropUniquenessConstraint( db(), LABEL, CreateUniqueConstraint_type );
+        dropUniquenessConstraint( db(), LABEL, type );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SingleShotTime )
     public void createIndex()
     {
-        createUniquenessConstraint( db(), LABEL, CreateUniqueConstraint_type );
+        createUniquenessConstraint( db(), LABEL, type );
         waitForSchemaIndexes( db() );
     }
 }

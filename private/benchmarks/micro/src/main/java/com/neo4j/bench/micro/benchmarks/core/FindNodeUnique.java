@@ -67,19 +67,19 @@ public class FindNodeUnique extends AbstractCoreBenchmark
                     DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String FindNodeUnique_type;
+    public String type;
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA", "UNIQUE"},
             base = {"NONE", "SCHEMA"} )
     @Param( {} )
-    public IndexType FindNodeUnique_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String FindNodeUnique_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -105,16 +105,16 @@ public class FindNodeUnique extends AbstractCoreBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Number initial = defaultRangeFor( FindNodeUnique_type ).min();
+        Number initial = defaultRangeFor( type ).min();
         // will create sequence of ascending number values, starting at 'min' and ending at 'min' + NODE_COUNT
-        PropertyDefinition propertyDefinition = ascPropertyFor( FindNodeUnique_type, initial );
+        PropertyDefinition propertyDefinition = ascPropertyFor( type, initial );
         DataGeneratorConfigBuilder builder = new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
                 .withNodeProperties( propertyDefinition )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( FindNodeUnique_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .isReusableStore( true );
-        switch ( FindNodeUnique_index )
+        switch ( index )
         {
         case SCHEMA:
             return builder.withSchemaIndexes( new LabelKeyDefinition( LABEL, propertyDefinition.key() ) ).build();
@@ -123,7 +123,7 @@ public class FindNodeUnique extends AbstractCoreBenchmark
         case NONE:
             return builder.build();
         default:
-            throw new RuntimeException( "Unsupported 'index' value: " + FindNodeUnique_index );
+            throw new RuntimeException( "Unsupported 'index' value: " + index );
         }
     }
 
@@ -138,9 +138,9 @@ public class FindNodeUnique extends AbstractCoreBenchmark
         public void setUp( FindNodeUnique benchmarkState ) throws InterruptedException
         {
             tx = benchmarkState.db().beginTx();
-            Range range = defaultRangeFor( benchmarkState.FindNodeUnique_type );
+            Range range = defaultRangeFor( benchmarkState.type );
             PropertyDefinition propertyDefinition = randPropertyFor(
-                    benchmarkState.FindNodeUnique_type,
+                    benchmarkState.type,
                     range.min(),
                     range.min().longValue() + NODE_COUNT,
                     // numerical

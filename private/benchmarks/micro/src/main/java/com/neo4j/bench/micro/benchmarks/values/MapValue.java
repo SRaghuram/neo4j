@@ -47,13 +47,13 @@ public class MapValue extends AbstractValuesBenchmark
             allowed = {"4", "40", "400"},
             base = {"4", "40", "400"} )
     @Param( {} )
-    public int MapValue_size;
+    public int size;
 
     @ParamValues(
             allowed = {"50", "75", "100"},
             base = {"50", "75", "100"} )
     @Param( {} )
-    public int MapValue_fraction;
+    public int fraction;
 
     @State( Scope.Thread )
     public static class ThreadState
@@ -84,9 +84,9 @@ public class MapValue extends AbstractValuesBenchmark
         private org.neo4j.values.virtual.MapValue createValue( MapValue benchmarkState, RNGState rngState )
         {
 
-            bound = (int) (benchmarkState.MapValue_size * (100.0 / benchmarkState.MapValue_fraction));
-            keys = new String[benchmarkState.MapValue_size];
-            AnyValue[] values = new AnyValue[benchmarkState.MapValue_size];
+            bound = (int) (benchmarkState.size * (100.0 / benchmarkState.fraction));
+            keys = new String[benchmarkState.size];
+            AnyValue[] values = new AnyValue[benchmarkState.size];
             for ( int i = 0; i < keys.length; i++ )
             {
                 String base = Long.toHexString( rngState.rng.nextLong() );

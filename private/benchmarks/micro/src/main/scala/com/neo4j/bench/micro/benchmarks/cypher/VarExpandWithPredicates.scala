@@ -30,25 +30,25 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
     allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var VarExpandWithPredicates_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("10"),
     base = Array("10"))
   @Param(Array[String]())
-  var VarExpandWithPredicates_degree: Int = _
+  var degree: Int = _
 
   @ParamValues(
     allowed = Array("1", "2"),
     base = Array("1", "2"))
   @Param(Array[String]())
-  var VarExpandWithPredicates_minDepth: Int = _
+  var minDepth: Int = _
 
   @ParamValues(
     allowed = Array("1", "2", "3"),
     base = Array("1", "2", "3"))
   @Param(Array[String]())
-  var VarExpandWithPredicates_length: Int = _
+  var length: Int = _
 
   override def description = "MATCH p=(a:Label{k1:42})-[:*1..3]->(b) WHERE all(n IN nodes(p) WHERE k2.x=0) RETURN a,b"
 
@@ -69,7 +69,7 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
       new PropertyDefinition(lookupKey, discrete(lookupDistribution: _*)),
       new PropertyDefinition(predicateKey, discrete(predicateDistribution: _*)))
     .withSchemaIndexes(new LabelKeyDefinition(label, lookupKey))
-    .withOutRelationships(new RelationshipDefinition(relType, VarExpandWithPredicates_degree))
+    .withOutRelationships(new RelationshipDefinition(relType, degree))
     .isReusableStore(true)
     .build()
 
@@ -106,8 +106,8 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
       endNodeName,
       relName,
       VarPatternLength(
-        min = VarExpandWithPredicates_minDepth,
-        max = Some(VarExpandWithPredicates_minDepth + VarExpandWithPredicates_length)),
+        min = minDepth,
+        max = Some(minDepth + length)),
       ExpandAll,
       tempNode.name,
       "r_RELS",
@@ -142,7 +142,7 @@ class VarExpandVarExpandWithPredicatesThreadState {
 
   @Setup
   def setUp(benchmarkState: VarExpandWithPredicates): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.VarExpandWithPredicates_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

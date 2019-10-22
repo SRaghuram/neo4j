@@ -51,7 +51,7 @@ public class CreateIndexUnique extends AbstractCreateIndex
             allowed = {"SCHEMA", "MANDATORY"},
             base = {"SCHEMA"} )
     @Param( {} )
-    public IndexType CreateIndexUnique_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {
@@ -60,7 +60,7 @@ public class CreateIndexUnique extends AbstractCreateIndex
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML, DATE_TIME, POINT} )
     @Param( {} )
-    public String CreateIndexUnique_type;
+    public String type;
 
     @Override
     int nodeCount()
@@ -71,7 +71,7 @@ public class CreateIndexUnique extends AbstractCreateIndex
     @Override
     String getType()
     {
-        return CreateIndexUnique_type;
+        return type;
     }
 
     @Override
@@ -92,16 +92,16 @@ public class CreateIndexUnique extends AbstractCreateIndex
     @TearDown( Level.Iteration )
     public void dropIndex()
     {
-        switch ( CreateIndexUnique_index )
+        switch ( index )
         {
         case SCHEMA:
-            dropSchemaIndex( db(), LABEL, CreateIndexUnique_type );
+            dropSchemaIndex( db(), LABEL, type );
             break;
         case MANDATORY:
-            dropMandatoryNodeConstraint( db(), LABEL, CreateIndexUnique_type );
+            dropMandatoryNodeConstraint( db(), LABEL, type );
             break;
         default:
-            throw new RuntimeException( "Unrecognized index type: " + CreateIndexUnique_index );
+            throw new RuntimeException( "Unrecognized index type: " + index );
         }
     }
 
@@ -109,16 +109,16 @@ public class CreateIndexUnique extends AbstractCreateIndex
     @BenchmarkMode( Mode.SingleShotTime )
     public void createIndex()
     {
-        switch ( CreateIndexUnique_index )
+        switch ( index )
         {
         case SCHEMA:
-            createSchemaIndex( db(), LABEL, CreateIndexUnique_type );
+            createSchemaIndex( db(), LABEL, type );
             break;
         case MANDATORY:
-            createMandatoryNodeConstraint( db(), LABEL, CreateIndexUnique_type );
+            createMandatoryNodeConstraint( db(), LABEL, type );
             break;
         default:
-            throw new RuntimeException( "Unrecognized index type: " + CreateIndexUnique_index );
+            throw new RuntimeException( "Unrecognized index type: " + index );
         }
         waitForSchemaIndexes( db(), LABEL );
     }

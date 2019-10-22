@@ -24,7 +24,7 @@ class Expand extends AbstractCypherBenchmark {
     allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var Expand_runtime: String = _
+  var runtime: String = _
 
   override def description = "Expand one step, with many relationship types"
 
@@ -70,7 +70,7 @@ class ExpandThreadState {
 
   @Setup
   def setUp(benchmarkState: Expand): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Expand_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

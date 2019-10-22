@@ -51,25 +51,25 @@ public class Expand extends AbstractCoreBenchmark
             allowed = {"SCATTERED_BY_START_NODE", "CO_LOCATED_BY_START_NODE"},
             base = {"SCATTERED_BY_START_NODE"} )
     @Param( {} )
-    public RelationshipLocality Expand_locality;
+    public RelationshipLocality locality;
 
     @ParamValues(
             allowed = {"true", "false"},
             base = {"true"} )
     @Param( {} )
-    public boolean Expand_dense;
+    public boolean dense;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String Expand_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String Expand_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -94,13 +94,13 @@ public class Expand extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIP_DEFINITIONS )
-                .withRelationshipLocality( Expand_locality )
+                .withRelationshipLocality( locality )
                 .withRelationshipOrder( Order.SHUFFLED )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .setDense( Expand_dense )
-                                          .withSetting( record_format, Expand_format )
-                                          .setTransactionMemory( Expand_txMemory )
+                                          .setDense( dense )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( true )
                 .build();
