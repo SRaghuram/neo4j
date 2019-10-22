@@ -22,7 +22,7 @@ public class DefaultDisabled extends BaseRegularBenchmark
             allowed = {"1"},
             base = {"1"} )
     @Param( {} )
-    public int DefaultDisabled_increment;
+    public int increment;
 
     @Override
     public String description()
@@ -52,6 +52,6 @@ public class DefaultDisabled extends BaseRegularBenchmark
     @BenchmarkMode( {Mode.Throughput} )
     public long method( TxState txState )
     {
-        return txState.count += DefaultDisabled_increment;
+        return txState.count += increment;
     }
 }

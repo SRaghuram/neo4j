@@ -33,25 +33,25 @@ class MultiColumnTop extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var MultiColumnTop_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
     base = Array(STR_SML))
   @Param(Array[String]())
-  var MultiColumnTop_type: String = _
+  var propertyType: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100"),
     base = Array("100"))
   @Param(Array[String]())
-  var MultiColumnTop_columns: Int = _
+  var columns: Int = _
 
   @ParamValues(
     allowed = Array("1", "100", "10000"),
     base = Array("1", "10000"))
   @Param(Array[String]())
-  var MultiColumnTop_limit: Long = _
+  var limit: Long = _
 
   override def description = "Top with multiple columns, e.g., UNWIND [{a:4},{a:2},...] AS x RETURN x.a, x.b, ... ORDER BY x.a, x.b LIMIT {limit}, ..."
 
@@ -61,7 +61,7 @@ class MultiColumnTop extends AbstractCypherBenchmark {
   def values: java.util.List[java.util.Map[String, Any]] = {
     val rng = new Random(42)
     val rngRange = 10
-    MultiColumnTop_type match {
+    propertyType match {
       case STR_SML =>
         List.range(0, LIST_ITEM_COUNT).map(i =>
           columnNames().map(keyName => keyName -> rng.nextInt(rngRange).toString).toMap[String, Any].asJava
@@ -70,12 +70,12 @@ class MultiColumnTop extends AbstractCypherBenchmark {
         List.range(0, LIST_ITEM_COUNT).map(i =>
           columnNames().map(keyName => keyName -> rng.nextInt(rngRange).toLong).toMap[String, Any].asJava
         ).asJava
-      case _ => throw new IllegalArgumentException(s"Unsupported type: $MultiColumnTop_type")
+      case _ => throw new IllegalArgumentException(s"Unsupported type: $propertyType")
     }
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = toInnerType(MultiColumnTop_type)
+    val listElementType = toInnerType(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -101,7 +101,7 @@ class MultiColumnTop extends AbstractCypherBenchmark {
 
   private def toInnerType(columnType: String): ListType = symbols.CTList(cypherTypeFor(columnType))
 
-  private def columnNames(): List[String] = List.range(0, MultiColumnTop_columns).map(i => keyNameFor(i))
+  private def columnNames(): List[String] = List.range(0, columns).map(i => keyNameFor(i))
 
   private def keyNameFor(i: Int) = i.toString
 
@@ -114,7 +114,7 @@ class MultiColumnTop extends AbstractCypherBenchmark {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
-    assertExpectedRowCount(MultiColumnTop_limit.toInt, subscriber)
+    assertExpectedRowCount(limit.toInt, subscriber)
   }
 }
 
@@ -127,9 +127,9 @@ class MultiColumnTopThreadState {
   def setUp(benchmarkState: MultiColumnTop): Unit = {
     val paramsMap = mutable.Map[String, AnyRef](
       "list" -> benchmarkState.values,
-      "limit" -> Long.box(benchmarkState.MultiColumnTop_limit)).asJava
+      "limit" -> Long.box(benchmarkState.limit)).asJava
     benchmarkState.params = ValueUtils.asMapValue(paramsMap)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.MultiColumnTop_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

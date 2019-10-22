@@ -44,13 +44,13 @@ public class ReadAll extends AbstractCoreBenchmark
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadAll_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String ReadAll_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -72,7 +72,7 @@ public class ReadAll extends AbstractCoreBenchmark
                 .withLabels( LABEL )
                 .withOutRelationships( RELATIONSHIP_DEFINITION )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( ReadAll_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .build();
     }
 

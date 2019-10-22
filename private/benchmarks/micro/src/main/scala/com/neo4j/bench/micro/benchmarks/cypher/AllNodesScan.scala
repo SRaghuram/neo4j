@@ -22,7 +22,7 @@ class AllNodesScan extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var AllNodesScan_runtime: String = _
+  var runtime: String = _
 
   override def description = "All Nodes Scan"
 
@@ -63,7 +63,7 @@ class AllNodesScanThreadState {
 
   @Setup
   def setUp(benchmarkState: AllNodesScan): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.AllNodesScan_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

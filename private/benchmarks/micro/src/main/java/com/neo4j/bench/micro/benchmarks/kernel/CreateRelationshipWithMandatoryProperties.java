@@ -72,22 +72,22 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractKernelBen
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateRelationshipWithMandatoryProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateRelationshipWithMandatoryProperties_txSize;
+    public int txSize;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateRelationshipWithMandatoryProperties_kernel;
+    public KernelImplementation kernel;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateRelationshipWithMandatoryProperties_kernel;
+        return kernel;
     }
 
     @Override
@@ -145,13 +145,13 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractKernelBen
                 CreateRelationshipWithMandatoryProperties benchmarkState,
                 RNGState rngState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateRelationshipWithMandatoryProperties_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             int stride = threadParams.getThreadCount();
             int offset = threadParams.getThreadIndex();
             // sequence should never wrap, 'sliding' value is irrelevant
             boolean sliding = false;
             values = stridingFor(
-                    benchmarkState.CreateRelationshipWithMandatoryProperties_type,
+                    benchmarkState.type,
                     Integer.MAX_VALUE,
                     stride,
                     offset,

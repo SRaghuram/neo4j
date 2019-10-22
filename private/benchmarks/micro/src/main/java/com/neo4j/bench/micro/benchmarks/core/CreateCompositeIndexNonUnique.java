@@ -58,13 +58,13 @@ public class CreateCompositeIndexNonUnique extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateCompositeIndexNonUnique_type;
+    public String type;
 
     @ParamValues(
             allowed = {"2", "4", "8"},
             base = {"2", "8"} )
     @Param( {} )
-    public int CreateCompositeIndexNonUnique_keys;
+    public int keys;
 
     @Override
     public String description()
@@ -88,10 +88,10 @@ public class CreateCompositeIndexNonUnique extends AbstractCoreBenchmark
 
     private PropertyDefinition[] propertyDefinitions()
     {
-        return IntStream.range( 0, CreateCompositeIndexNonUnique_keys )
+        return IntStream.range( 0, keys )
                         .mapToObj( i -> new PropertyDefinition(
-                                CreateCompositeIndexNonUnique_type + "_" + i,
-                                valuesFor( CreateCompositeIndexNonUnique_type ) ) )
+                                type + "_" + i,
+                                valuesFor( type ) ) )
                         .toArray( PropertyDefinition[]::new );
     }
 

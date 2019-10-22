@@ -42,13 +42,13 @@ public class CreateLabels extends AbstractKernelBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateLabels_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateLabels_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -77,19 +77,19 @@ public class CreateLabels extends AbstractKernelBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( CreateLabels_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .isReusableStore( false )
                 .build();
     }
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateLabels_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateLabels_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -102,7 +102,7 @@ public class CreateLabels extends AbstractKernelBenchmark
         @Setup
         public void setUp( ThreadParams threadParams, CreateLabels benchmarkState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateLabels_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             ids = nonContendingStridingFor(
                     LNG,
                     threadParams.getThreadCount(),

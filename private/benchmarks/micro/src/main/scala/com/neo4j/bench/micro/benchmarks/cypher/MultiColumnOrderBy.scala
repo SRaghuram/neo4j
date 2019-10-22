@@ -31,19 +31,19 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var MultiColumnOrderBy_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
     base = Array(STR_SML))
   @Param(Array[String]())
-  var MultiColumnOrderBy_type: String = _
+  var propertyType: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100"),
     base = Array("100"))
   @Param(Array[String]())
-  var MultiColumnOrderBy_columns: Int = _
+  var columns: Int = _
 
   override def description = "Order By multiple columns, e.g., UNWIND [{a:4},{a:2},...] AS x RETURN x.a, x.b, ... ORDER BY x.a, x.b, ..."
 
@@ -53,7 +53,7 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
   def values: java.util.List[java.util.Map[String, Any]] = {
     val rng = new Random(42)
     val rngRange = 10
-    MultiColumnOrderBy_type match {
+    propertyType match {
       case STR_SML =>
         List.range(0, EXPECTED_ROW_COUNT).map(i =>
           columnNames().map(keyName => keyName -> rng.nextInt(rngRange).toString).toMap[String, Any].asJava
@@ -62,12 +62,12 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
         List.range(0, EXPECTED_ROW_COUNT).map(i =>
           columnNames().map(keyName => keyName -> rng.nextInt(rngRange).toLong).toMap[String, Any].asJava
         ).asJava
-      case _ => throw new IllegalArgumentException(s"Unsupported type: $MultiColumnOrderBy_type")
+      case _ => throw new IllegalArgumentException(s"Unsupported type: $propertyType")
     }
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = toInnerType(MultiColumnOrderBy_type)
+    val listElementType = toInnerType(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -92,7 +92,7 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
 
   private def toInnerType(columnType: String): ListType = symbols.CTList(cypherTypeFor(columnType))
 
-  private def columnNames(): List[String] = List.range(0, MultiColumnOrderBy_columns).map(i => keyNameFor(i))
+  private def columnNames(): List[String] = List.range(0, columns).map(i => keyNameFor(i))
 
   private def keyNameFor(i: Int) = i.toString
 
@@ -117,7 +117,7 @@ class MultiColumnOrderByThreadState {
   @Setup
   def setUp(benchmarkState: MultiColumnOrderBy): Unit = {
     benchmarkState.params = mapValuesOfList("list", benchmarkState.values)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.MultiColumnOrderBy_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

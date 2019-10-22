@@ -39,13 +39,13 @@ public class ReadAll extends AbstractKernelBenchmark
 {
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation ReadAll_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadAll_format;
+    public String format;
 
     @Override
     public String description()
@@ -73,7 +73,7 @@ public class ReadAll extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return ReadAll_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )

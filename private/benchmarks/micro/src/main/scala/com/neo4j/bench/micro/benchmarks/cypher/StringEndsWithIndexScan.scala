@@ -33,19 +33,19 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var StringEndsWithIndexScan_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.0001", "0.001", "0.01", "0.1"),
     base = Array("0.0001", "0.1"))
   @Param(Array[String]())
-  var StringEndsWithIndexScan_selectivity: Double = _
+  var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(STR_SML, STR_BIG),
     base = Array(STR_SML, STR_BIG))
   @Param(Array[String]())
-  var StringEndsWithIndexScan_type: String = _
+  var propertyTtype: String = _
 
   override def description = "String Ends With Index Scan"
 
@@ -55,7 +55,7 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
   private val SELECTIVITIES = List[Double](0.00001, 0.00010, 0.00100, 0.01000, 0.10000)
 
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * StringEndsWithIndexScan_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
@@ -77,13 +77,13 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
   override protected def getConfig: DataGeneratorConfig = {
     val selectivitiesAsJava = new util.ArrayList[java.lang.Double](SELECTIVITIES.map(d => new java.lang.Double(d)).asJava)
     val cumulativeSelectivities = calculateCumulativeSelectivities(selectivitiesAsJava).asScala.map(d => d.toDouble)
-    val length = stringLengthFor(StringEndsWithIndexScan_type)
+    val length = stringLengthFor(propertyTtype)
     val buckets = SELECTIVITIES.indices.map(i => new Bucket(
       cumulativeSelectivities(i),
-      constant(StringEndsWithIndexScan_type, stringForSelectivity(length, SELECTIVITIES(i)))))
+      constant(propertyTtype, stringForSelectivity(length, SELECTIVITIES(i)))))
     val bucketsWithRemainder = buckets :+ new Bucket(
       1.0 - cumulativeSelectivities.sum,
-      constant(StringEndsWithIndexScan_type, stringForRemainder(length)))
+      constant(propertyTtype, stringForRemainder(length)))
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
@@ -95,7 +95,7 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("node")
-    val value = suffixForSelectivity(StringEndsWithIndexScan_selectivity)
+    val value = suffixForSelectivity(selectivity)
     val literal = StringLiteral(value)(Pos)
     val indexSeek = plans.NodeIndexEndsWithScan(
       node.name,
@@ -130,7 +130,7 @@ class StringEndsWithIndexScanThreadState {
 
   @Setup
   def setUp(benchmarkState: StringEndsWithIndexScan): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.StringEndsWithIndexScan_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

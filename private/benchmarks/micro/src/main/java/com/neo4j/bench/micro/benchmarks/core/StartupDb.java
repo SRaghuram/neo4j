@@ -44,7 +44,7 @@ public class StartupDb extends AbstractCoreBenchmark
             allowed = {"NONE", "SCHEMA"},
             base = {"NONE", "SCHEMA"} )
     @Param( {} )
-    public IndexType StartupDb_index;
+    public IndexType index;
 
     @Override
     protected DataGeneratorConfig getConfig()
@@ -73,7 +73,7 @@ public class StartupDb extends AbstractCoreBenchmark
 
     private LabelKeyDefinition[] schemaDefinitions()
     {
-        LabelKeyDefinition[] labelKeyDefinitions = StartupDb_index.equals( SCHEMA ) ?
+        LabelKeyDefinition[] labelKeyDefinitions = index.equals( SCHEMA ) ?
                                                    new LabelKeyDefinition[PROPERTIES.length] :
                                                    new LabelKeyDefinition[0];
         for ( int i = 0; i < labelKeyDefinitions.length; i++ )

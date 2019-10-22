@@ -35,7 +35,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Slotted.NAME))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_runtime: String = _
+  var runtime: String = _
 
   /*
    * --- Maximum Levels ---
@@ -53,7 +53,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("10", "30", "60"),
     base = Array("60"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_maxBits: Int = _
+  var maxBits: Int = _
 
   /*
    * ============================================================================================================
@@ -77,7 +77,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
     base = Array("5"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_extraLevels: Int = _
+  var extraLevels: Int = _
 
   /*
    *  --- Top Threshold (per tile) ---
@@ -95,7 +95,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0.5", "0.6", "0.7", "0.8", "0.9", "0.99"),
     base = Array("0.8"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_thresholdTop: Double = _
+  var thresholdTop: Double = _
 
   /*
    *  --- Top Delta (per tile) ---
@@ -106,7 +106,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"),
     base = Array("0.3"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_thresholdDelta: Double = _
+  var thresholdDelta: Double = _
 
   /*
    * ============================================================================================================
@@ -123,7 +123,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0.1", "0.01", "0.001"),
     base = Array("0.1", "0.001"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_ratio: Double = _
+  var ratio: Double = _
 
   /*
    * --- Coordinate Reference System ---
@@ -136,7 +136,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("cartesian"),
     base = Array("cartesian"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_crs: String = _
+  var crs: String = _
 
   /*
   * --- Logical Plan ---
@@ -146,7 +146,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("true", "false"),
     base = Array("false"))
   @Param(Array[String]())
-  var CircleDistancePointIndexSeek_filtered: Boolean = _
+  var filtered: Boolean = _
 
   override def description: String = "Retrieves all reachable points from center of a circle:\n" +
     " * data distribution is a grid of circles\n" +
@@ -155,11 +155,11 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     " * runs with and without post filter distance function\n" +
     " * reads always start from the center of a random circle"
 
-  override def crs: CRS = CRS.from(CircleDistancePointIndexSeek_crs)
+  override def crsSetting: CRS = CRS.from(crs)
 
-  override def dataExtentsRatio: Double = CircleDistancePointIndexSeek_ratio
+  override def dataExtentsRatio: Double = ratio
 
-  override def queryExtentsRatio: Double = CircleDistancePointIndexSeek_ratio
+  override def queryExtentsRatio: Double = ratio
 
   // allows for radius variation due to floating point errors in floating math operations (e.g., sin & cosine)
   val ROUNDING_ERROR: Double = 1.00001
@@ -177,10 +177,10 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     dataExtentMinY,
     dataExtentMaxY,
     NODE_COUNT,
-    crs)
+    crsSetting)
 
   override protected def getConfig: DataGeneratorConfig = {
-    val bottomThreshold = calculateBottomThreshold(CircleDistancePointIndexSeek_thresholdTop, CircleDistancePointIndexSeek_thresholdDelta)
+    val bottomThreshold = calculateBottomThreshold(thresholdTop, thresholdDelta)
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
@@ -190,9 +190,9 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
       .withNeo4jConfig(
         Neo4jConfigBuilder
         .empty()
-        .withSetting(space_filling_curve_max_bits, CircleDistancePointIndexSeek_maxBits.toString)
-        .withSetting(space_filling_curve_extra_levels, CircleDistancePointIndexSeek_extraLevels.toString)
-        .withSetting(space_filling_curve_top_threshold, CircleDistancePointIndexSeek_thresholdTop.toString)
+        .withSetting(space_filling_curve_max_bits, maxBits.toString)
+        .withSetting(space_filling_curve_extra_levels, extraLevels.toString)
+        .withSetting(space_filling_curve_top_threshold, thresholdTop.toString)
         .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)
         .build())
       .build()
@@ -216,7 +216,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
       IndexOrderNone)(IdGen)
     val resultColumns = List(node.name)
 
-    val produceResults = if (CircleDistancePointIndexSeek_filtered) {
+    val produceResults = if (filtered) {
       val filter = Selection(
         Seq(LessThanOrEqual(distanceFunction(astProperty(node, KEY), point), distanceLiteral)(Pos)),
         indexSeek)(IdGen)
@@ -252,7 +252,7 @@ class CircleDistancePointIndexSeekThreadState {
 
   @Setup
   def setUp(benchmark: CircleDistancePointIndexSeek): Unit = {
-    executablePlan = benchmark.buildPlan(from(benchmark.CircleDistancePointIndexSeek_runtime))
+    executablePlan = benchmark.buildPlan(from(benchmark.runtime))
 
     // collection of points to use as query params. contains the middle of every cluster.
     val pointsFun: ValueGeneratorFun[Point] = benchmark.clustersDefinition.clusterCenters()

@@ -55,7 +55,7 @@ public class ReadV2WithInterference extends ReadV2
             allowed = {"0.01", "0.25", "0.5", "0.75", "1.1"},
             base = {"0.01", "1.1"} )
     @Param( {} )
-    public double ReadV2WithInterference_percentage;
+    public double percentage;
 
     private Future<?> writerFuture;
     private volatile boolean writerStopped;
@@ -69,7 +69,7 @@ public class ReadV2WithInterference extends ReadV2
     @Override
     protected double getPercentageCached()
     {
-        return ReadV2WithInterference_percentage;
+        return percentage;
     }
 
     @Setup( Level.Iteration )

@@ -25,19 +25,19 @@ class Selection extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var Selection_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.001", "0.5", "0.99"),
     base = Array("0.001", "0.5", "0.99"))
   @Param(Array[String]())
-  var Selection_selectivity: Double = _
+  var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
     base = Array(LNG, STR_SML))
   @Param(Array[String]())
-  var Selection_type: String = _
+  var propertyType: String = _
 
   override def description = "MATCH (n) WHERE n.key=$val RETURN n"
 
@@ -45,11 +45,11 @@ class Selection extends AbstractCypherBenchmark {
   private val KEY = "key"
 
   private val TOLERATED_ROW_COUNT_ERROR: Double = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * Selection_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
-  private lazy val buckets: Array[Bucket] = discreteBucketsFor(Selection_type, Selection_selectivity, 1 - Selection_selectivity)
+  private lazy val buckets: Array[Bucket] = discreteBucketsFor(propertyType, selectivity, 1 - selectivity)
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
@@ -63,7 +63,7 @@ class Selection extends AbstractCypherBenchmark {
     val nodeIdName = node.name
     val allNodeScan = plans.AllNodesScan(nodeIdName, Set.empty)(IdGen)
     val property = astProperty(node, KEY)
-    val literalValue = astLiteralFor(buckets(0), Selection_type)
+    val literalValue = astLiteralFor(buckets(0), propertyType)
     val predicate = astEquals(property, literalValue)
     val selection = plans.Selection(Seq(predicate), allNodeScan)(IdGen)
     val resultColumns = List(nodeIdName)
@@ -91,7 +91,7 @@ class SelectionThreadState {
 
   @Setup
   def setUp(benchmarkState: Selection): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Selection_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

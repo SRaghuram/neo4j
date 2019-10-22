@@ -25,7 +25,7 @@ class ExpandExpand extends AbstractCypherBenchmark {
     allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var ExpandExpand_runtime: String = _
+  var runtime: String = _
 
   override def description = "Expand two steps"
 
@@ -76,7 +76,7 @@ class ExpandExpandThreadState {
 
   @Setup
   def setUp(benchmarkState: ExpandExpand): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.ExpandExpand_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

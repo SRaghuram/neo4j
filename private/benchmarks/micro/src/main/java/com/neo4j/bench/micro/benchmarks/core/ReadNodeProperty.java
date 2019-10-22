@@ -58,19 +58,19 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_INL, STR_SML} )
     @Param( {} )
-    public String ReadNodeProperty_type;
+    public String type;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadNodeProperty_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String ReadNodeProperty_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -95,12 +95,12 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        PropertyDefinition propertyDefinition = randPropertyFor( ReadNodeProperty_type );
+        PropertyDefinition propertyDefinition = randPropertyFor( type );
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withNodeProperties( propertyDefinition )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( ReadNodeProperty_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .build();
     }
 
@@ -114,7 +114,7 @@ public class ReadNodeProperty extends AbstractCoreBenchmark
         public void setUp( ReadNodeProperty benchmarkState ) throws InterruptedException
         {
             tx = benchmarkState.db().beginTx();
-            propertyKey = randPropertyFor( benchmarkState.ReadNodeProperty_type ).key();
+            propertyKey = randPropertyFor( benchmarkState.type ).key();
         }
 
         @TearDown

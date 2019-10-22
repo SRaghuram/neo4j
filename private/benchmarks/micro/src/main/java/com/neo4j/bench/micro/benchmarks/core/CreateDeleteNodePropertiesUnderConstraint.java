@@ -67,25 +67,25 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
             allowed = {"UNIQUE"},
             base = {"UNIQUE"} )
     @Param( {} )
-    public IndexType CreateDeleteNodePropertiesUnderConstraint_constraint;
+    public IndexType constraint;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesUnderConstraint_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesUnderConstraint_format;
+    public String format;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesUnderConstraint_count;
+    public int count;
 
     @ParamValues(
             allowed = {
@@ -94,7 +94,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {STR_SML} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesUnderConstraint_type;
+    public String type;
 
     /**
      * - Threads work on node ID sequences
@@ -151,11 +151,11 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
 
     private PropertyDefinition[] properties()
     {
-        return IntStream.range( 0, CreateDeleteNodePropertiesUnderConstraint_count )
+        return IntStream.range( 0, count )
                         .mapToObj( i ->
                                            new PropertyDefinition(
-                                                   CreateDeleteNodePropertiesUnderConstraint_type + "_" + i,
-                                                   ascPropertyFor( CreateDeleteNodePropertiesUnderConstraint_type ).value() ) )
+                                                   type + "_" + i,
+                                                   ascPropertyFor( type ).value() ) )
                         .toArray( PropertyDefinition[]::new );
     }
 
@@ -192,7 +192,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
                     NODE_COUNT ).create();
             keys = benchmarkState.keys();
             values = nonContendingStridingFor(
-                    benchmarkState.CreateDeleteNodePropertiesUnderConstraint_type,
+                    benchmarkState.type,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     NODE_COUNT ).create();
@@ -200,8 +200,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
             initialCreatePropertyId = thread;
             createPropertyId = initialCreatePropertyId;
             updateProperties();
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState
-                    .CreateDeleteNodePropertiesUnderConstraint_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
             advanceStoreToStableState( benchmarkState.db(), rngState.rng );
         }
 

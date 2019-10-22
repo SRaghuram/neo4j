@@ -87,25 +87,25 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String ConcurrentReadWriteNonUniqueNodePropertiesV2_type;
+    public String type;
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA"},
             base = {"SCHEMA"} )
     @Param( {} )
-    public IndexType ConcurrentReadWriteNonUniqueNodePropertiesV2_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int ConcurrentReadWriteNonUniqueNodePropertiesV2_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ConcurrentReadWriteNonUniqueNodePropertiesV2_format;
+    public String format;
 
     @Override
     public String description()
@@ -149,23 +149,23 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
                 .withNodeProperties( propertyDefinition )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, ConcurrentReadWriteNonUniqueNodePropertiesV2_format ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, format ).build() )
                 .isReusableStore( false );
-        switch ( ConcurrentReadWriteNonUniqueNodePropertiesV2_index )
+        switch ( index )
         {
         case SCHEMA:
             return builder.withSchemaIndexes( new LabelKeyDefinition( LABEL, propertyDefinition.key() ) ).build();
         case NONE:
             return builder.build();
         default:
-            throw new RuntimeException( "Unsupported 'index': " + ConcurrentReadWriteNonUniqueNodePropertiesV2_index );
+            throw new RuntimeException( "Unsupported 'index': " + index );
         }
     }
 
     private PropertyDefinition getPropertyDefinition( Bucket[] buckets )
     {
         ValueGeneratorFactory values = discrete( buckets );
-        return new PropertyDefinition( ConcurrentReadWriteNonUniqueNodePropertiesV2_type, values );
+        return new PropertyDefinition( type, values );
     }
 
     private Bucket[] getBuckets()
@@ -174,7 +174,7 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
                 HIGH_SELECTIVITY_RATIO,
                 MEDIUM_SELECTIVITY_RATIO,
                 LOW_SELECTIVITY_RATIO};
-        return discreteBucketsFor( ConcurrentReadWriteNonUniqueNodePropertiesV2_type, discreteBucketRatios );
+        return discreteBucketsFor( type, discreteBucketRatios );
     }
 
     private int expectedHighSelectivityCount()
@@ -230,7 +230,7 @@ public class ConcurrentReadWriteNonUniqueNodePropertiesV2 extends AbstractCoreBe
             values = propertyDefinition.value().create();
             txBatch = new TxBatch(
                     benchmarkState.db(),
-                    benchmarkState.ConcurrentReadWriteNonUniqueNodePropertiesV2_txSize );
+                    benchmarkState.txSize );
         }
 
         long nodeId( SplittableRandom rng )

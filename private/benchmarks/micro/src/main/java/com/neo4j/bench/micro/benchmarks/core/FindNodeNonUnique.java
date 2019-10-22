@@ -60,19 +60,19 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
                     DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String FindNodeNonUnique_type;
+    public String type;
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA"},
             base = {"SCHEMA"} )
     @Param( {} )
-    public IndexType FindNodeNonUnique_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String FindNodeNonUnique_txMemory;
+    public String txMemory;
 
     private Object highSelectivityValue;
     private Object mediumSelectivityValue;
@@ -103,32 +103,32 @@ public class FindNodeNonUnique extends AbstractCoreBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Bucket[] buckets = getBuckets( FindNodeNonUnique_type );
+        Bucket[] buckets = getBuckets( type );
         highSelectivityValue = buckets[0].value();
         mediumSelectivityValue = buckets[1].value();
         lowSelectivityValue = buckets[2].value();
-        PropertyDefinition propertyDefinition = getPropertyDefinition( buckets, FindNodeNonUnique_type );
+        PropertyDefinition propertyDefinition = getPropertyDefinition( buckets, type );
         DataGeneratorConfigBuilder builder = new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
                 .withNodeProperties( propertyDefinition )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( FindNodeNonUnique_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .isReusableStore( true );
-        switch ( FindNodeNonUnique_index )
+        switch ( index )
         {
         case SCHEMA:
             return builder.withSchemaIndexes( new LabelKeyDefinition( LABEL, propertyDefinition.key() ) ).build();
         case NONE:
             return builder.build();
         default:
-            throw new RuntimeException( "Unsupported 'index': " + FindNodeNonUnique_index );
+            throw new RuntimeException( "Unsupported 'index': " + index );
         }
     }
 
     private PropertyDefinition getPropertyDefinition()
     {
-        Bucket[] buckets = getBuckets( FindNodeNonUnique_type );
-        return getPropertyDefinition( buckets, FindNodeNonUnique_type );
+        Bucket[] buckets = getBuckets( type );
+        return getPropertyDefinition( buckets, type );
     }
 
     public static PropertyDefinition getPropertyDefinition( Bucket[] buckets, String type )

@@ -76,28 +76,28 @@ public class CreateUniqueRelationshipProperties extends AbstractKernelBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateUniqueRelationshipProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateUniqueRelationshipProperties_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateUniqueRelationshipProperties_format;
+    public String format;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateUniqueRelationshipProperties_kernel;
+    public KernelImplementation kernel;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateUniqueRelationshipProperties_kernel;
+        return kernel;
     }
 
     @Override
@@ -135,7 +135,7 @@ public class CreateUniqueRelationshipProperties extends AbstractKernelBenchmark
                 .withOutRelationships( RELATIONSHIPS_PER_NODE )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateUniqueRelationshipProperties_format )
+                                          .withSetting( record_format, format )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -153,14 +153,14 @@ public class CreateUniqueRelationshipProperties extends AbstractKernelBenchmark
         @Setup
         public void setUp( ThreadParams threadParams, CreateUniqueRelationshipProperties benchmarkState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateUniqueRelationshipProperties_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             ids = nonContendingStridingFor(
                     LNG,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     RELATIONSHIP_COUNT ).create();
             values = nonContendingStridingFor(
-                    benchmarkState.CreateUniqueRelationshipProperties_type,
+                    benchmarkState.type,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     RELATIONSHIP_COUNT ).create();

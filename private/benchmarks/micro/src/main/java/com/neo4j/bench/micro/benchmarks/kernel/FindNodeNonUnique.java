@@ -66,13 +66,13 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
 {
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation FindNodeNonUnique_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String FindNodeNonUnique_format;
+    public String format;
 
     @ParamValues(
             allowed = {
@@ -80,7 +80,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
                     DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT},
             base = {LNG, STR_SML, DATE_TIME, POINT} )
     @Param( {} )
-    public String FindNodeNonUnique_type;
+    public String type;
 
     private Value highSelectivityValue;
     private Value mediumSelectivityValue;
@@ -110,11 +110,11 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Bucket[] buckets = getBuckets( FindNodeNonUnique_type );
+        Bucket[] buckets = getBuckets( type );
         highSelectivityValue = Values.of( buckets[0].value() );
         mediumSelectivityValue = Values.of( buckets[1].value() );
         lowSelectivityValue = Values.of( buckets[2].value() );
-        PropertyDefinition propertyDefinition = getPropertyDefinition( buckets, FindNodeNonUnique_type );
+        PropertyDefinition propertyDefinition = getPropertyDefinition( buckets, type );
         DataGeneratorConfigBuilder builder = new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
@@ -125,14 +125,14 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
 
     private String getPropertyKey()
     {
-        Bucket[] buckets = getBuckets( FindNodeNonUnique_type );
-        return getPropertyDefinition( buckets, FindNodeNonUnique_type ).key();
+        Bucket[] buckets = getBuckets( type );
+        return getPropertyDefinition( buckets, type ).key();
     }
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return FindNodeNonUnique_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )

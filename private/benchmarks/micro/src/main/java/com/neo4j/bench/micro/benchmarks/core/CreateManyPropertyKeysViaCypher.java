@@ -43,19 +43,19 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateManyPropertyKeysViaCypher_propsPerMap;
+    public int propsPerMap;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateManyPropertyKeysViaCypher_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateManyPropertyKeysViaCypher_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -77,7 +77,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( 1 )
                 .withPropertyOrder( Order.ORDERED )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, CreateManyPropertyKeysViaCypher_format ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, format ).build() )
                 .isReusableStore( false )
                 .build();
     }
@@ -102,7 +102,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
             int thread = threadParams.getThreadIndex();
             keyBase = "Thread(" + thread + ")";
             propTokenCount = 0;
-            propsPerMap = benchmarkState.CreateManyPropertyKeysViaCypher_propsPerMap;
+            propsPerMap = benchmarkState.propsPerMap;
             db = benchmarkState.db();
             // This setup means that we will always commit the same number of property keys per tx,
             // regardless of the number of properties written in every invocation. The only exception

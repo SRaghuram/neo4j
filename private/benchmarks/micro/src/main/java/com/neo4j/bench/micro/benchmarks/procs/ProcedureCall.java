@@ -38,7 +38,7 @@ public class ProcedureCall extends AbstractProceduresBenchmark
             allowed = {"1", "100", "10000", "1000000"},
             base = {"1", "100", "10000", "1000000"} )
     @Param( {} )
-    public long ProcedureCall_rows;
+    public long rows;
 
     @Override
     protected void afterDatabaseStart()
@@ -64,7 +64,7 @@ public class ProcedureCall extends AbstractProceduresBenchmark
         RawIterator<AnyValue[],ProcedureException> iterator = procedures.callProcedure(
                 context,
                 token,
-                new AnyValue[]{longValue( ProcedureCall_rows )},
+                new AnyValue[]{longValue( rows )},
                 EMPTY_RESOURCE_TRACKER );
 
         int count = 0;

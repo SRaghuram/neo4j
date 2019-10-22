@@ -10,6 +10,7 @@ import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -56,9 +57,6 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     @Param( {} )
     public String baseNeo4jConfig;
 
-    @Param( {} )
-    public String storesDir;
-
     public enum StartDatabaseInstruction
     {
         START_DB,
@@ -78,14 +76,14 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     }
 
     @Override
-    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params )
+    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams, BenchmarkParams benchmarkParams )
     {
-        Stores stores = new Stores( Paths.get( storesDir ) );
+        Stores stores = new Stores( runnerParams.workDir() );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
 
         Augmenterizer augmenterizer = augmentDataGeneration();
         managedStore = new ManagedStore( stores );
-        managedStore.prepareDb( group, benchmark, getConfig(), neo4jConfig, augmenterizer, params.getThreads() );
+        managedStore.prepareDb( group, benchmark, getConfig(), neo4jConfig, augmenterizer, benchmarkParams.getThreads() );
         if ( afterDataGeneration().equals( StartDatabaseInstruction.START_DB ) )
         {
             managedStore.startDb();

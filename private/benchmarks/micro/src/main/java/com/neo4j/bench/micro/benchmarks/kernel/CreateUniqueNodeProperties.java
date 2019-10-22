@@ -76,34 +76,34 @@ public class CreateUniqueNodeProperties extends AbstractKernelBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML, DATE_TIME, POINT} )
     @Param( {} )
-    public String CreateUniqueNodeProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA", "UNIQUE"},
             base = {"NONE", "SCHEMA"} )
     @Param( {} )
-    public IndexType CreateUniqueNodeProperties_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateUniqueNodeProperties_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateUniqueNodeProperties_format;
+    public String format;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateUniqueNodeProperties_kernel;
+    public KernelImplementation kernel;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateUniqueNodeProperties_kernel;
+        return kernel;
     }
 
     @Override
@@ -143,7 +143,7 @@ public class CreateUniqueNodeProperties extends AbstractKernelBenchmark
                 .withUniqueConstraints( uniquenessConstraints( KEYS ) )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateUniqueNodeProperties_format )
+                                          .withSetting( record_format, format )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -151,7 +151,7 @@ public class CreateUniqueNodeProperties extends AbstractKernelBenchmark
 
     LabelKeyDefinition[] schemaIndexes( String[] keys )
     {
-        return (IndexType.SCHEMA.equals( CreateUniqueNodeProperties_index ))
+        return (IndexType.SCHEMA.equals( index ))
                ? Stream.of( keys )
                        .map( key -> new LabelKeyDefinition( LABEL, key ) )
                        .toArray( LabelKeyDefinition[]::new )
@@ -160,7 +160,7 @@ public class CreateUniqueNodeProperties extends AbstractKernelBenchmark
 
     LabelKeyDefinition[] uniquenessConstraints( String[] keys )
     {
-        return (IndexType.UNIQUE.equals( CreateUniqueNodeProperties_index ))
+        return (IndexType.UNIQUE.equals( index ))
                ? Stream.of( keys )
                        .map( key -> new LabelKeyDefinition( LABEL, key ) )
                        .toArray( LabelKeyDefinition[]::new )
@@ -179,14 +179,14 @@ public class CreateUniqueNodeProperties extends AbstractKernelBenchmark
         @Setup
         public void setUp( ThreadParams threadParams, CreateUniqueNodeProperties benchmarkState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateUniqueNodeProperties_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             ids = nonContendingStridingFor(
                     LNG,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     NODE_COUNT ).create();
             values = nonContendingStridingFor(
-                    benchmarkState.CreateUniqueNodeProperties_type,
+                    benchmarkState.type,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     NODE_COUNT ).create();

@@ -65,23 +65,23 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG} )
     @Param( {} )
-    public String ReadMultipleNodeProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"SCATTERED_BY_ELEMENT", "CO_LOCATED_BY_ELEMENT"},
             base = {"SCATTERED_BY_ELEMENT"} )
     @Param( {} )
-    public PropertyLocality ReadMultipleNodeProperties_locality;
+    public PropertyLocality locality;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String ReadMultipleNodeProperties_txMemory;
+    public String txMemory;
 
     private PropertyDefinition[] propertyDefinitions()
     {
-        PropertyDefinition propertyDefinition = randPropertyFor( ReadMultipleNodeProperties_type );
+        PropertyDefinition propertyDefinition = randPropertyFor( type );
         return IntStream.range( 0, PROPERTY_COUNT ).boxed()
                         .map( i -> propertyDefinition.key() + i )
                         .map( k -> new PropertyDefinition( k, propertyDefinition.value() ) )
@@ -121,9 +121,9 @@ public class ReadMultipleNodeProperties extends AbstractCoreBenchmark
                 .withNodeCount( NODE_COUNT )
                 .withNodeProperties( propertyDefinitions() )
                 .withPropertyOrder( Order.ORDERED )
-                .withPropertyLocality( ReadMultipleNodeProperties_locality )
+                .withPropertyLocality( locality )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( ReadMultipleNodeProperties_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .build();
     }
 

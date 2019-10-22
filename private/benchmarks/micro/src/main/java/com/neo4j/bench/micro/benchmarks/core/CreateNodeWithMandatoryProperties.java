@@ -62,13 +62,13 @@ public class CreateNodeWithMandatoryProperties extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateNodeWithMandatoryProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateNodeWithMandatoryProperties_txSize;
+    public int txSize;
 
     @Override
     public String description()
@@ -111,12 +111,12 @@ public class CreateNodeWithMandatoryProperties extends AbstractCoreBenchmark
             // sequence should never wrap, 'sliding' value is irrelevant
             boolean sliding = false;
             values = stridingFor(
-                    benchmarkState.CreateNodeWithMandatoryProperties_type,
+                    benchmarkState.type,
                     Integer.MAX_VALUE,
                     stride,
                     offset,
                     sliding ).create();
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNodeWithMandatoryProperties_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         Object value( SplittableRandom rng )

@@ -23,7 +23,7 @@ class NodeByLabelScan extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var NodeByLabelScan_runtime: String = _
+  var runtime: String = _
 
   override def description = "Node By Label Scan"
 
@@ -65,7 +65,7 @@ class NodeByLabelScanThreadState {
 
   @Setup
   def setUp(benchmarkState: NodeByLabelScan): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.NodeByLabelScan_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

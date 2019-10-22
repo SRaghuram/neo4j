@@ -46,34 +46,34 @@ public class CreateDeleteLabels extends AbstractKernelBenchmark
             allowed = {"1", "10", "100", "1000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateDeleteLabels_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateDeleteLabels_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateDeleteLabels_txMemory;
+    public String txMemory;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4", "64"} )
     @Param( {} )
-    public int CreateDeleteLabels_count;
+    public int count;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateDeleteLabels_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateDeleteLabels_kernelImplementation;
+        return kernelImplementation;
     }
 
     /**
@@ -117,8 +117,8 @@ public class CreateDeleteLabels extends AbstractKernelBenchmark
                 .withLabelOrder( Order.ORDERED )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateDeleteLabels_format )
-                                          .setTransactionMemory( CreateDeleteLabels_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -126,7 +126,7 @@ public class CreateDeleteLabels extends AbstractKernelBenchmark
 
     private Label[] labels()
     {
-        return IntStream.range( 0, CreateDeleteLabels_count ).boxed()
+        return IntStream.range( 0, count ).boxed()
                         .map( i -> Label.label( "Label" + i ) )
                         .toArray( Label[]::new );
     }
@@ -144,7 +144,7 @@ public class CreateDeleteLabels extends AbstractKernelBenchmark
         @Setup
         public void setUp( ThreadParams threadParams, CreateDeleteLabels benchmarkState, RNGState rngState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateDeleteLabels_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             int threads = threadCountForSubgroupInstancesOf( threadParams );
             int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(

@@ -41,13 +41,13 @@ public class ReadById extends AbstractCoreBenchmark
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadById_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String ReadById_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -71,8 +71,8 @@ public class ReadById extends AbstractCoreBenchmark
                 .withOutRelationships( RELATIONSHIP_DEFINITION )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, ReadById_format )
-                                          .setTransactionMemory( ReadById_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( true )
                 .build();

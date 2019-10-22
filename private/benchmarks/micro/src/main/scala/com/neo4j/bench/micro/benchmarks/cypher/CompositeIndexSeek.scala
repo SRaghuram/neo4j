@@ -27,25 +27,25 @@ class CompositeIndexSeek extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
-  var CompositeIndexSeek_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
     base = Array("0.001", "0.1"))
   @Param(Array[String]())
-  var CompositeIndexSeek_selectivity: Double = _
+  var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML, STR_BIG),
     base = Array(LNG))
   @Param(Array[String]())
-  var CompositeIndexSeek_type: String = _
+  var propertyType: String = _
 
   @ParamValues(
     allowed = Array("2", "4"),
     base = Array("2", "4"))
   @Param(Array[String]())
-  var CompositeIndexSeek_propertyCount: Int = _
+  var propertyCount: Int = _
 
   override def description = "Composite Index Seek"
 
@@ -53,18 +53,18 @@ class CompositeIndexSeek extends AbstractCypherBenchmark {
   private val LABEL: Label = Label.label("SampleLabel")
 
   private val TOLERATED_ROW_COUNT_ERROR: Double = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * CompositeIndexSeek_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
   lazy val buckets: Array[Bucket] = {
-    val selectivity = Math.pow(CompositeIndexSeek_selectivity, 1.0 / CompositeIndexSeek_propertyCount)
-    ValueGeneratorUtil.discreteBucketsFor(CompositeIndexSeek_type, selectivity, 1 - selectivity)
+    val bucketSelectivity = Math.pow(selectivity, 1.0 / propertyCount)
+    ValueGeneratorUtil.discreteBucketsFor(propertyType, bucketSelectivity, 1 - bucketSelectivity)
   }
 
   lazy val properties: Array[PropertyDefinition] =
-    Array.range(0, CompositeIndexSeek_propertyCount)
-    .map(i => new PropertyDefinition(s"${CompositeIndexSeek_type}_$i", discrete(buckets: _*)))
+    Array.range(0, propertyCount)
+    .map(i => new PropertyDefinition(s"${propertyType}_$i", discrete(buckets: _*)))
 
   lazy val index: LabelKeyDefinition = new LabelKeyDefinition(LABEL, keys: _*)
 
@@ -86,10 +86,10 @@ class CompositeIndexSeek extends AbstractCypherBenchmark {
     val labelToken = astLabelToken(LABEL, planContext)
     // TODO assuming this property key id mapping only works when properties are written in ORDERED order, not SHUFFLED
     // TODO if store was available at this point it would be possible to retrieve this info from the store
-    val keyTokens = Seq.range(0, CompositeIndexSeek_propertyCount)
+    val keyTokens = Seq.range(0, propertyCount)
                     .map(i => IndexedProperty(astPropertyKeyToken(properties(i).key(), planContext), DoNotGetValue))
-    val seekExpressions = Seq.range(0, CompositeIndexSeek_propertyCount)
-                          .map(_ => SingleQueryExpression(astLiteralFor(buckets(0), CompositeIndexSeek_type)))
+    val seekExpressions = Seq.range(0, propertyCount)
+                          .map(_ => SingleQueryExpression(astLiteralFor(buckets(0), propertyType)))
     val indexSeek = plans.NodeIndexSeek(
       nodeIdName,
       labelToken,
@@ -122,7 +122,7 @@ class CompositeIndexSeekThreadState {
 
   @Setup
   def setUp(benchmarkState: CompositeIndexSeek): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.CompositeIndexSeek_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

@@ -65,7 +65,7 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
             allowed = {"legacy_compiled", "interpreted"},
             base = {"legacy_compiled", "interpreted"} )
     @Param( {} )
-    public String BoltValueSerialization_runtime;
+    public String runtime;
 
     @Override
     public String description()
@@ -116,7 +116,7 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
         public void setup( BoltValueSerialization state, ThreadParams threadParams ) throws Throwable
         {
             random = RNGState.newRandom( threadParams );
-            prefix = String.format( "CYPHER runtime=%s ", state.BoltValueSerialization_runtime );
+            prefix = String.format( "CYPHER runtime=%s ", state.runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
             machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
             var hello = new HelloMessage( map(

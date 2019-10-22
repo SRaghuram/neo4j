@@ -64,13 +64,13 @@ public class CreateNodesWithCompositeIndex extends AbstractKernelBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"1"} )
     @Param( {} )
-    public int CreateNodesWithCompositeIndex_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateNodesWithCompositeIndex_format;
+    public String format;
 
     @ParamValues(
             allowed = {
@@ -79,22 +79,22 @@ public class CreateNodesWithCompositeIndex extends AbstractKernelBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateNodesWithCompositeIndex_type;
+    public String type;
 
     @ParamValues(
             allowed = {"2", "4", "8"},
             base = {"2", "8"} )
     @Param( {} )
-    public int CreateNodesWithCompositeIndex_keys;
+    public int keys;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateNodesWithCompositeIndex_kernel;
+    public KernelImplementation kernel;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateNodesWithCompositeIndex_kernel;
+        return kernel;
     }
 
     @Override
@@ -116,7 +116,7 @@ public class CreateNodesWithCompositeIndex extends AbstractKernelBenchmark
                 .withSchemaIndexes( new LabelKeyDefinition( LABEL, keys() ) )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateNodesWithCompositeIndex_format )
+                                          .withSetting( record_format, format )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -129,10 +129,10 @@ public class CreateNodesWithCompositeIndex extends AbstractKernelBenchmark
 
     private PropertyDefinition[] propertyDefinitions()
     {
-        return IntStream.range( 0, CreateNodesWithCompositeIndex_keys )
+        return IntStream.range( 0, keys )
                         .mapToObj( i -> new PropertyDefinition(
-                                CreateNodesWithCompositeIndex_type + "_" + i,
-                                randPropertyFor( CreateNodesWithCompositeIndex_type ).value() ) )
+                                type + "_" + i,
+                                randPropertyFor( type ).value() ) )
                         .toArray( PropertyDefinition[]::new );
     }
 
@@ -146,9 +146,9 @@ public class CreateNodesWithCompositeIndex extends AbstractKernelBenchmark
         @Setup
         public void setUp( CreateNodesWithCompositeIndex benchmarkState ) throws InterruptedException, KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateNodesWithCompositeIndex_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             keys = propertyKeysToIds( benchmarkState.keys() );
-            values = randPropertyFor( benchmarkState.CreateNodesWithCompositeIndex_type ).value().create();
+            values = randPropertyFor( benchmarkState.type ).value().create();
             label = kernelTx.token.labelGetOrCreateForName( LABEL.name() );
         }
 

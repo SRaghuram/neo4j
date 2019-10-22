@@ -72,31 +72,31 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateNonUniqueNodeProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA"},
             base = {"SCHEMA"} )
     @Param( {} )
-    public IndexType CreateNonUniqueNodeProperties_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateNonUniqueNodeProperties_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateNonUniqueNodeProperties_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateNonUniqueNodeProperties_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -134,13 +134,13 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
                 .withSchemaIndexes( schemaIndexes( KEYS ) )
                 .withUniqueConstraints( uniquenessConstraints( KEYS ) )
                 .isReusableStore( false )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( CreateNonUniqueNodeProperties_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .build();
     }
 
     private LabelKeyDefinition[] schemaIndexes( String[] keys )
     {
-        return (IndexType.SCHEMA.equals( CreateNonUniqueNodeProperties_index ))
+        return (IndexType.SCHEMA.equals( index ))
                ? Stream.of( keys )
                        .map( key -> new LabelKeyDefinition( LABEL, key ) )
                        .toArray( LabelKeyDefinition[]::new )
@@ -149,7 +149,7 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
 
     private LabelKeyDefinition[] uniquenessConstraints( String[] keys )
     {
-        return (IndexType.UNIQUE.equals( CreateNonUniqueNodeProperties_index ))
+        return (IndexType.UNIQUE.equals( index ))
                ? Stream.of( keys )
                        .map( key -> new LabelKeyDefinition( LABEL, key ) )
                        .toArray( LabelKeyDefinition[]::new )
@@ -159,7 +159,7 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     private ValueGeneratorFactory getValueGeneratorFactory()
     {
         double[] discreteBucketRatios = new double[]{1, 10, 100};
-        return discreteFor( CreateNonUniqueNodeProperties_type, discreteBucketRatios );
+        return discreteFor( type, discreteBucketRatios );
     }
 
     @State( Scope.Thread )
@@ -182,7 +182,7 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
             values = benchmarkState.getValueGeneratorFactory().create();
             keyId = 0;
             nodeId = -1;
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNonUniqueNodeProperties_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         long nodeId()

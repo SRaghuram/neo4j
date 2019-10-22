@@ -62,17 +62,17 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_INL, STR_SML, POINT, DATE_TIME} )
     @Param( {} )
-    public String ReadNodeProperty_type;
+    public String type;
 
     @ParamValues(
             allowed = {"standard"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadNodeProperty_format;
+    public String format;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation ReadNodeProperty_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     public String description()
@@ -97,7 +97,7 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        PropertyDefinition propertyDefinition = randPropertyFor( ReadNodeProperty_type );
+        PropertyDefinition propertyDefinition = randPropertyFor( type );
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withNodeProperties( propertyDefinition )
@@ -108,7 +108,7 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return ReadNodeProperty_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -126,7 +126,7 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
             node = kernelTx.cursors.allocateNodeCursor();
             property = kernelTx.cursors.allocatePropertyCursor();
             read = kernelTx.read;
-            propertyKeyId = propertyKeyToId( randPropertyFor( benchmark.ReadNodeProperty_type ) );
+            propertyKeyId = propertyKeyToId( randPropertyFor( benchmark.type ) );
         }
 
         @TearDown

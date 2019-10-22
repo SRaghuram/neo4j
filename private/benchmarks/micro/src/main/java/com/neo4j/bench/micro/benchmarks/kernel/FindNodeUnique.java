@@ -63,13 +63,13 @@ public class FindNodeUnique extends AbstractKernelBenchmark
 {
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation FindNodeUnique_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String FindNodeUnique_format;
+    public String format;
 
     /*
     NOTE: POINT is not enabled because, at present, nodes are filled using <ascending> policy and queried using <random> policy.
@@ -81,7 +81,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
                     DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String FindNodeUnique_type;
+    public String type;
 
     @Override
     public String description()
@@ -105,9 +105,9 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Number initial = defaultRangeFor( FindNodeUnique_type ).min();
+        Number initial = defaultRangeFor( type ).min();
         // will create sequence of ascending number values, starting at 'min' and ending at 'min' + NODE_COUNT
-        PropertyDefinition propertyDefinition = ascPropertyFor( FindNodeUnique_type, initial );
+        PropertyDefinition propertyDefinition = ascPropertyFor( type, initial );
         DataGeneratorConfigBuilder builder = new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
@@ -120,7 +120,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return FindNodeUnique_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -138,9 +138,9 @@ public class FindNodeUnique extends AbstractKernelBenchmark
         public void setUp( FindNodeUnique benchmark ) throws Exception
         {
             initializeTx( benchmark );
-            Range range = defaultRangeFor( benchmark.FindNodeUnique_type );
+            Range range = defaultRangeFor( benchmark.type );
             PropertyDefinition propertyDefinition = randPropertyFor(
-                    benchmark.FindNodeUnique_type,
+                    benchmark.type,
                     range.min(),
                     range.min().longValue() + NODE_COUNT,
                     // numerical

@@ -69,31 +69,31 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractKernelB
             allowed = {"1", "10", "100", "1000"},
             base = {"1"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesWithUnusedIndexes_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesWithUnusedIndexes_format;
+    public String format;
 
     @ParamValues(
             allowed = {"2"},
             base = {"2"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesWithUnusedIndexes_propertyCount;
+    public int propertyCount;
 
     @ParamValues(
             allowed = {"10", "100", "1000", "10000"},
             base = {"100", "10000"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesWithUnusedIndexes_indexCount;
+    public int indexCount;
 
     @ParamValues(
             allowed = {"1", "3", "10", "100", "10000"},
             base = {"3"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel;
+    public int indexCountPerLabel;
 
     @ParamValues(
             allowed = {
@@ -102,23 +102,23 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractKernelB
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesWithUnusedIndexes_type;
+    public String type;
 
     private static final String NONE = "NONE", INDEXED = "INDEXED", UNINDEXED = "UNINDEXED";
     @ParamValues(
             allowed = {NONE, INDEXED, UNINDEXED},
             base = {NONE, INDEXED, UNINDEXED} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesWithUnusedIndexes_label;
+    public String label;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateDeleteNodePropertiesWithUnusedIndexes_kernel;
+    public KernelImplementation kernel;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateDeleteNodePropertiesWithUnusedIndexes_kernel;
+        return kernel;
     }
 
     /**
@@ -169,7 +169,7 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractKernelB
 
     private Label[] labels()
     {
-        switch ( CreateDeleteNodePropertiesWithUnusedIndexes_label )
+        switch ( label )
         {
         case NONE:
             return new Label[0];
@@ -179,27 +179,27 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractKernelB
             return new Label[]{Label.label( "UnIndexed" )};
         default:
             throw new RuntimeException(
-                    "Unrecognized label setting: " + CreateDeleteNodePropertiesWithUnusedIndexes_label );
+                    "Unrecognized label setting: " + label );
         }
     }
 
     private LabelKeyDefinition[] indexes()
     {
-        return IntStream.range( 0, CreateDeleteNodePropertiesWithUnusedIndexes_indexCount )
+        return IntStream.range( 0, indexCount )
                         .mapToObj( i -> new LabelKeyDefinition(
                                 Label.label(
-                                        "Indexed" + (i / CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel) ),
-                                UNUSED_KEY_PREFIX + (i % CreateDeleteNodePropertiesWithUnusedIndexes_indexCountPerLabel) ) )
+                                        "Indexed" + (i / indexCountPerLabel) ),
+                                UNUSED_KEY_PREFIX + (i % indexCountPerLabel) ) )
                         .toArray( LabelKeyDefinition[]::new );
     }
 
     private PropertyDefinition[] properties()
     {
-        return IntStream.range( 0, CreateDeleteNodePropertiesWithUnusedIndexes_propertyCount )
+        return IntStream.range( 0, propertyCount )
                         .mapToObj( i ->
                                            new PropertyDefinition(
-                                                   CreateDeleteNodePropertiesWithUnusedIndexes_type + "_" + i,
-                                                   randPropertyFor( CreateDeleteNodePropertiesWithUnusedIndexes_type ).value() ) )
+                                                   type + "_" + i,
+                                                   randPropertyFor( type ).value() ) )
                         .toArray( PropertyDefinition[]::new );
     }
 
@@ -225,7 +225,7 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractKernelB
                 CreateDeleteNodePropertiesWithUnusedIndexes benchmarkState,
                 RNGState rngState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateDeleteNodePropertiesWithUnusedIndexes_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             int threads = threadCountForSubgroupInstancesOf( threadParams );
             int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
@@ -235,7 +235,7 @@ public class CreateDeleteNodePropertiesWithUnusedIndexes extends AbstractKernelB
                     NODE_COUNT ).create();
             keys = propertyKeysToIds( benchmarkState.keys() );
             values =
-                    randPropertyFor( benchmarkState.CreateDeleteNodePropertiesWithUnusedIndexes_type ).value().create();
+                    randPropertyFor( benchmarkState.type ).value().create();
             // set to 'thread' so threads start at different offsets/labels
             initialCreatePropertyId = thread;
             createPropertyId = initialCreatePropertyId;
