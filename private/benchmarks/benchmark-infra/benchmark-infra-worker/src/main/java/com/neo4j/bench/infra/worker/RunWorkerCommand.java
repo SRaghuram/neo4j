@@ -53,8 +53,9 @@ public class RunWorkerCommand extends BaseInfraCommand
             }
 
             // download & extract dataset
-            String mainVersionNumber = runWorkloadParams.neo4jVersion().substring( 0, 3 );
-            Dataset dataset = artifactStorage.downloadDataset( mainVersionNumber, infraParams.storeName() );
+            String neo4jVersion = runWorkloadParams.neo4jVersion();
+            String branch = neo4jVersion.substring( 0, neo4jVersion.lastIndexOf( "." ) );
+            Dataset dataset = artifactStorage.downloadDataset( branch, infraParams.storeName() );
             dataset.extractInto( macroDir );
 
             // download artifacts
