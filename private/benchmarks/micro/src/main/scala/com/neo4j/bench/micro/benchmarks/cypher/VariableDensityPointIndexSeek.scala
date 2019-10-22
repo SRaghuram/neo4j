@@ -34,7 +34,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array(Interpreted.NAME, Slotted.NAME),
     base = Array(Slotted.NAME))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_runtime: String = _
+  var runtime: String = _
 
   /*
    * --- Maximum Levels ---
@@ -52,7 +52,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("10", "30", "60"),
     base = Array("60"))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_maxBits: Int = _
+  var maxBits: Int = _
 
   /*
    * ============================================================================================================
@@ -76,7 +76,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
     base = Array("5"))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_extraLevels: Int = _
+  var extraLevels: Int = _
 
   /*
    *  --- Top Threshold (per tile) ---
@@ -94,7 +94,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0.5", "0.6", "0.7", "0.8", "0.9", "0.99"),
     base = Array("0.8"))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_thresholdTop: Double = _
+  var thresholdTop: Double = _
 
   /*
    *  --- Top Delta (per tile) ---
@@ -105,7 +105,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"),
     base = Array("0.3"))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_thresholdDelta: Double = _
+  var thresholdDelta: Double = _
 
   /*
    * ============================================================================================================
@@ -122,7 +122,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("0.1", "0.01", "0.001"),
     base = Array("0.1", "0.001"))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_ratio: Double = _
+  var ratio: Double = _
 
   /*
    * --- Coordinate Reference System ---
@@ -135,36 +135,36 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     allowed = Array("cartesian"),
     base = Array("cartesian"))
   @Param(Array[String]())
-  var VariableDensityPointIndexSeek_crs: String = _
+  var crs: String = _
 
   override def description: String = "Variable Density Point Index Seek:\n" +
     " * simple grid data distribution\n" +
     " * fixed point density\n" +
     " * random reads"
 
-  override def crs: CRS = CRS.from(VariableDensityPointIndexSeek_crs)
+  override def crsSetting: CRS = CRS.from(crs)
 
-  override def dataExtentsRatio: Double = VariableDensityPointIndexSeek_ratio
+  override def dataExtentsRatio: Double = ratio
 
-  override def queryExtentsRatio: Double = VariableDensityPointIndexSeek_ratio
+  override def queryExtentsRatio: Double = ratio
 
   override protected def getConfig: DataGeneratorConfig = {
-    val bottomThreshold = calculateBottomThreshold(VariableDensityPointIndexSeek_thresholdTop, VariableDensityPointIndexSeek_thresholdDelta)
+    val bottomThreshold = calculateBottomThreshold(thresholdTop, thresholdDelta)
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
       .withNodeProperties(
         new PropertyDefinition(
           KEY,
-          grid(dataExtentMinX, dataExtentMaxX, dataExtentMinY, dataExtentMaxY, NODE_COUNT, crs)))
+          grid(dataExtentMinX, dataExtentMaxX, dataExtentMinY, dataExtentMaxY, NODE_COUNT, crsSetting)))
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .withNeo4jConfig(
         Neo4jConfigBuilder
         .empty()
-        .withSetting(space_filling_curve_max_bits, VariableDensityPointIndexSeek_maxBits.toString)
-        .withSetting(space_filling_curve_extra_levels, VariableDensityPointIndexSeek_extraLevels.toString)
-        .withSetting(space_filling_curve_top_threshold, VariableDensityPointIndexSeek_thresholdTop.toString)
+        .withSetting(space_filling_curve_max_bits, maxBits.toString)
+        .withSetting(space_filling_curve_extra_levels, extraLevels.toString)
+        .withSetting(space_filling_curve_top_threshold, thresholdTop.toString)
         .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)
         .build())
       .build()
@@ -173,10 +173,10 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("node")
     val point = astParameter("point", symbols.CTPoint)
-    val distance = computeQueryDistance(crs.crs(),
+    val distance = computeQueryDistance(crsSetting.crs(),
       dataExtentX,
       dataExtentY,
-      VariableDensityPointIndexSeek_ratio)
+      ratio)
     val distanceLiteral = astLiteralFor(distance, DBL)
     val seekExpression = astRangeBetweenPointsQueryExpression(point, distanceLiteral)
     val indexSeek = plans.NodeIndexSeek(
@@ -216,20 +216,20 @@ class VariableDensityPointIndexSeekThreadState {
 
   @Setup
   def setUp(benchmark: VariableDensityPointIndexSeek): Unit = {
-    executionResult = benchmark.buildPlan(from(benchmark.VariableDensityPointIndexSeek_runtime))
+    executionResult = benchmark.buildPlan(from(benchmark.runtime))
     points = random(
       benchmark.searchExtentMinX,
       benchmark.searchExtentMaxX,
       benchmark.searchExtentMinY,
       benchmark.searchExtentMaxY,
-      benchmark.crs).create()
+      benchmark.crsSetting).create()
     calculateExpectedRowCounts(benchmark)
     tx = benchmark.beginInternalTransaction()
   }
 
   private def calculateExpectedRowCounts(benchmark: VariableDensityPointIndexSeek): Unit = {
     val expectedRowCount = Math.round(
-      benchmark.NODE_COUNT * benchmark.VariableDensityPointIndexSeek_ratio * benchmark.VariableDensityPointIndexSeek_ratio)
+      benchmark.NODE_COUNT * benchmark.ratio * benchmark.ratio)
     // for very small search spaces tolerance of 10% is meaningless, never set tolerance lower than 10 rows
     val tolerance = Math.max(expectedRowCount * TOLERATED_ROW_COUNT_ERROR, 10)
     // never set min below 0

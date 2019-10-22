@@ -24,25 +24,25 @@ class Eager extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var Eager_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0", "4"),
     base = Array("4"))
   @Param(Array[String]())
-  var Eager_referenceColumns: Int = _
+  var referenceColumns: Int = _
 
   @ParamValues(
     allowed = Array("1", "4"),
     base = Array("1", "4"))
   @Param(Array[String]())
-  var Eager_primitiveColumns: Int = _
+  var primitiveColumns: Int = _
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
     base = Array(STR_SML))
   @Param(Array[String]())
-  var Eager_refType: String = _
+  var refType: String = _
 
   override def description = "MATCH (n1), (n2) WITH n1, n2, 1 AS r1, 2 AS r2 LIMIT count RETURN n1, n2, r1, r2"
 
@@ -56,15 +56,15 @@ class Eager extends AbstractCypherBenchmark {
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val nodeName = s"n$Eager_primitiveColumns"
+    val nodeName = s"n$primitiveColumns"
     val leftAllNodesScan = plans.AllNodesScan(nodeName, Set.empty)(IdGen)
     val (cartesianProducts, table, nodeNames) = buildCartesianProducts(
-      Eager_primitiveColumns - 1,
+      primitiveColumns - 1,
       leftAllNodesScan,
       SemanticTable().addNode(astVariable(nodeName)),
       List(nodeName))
     val limit = plans.Limit(cartesianProducts, astLiteralFor(NODE_COUNT, LNG), DoNotIncludeTies)(IdGen)
-    val projectColumns = Range(0, Eager_referenceColumns).map(i => (s"r$i", astLiteralFor(i, Eager_refType))).toMap
+    val projectColumns = Range(0, referenceColumns).map(i => (s"r$i", astLiteralFor(i, refType))).toMap
     val projection = plans.Projection(limit, projectColumns)(IdGen)
     val eager = plans.Eager(projection)(IdGen)
     val resultColumns = nodeNames ++ projectColumns.keys.toList
@@ -102,7 +102,7 @@ class EagerThreadState {
 
   @Setup
   def setUp(benchmarkState: Eager): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.Eager_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

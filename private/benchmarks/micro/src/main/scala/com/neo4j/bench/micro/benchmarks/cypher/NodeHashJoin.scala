@@ -28,13 +28,13 @@ class NodeHashJoin extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var NodeHashJoin_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
     base = Array("0.01"))
   @Param(Array[String]())
-  var NodeHashJoin_selectivity: Double = _
+  var selectivity: Double = _
 
   override def description = "Node Hash Join"
 
@@ -43,14 +43,14 @@ class NodeHashJoin extends AbstractCypherBenchmark {
   private val KEY = "key"
   private val VALUE = 42
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * NodeHashJoin_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
   override protected def getConfig: DataGeneratorConfig = {
     val buckets = List(
-      new Bucket(NodeHashJoin_selectivity, constant(LNG, VALUE)),
-      new Bucket(1 - NodeHashJoin_selectivity, constant(INT, 1)))
+      new Bucket(selectivity, constant(LNG, VALUE)),
+      new Bucket(1 - selectivity, constant(INT, 1)))
     val property = new PropertyDefinition(KEY, discrete(buckets: _*))
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
@@ -97,7 +97,7 @@ class NodeHashJoinThreadState {
 
   @Setup
   def setUp(benchmarkState: NodeHashJoin): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.NodeHashJoin_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

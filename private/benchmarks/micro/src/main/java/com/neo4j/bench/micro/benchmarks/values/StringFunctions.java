@@ -53,13 +53,13 @@ public class StringFunctions extends AbstractValuesBenchmark
             allowed = {STR_SML, STR_BIG},
             base = {STR_BIG} )
     @Param( {} )
-    public String StringFunctions_type;
+    public String type;
 
     @ParamValues(
             allowed = {"UTF8", "STRING"},
             base = {"UTF8", "STRING"} )
     @Param( {} )
-    public String StringFunctions_encoding;
+    public String encoding;
 
     @State( Scope.Thread )
     public static class ThreadState
@@ -74,14 +74,14 @@ public class StringFunctions extends AbstractValuesBenchmark
 
         private TextValue createValue( StringFunctions benchmarkState, RNGState rngState )
         {
-            Range range = defaultRangeFor( benchmarkState.StringFunctions_type );
+            Range range = defaultRangeFor( benchmarkState.type );
             ValueGeneratorFun fun = randGeneratorFor(
-                    benchmarkState.StringFunctions_type,
+                    benchmarkState.type,
                     range.min(),
                     range.max(),
                     false ).create();
             String next = (String) fun.next( rngState.rng );
-            switch ( benchmarkState.StringFunctions_encoding )
+            switch ( benchmarkState.encoding )
             {
             case "UTF8":
                 byte[] bytes = next.getBytes( StandardCharsets.UTF_8 );
@@ -89,7 +89,7 @@ public class StringFunctions extends AbstractValuesBenchmark
             case "STRING":
                 return Values.stringValue( next );
             default:
-                throw new IllegalArgumentException( "Unknown encoding: " + benchmarkState.StringFunctions_encoding );
+                throw new IllegalArgumentException( "Unknown encoding: " + benchmarkState.encoding );
             }
         }
     }

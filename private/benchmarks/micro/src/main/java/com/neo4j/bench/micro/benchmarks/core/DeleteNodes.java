@@ -38,7 +38,7 @@ public class DeleteNodes extends AbstractCoreBenchmark
             allowed = {"1", "10", "100"},
             base = {"1"} )
     @Param( {} )
-    public int DeleteNodes_txSize;
+    public int txSize;
 
     @Override
     public String description()
@@ -85,7 +85,7 @@ public class DeleteNodes extends AbstractCoreBenchmark
                     threadParams.getThreadIndex(),
                     NODE_COUNT ).create();
             nodeId = -1;
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.DeleteNodes_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         long nodeId()

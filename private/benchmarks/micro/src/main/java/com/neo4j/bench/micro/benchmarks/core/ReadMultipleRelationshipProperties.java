@@ -69,17 +69,17 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG} )
     @Param( {} )
-    public String ReadMultipleRelationshipProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"SCATTERED_BY_ELEMENT", "CO_LOCATED_BY_ELEMENT"},
             base = {"SCATTERED_BY_ELEMENT"} )
     @Param( {} )
-    public PropertyLocality ReadMultipleRelationshipProperties_locality;
+    public PropertyLocality locality;
 
     private PropertyDefinition[] propertyDefinitions()
     {
-        PropertyDefinition propertyDefinition = randPropertyFor( ReadMultipleRelationshipProperties_type );
+        PropertyDefinition propertyDefinition = randPropertyFor( type );
         return IntStream.range( 0, PROPERTY_COUNT ).boxed()
                         .map( i -> propertyDefinition.key() + i )
                         .map( k -> new PropertyDefinition( k, propertyDefinition.value() ) )
@@ -120,7 +120,7 @@ public class ReadMultipleRelationshipProperties extends AbstractCoreBenchmark
                 .withOutRelationships( RELATIONSHIPS_PER_NODE )
                 .withRelationshipProperties( propertyDefinitions() )
                 .withPropertyOrder( Order.ORDERED )
-                .withPropertyLocality( ReadMultipleRelationshipProperties_locality )
+                .withPropertyLocality( locality )
                 .isReusableStore( true )
                 .build();
     }

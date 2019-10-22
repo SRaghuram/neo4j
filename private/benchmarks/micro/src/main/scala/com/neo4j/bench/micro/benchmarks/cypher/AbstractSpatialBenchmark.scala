@@ -38,7 +38,7 @@ abstract class AbstractSpatialBenchmark extends AbstractCypherBenchmark {
       10000000 * ratio // TODO wtf?
   }
 
-  def crs: CRS
+  def crsSetting: CRS
 
   /*
   Specifies how data extents will be scaled relative to default data extents
@@ -50,12 +50,12 @@ abstract class AbstractSpatialBenchmark extends AbstractCypherBenchmark {
    */
   def queryExtentsRatio: Double
 
-  private def defaultDataExtentX: Double = crs.crs() match {
+  private def defaultDataExtentX: Double = crsSetting.crs() match {
     case CoordinateReferenceSystem.Cartesian => INDEX_EXTENT_CARTESIAN_X
     case CoordinateReferenceSystem.WGS84 => INDEX_EXTENT_WGS84_X
   }
 
-  private def defaultDataExtentY: Double = crs.crs() match {
+  private def defaultDataExtentY: Double = crsSetting.crs() match {
     case CoordinateReferenceSystem.Cartesian => INDEX_EXTENT_CARTESIAN_Y
     case CoordinateReferenceSystem.WGS84 => INDEX_EXTENT_WGS84_Y
   }

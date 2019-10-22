@@ -44,25 +44,25 @@ public class CreateDeleteLabels extends AbstractCoreBenchmark
             allowed = {"1", "10", "100", "1000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateDeleteLabels_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateDeleteLabels_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateDeleteLabels_txMemory;
+    public String txMemory;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4", "64"} )
     @Param( {} )
-    public int CreateDeleteLabels_count;
+    public int count;
 
     /**
      * - Threads work on node ID sequences
@@ -105,8 +105,8 @@ public class CreateDeleteLabels extends AbstractCoreBenchmark
                 .withLabelOrder( Order.ORDERED )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateDeleteLabels_format )
-                                          .setTransactionMemory( CreateDeleteLabels_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -114,7 +114,7 @@ public class CreateDeleteLabels extends AbstractCoreBenchmark
 
     private Label[] labels()
     {
-        return IntStream.range( 0, CreateDeleteLabels_count ).boxed()
+        return IntStream.range( 0, count ).boxed()
                         .map( i -> Label.label( "Label" + i ) )
                         .toArray( Label[]::new );
     }
@@ -145,7 +145,7 @@ public class CreateDeleteLabels extends AbstractCoreBenchmark
             initialCreateLabelId = thread;
             createLabelId = initialCreateLabelId;
             updateLabels();
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateDeleteLabels_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
             advanceStoreToStableState( benchmarkState.db(), rngState.rng );
         }
 

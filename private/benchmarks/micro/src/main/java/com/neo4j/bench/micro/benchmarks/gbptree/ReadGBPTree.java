@@ -30,13 +30,13 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
             allowed = {"0", "1000000", "10000000", "100000000"},
             base = {"100000000"} )
     @Param( {} )
-    public long ReadGBPTree_initialTreeSize;
+    public long initialTreeSize;
 
     @ParamValues(
             allowed = {"FIXED", "DYNAMIC"},
             base = {"FIXED", "DYNAMIC"} )
     @Param( {} )
-    public Layout ReadGBPTree_layoutType;
+    public Layout layoutType;
 
     @ParamValues(
             allowed = {"8", "256"},
@@ -45,13 +45,13 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
             // base = {"8", "256"} )
             base = {"8"} )
     @Param( {} )
-    public int ReadGBPTree_keySize;
+    public int keySize;
 
     @ParamValues(
             allowed = {"0", "8"},
             base = {"0", "8"} )
     @Param( {} )
-    public int ReadGBPTree_valueSize;
+    public int valueSize;
 
     @Override
     public String description()
@@ -71,25 +71,25 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
     @Override
     Layout layout()
     {
-        return ReadGBPTree_layoutType;
+        return layoutType;
     }
 
     @Override
     int keySize()
     {
-        return ReadGBPTree_keySize;
+        return keySize;
     }
 
     @Override
     int valueSize()
     {
-        return ReadGBPTree_valueSize;
+        return valueSize;
     }
 
     @Override
     long initialTreeSize()
     {
-        return ReadGBPTree_initialTreeSize;
+        return initialTreeSize;
     }
 
     @Override
@@ -171,6 +171,6 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
                 count++;
             }
         }
-        return assertCount( count, ReadGBPTree_initialTreeSize );
+        return assertCount( count, initialTreeSize );
     }
 }

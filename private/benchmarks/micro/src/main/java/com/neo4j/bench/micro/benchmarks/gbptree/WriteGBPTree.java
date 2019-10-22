@@ -28,13 +28,13 @@ public class WriteGBPTree extends AbstractGBPTreeBenchmark
             allowed = {"0", "1000000", "10000000", "100000000"},
             base = {"100000000"} )
     @Param( {} )
-    public long WriteGBPTree_initialTreeSize;
+    public long initialTreeSize;
 
     @ParamValues(
             allowed = {"FIXED", "DYNAMIC"},
             base = {"FIXED", "DYNAMIC"} )
     @Param( {} )
-    public Layout WriteGBPTree_layoutType;
+    public Layout layoutType;
 
     @ParamValues(
             allowed = {"8", "256"},
@@ -43,13 +43,13 @@ public class WriteGBPTree extends AbstractGBPTreeBenchmark
             // base = {"8", "256"} )
             base = {"8"} )
     @Param( {} )
-    public int WriteGBPTree_keySize;
+    public int keySize;
 
     @ParamValues(
             allowed = {"0", "8"},
             base = {"0", "8"} )
     @Param( {} )
-    public int WriteGBPTree_valueSize;
+    public int valueSize;
 
     @Override
     public String description()
@@ -68,25 +68,25 @@ public class WriteGBPTree extends AbstractGBPTreeBenchmark
     @Override
     Layout layout()
     {
-        return WriteGBPTree_layoutType;
+        return layoutType;
     }
 
     @Override
     int keySize()
     {
-        return WriteGBPTree_keySize;
+        return keySize;
     }
 
     @Override
     int valueSize()
     {
-        return WriteGBPTree_valueSize;
+        return valueSize;
     }
 
     @Override
     long initialTreeSize()
     {
-        return WriteGBPTree_initialTreeSize;
+        return initialTreeSize;
     }
 
     @Override

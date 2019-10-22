@@ -57,19 +57,19 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR, BYTE_ARR},
             base = {LNG, STR_SML, STR_BIG, POINT, BYTE_ARR} )
     @Param( {} )
-    public String BoltPropertySerialization_type;
+    public String type;
 
     @ParamValues(
             allowed = {"compiled", "interpreted"},
             base = {"compiled", "interpreted"} )
     @Param( {} )
-    public String BoltPropertySerialization_runtime;
+    public String runtime;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000", "100000", "1000000"},
             base = {"1", "100000"} )
     @Param( {} )
-    public int BoltPropertySerialization_nodeCount;
+    public int nodeCount;
 
     @Override
     public String description()
@@ -87,9 +87,9 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
     protected DataGeneratorConfig getConfig()
     {
         return new DataGeneratorConfigBuilder()
-                .withNodeCount( BoltPropertySerialization_nodeCount )
+                .withNodeCount( nodeCount )
                 .withNodeProperties(
-                        new PropertyDefinition( "prop", randPropertyFor( BoltPropertySerialization_type ).value() ) )
+                        new PropertyDefinition( "prop", randPropertyFor( type ).value() ) )
                 .isReusableStore( true )
                 .build();
     }
@@ -106,7 +106,7 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
         public void setup( BoltPropertySerialization state ) throws Throwable
         {
             query = String.format( "CYPHER runtime=%s MATCH (n) RETURN n.prop",
-                    state.BoltPropertySerialization_runtime );
+                    state.runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
             boltFactory.start();
             machine = boltFactory.newMachine( BOLT_CHANNEL, Clock.systemUTC() );

@@ -32,21 +32,21 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var StringPrefixIndexSeek_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.0001", "0.001", "0.01", "0.1"),
     //    base = Array("0.0001", "0.1"))
     base = Array("0.0001"))
   @Param(Array[String]())
-  var StringPrefixIndexSeek_selectivity: Double = _
+  var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(STR_SML, STR_BIG),
     //    base = Array(STR_SML, STR_BIG))
     base = Array(STR_BIG))
   @Param(Array[String]())
-  var StringPrefixIndexSeek_type: String = _
+  var propertyType: String = _
 
   override def description = "String Prefix Index Seek"
 
@@ -56,7 +56,7 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   private val SELECTIVITIES = List[Double](0.00001, 0.00010, 0.00100, 0.01000, 0.10000)
 
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * StringPrefixIndexSeek_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
@@ -78,13 +78,13 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   override protected def getConfig: DataGeneratorConfig = {
     val selectivitiesAsJava = new util.ArrayList[java.lang.Double](SELECTIVITIES.map(d => new java.lang.Double(d)).asJava)
     val cumulativeSelectivities = calculateCumulativeSelectivities(selectivitiesAsJava).asScala.map(d => d.toDouble)
-    val length = stringLengthFor(StringPrefixIndexSeek_type)
+    val length = stringLengthFor(propertyType)
     val buckets = SELECTIVITIES.indices.map(i => new Bucket(
       cumulativeSelectivities(i),
-      constant(StringPrefixIndexSeek_type, stringForSelectivity(length, SELECTIVITIES(i)))))
+      constant(propertyType, stringForSelectivity(length, SELECTIVITIES(i)))))
     val bucketsWithRemainder = buckets :+ new Bucket(
       1.0 - cumulativeSelectivities.sum,
-      constant(StringPrefixIndexSeek_type, stringForRemainder(length)))
+      constant(propertyType, stringForRemainder(length)))
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
@@ -96,7 +96,7 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("node")
-    val value = prefixForSelectivity(StringPrefixIndexSeek_selectivity)
+    val value = prefixForSelectivity(selectivity)
     val literal = StringLiteral(value)(Pos)
     val seekExpression = astStringPrefixQueryExpression(literal)
     val indexSeek = plans.NodeIndexSeek(
@@ -129,7 +129,7 @@ class StringPrefixIndexSeekThreadState {
 
   @Setup
   def setUp(benchmarkState: StringPrefixIndexSeek): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.StringPrefixIndexSeek_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

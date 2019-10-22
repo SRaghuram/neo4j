@@ -71,19 +71,19 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateUniqueRelationshipProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateUniqueRelationshipProperties_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateUniqueRelationshipProperties_format;
+    public String format;
 
     @Override
     public String description()
@@ -118,7 +118,7 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIPS_PER_NODE )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, CreateUniqueRelationshipProperties_format ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, format ).build() )
                 .isReusableStore( false )
                 .build();
     }
@@ -141,13 +141,13 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
                     threadParams.getThreadIndex(),
                     RELATIONSHIP_COUNT ).create();
             values = nonContendingStridingFor(
-                    benchmarkState.CreateUniqueRelationshipProperties_type,
+                    benchmarkState.type,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     RELATIONSHIP_COUNT ).create();
             keyId = 0;
             relationshipId = -1;
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateUniqueRelationshipProperties_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         long relationshipId()

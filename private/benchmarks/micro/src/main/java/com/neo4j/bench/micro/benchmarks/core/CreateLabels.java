@@ -39,13 +39,13 @@ public class CreateLabels extends AbstractCoreBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateLabels_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateLabels_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -75,7 +75,7 @@ public class CreateLabels extends AbstractCoreBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( CreateLabels_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .isReusableStore( false )
                 .build();
     }
@@ -100,7 +100,7 @@ public class CreateLabels extends AbstractCoreBenchmark
             labelId = 0;
             nodeId = -1;
             label = toLabel( labelId );
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateLabels_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         Label toLabel( int i )

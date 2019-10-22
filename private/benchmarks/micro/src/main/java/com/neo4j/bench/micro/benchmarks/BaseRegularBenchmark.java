@@ -10,6 +10,7 @@ import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -24,13 +25,10 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
     @Param( {} )
     public String baseNeo4jConfig;
 
-    @Param( {} )
-    public String storesDir;
-
     @Override
-    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Exception
+    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams, BenchmarkParams benchmarkParams ) throws Exception
     {
-        Stores stores = new Stores( Paths.get( storesDir ) );
+        Stores stores = new Stores( runnerParams.workDir() );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
 
         stores.writeNeo4jConfigForNoStore( neo4jConfig, FullBenchmarkName.from( group, benchmark ) );

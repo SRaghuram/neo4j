@@ -46,25 +46,25 @@ public class ReadRelationship extends AbstractCoreBenchmark
             allowed = {"SCATTERED_BY_START_NODE", "CO_LOCATED_BY_START_NODE"},
             base = {"SCATTERED_BY_START_NODE"} )
     @Param( {} )
-    public RelationshipLocality ReadRelationship_locality;
+    public RelationshipLocality locality;
 
     @ParamValues(
             allowed = {"true", "false"},
             base = {"true"} )
     @Param( {} )
-    public boolean ReadRelationship_dense;
+    public boolean dense;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadRelationship_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String ReadRelationship_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -89,13 +89,13 @@ public class ReadRelationship extends AbstractCoreBenchmark
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder
                 .empty()
                 .withSetting( dense_node_threshold, denseNodeThreshold() )
-                .withSetting( record_format, ReadRelationship_format )
-                .setTransactionMemory( ReadRelationship_txMemory )
+                .withSetting( record_format, format )
+                .setTransactionMemory( txMemory )
                 .build();
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIP_DEFINITIONS )
-                .withRelationshipLocality( ReadRelationship_locality )
+                .withRelationshipLocality( locality )
                 .withRelationshipOrder( Order.SHUFFLED )
                 .withNeo4jConfig( neo4jConfig )
                 .isReusableStore( true )
@@ -104,7 +104,7 @@ public class ReadRelationship extends AbstractCoreBenchmark
 
     private String denseNodeThreshold()
     {
-        return ReadRelationship_dense
+        return dense
                // dense node threshold set to min --> all nodes are dense
                ? "1"
                // dense node threshold set to max --> no nodes are dense

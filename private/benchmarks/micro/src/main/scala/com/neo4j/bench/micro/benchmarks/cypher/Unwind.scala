@@ -25,13 +25,13 @@ class Unwind extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var Unwind_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(STR_SML))
   @Param(Array[String]())
-  var Unwind_type: String = _
+  var propertyType: String = _
 
   override def description = "Unwind, e.g., UNWIND $list AS value RETURN value"
 
@@ -40,7 +40,7 @@ class Unwind extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(Unwind_type)
+    val listElementType = cypherTypeFor(propertyType)
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -69,8 +69,8 @@ class UnwindThreadState {
 
   @Setup
   def setUp(benchmarkState: Unwind): Unit = {
-    benchmarkState.params = mapValuesOfList("list", listOf(benchmarkState.Unwind_type, benchmarkState.VALUE_COUNT))
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.Unwind_runtime))
+    benchmarkState.params = mapValuesOfList("list", listOf(benchmarkState.propertyType, benchmarkState.VALUE_COUNT))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

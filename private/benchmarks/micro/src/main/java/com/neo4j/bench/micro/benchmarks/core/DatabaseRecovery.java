@@ -53,20 +53,20 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
             allowed = {"10000", "100000", "1000000"},
             base = {"10000", "100000"} )
     @Param( {} )
-    public int DatabaseRecovery_transactionsToRecover;
+    public int transactionsToRecover;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String DatabaseRecovery_storeFormat;
+    public String storeFormat;
 
     @Override
     protected DataGeneratorConfig getConfig()
     {
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder
                 .empty()
-                .withSetting( record_format, DatabaseRecovery_storeFormat )
+                .withSetting( record_format, storeFormat )
                 .withSetting( GraphDatabaseSettings.check_point_interval_tx, String.valueOf( Integer.MAX_VALUE ) )
                 .build();
         return new DataGeneratorConfigBuilder()
@@ -91,7 +91,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
 
         ValueGeneratorFun<String> stringGenerator = StringGenerator.randShortAlphaNumerical().create();
         SplittableRandom rng = RNGState.newRandom( 42 );
-        for ( int i = 0; i < DatabaseRecovery_transactionsToRecover; i++ )
+        for ( int i = 0; i < transactionsToRecover; i++ )
         {
             try ( Transaction transaction = db.beginTx() )
             {

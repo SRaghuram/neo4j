@@ -27,19 +27,19 @@ class IndexSeek extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var IndexSeek_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
     base = Array("0.001", "0.1"))
   @Param(Array[String]())
-  var IndexSeek_selectivity: Double = _
+  var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML, STR_BIG),
     base = Array(LNG, STR_SML))
   @Param(Array[String]())
-  var IndexSeek_type: String = _
+  var propertyType: String = _
 
   override def description = "Index Seek"
 
@@ -48,11 +48,11 @@ class IndexSeek extends AbstractCypherBenchmark {
   private val KEY = "key"
 
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
-  private lazy val expectedRowCount: Double = NODE_COUNT * IndexSeek_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
-  private lazy val buckets: Array[Bucket] = discreteBucketsFor(IndexSeek_type, IndexSeek_selectivity, 1 - IndexSeek_selectivity)
+  private lazy val buckets: Array[Bucket] = discreteBucketsFor(propertyType, selectivity, 1 - selectivity)
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
@@ -65,7 +65,7 @@ class IndexSeek extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("node")
-    val literal = astLiteralFor(buckets(0), IndexSeek_type)
+    val literal = astLiteralFor(buckets(0), propertyType)
     val seekExpression = SingleQueryExpression(literal)
     val indexSeek = plans.NodeIndexSeek(
       node.name,
@@ -97,7 +97,7 @@ class IndexSeekThreadState {
 
   @Setup
   def setUp(benchmarkState: IndexSeek): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.IndexSeek_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

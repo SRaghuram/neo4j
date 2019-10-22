@@ -31,7 +31,7 @@ class Distinct extends AbstractCypherBenchmark {
   private val NODE_B = "nodeB"
   private val PROPERTY = "prop"
 
-  private lazy val NODE_COUNT = Distinct_columns match {
+  private lazy val NODE_COUNT = columns match {
     case ONE_COLUMN_PRIMITIVE | ONE_COLUMN_LNG | ONE_COLUMN_STR_SML => 10000
     case TWO_COLUMNS_PRIMITIVE | TWO_COLUMNS_PRIMITIVE_LNG | TWO_COLUMNS_PRIMITIVE_STR_SML => 100
   }
@@ -45,13 +45,13 @@ class Distinct extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var Distinct_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(ONE_COLUMN_PRIMITIVE, ONE_COLUMN_LNG, ONE_COLUMN_STR_SML, TWO_COLUMNS_PRIMITIVE, TWO_COLUMNS_PRIMITIVE_LNG, TWO_COLUMNS_PRIMITIVE_STR_SML),
     base = Array(ONE_COLUMN_PRIMITIVE, TWO_COLUMNS_PRIMITIVE, TWO_COLUMNS_PRIMITIVE_STR_SML))
   @Param(Array[String]())
-  var Distinct_columns: String = _
+  var columns: String = _
 
   override def description = "Distinct only, e.g., MATCH (n), (m) RETURN DISTINCT n, m." + PROPERTY
 
@@ -59,11 +59,11 @@ class Distinct extends AbstractCypherBenchmark {
     val builder = new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .isReusableStore(true)
-    withProperty(Distinct_columns, builder)
+    withProperty(columns, builder)
     .build()
   }
 
-  def withProperty(columnDefinition: String, builder: DataGeneratorConfigBuilder): DataGeneratorConfigBuilder = Distinct_columns match {
+  def withProperty(columnDefinition: String, builder: DataGeneratorConfigBuilder): DataGeneratorConfigBuilder = columns match {
     case ONE_COLUMN_PRIMITIVE => builder
     case ONE_COLUMN_LNG | ONE_COLUMN_STR_SML => builder.withNodeProperties(randPropertyFor(columnDefinition, PROPERTY))
     case TWO_COLUMNS_PRIMITIVE => builder
@@ -74,7 +74,7 @@ class Distinct extends AbstractCypherBenchmark {
     val table = SemanticTable()
                 .addNode(astVariable(NODE_A))
                 .addNode(astVariable(NODE_B))
-    Distinct_columns match {
+    columns match {
       case ONE_COLUMN_PRIMITIVE =>
         val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
         val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(IdGen)
@@ -143,7 +143,7 @@ class DistinctThreadState {
 
   @Setup
   def setUp(benchmarkState: Distinct): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.Distinct_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

@@ -25,19 +25,19 @@ class GreaterThanIndexSeek extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var GreaterThanIndexSeek_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
     base = Array("0.001", "0.1"))
   @Param(Array[String]())
-  var GreaterThanIndexSeek_selectivity: Double = _
+  var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML, STR_BIG),
     base = Array(LNG, STR_SML))
   @Param(Array[String]())
-  var GreaterThanIndexSeek_type: String = _
+  var propertyType: String = _
 
   override def description = "Greater Than Index Seek"
 
@@ -46,7 +46,7 @@ class GreaterThanIndexSeek extends AbstractCypherBenchmark {
   private val KEY = "key"
 
   private val TOLERATED_ROW_COUNT_ERROR = 0.075
-  private lazy val expectedRowCount: Double = NODE_COUNT * GreaterThanIndexSeek_selectivity
+  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
   private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
   private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
@@ -54,18 +54,18 @@ class GreaterThanIndexSeek extends AbstractCypherBenchmark {
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
-      .withNodeProperties(new PropertyDefinition(KEY, randGeneratorFor(GreaterThanIndexSeek_type, 0, NODE_COUNT, true)))
+      .withNodeProperties(new PropertyDefinition(KEY, randGeneratorFor(propertyType, 0, NODE_COUNT, true)))
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("node")
-    val offsetForSelectivity = Math.round(NODE_COUNT * GreaterThanIndexSeek_selectivity)
+    val offsetForSelectivity = Math.round(NODE_COUNT * selectivity)
     val lowerValue = NODE_COUNT - offsetForSelectivity
     // pads when type is string. necessary to get number-like ordering.
-    val paddedLowerValue = asIntegral(GreaterThanIndexSeek_type, lowerValue)
-    val lower = astLiteralFor(paddedLowerValue, GreaterThanIndexSeek_type)
+    val paddedLowerValue = asIntegral(propertyType, lowerValue)
+    val lower = astLiteralFor(paddedLowerValue, propertyType)
     val seekExpression = astRangeGreaterThanQueryExpression(lower)
     val indexSeek = plans.NodeIndexSeek(
       node.name,
@@ -97,7 +97,7 @@ class GreaterThanIndexSeekThreadState {
 
   @Setup
   def setUp(benchmarkState: GreaterThanIndexSeek): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.GreaterThanIndexSeek_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

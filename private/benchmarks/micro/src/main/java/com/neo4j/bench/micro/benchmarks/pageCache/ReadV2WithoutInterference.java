@@ -51,7 +51,7 @@ public class ReadV2WithoutInterference extends ReadV2
             allowed = {"0.01", "0.25", "0.5", "0.75", "1.1"},
             base = {"0.01", "1.1"} )
     @Param( {} )
-    public double ReadV2WithoutInterference_percentage;
+    public double percentage;
 
     @Override
     public String description()
@@ -62,7 +62,7 @@ public class ReadV2WithoutInterference extends ReadV2
     @Override
     protected double getPercentageCached()
     {
-        return ReadV2WithoutInterference_percentage;
+        return percentage;
     }
 
     @Benchmark

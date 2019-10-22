@@ -80,25 +80,25 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
             allowed = {"NONE", "SCHEMA", "COMPOSITE_SCHEMA"},
             base = {"NONE", "SCHEMA", "COMPOSITE_SCHEMA"} )
     @Param( {} )
-    public IndexType CreateDeleteNodeProperties_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateDeleteNodeProperties_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateDeleteNodeProperties_format;
+    public String format;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4", "64"} )
     @Param( {} )
-    public int CreateDeleteNodeProperties_count;
+    public int count;
 
     @ParamValues(
             allowed = {
@@ -107,13 +107,13 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateDeleteNodeProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateDeleteNodeProperties_txMemory;
+    public String txMemory;
 
     /**
      * - Threads work on node ID sequences
@@ -158,8 +158,8 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                 .withNodeProperties( properties() )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateDeleteNodeProperties_format )
-                                          .setTransactionMemory( CreateDeleteNodeProperties_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -182,7 +182,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
             public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
             {
                 SplittableRandom rng = RNGState.newRandom( 0 );
-                ValueGeneratorFun values = randPropertyFor( CreateDeleteNodeProperties_type ).value().create();
+                ValueGeneratorFun values = randPropertyFor( type ).value().create();
                 File storeDir = storeAndConfig.store().toFile();
                 GraphDatabaseService db = new EnterpriseGraphDatabaseFactory()
                         .newEmbeddedDatabaseBuilder( storeDir )
@@ -208,7 +208,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                 }
                 txBatch.close();
 
-                if ( COMPOSITE_SCHEMA.equals( CreateDeleteNodeProperties_index ) || SCHEMA.equals( CreateDeleteNodeProperties_index ) )
+                if ( COMPOSITE_SCHEMA.equals( index ) || SCHEMA.equals( index ) )
                 {
                     // Create indexes
                     LabelKeyDefinition[] indexes = indexes();
@@ -223,7 +223,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
 
     private LabelKeyDefinition[] indexes()
     {
-        switch ( CreateDeleteNodeProperties_index )
+        switch ( index )
         {
         case NONE:
             return new LabelKeyDefinition[0];
@@ -234,7 +234,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
         case COMPOSITE_SCHEMA:
             return compositeSchemaIndexDefinitions();
         default:
-            throw new IllegalArgumentException( "Invalid index type: " + CreateDeleteNodeProperties_index );
+            throw new IllegalArgumentException( "Invalid index type: " + index );
         }
     }
 
@@ -262,11 +262,11 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
 
     private PropertyDefinition[] properties()
     {
-        return IntStream.range( 0, CreateDeleteNodeProperties_count )
+        return IntStream.range( 0, count )
                         .mapToObj( i ->
                                            new PropertyDefinition(
-                                                   CreateDeleteNodeProperties_type + "_" + i,
-                                                   randPropertyFor( CreateDeleteNodeProperties_type ).value() ) )
+                                                   type + "_" + i,
+                                                   randPropertyFor( type ).value() ) )
                         .toArray( PropertyDefinition[]::new );
     }
 
@@ -304,12 +304,12 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                     thread,
                     NODE_COUNT ).create();
             keys = benchmarkState.keys();
-            values = randPropertyFor( benchmarkState.CreateDeleteNodeProperties_type ).value().create();
+            values = randPropertyFor( benchmarkState.type ).value().create();
             // set to 'thread' so threads start at different offsets/labels
             initialCreatePropertyId = thread;
             createPropertyId = initialCreatePropertyId;
             updateProperties();
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateDeleteNodeProperties_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
             advanceStoreToStableState( benchmarkState.db() );
         }
 
