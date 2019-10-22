@@ -66,8 +66,8 @@ public class Expand extends AbstractCoreBenchmark
     public String Expand_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String Expand_txMemory;
 
