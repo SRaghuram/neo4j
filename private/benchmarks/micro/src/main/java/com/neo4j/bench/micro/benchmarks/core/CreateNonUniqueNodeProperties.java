@@ -93,8 +93,8 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     public String CreateNonUniqueNodeProperties_format;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String CreateNonUniqueNodeProperties_txMemory;
 

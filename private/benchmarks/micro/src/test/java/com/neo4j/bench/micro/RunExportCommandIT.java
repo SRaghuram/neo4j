@@ -161,7 +161,7 @@ public class RunExportCommandIT
         assertThat( report.testRun().build(), equalTo( 1L ) );
         HashMap<String,String> expectedBenchmarkConfig = new HashMap<>();
         expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.format", "standard" );
-        expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.txMemory", "on_heap" );
+        expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.txMemory", "default" );
         expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById", "true" );
         assertThat( report.benchmarkConfig().toMap(), equalTo( expectedBenchmarkConfig ) );
         int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
