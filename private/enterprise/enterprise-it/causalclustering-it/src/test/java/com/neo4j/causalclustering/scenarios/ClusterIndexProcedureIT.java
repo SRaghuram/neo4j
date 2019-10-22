@@ -95,14 +95,14 @@ class ClusterIndexProcedureIT
     void createUniquePropertyConstraintMustPropagate() throws Exception
     {
         // create a constraint
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        cluster.coreTx( ( db, tx ) ->
         {
             tx.execute( "CALL db.createUniquePropertyConstraint( 'person names', \":Person(name)\", \"lucene+native-3.0\")" ).close();
             tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
-        cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
             Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
@@ -126,14 +126,14 @@ class ClusterIndexProcedureIT
     void createNodeKeyConstraintMustPropagate() throws Exception
     {
         // create a node key
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        cluster.coreTx( ( db, tx ) ->
         {
             tx.execute( "CALL db.createNodeKey( 'person names', \":Person(name)\", \"lucene+native-3.0\")" ).close();
             tx.commit();
         } );
 
         // node created just to be able to use dataMatchesEventually as a barrier
-        cluster.coreTx( ( db, tx ) ->
+        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
         {
             Node person = tx.createNode( Label.label( "Person" ) );
             person.setProperty( "name", "Bo Burnham" );
