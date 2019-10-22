@@ -70,14 +70,14 @@ public class FabricDatabaseManager extends LifecycleAdapter
 
             if ( fabricConfig.isEnabled() )
             {
-                String dbName = fabricConfig.getDatabase().getName();
+                NormalizedDatabaseName dbName = fabricConfig.getDatabase().getName();
                 if ( exists )
                 {
-                    log.info( "Using existing Fabric virtual database '%s'", dbName);
+                    log.info( "Using existing Fabric virtual database '%s'", dbName.name());
                 }
                 else
                 {
-                    log.info( "Creating Fabric virtual database '%s'", dbName);
+                    log.info( "Creating Fabric virtual database '%s'", dbName.name());
                     newFabricDb( tx, dbName );
                 }
             }
