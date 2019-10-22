@@ -21,13 +21,13 @@ public class ValidDisabledBenchmark extends BaseBenchmark
             allowed = {"1", "2"},
             base = {"1"} )
     @Param( {} )
-    public int ValidDisabledBenchmark_param1;
+    public int param1;
 
     @ParamValues(
             allowed = {"a", "b"},
             base = {"a"} )
     @Param( {} )
-    public String ValidDisabledBenchmark_param2;
+    public String param2;
 
     @Override
     public String benchmarkGroup()
