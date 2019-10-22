@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.morsel.{ExecutablePipeline, WorkerManag
 import org.neo4j.cypher.internal.runtime.{InputDataStream, MemoryTracking, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.result.QueryProfile
+import org.neo4j.exceptions.RuntimeUnsupportedException
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
@@ -49,6 +50,10 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                        morselSize: Int,
                                        memoryTracking: MemoryTracking,
                                        executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy): ProfiledQuerySubscription = {
+
+    if (queryContext.transactionalContext.dataRead.transactionStateHasChanges) {
+      throw new RuntimeUnsupportedException("The parallel runtime is not supported if there are changes in the transaction state. Use another runtime.")
+    }
 
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
