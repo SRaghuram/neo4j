@@ -5,6 +5,7 @@
  */
 package com.neo4j.procedure.enterprise.builtin;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
@@ -30,18 +31,19 @@ public class EnterpriseBuiltInProcedures
     public DependencyResolver resolver;
 
     @Description( "Create a named node key constraint with index backed by specified index provider " +
-            "(for example: CALL db.createNodeKey(\"MyConstraint\", \":Person(name)\", \"native-btree-1.0\")) - " +
-            "YIELD name, index, providerName, status" )
+            "(for example: CALL db.createNodeKey(\"MyConstraint\", [\"Person\"], [\"name\"], \"native-btree-1.0\")) - " +
+            "YIELD name, labels, properties, providerName, status" )
     @Procedure( name = "db.createNodeKey", mode = SCHEMA )
     public Stream<BuiltInProcedures.SchemaIndexInfo> createNodeKey(
             @Name( "constraintName" ) String constraintName,
-            @Name( "index" ) String index,
+            @Name( "labels" ) List<String> labels,
+            @Name( "properties" ) List<String> properties,
             @Name( "providerName" ) String providerName )
             throws ProcedureException
     {
         try ( IndexProcedures indexProcedures = indexProcedures() )
         {
-            return indexProcedures.createNodeKey( constraintName, index, providerName );
+            return indexProcedures.createNodeKey( constraintName, labels, properties, providerName );
         }
     }
 

@@ -39,7 +39,8 @@ class IndexProceduresIT
     private static final String CREATE_NODE_KEY_CONSTRAINT_FORMAT = "db.createNodeKey";
     private static final Label label = Label.label( "Label" );
     private static final String prop = "prop";
-    private static final String pattern = ":" + label + "(" + prop + ")";
+    private static final String labels = "['" + label + "']";
+    private static final String properties = "['" + prop + "']";
     private static final String providerName = "native-btree-1.0";
 
     @ParameterizedTest
@@ -121,11 +122,11 @@ class IndexProceduresIT
     {
         if ( indexName == null )
         {
-            return format( "CALL " + procedureName + "( NULL, \"%s\", \"%s\" )", pattern, providerName );
+            return format( "CALL " + procedureName + "( NULL, %s, %s, \"%s\" )", labels, properties, providerName );
         }
         else
         {
-            return format( "CALL " + procedureName + "( \"%s\", \"%s\", \"%s\" )", indexName, pattern, providerName );
+            return format( "CALL " + procedureName + "( \"%s\", %s, %s, \"%s\" )", indexName, labels, properties, providerName );
         }
     }
 }

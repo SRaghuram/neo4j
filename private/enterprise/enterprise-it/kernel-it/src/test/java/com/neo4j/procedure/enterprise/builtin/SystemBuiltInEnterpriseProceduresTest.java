@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureName;
@@ -145,24 +146,36 @@ class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
     @Test
     void checkEnterpriseProceduresThatAreNotAllowedOnSystem()
     {
-        GraphDatabaseService system = databaseManagementService.database( SYSTEM_DATABASE_NAME );
-        List<String> queries = List.of( "CALL db.createIndex(':Person(name)', 'lucene+native-2.0')",
+        List<String> queries = List.of( "CALL db.createIndex('My index',['Person'], ['name'], 'lucene+native-3.0')",
                 "CALL db.createLabel('Foo')",
-                "CALL db.createNodeKey(':Person(name)', 'lucene+native-2.0')",  // enterprise only
+                "CALL db.createNodeKey('My node key', ['Person'], ['age'], 'lucene+native-3.0')",  // enterprise only
                 "CALL db.createProperty('bar')",
                 "CALL db.createRelationshipType('BAZ')",
-                "CALL db.createUniquePropertyConstraint(':Person(name)', 'lucene+native-2.0')",
+                "CALL db.createUniquePropertyConstraint('My unique property', ['Person'], ['id'], 'lucene+native-3.0')",
                 "CALL db.index.fulltext.createNodeIndex('businessNameIndex', ['Business'],['name'])",
-                "CALL db.index.fulltext.createRelationshipIndex('businessNameIndex', ['Business'],['name'])",
+                "CALL db.index.fulltext.createRelationshipIndex('is owner of index', ['IS_OWNER_OF'],['name'])",
                 "CALL dbms.setTXMetaData( { User: 'Sascha' } )",
                 "CALL db.index.fulltext.drop('businessNameIndex')" );
 
+        // First validate that all queries can actually run on normal db
+        final GraphDatabaseService db = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        for ( String q : queries )
+        {
+            try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
+            {
+                tx.execute( q ).close();
+                tx.commit();
+            }
+        }
+
+        // Then validate that they can't run in system
+        GraphDatabaseService system = databaseManagementService.database( SYSTEM_DATABASE_NAME );
         for ( String q : queries )
         {
             try ( org.neo4j.graphdb.Transaction tx = system.beginTx() )
             {
                 // When & Then
-                RuntimeException exception = assertThrows( RuntimeException.class, () -> tx.execute( q ) );
+                RuntimeException exception = assertThrows( RuntimeException.class, () -> tx.execute( q ).close() );
                 assertTrue( exception.getMessage().startsWith( "Not a recognised system command or procedure:" ),
                         "Wrong error message for '" + q + "' => " + exception.getMessage() );
             }

@@ -271,7 +271,8 @@ class ProcedureResourcesIT
             break;
         case "db.createIndex":
             proc.withParam( "'This is my index name'" );
-            proc.withParam( "':Person(name)'" );
+            proc.withParam( "['Person']" );
+            proc.withParam( "['name']" );
             proc.withParam( "'lucene+native-3.0'" );
             break;
         case "db.createNodeKey":

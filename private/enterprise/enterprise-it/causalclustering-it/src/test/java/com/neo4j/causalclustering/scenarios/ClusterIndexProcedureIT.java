@@ -66,7 +66,7 @@ class ClusterIndexProcedureIT
         // create an index
         cluster.coreTx( ( db, tx ) ->
         {
-            tx.execute( "CALL db.createIndex( 'person names', \":Person(name)\", \"lucene+native-3.0\")" ).close();
+            tx.execute( "CALL db.createIndex( 'person names', ['Person'], ['name'], 'lucene+native-3.0' )" ).close();
             tx.commit();
         } );
 
@@ -97,7 +97,7 @@ class ClusterIndexProcedureIT
         // create a constraint
         cluster.coreTx( ( db, tx ) ->
         {
-            tx.execute( "CALL db.createUniquePropertyConstraint( 'person names', \":Person(name)\", \"lucene+native-3.0\")" ).close();
+            tx.execute( "CALL db.createUniquePropertyConstraint( 'person names', ['Person'], ['name'], 'lucene+native-3.0' )" ).close();
             tx.commit();
         } );
 
@@ -128,7 +128,7 @@ class ClusterIndexProcedureIT
         // create a node key
         cluster.coreTx( ( db, tx ) ->
         {
-            tx.execute( "CALL db.createNodeKey( 'person names', \":Person(name)\", \"lucene+native-3.0\")" ).close();
+            tx.execute( "CALL db.createNodeKey( 'person names', ['Person'], ['name'], 'lucene+native-3.0' )" ).close();
             tx.commit();
         } );
 
