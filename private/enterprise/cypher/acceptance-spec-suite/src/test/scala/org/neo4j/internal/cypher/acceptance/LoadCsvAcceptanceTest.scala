@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.{File, PrintWriter}
 import java.lang.Boolean.FALSE
 import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 import java.util.Collections.emptyMap
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
@@ -196,6 +196,20 @@ class LoadCsvAcceptanceTest
 
   test("should return correct filename") {
     val path = Files.createTempFile("file",".csv")
+
+    Files.write(path,"foo".getBytes)
+    assert(Files.exists(path))
+
+    val filePathForQuery = path.normalize().toUri
+    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, file()")
+    assertStats(result, nodesCreated = 1, propertiesWritten = 1)
+    resourceMonitor.assertClosedAndClear(1)
+    result.toList should equal(List(Map("a.name" -> "foo", "file()" -> filePathForQuery.getPath)))
+  }
+
+  test("should return correct filename for path including spaces") {
+    val dirPath = Files.createTempDirectory("directory with spaces")
+    val path = Files.createTempFile(dirPath,"file",".csv")
 
     Files.write(path,"foo".getBytes)
     assert(Files.exists(path))
