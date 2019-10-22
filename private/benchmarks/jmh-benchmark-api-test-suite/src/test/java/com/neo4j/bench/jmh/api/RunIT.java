@@ -79,7 +79,7 @@ public class RunIT
                 profilerRecordingsOutputDir );
 
         List<BenchmarkGroupBenchmark> benchmarks = results.benchmarkGroupBenchmarks();
-        assertThat( benchmarks.size(), equalTo( 4 ) );
+        assertThat( errorReporter.toString(), benchmarks.size(), equalTo( 4 ) );
 
         List<String> expectedBenchmarkNames = new ArrayList<>();
         for ( Class benchmark : benchmarksFinder.getBenchmarks() )
@@ -149,7 +149,7 @@ public class RunIT
                 profilerRecordingsOutputDir );
 
         List<BenchmarkGroupBenchmark> benchmarks = results.benchmarkGroupBenchmarks();
-        assertThat( benchmarks.size(), equalTo( 2 ) );
+        assertThat( errorReporter.toString(), benchmarks.size(), equalTo( 2 ) );
         for ( BenchmarkGroupBenchmark benchmark : benchmarks )
         {
             assertThat( benchmark.benchmarkGroup().name(), equalTo( "test" ) );

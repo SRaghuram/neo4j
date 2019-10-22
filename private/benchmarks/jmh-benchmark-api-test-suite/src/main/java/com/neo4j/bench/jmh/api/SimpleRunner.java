@@ -12,10 +12,10 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
-import java.nio.file.Path;
 import java.util.List;
 
 public class SimpleRunner extends Runner
@@ -33,7 +33,7 @@ public class SimpleRunner extends Runner
 
     @Override
     protected List<BenchmarkDescription> prepare( List<BenchmarkDescription> benchmarks,
-                                                  Path workDir,
+                                                  RunnerParams runnerParams,
                                                   Jvm jvm,
                                                   ErrorReporter errorReporter,
                                                   String[] jvmArgs )
@@ -44,36 +44,42 @@ public class SimpleRunner extends Runner
     @Override
     protected ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
                                                        ProfilerType profilerType,
-                                                       Path workDir,
+                                                       RunnerParams runnerParams,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
         return augmentOptions( optionsBuilder );
     }
 
     @Override
-    protected void afterProfilerRun( BenchmarkDescription benchmark, ProfilerType profilerType, Path workDir, ErrorReporter errorReporter )
+    protected void afterProfilerRun( BenchmarkDescription benchmark, ProfilerType profilerType, RunnerParams runnerParams, ErrorReporter errorReporter )
     {
 
     }
 
     @Override
     protected ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
-                                                          Path workDir,
+                                                          RunnerParams runnerParams,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
         return augmentOptions( optionsBuilder );
     }
 
     @Override
-    protected void afterMeasurementRun( BenchmarkDescription benchmark, Path workDir, ErrorReporter errorReporter )
+    protected void afterMeasurementRun( BenchmarkDescription benchmark, RunnerParams runnerParams, ErrorReporter errorReporter )
     {
 
     }
 
     @Override
-    protected Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, Path workDir )
+    protected Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams )
     {
         return Neo4jConfig.empty();
+    }
+
+    @Override
+    protected RunnerParams runnerParams( RunnerParams runnerParams )
+    {
+        return runnerParams;
     }
 
     private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder )

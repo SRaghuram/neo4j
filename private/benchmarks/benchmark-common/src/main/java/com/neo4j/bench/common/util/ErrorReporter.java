@@ -14,6 +14,8 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.joining;
+
 public class ErrorReporter
 {
     public static String stackTraceToString( Throwable e )
@@ -68,5 +70,13 @@ public class ErrorReporter
     public ErrorPolicy policy()
     {
         return errorPolicy;
+    }
+
+    @Override
+    public String toString()
+    {
+        return errors.isEmpty()
+               ? "No errors"
+               : errors.stream().map( TestRunError::toString ).collect( joining( "-------------------\n" ) );
     }
 }

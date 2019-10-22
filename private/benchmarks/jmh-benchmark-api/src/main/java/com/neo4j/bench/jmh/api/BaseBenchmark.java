@@ -7,6 +7,7 @@ package com.neo4j.bench.jmh.api;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -21,12 +22,16 @@ public abstract class BaseBenchmark
     @Param( {} )
     public String workDir;
 
+    @Param( {} )
+    public String runnerParams;
+
     @Setup
-    public final void setUp( BenchmarkParams params ) throws Exception
+    public final void setUp( BenchmarkParams benchmarkParams ) throws Exception
     {
-        BenchmarkGroup group = BenchmarkDiscoveryUtils.toBenchmarkGroup( params );
-        Benchmark benchmark = BenchmarkDiscoveryUtils.toBenchmarks( params ).parentBenchmark();
-        onSetup( group, benchmark, params );
+        BenchmarkGroup group = BenchmarkDiscoveryUtils.toBenchmarkGroup( benchmarkParams );
+        RunnerParams runnerParams = RunnerParams.extractFrom( benchmarkParams );
+        Benchmark benchmark = BenchmarkDiscoveryUtils.toBenchmarks( benchmarkParams, runnerParams ).parentBenchmark();
+        onSetup( group, benchmark, runnerParams, benchmarkParams );
     }
 
     @TearDown
@@ -40,7 +45,7 @@ public abstract class BaseBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @Setup(Level.Trial).
      */
-    protected void onSetup( BenchmarkGroup group, Benchmark benchmark, BenchmarkParams params ) throws Exception
+    protected void onSetup( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams, BenchmarkParams benchmarkParams ) throws Exception
     {
     }
 
