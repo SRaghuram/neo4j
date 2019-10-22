@@ -128,9 +128,19 @@ public class Neo4jConfigBuilder
 
     public Neo4jConfigBuilder setTransactionMemory( String setting )
     {
-        String translatedValue = setting.equals( "on_heap" )
-                                 ? GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name()
-                                 : GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
+        String translatedValue;
+        if ( setting.equals( "on_heap" ) )
+        {
+            translatedValue = GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name();
+        }
+        else if ( setting.equals( "off_heap" ) )
+        {
+            translatedValue = GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
+        }
+        else
+        {
+            translatedValue = GraphDatabaseSettings.tx_state_memory_allocation.getDefaultValue();
+        }
         return withSetting( tx_state_memory_allocation, translatedValue );
     }
 

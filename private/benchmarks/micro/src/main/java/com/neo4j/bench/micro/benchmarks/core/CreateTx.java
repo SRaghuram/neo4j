@@ -32,8 +32,8 @@ public class CreateTx extends AbstractCoreBenchmark
     private final AtomicLong nodeId = new AtomicLong( 0 );
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String CreateTx_txMemory;
 

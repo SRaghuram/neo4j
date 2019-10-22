@@ -48,8 +48,8 @@ public class ReadLabel extends AbstractCoreBenchmark
     public LabelLocality ReadLabel_locality;
 
     @ParamValues(
-            allowed = {"off_heap", "on_heap"},
-            base = {"on_heap"} )
+            allowed = {"off_heap", "on_heap", "default"},
+            base = {"default"} )
     @Param( {} )
     public String ReadLabel_txMemory;
 
