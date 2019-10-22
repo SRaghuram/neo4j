@@ -120,17 +120,23 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
     maybeLabelId match {
       case Some(labelId) =>
         /**
-          * {{{
-          *   this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
-          *   context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
-          *   this.canContinue = nodeLabelCursor.next()
-          *   true
-          * }}}
-          */
+         * {{{
+         *   this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
+         *   context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
+         *   this.canContinue = nodeLabelCursor.next()
+         *   if (this.canContinue) {
+         *     profileRow()
+         *   }
+         *   true
+         * }}}
+         */
         block(
           allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
           nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField)),
           setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
+          condition(loadField(canContinue)){
+            profileRow(id)
+          },
           constant(true)
         )
 
@@ -161,7 +167,10 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
               allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
               nodeLabelScan(loadField(labelField), loadField(nodeLabelCursorField)),
               setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
-              )
+              condition(loadField(canContinue)) {
+                profileRow(id)
+              }
+            )
           },
           load(hasInnerLoop)
         )
@@ -170,22 +179,27 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(offset, nodeLabelCursor.nodeReference())
-      *     << inner.genOperate >>
-      *     this.canContinue = this.nodeLabelCursor.next()
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     ...
+     *     setLongAt(offset, nodeLabelCursor.nodeReference())
+     *     << inner.genOperate >>
+     *     this.canContinue = this.nodeLabelCursor.next()
+     *     if (this.canContinue) {
+     *       profileRow()
+     *     }
+     *   }
+     * }}}
+     */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
-        profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField))),
+        condition(loadField(canContinue)) {
+          profileRow(id)
+        },
         endInnerLoop
       )
     )

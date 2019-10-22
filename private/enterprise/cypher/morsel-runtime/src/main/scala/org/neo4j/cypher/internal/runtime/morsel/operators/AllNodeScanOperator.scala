@@ -193,17 +193,23 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
-      *   context.transactionalContext.dataRead.allNodesScan(cursor)
-      *   this.canContinue = nodeCursor.next()
-      *   true
-      * }}}
-      */
+     * {{{
+     *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+     *   context.transactionalContext.dataRead.allNodesScan(cursor)
+     *   this.canContinue = nodeCursor.next()
+     *   if (this.canContinue) {
+     *     profileRow()
+     *   }
+     *   true
+     * }}}
+     */
     block(
       allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       allNodeScan(loadField(nodeCursorField)),
       setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
+      condition(loadField(canContinue)) {
+        profileRow(id)
+      },
       constant(true)
     )
   }
@@ -215,6 +221,9 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
       *     ...
       *     << inner.genOperate >>
       *     this.canContinue = this.nodeCursor.next()
+      *     if (this.canContinue) {
+      *       profileRow()
+      *     }
       *   }
       * }}}
       */
@@ -224,9 +233,11 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         // since it means nobody is interested in those arguments.
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
-        profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
+        condition(loadField(canContinue)) {
+          profileRow(id)
+        },
         endInnerLoop
         )
       )

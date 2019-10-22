@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.IntermediateRepresentation.{condition, _}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
@@ -205,26 +205,29 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   /**
-    * {{{
-    *    val fromNode = inputMorsel.getLongAt(fromOffset)
-    *    if (entityIsNull(fromNode))
-    *      false
-    *    else {
-    *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
-    *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
-    *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
-    *      read.singleNode(node, nodeCursor)
-    *      relationships = if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
-    *                      else {
-    *                        //or incomingCursor or allCursor depending on the direction
-    *                        outgoingCursor(groupCursor, traversalCursor, nodeCursor, types)
-    *                      }
-    *      this.canContinue = relationships.next()
-    *      true
-    *      }
-    * }}}
-    *
-    */
+   * {{{
+   *    val fromNode = inputMorsel.getLongAt(fromOffset)
+   *    if (entityIsNull(fromNode))
+   *      false
+   *    else {
+   *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+   *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
+   *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
+   *      read.singleNode(node, nodeCursor)
+   *      relationships = if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
+   *                      else {
+   *                        //or incomingCursor or allCursor depending on the direction
+   *                        outgoingCursor(groupCursor, traversalCursor, nodeCursor, types)
+   *                      }
+   *      this.canContinue = relationships.next()
+   *      if (this.canContinue) {
+   *        profileRow()
+   *      }
+   *      true
+   *    }
+   * }}}
+   *
+   */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val (denseMethod, sparseMethod) = dir match {
       case OUTGOING =>
@@ -272,7 +275,10 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
          ),
          invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
          assign(resultBoolean, constant(true)),
-         setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField)))
+         setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
+         condition(loadField(canContinue)) {
+           profileRow(id)
+         }
        )
       },
 
@@ -292,18 +298,21 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   }
 
   /**
-    * {{{
-    *     while (hasDemand && this.canContinue) {
-    *         val relId = relationships.relationshipReference()
-    *         val otherSide = relationships.otherNodeReference()
-    *
-    *         outputRow.copyFrom(inputMorsel)
-    *         outputRow.setLongAt(relOffset, relId)
-    *         outputRow.setLongAt(toOffset, otherSide)
-    *          <<< inner.genOperate() >>>
-    *          this.canContinue = relationships.next()
-    * }}}
-    */
+   * {{{
+   *     while (hasDemand && this.canContinue) {
+   *       val relId = relationships.relationshipReference()
+   *       val otherSide = relationships.otherNodeReference()
+   *       outputRow.copyFrom(inputMorsel)
+   *       outputRow.setLongAt(relOffset, relId)
+   *       outputRow.setLongAt(toOffset, otherSide)
+   *       <<< inner.genOperate() >>>
+   *       this.canContinue = relationships.next()
+   *       if (this.canContinue) {
+   *         profileRow()
+   *       }
+   *     }
+   * }}}
+   */
   override protected def genInnerLoop: IntermediateRepresentation = {
     val otherNode = dir match {
       case OUTGOING => method[RelationshipSelectionCursor, Long]("targetNodeReference")
@@ -317,9 +326,11 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
                                             method[RelationshipSelectionCursor, Long]("relationshipReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
-        profileRow(id),
         inner.genOperateWithExpressions,
         setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
+        condition(loadField(canContinue)){
+          profileRow(id)
+        },
         endInnerLoop
       )
     )

@@ -45,7 +45,6 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && inputMorsel.isValidRow) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-
         inputMorsel.moveToNextRow()
         outputRow.moveToNextRow()
       }
