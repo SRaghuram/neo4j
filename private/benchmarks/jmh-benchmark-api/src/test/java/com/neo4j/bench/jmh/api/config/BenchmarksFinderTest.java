@@ -50,7 +50,7 @@ class BenchmarksFinderTest extends BenchmarksFinderFixture
         BenchmarksFinder benchmarksFinder = getBenchmarksFinder();
         List<Field> fields = benchmarksFinder.getParamFieldsFor( ValidDisabledBenchmark.class );
         Set<String> fieldNames = fields.stream().map( Field::getName ).collect( toSet() );
-        assertThat( fieldNames, equalTo( Sets.newHashSet( "ValidDisabledBenchmark_param1", "ValidDisabledBenchmark_param2" ) ) );
+        assertThat( fieldNames, equalTo( Sets.newHashSet( "param1", "param2" ) ) );
     }
 
     @Test
@@ -133,7 +133,7 @@ class BenchmarksFinderTest extends BenchmarksFinderFixture
 
         assertThat(
                 parameters,
-                equalTo( newHashSet( "ValidEnabledBenchmark1_number", "ValidEnabledBenchmark1_string" ) ) );
+                equalTo( newHashSet( "number", "string" ) ) );
     }
 
     @Test
