@@ -21,7 +21,7 @@ public class ValidEnabledBenchmark2 extends BaseBenchmark
             allowed = {"true", "false"},
             base = {"true"} )
     @Param( {} )
-    public boolean ValidEnabledBenchmark2_boolean;
+    public boolean aBoolean;
 
     @Override
     public String benchmarkGroup()

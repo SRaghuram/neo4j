@@ -22,7 +22,7 @@ public class ValidEnabledGroupBenchmark extends BaseBenchmark
             allowed = {"a", "b"},
             base = {"a", "b"} )
     @Param( {} )
-    public String ValidEnabledGroupBenchmark_string;
+    public String string;
 
     @Override
     public String benchmarkGroup()

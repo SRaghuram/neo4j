@@ -23,7 +23,7 @@ public class BenchmarksValidator
     BenchmarkValidationResult validate()
     {
         boolean valid = hasAtLeastOneBenchmarkClass() &&
-                        hasClassNamePrefixOnAllParamFieldNames() &&
+                        hasNoClassNamePrefixOnAnyParamFieldNames() &&
                         hasEmptyValueOnAllParamFields() &&
                         hasParamValueOnAllParamFields() &&
                         hasParamOnAllParamValueFields() &&
@@ -43,12 +43,14 @@ public class BenchmarksValidator
         return benchmarksFinder.getBenchmarkMethods().keySet().size() > 0;
     }
 
-    private boolean hasClassNamePrefixOnAllParamFieldNames()
+    // NOTE: this is a sanity check, to make sure old cold is updated to remove the class name prefixes that used to be necessary
+    private boolean hasNoClassNamePrefixOnAnyParamFieldNames()
     {
-        // JMH options builder does not allow for setting param:value pairs on individual classes, only globally
-        // To get around that this benchmark suite prepends benchmark class names onto the param names of those classes
-        // This test makes sure this policy is being followed
-        return benchmarksFinder.getParamFieldsWithoutClassNamePrefix().size() == 0;
+        // JMH options builder does not allow for setting param:value pairs on individual classes, only globally.
+        // To get around that this benchmark suite used to prepend benchmark class names onto the param names of those fields.
+        // Since then the benchmark suite was updated, to run every benchmark in a new "JMH run", which makes the class name prefix unnecessary.
+        // This test makes sure all old benchmark field names get updated, to match the new naming policy (no class name prefix).
+        return benchmarksFinder.getParamFieldsWithClassNamePrefix().size() == 0;
     }
 
     private boolean hasEmptyValueOnAllParamFields()
@@ -111,16 +113,16 @@ public class BenchmarksValidator
         {
             sb.append( "\t" ).append( "* No benchmark classes found\n" );
         }
-        if ( !hasClassNamePrefixOnAllParamFieldNames() )
+        if ( !hasNoClassNamePrefixOnAnyParamFieldNames() )
         {
             sb
                     .append( "\t" ).append( "* @" ).append( Param.class.getSimpleName() )
-                    .append( " fields lack class name prefix:\n" );
-            benchmarksFinder.getParamFieldsWithoutClassNamePrefix().forEach( field -> sb
+                    .append( " fields should not have class name prefix:\n" );
+            benchmarksFinder.getParamFieldsWithClassNamePrefix().forEach( field -> sb
                     .append( "\t\t" ).append( "> " )
                     .append( field.getName() )
                     .append( " in " ).append( field.getDeclaringClass().getName() )
-                    .append( " should have prefix: " ).append( field.getDeclaringClass().getSimpleName() ).append( "_" )
+                    .append( " should not have prefix: " ).append( field.getDeclaringClass().getSimpleName() )
                     .append( "\n" )
             );
         }
