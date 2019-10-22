@@ -51,12 +51,12 @@ public class WriteV2WithoutInterference extends WriteV2
             allowed = {"0.01", "0.25", "0.5", "0.75", "1.1"},
             base = {"0.01", "1.1"} )
     @Param( {} )
-    public double WriteV2WithoutInterference_percentage;
+    public double percentage;
 
     @Override
     protected double getPercentageCached()
     {
-        return WriteV2WithoutInterference_percentage;
+        return percentage;
     }
 
     @Override

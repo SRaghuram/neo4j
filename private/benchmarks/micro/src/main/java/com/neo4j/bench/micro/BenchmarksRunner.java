@@ -15,6 +15,7 @@ import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
 import com.neo4j.bench.jmh.api.Runner;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.Options;
@@ -33,7 +34,6 @@ import static java.time.temporal.ChronoUnit.MILLIS;
 class BenchmarksRunner extends Runner
 {
     private static final String PARAM_NEO4J_CONFIG = "baseNeo4jConfig";
-    private static final String PARAM_STORES_DIR = "storesDir";
 
     private final Neo4jConfig baseNeo4jConfig;
     private final int forkCount;
@@ -66,7 +66,7 @@ class BenchmarksRunner extends Runner
 
     @Override
     protected List<BenchmarkDescription> prepare( List<BenchmarkDescription> benchmarks,
-                                                  Path workDir,
+                                                  RunnerParams runnerParams,
                                                   Jvm jvm,
                                                   ErrorReporter errorReporter,
                                                   String[] jvmArgs )
@@ -81,7 +81,7 @@ class BenchmarksRunner extends Runner
 
         long storeGenerationStart = System.currentTimeMillis();
 
-        Stores stores = new Stores( workDir );
+        Stores stores = new Stores( runnerParams.workDir() );
 
         List<BenchmarkDescription> benchmarksWithStores = new ArrayList<>( benchmarks );
         try
@@ -91,7 +91,7 @@ class BenchmarksRunner extends Runner
                 try
                 {
                     ChainedOptionsBuilder builder = baseBuilder(
-                            workDir,
+                            runnerParams,
                             benchmark,
                             1, // thread count
                             jvm,
@@ -102,9 +102,7 @@ class BenchmarksRunner extends Runner
                             .measurementIterations( 1 )
                             .measurementTime( TimeValue.NONE )
                             .verbosity( VerboseMode.SILENT )
-                            .forks( Math.min( forkCount, 1 ) )
-                            .param( PARAM_STORES_DIR, workDir.toAbsolutePath().toString() )
-                            .param( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() );
+                            .forks( Math.min( forkCount, 1 ) );
                     Options options = builder.build();
                     // sanity check, make sure provided benchmarks were correctly exploded
                     JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
@@ -136,36 +134,43 @@ class BenchmarksRunner extends Runner
     @Override
     protected ChainedOptionsBuilder beforeProfilerRun( BenchmarkDescription benchmark,
                                                        ProfilerType profilerType,
-                                                       Path workDir,
+                                                       RunnerParams runnerParams,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, workDir, benchmark );
+        return augmentOptions( optionsBuilder, runnerParams.workDir(), benchmark );
     }
 
     @Override
-    protected void afterProfilerRun( BenchmarkDescription benchmark, ProfilerType profilerType, Path workDir, ErrorReporter errorReporter )
+    protected void afterProfilerRun( BenchmarkDescription benchmark, ProfilerType profilerType, RunnerParams runnerParams, ErrorReporter errorReporter )
     {
         // do nothing
     }
 
     @Override
     protected ChainedOptionsBuilder beforeMeasurementRun( BenchmarkDescription benchmark,
-                                                          Path workDir,
+                                                          RunnerParams runnerParams,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, workDir, benchmark ).forks( forkCount );
+        return augmentOptions( optionsBuilder, runnerParams.workDir(), benchmark ).forks( forkCount );
     }
 
     @Override
-    protected void afterMeasurementRun( BenchmarkDescription benchmark, Path workDir, ErrorReporter errorReporter )
+    protected void afterMeasurementRun( BenchmarkDescription benchmark, RunnerParams runnerParams, ErrorReporter errorReporter )
     {
         // do nothing
     }
 
     @Override
-    protected Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, Path workDir )
+    protected Neo4jConfig systemConfigFor( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams )
     {
-        return new Stores( workDir ).neo4jConfigFor( group, benchmark );
+        return new Stores( runnerParams.workDir() ).neo4jConfigFor( group, benchmark );
+    }
+
+    @Override
+    protected RunnerParams runnerParams( RunnerParams runnerParams )
+    {
+        runnerParams.addParam( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() );
+        return runnerParams;
     }
 
     private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder, Path workDir, BenchmarkDescription benchmark )
@@ -176,8 +181,6 @@ class BenchmarksRunner extends Runner
             optionsBuilder = JmhOptionsUtil.applyAnnotations( benchmarkClass, optionsBuilder );
         }
         return optionsBuilder
-                .param( PARAM_STORES_DIR, workDir.toAbsolutePath().toString() )
-                .param( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() )
                 .warmupIterations( iterations )
                 .warmupTime( duration )
                 .measurementIterations( iterations )

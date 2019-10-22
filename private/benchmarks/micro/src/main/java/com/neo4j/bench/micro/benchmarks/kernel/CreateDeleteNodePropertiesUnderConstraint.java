@@ -70,25 +70,25 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractKernelBen
             allowed = {"UNIQUE"},
             base = {"UNIQUE"} )
     @Param( {} )
-    public IndexType CreateDeleteNodePropertiesUnderConstraint_constraint;
+    public IndexType constraint;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesUnderConstraint_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesUnderConstraint_format;
+    public String format;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4"} )
     @Param( {} )
-    public int CreateDeleteNodePropertiesUnderConstraint_count;
+    public int count;
 
     @ParamValues(
             allowed = {
@@ -97,16 +97,16 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractKernelBen
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {STR_SML} )
     @Param( {} )
-    public String CreateDeleteNodePropertiesUnderConstraint_type;
+    public String type;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateDeleteNodePropertiesUnderConstraint_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateDeleteNodePropertiesUnderConstraint_kernelImplementation;
+        return kernelImplementation;
     }
 
     /**
@@ -164,11 +164,11 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractKernelBen
 
     private PropertyDefinition[] properties()
     {
-        return IntStream.range( 0, CreateDeleteNodePropertiesUnderConstraint_count )
+        return IntStream.range( 0, count )
                         .mapToObj( i ->
                                            new PropertyDefinition(
-                                                   CreateDeleteNodePropertiesUnderConstraint_type + "_" + i,
-                                                   ascPropertyFor( CreateDeleteNodePropertiesUnderConstraint_type ).value() ) )
+                                                   type + "_" + i,
+                                                   ascPropertyFor( type ).value() ) )
                         .toArray( PropertyDefinition[]::new );
     }
 
@@ -195,7 +195,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractKernelBen
                 CreateDeleteNodePropertiesUnderConstraint benchmarkState,
                 RNGState rngState ) throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateDeleteNodePropertiesUnderConstraint_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             int threads = threadCountForSubgroupInstancesOf( threadParams );
             int thread = uniqueSubgroupThreadIdFor( threadParams );
             ids = nonContendingStridingFor(
@@ -205,7 +205,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractKernelBen
                     NODE_COUNT ).create();
             keys = propertyKeysToIds( benchmarkState.keys() );
             values = nonContendingStridingFor(
-                    benchmarkState.CreateDeleteNodePropertiesUnderConstraint_type,
+                    benchmarkState.type,
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     NODE_COUNT ).create();

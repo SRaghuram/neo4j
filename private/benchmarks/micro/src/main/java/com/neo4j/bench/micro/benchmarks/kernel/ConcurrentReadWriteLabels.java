@@ -63,19 +63,19 @@ public class ConcurrentReadWriteLabels extends AbstractKernelBenchmark
             allowed = {"1", "10", "100", "1000"},
             base = {"100"} )
     @Param( {} )
-    public int ConcurrentReadWriteLabels_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ConcurrentReadWriteLabels_format;
+    public String format;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4", "64"} )
     @Param( {} )
-    public int ConcurrentReadWriteLabels_count;
+    public int count;
 
     /**
      * In more detail:
@@ -120,26 +120,26 @@ public class ConcurrentReadWriteLabels extends AbstractKernelBenchmark
                 .withNodeCount( NODE_COUNT )
                 .withLabels( labels() )
                 .withLabelOrder( Order.ORDERED )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, ConcurrentReadWriteLabels_format ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, format ).build() )
                 .isReusableStore( false )
                 .build();
     }
 
     private Label[] labels()
     {
-        return IntStream.range( 0, ConcurrentReadWriteLabels_count ).boxed()
+        return IntStream.range( 0, count ).boxed()
                         .map( i -> Label.label( "Label" + i ) )
                         .toArray( Label[]::new );
     }
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation ConcurrentReadWriteLabels_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return ConcurrentReadWriteLabels_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -157,7 +157,7 @@ public class ConcurrentReadWriteLabels extends AbstractKernelBenchmark
         public void setUp( ThreadParams threadParams, ConcurrentReadWriteLabels benchmarkState, RNGState rngState )
                 throws KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.ConcurrentReadWriteLabels_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             throttler = new Throttler( TARGET_WRITE_THROUGHPUT );
             int threads = threadCountForSubgroupInstancesOf( threadParams );
             int thread = uniqueSubgroupThreadIdFor( threadParams );

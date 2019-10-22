@@ -32,19 +32,19 @@ class Top extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var Top_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(STR_SML, LNG, DBL),
     base = Array(STR_SML, LNG))
   @Param(Array[String]())
-  var Top_sort_type: String = _
+  var sort_type: String = _
 
   @ParamValues(
     allowed = Array("1", "100", "10000"),
     base = Array("1", "10000"))
   @Param(Array[String]())
-  var Top_limit: Long = _
+  var limit: Long = _
 
   override def description = "Top, e.g., UNWIND $list AS x RETURN x ORDER BY x LIMIT $limit"
 
@@ -53,7 +53,7 @@ class Top extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(Top_sort_type)
+    val listElementType = cypherTypeFor(sort_type)
     val listType = symbols.CTList(listElementType)
     val unwindListParameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -75,7 +75,7 @@ class Top extends AbstractCypherBenchmark {
   def executePlan(threadState: TopThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
     threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
-    assertExpectedRowCount(Top_limit.toInt, visitor)
+    assertExpectedRowCount(limit.toInt, visitor)
   }
 }
 
@@ -86,13 +86,13 @@ class TopThreadState {
 
   @Setup
   def setUp(benchmarkState: Top): Unit = {
-    val unwindListValues: java.util.List[_] = listOf(benchmarkState.Top_sort_type, benchmarkState.LIST_ITEM_COUNT)
+    val unwindListValues: java.util.List[_] = listOf(benchmarkState.sort_type, benchmarkState.LIST_ITEM_COUNT)
     Collections.shuffle(unwindListValues)
     val paramsMap = mutable.Map[String, AnyRef](
       "list" -> unwindListValues,
-      "limit" -> Long.box(benchmarkState.Top_limit)).asJava
+      "limit" -> Long.box(benchmarkState.limit)).asJava
     benchmarkState.params = ValueUtils.asMapValue(paramsMap)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Top_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

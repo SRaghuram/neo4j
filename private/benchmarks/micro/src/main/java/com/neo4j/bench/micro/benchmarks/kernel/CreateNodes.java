@@ -34,23 +34,23 @@ public class CreateNodes extends AbstractKernelBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateNodes_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateNodes_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateNodes_txMemory;
+    public String txMemory;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateNodes_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     public String description()
@@ -70,8 +70,8 @@ public class CreateNodes extends AbstractKernelBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateNodes_format )
-                                          .setTransactionMemory( CreateNodes_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -80,7 +80,7 @@ public class CreateNodes extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateNodes_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -90,7 +90,7 @@ public class CreateNodes extends AbstractKernelBenchmark
         @Setup
         public void setUp( CreateNodes benchmarkState ) throws InterruptedException, KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateNodes_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
         }
 
         @TearDown

@@ -26,13 +26,13 @@ class IndexScan extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var IndexScan_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML, STR_BIG),
     base = Array(LNG, STR_SML))
   @Param(Array[String]())
-  var IndexScan_type: String = _
+  var propertyType: String = _
 
   override def description = "Index Scan"
 
@@ -49,7 +49,7 @@ class IndexScan extends AbstractCypherBenchmark {
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
-      .withNodeProperties(new PropertyDefinition(KEY, ascGeneratorFor(IndexScan_type, 0)))
+      .withNodeProperties(new PropertyDefinition(KEY, ascGeneratorFor(propertyType, 0)))
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .build()
@@ -86,7 +86,7 @@ class IndexScanThreadState {
 
   @Setup
   def setUp(benchmarkState: IndexScan): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.IndexScan_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

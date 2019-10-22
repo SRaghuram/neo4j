@@ -60,19 +60,19 @@ public class ConcurrentReadWriteLabelsV2 extends AbstractCoreBenchmark
             allowed = {"1", "10", "100", "1000"},
             base = {"100"} )
     @Param( {} )
-    public int ConcurrentReadWriteLabelsV2_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ConcurrentReadWriteLabelsV2_format;
+    public String format;
 
     @ParamValues(
             allowed = {"4", "64"},
             base = {"4", "64"} )
     @Param( {} )
-    public int ConcurrentReadWriteLabelsV2_count;
+    public int count;
 
     /**
      * In more detail:
@@ -117,14 +117,14 @@ public class ConcurrentReadWriteLabelsV2 extends AbstractCoreBenchmark
                 .withNodeCount( NODE_COUNT )
                 .withLabels( labels() )
                 .withLabelOrder( Order.ORDERED )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, ConcurrentReadWriteLabelsV2_format ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, format ).build() )
                 .isReusableStore( false )
                 .build();
     }
 
     private Label[] labels()
     {
-        return IntStream.range( 0, ConcurrentReadWriteLabelsV2_count ).boxed()
+        return IntStream.range( 0, count ).boxed()
                         .map( i -> Label.label( "Label" + i ) )
                         .toArray( Label[]::new );
     }
@@ -157,7 +157,7 @@ public class ConcurrentReadWriteLabelsV2 extends AbstractCoreBenchmark
             initialCreateLabelId = thread;
             createLabelId = initialCreateLabelId;
             updateLabels();
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.ConcurrentReadWriteLabelsV2_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
             advanceStoreToStableState( benchmarkState.db(), rngState.rng );
         }
 

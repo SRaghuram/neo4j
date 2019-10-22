@@ -47,19 +47,19 @@ public class CreateRelationships extends AbstractCoreBenchmark
             allowed = {"1", "100", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateRelationships_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"true", "false"},
             base = {"true"} )
     @Param( {} )
-    public boolean CreateRelationships_dense;
+    public boolean dense;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateRelationships_format;
+    public String format;
 
     @Override
     public String description()
@@ -88,7 +88,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
     {
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder.empty()
                                                     .withSetting( dense_node_threshold, denseNodeThreshold() )
-                                                    .withSetting( record_format, CreateRelationships_format )
+                                                    .withSetting( record_format, format )
                                                     .build();
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
@@ -99,7 +99,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
 
     private String denseNodeThreshold()
     {
-        return CreateRelationships_dense
+        return dense
                // HIGH dense node threshold --> NO nodes are dense
                ? Integer.toString( Integer.MAX_VALUE )
                // LOW dense node threshold --> ALL nodes are dense
@@ -136,7 +136,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
             // access store in random/scattered pattern
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom
             shuffle( this.nodes, ThreadLocalRandom.current() );
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateRelationships_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         Node nextNode()

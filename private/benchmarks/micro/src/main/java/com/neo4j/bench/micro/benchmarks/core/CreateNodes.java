@@ -33,19 +33,19 @@ public class CreateNodes extends AbstractCoreBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"1", "100"} )
     @Param( {} )
-    public int CreateNodes_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateNodes_format;
+    public String format;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateNodes_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -65,8 +65,8 @@ public class CreateNodes extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateNodes_format )
-                                          .setTransactionMemory( CreateNodes_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build())
                 .isReusableStore( false )
                 .build();
@@ -80,7 +80,7 @@ public class CreateNodes extends AbstractCoreBenchmark
         @Setup
         public void setUp( CreateNodes benchmarkState ) throws InterruptedException
         {
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNodes_txSize );
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         void advance()

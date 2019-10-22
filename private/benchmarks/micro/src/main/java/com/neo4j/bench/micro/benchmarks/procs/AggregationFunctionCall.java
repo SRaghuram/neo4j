@@ -29,7 +29,7 @@ public class AggregationFunctionCall extends AbstractProceduresBenchmark
             allowed = {"1", "100", "10000", "1000000"},
             base = {"1", "100", "10000", "1000000"} )
     @Param( {} )
-    public long AggregationFunctionCall_rows;
+    public long rows;
 
     @Override
     protected void afterDatabaseStart()
@@ -53,7 +53,7 @@ public class AggregationFunctionCall extends AbstractProceduresBenchmark
     public long testAggregation() throws ProcedureException
     {
         UserAggregator aggregator = procedures.createAggregationFunction( context, token );
-        for ( long i = 0; i < AggregationFunctionCall_rows; i++ )
+        for ( long i = 0; i < rows; i++ )
         {
             aggregator.update( new Object[]{i} );
         }

@@ -56,7 +56,7 @@ public class CreateIndexNonUnique extends AbstractCreateIndex
             allowed = {"SCHEMA"},
             base = {"SCHEMA"} )
     @Param( {} )
-    public IndexType CreateIndexNonUnique_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {
@@ -65,7 +65,7 @@ public class CreateIndexNonUnique extends AbstractCreateIndex
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateIndexNonUnique_type;
+    public String type;
 
     @Override
     int nodeCount()
@@ -76,7 +76,7 @@ public class CreateIndexNonUnique extends AbstractCreateIndex
     @Override
     String getType()
     {
-        return CreateIndexNonUnique_type;
+        return type;
     }
 
     @Override
@@ -117,14 +117,14 @@ public class CreateIndexNonUnique extends AbstractCreateIndex
     @TearDown( Level.Iteration )
     public void dropIndex()
     {
-        dropSchemaIndex( db(), LABEL, CreateIndexNonUnique_type );
+        dropSchemaIndex( db(), LABEL, type );
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SingleShotTime )
     public void createIndex()
     {
-        createSchemaIndex( db(), LABEL, CreateIndexNonUnique_type );
+        createSchemaIndex( db(), LABEL, type );
         waitForSchemaIndexes( db(), LABEL );
     }
 }

@@ -26,7 +26,7 @@ class OptionalExpand extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(Slotted.NAME))
   @Param(Array[String]())
-  var OptionalExpand_runtime: String = _
+  var runtime: String = _
 
   override def description = "MATCH (n1) OPTIONAL MATCH (n1)-[r:R1]->(n2) WHERE id(n2)%2=0 RETURN n1,r,n2"
 
@@ -87,7 +87,7 @@ class OptionalExpandThreadState {
 
   @Setup
   def setUp(benchmarkState: OptionalExpand): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.OptionalExpand_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

@@ -30,25 +30,25 @@ class VarExpand extends AbstractCypherBenchmark {
     allowed = Array(Interpreted.NAME, Slotted.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var VarExpand_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("10"),
     base = Array("10"))
   @Param(Array[String]())
-  var VarExpand_degree: Int = _
+  var degree: Int = _
 
   @ParamValues(
     allowed = Array("1", "2"),
     base = Array("2"))
   @Param(Array[String]())
-  var VarExpand_minDepth: Int = _
+  var minDepth: Int = _
 
   @ParamValues(
     allowed = Array("1", "2", "3"),
     base = Array("3"))
   @Param(Array[String]())
-  var VarExpand_length: Int = _
+  var length: Int = _
 
   override def description = "MATCH (a:Label{k1:42})-[:*1..3]->(b) RETURN a,b"
 
@@ -64,7 +64,7 @@ class VarExpand extends AbstractCypherBenchmark {
     .withLabels(label)
     .withNodeProperties(new PropertyDefinition(lookupKey, discrete(lookupDistribution: _*)))
     .withSchemaIndexes(new LabelKeyDefinition(label, lookupKey))
-    .withOutRelationships(new RelationshipDefinition(relType, VarExpand_degree))
+    .withOutRelationships(new RelationshipDefinition(relType, degree))
     .isReusableStore(true)
     .build()
 
@@ -95,7 +95,7 @@ class VarExpand extends AbstractCypherBenchmark {
       Seq(RelTypeName(relType.name())(Pos)),
       endNodeName,
       relName,
-      VarPatternLength(VarExpand_minDepth, Some(VarExpand_minDepth + VarExpand_length)),
+      VarPatternLength(minDepth, Some(minDepth + length)),
       ExpandAll,
       "r_NODES",
       "r_RELS",
@@ -130,7 +130,7 @@ class VarExpandThreadState {
 
   @Setup
   def setUp(benchmarkState: VarExpand): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.VarExpand_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

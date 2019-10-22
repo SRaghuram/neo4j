@@ -46,28 +46,28 @@ public class CreateRelationships extends AbstractKernelBenchmark
             allowed = {"1", "100", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateRelationships_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"true", "false"},
             base = {"true"} )
     @Param( {} )
-    public boolean CreateRelationships_dense;
+    public boolean dense;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateRelationships_format;
+    public String format;
 
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation CreateRelationships_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return CreateRelationships_kernelImplementation;
+        return kernelImplementation;
     }
 
     @Override
@@ -100,7 +100,7 @@ public class CreateRelationships extends AbstractKernelBenchmark
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
                                           .withSetting( dense_node_threshold, denseNodeThreshold() )
-                                          .withSetting( record_format, CreateRelationships_format )
+                                          .withSetting( record_format, format )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -108,7 +108,7 @@ public class CreateRelationships extends AbstractKernelBenchmark
 
     private String denseNodeThreshold()
     {
-        return CreateRelationships_dense
+        return dense
                // HIGH dense node threshold --> NO nodes are dense
                ? Integer.toString( Integer.MAX_VALUE )
                // LOW dense node threshold --> ALL nodes are dense
@@ -126,7 +126,7 @@ public class CreateRelationships extends AbstractKernelBenchmark
         public void setUp( ThreadParams threadParams, CreateRelationships benchmarkState, RNGState rngState )
                 throws InterruptedException, KernelException
         {
-            initializeTx( benchmarkState, benchmarkState.CreateRelationships_txSize );
+            initializeTx( benchmarkState, benchmarkState.txSize );
             int stride = threadParams.getThreadCount();
             boolean sliding = false;
             ValueGeneratorFun<Long> ids = stridingLong(

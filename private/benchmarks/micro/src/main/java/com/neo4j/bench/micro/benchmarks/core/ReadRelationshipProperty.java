@@ -62,13 +62,13 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String ReadRelationshipProperty_type;
+    public String type;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String ReadRelationshipProperty_format;
+    public String format;
 
     @Override
     public String description()
@@ -93,12 +93,12 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        PropertyDefinition propertyDefinition = randPropertyFor( ReadRelationshipProperty_type );
+        PropertyDefinition propertyDefinition = randPropertyFor( type );
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIPS_PER_NODE )
                 .withRelationshipProperties( propertyDefinition )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, ReadRelationshipProperty_format ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().withSetting( record_format, format ).build() )
                 .isReusableStore( true )
                 .build();
     }
@@ -113,7 +113,7 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
         public void setUp( ReadRelationshipProperty benchmarkState ) throws InterruptedException
         {
             tx = benchmarkState.db().beginTx();
-            propertyKey = randPropertyFor( benchmarkState.ReadRelationshipProperty_type ).key();
+            propertyKey = randPropertyFor( benchmarkState.type ).key();
         }
 
         @TearDown

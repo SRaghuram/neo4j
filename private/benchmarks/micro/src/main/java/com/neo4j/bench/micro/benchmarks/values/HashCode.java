@@ -76,7 +76,7 @@ public class HashCode extends AbstractValuesBenchmark
             base = {STR_SML, STR_BIG, POINT, BYTE_ARR, LNG_ARR, DBL_ARR}
     )
     @Param( {} )
-    public String HashCode_type;
+    public String type;
 
     private static final int ARBITRARY_UNIMPORTANT_IMAGINARY_LABEL_ID = 13;
     private static final int ARBITRARY_UNIMPORTANT_IMAGINARY_PROPERTY_KEY_ID = 11;
@@ -94,7 +94,7 @@ public class HashCode extends AbstractValuesBenchmark
 
         private Supplier<Value> createHashCodeSupplier( HashCode benchmarkState, RNGState rngState )
         {
-            String type = benchmarkState.HashCode_type;
+            String type = benchmarkState.type;
             Range range = defaultRangeFor( type );
             ValueGeneratorFun fun = randGeneratorFor(
                     type,

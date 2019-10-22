@@ -24,13 +24,13 @@ class ProjectNodeProperty extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var ProjectNodeProperty_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
     base = Array(LNG, STR_SML))
   @Param(Array[String]())
-  var ProjectNodeProperty_type: String = _
+  var propertyType: String = _
 
   override def description = "MATCH (n) RETURN n.key"
 
@@ -40,7 +40,7 @@ class ProjectNodeProperty extends AbstractCypherBenchmark {
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
-      .withNodeProperties(randPropertyFor(ProjectNodeProperty_type, KEY))
+      .withNodeProperties(randPropertyFor(propertyType, KEY))
       .isReusableStore(true)
       .build()
 
@@ -74,7 +74,7 @@ class ProjectNodePropertyThreadState {
 
   @Setup
   def setUp(benchmarkState: ProjectNodeProperty): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.ProjectNodeProperty_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

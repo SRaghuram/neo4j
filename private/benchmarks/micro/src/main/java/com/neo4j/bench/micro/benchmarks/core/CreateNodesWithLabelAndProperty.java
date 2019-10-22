@@ -60,13 +60,13 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"1"} )
     @Param( {} )
-    public int CreateNodesWithLabelAndProperty_txSize;
+    public int txSize;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String CreateNodesWithLabelAndProperty_format;
+    public String format;
 
     @ParamValues(
             allowed = {
@@ -75,19 +75,19 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateNodesWithLabelAndProperty_type;
+    public String type;
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA"},
             base = {"NONE", "SCHEMA"} )
     @Param( {} )
-    public IndexType CreateNodesWithLabelAndProperty_index;
+    public IndexType index;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String CreateNodesWithLabelAndProperty_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -108,8 +108,8 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
                 .withSchemaIndexes( schemaIndexes() )
                 .withNeo4jConfig( Neo4jConfigBuilder
                                           .empty()
-                                          .withSetting( record_format, CreateNodesWithLabelAndProperty_format )
-                                          .setTransactionMemory( CreateNodesWithLabelAndProperty_txMemory )
+                                          .withSetting( record_format, format )
+                                          .setTransactionMemory( txMemory )
                                           .build() )
                 .isReusableStore( false )
                 .build();
@@ -117,7 +117,7 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
 
     private LabelKeyDefinition[] schemaIndexes()
     {
-        return (IndexType.SCHEMA.equals( CreateNodesWithLabelAndProperty_index ))
+        return (IndexType.SCHEMA.equals( index ))
                ? new LabelKeyDefinition[]{new LabelKeyDefinition( LABEL, KEY )}
                : new LabelKeyDefinition[0];
     }
@@ -131,8 +131,8 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
         @Setup
         public void setUp( CreateNodesWithLabelAndProperty benchmarkState ) throws InterruptedException
         {
-            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNodesWithLabelAndProperty_txSize );
-            values = randPropertyFor( benchmarkState.CreateNodesWithLabelAndProperty_type ).value().create();
+            txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
+            values = randPropertyFor( benchmarkState.type ).value().create();
         }
 
         void advance()

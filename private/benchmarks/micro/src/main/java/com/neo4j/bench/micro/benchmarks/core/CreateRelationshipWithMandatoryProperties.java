@@ -72,13 +72,13 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String CreateRelationshipWithMandatoryProperties_type;
+    public String type;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000", "10000"},
             base = {"100"} )
     @Param( {} )
-    public int CreateRelationshipWithMandatoryProperties_txSize;
+    public int txSize;
 
     @Override
     public String description()
@@ -139,7 +139,7 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
             // sequence should never wrap, 'sliding' value is irrelevant
             boolean sliding = false;
             values = stridingFor(
-                    benchmarkState.CreateRelationshipWithMandatoryProperties_type,
+                    benchmarkState.type,
                     Integer.MAX_VALUE,
                     stride,
                     offset,
@@ -161,7 +161,7 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractCoreBench
             shuffle( this.nodes, ThreadLocalRandom.current() );
             txBatch = new TxBatch(
                     benchmarkState.db(),
-                    benchmarkState.CreateRelationshipWithMandatoryProperties_txSize );
+                    benchmarkState.txSize );
         }
 
         Node nextNode()

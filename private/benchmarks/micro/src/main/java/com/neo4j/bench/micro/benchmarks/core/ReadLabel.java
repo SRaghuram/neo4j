@@ -39,19 +39,19 @@ public class ReadLabel extends AbstractCoreBenchmark
             allowed = {"4", "64"},
             base = {"64"} )
     @Param( {} )
-    public int ReadLabel_count;
+    public int count;
 
     @ParamValues(
             allowed = {"SCATTERED_BY_NODE", "CO_LOCATED_BY_NODE"},
             base = {"SCATTERED_BY_NODE"} )
     @Param( {} )
-    public LabelLocality ReadLabel_locality;
+    public LabelLocality locality;
 
     @ParamValues(
             allowed = {"off_heap", "on_heap", "default"},
             base = {"default"} )
     @Param( {} )
-    public String ReadLabel_txMemory;
+    public String txMemory;
 
     @Override
     public String description()
@@ -79,11 +79,11 @@ public class ReadLabel extends AbstractCoreBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
-                .withLabels( labels( ReadLabel_count ) )
+                .withLabels( labels( count ) )
                 .withLabelOrder( Order.ORDERED )
-                .withLabelLocality( ReadLabel_locality )
+                .withLabelLocality( locality )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( ReadLabel_txMemory ).build() )
+                .withNeo4jConfig( Neo4jConfigBuilder.empty().setTransactionMemory( txMemory ).build() )
                 .build();
     }
 
@@ -106,7 +106,7 @@ public class ReadLabel extends AbstractCoreBenchmark
         public void setUp( ReadLabel benchmarkState ) throws InterruptedException
         {
             tx = benchmarkState.db().beginTx();
-            labels = labels( benchmarkState.ReadLabel_count );
+            labels = labels( benchmarkState.count );
             firstLabel = labels[0];
             lastLabel = labels[labels.length - 1];
         }
