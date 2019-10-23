@@ -31,13 +31,13 @@ class CaseExpression extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var CaseExpression_engine: String = _
+  var engine: String = _
 
   @ParamValues(
     allowed = Array("2", "4", "8", "16"),
     base = Array("8"))
   @Param(Array[String]())
-  var CaseExpression_size: Int = _
+  var size: Int = _
 
   override def description = "UNWIND $list RETURN CASE $p WHEN 1 THEN '1' WHEN 2 THEN '2'... ELSE 'DEFAULT'"
 
@@ -49,7 +49,7 @@ class CaseExpression extends AbstractCypherBenchmark {
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val resultColumns = List("result")
     val parameter = Parameter("x", symbols.CTAny)(Pos)
-    val alternatives = (0 until CaseExpression_size).map(i =>  astLiteralFor(i, LNG) -> astLiteralFor(i.toString, STR_SML))
+    val alternatives = (0 until size).map(i =>  astLiteralFor(i, LNG) -> astLiteralFor(i.toString, STR_SML))
 
     val expression = astCase(parameter, alternatives, Some( astLiteralFor("DEFAULT", STR_SML)))
     val listType = symbols.CTList(symbols.CTAny)
@@ -65,7 +65,7 @@ class CaseExpression extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: CaseExpressionThreadState, bh: Blackhole, rngState: RNGState): Long = {
-    threadState.paramBuilder.add("x", doubleValue(rngState.rng.nextInt(CaseExpression_size + 1)))
+    threadState.paramBuilder.add("x", doubleValue(rngState.rng.nextInt(size + 1)))
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params = threadState.paramBuilder.build(), tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
@@ -92,7 +92,7 @@ class CaseExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: CaseExpression, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.CaseExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
 

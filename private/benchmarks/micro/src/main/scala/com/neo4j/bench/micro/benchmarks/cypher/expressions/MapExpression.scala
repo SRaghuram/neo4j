@@ -30,13 +30,13 @@ class MapExpression extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var MapExpression_engine: String = _
+  var engine: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100"),
     base = Array("10"))
   @Param(Array[String]())
-  var MapExpression_size: Int = _
+  var size: Int = _
 
   override def description = "UNWIND $list RETURN {k1: $x, k2: $x, ..., k_size: $x) AS result"
 
@@ -48,7 +48,7 @@ class MapExpression extends AbstractCypherBenchmark {
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val resultColumns = List("result")
     val parameter = Parameter("x", symbols.CTAny)(Pos)
-    val mapExpressions = (0 until MapExpression_size).map(i => s"k$i" -> parameter)
+    val mapExpressions = (0 until size).map(i => s"k$i" -> parameter)
     val expression = astMap(mapExpressions: _*)
     val listType = symbols.CTList(symbols.CTAny)
     val unwindListParameter = astParameter("list", listType)
@@ -89,7 +89,7 @@ class MapExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: MapExpression, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.MapExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),

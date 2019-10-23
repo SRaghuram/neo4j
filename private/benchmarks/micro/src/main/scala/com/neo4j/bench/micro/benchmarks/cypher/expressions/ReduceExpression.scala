@@ -30,13 +30,13 @@ class ReduceExpression extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var ReduceExpression_engine: String = _
+  var engine: String = _
 
   @ParamValues(
     allowed = Array("10", "100", "1000"),
     base = Array("100"))
   @Param(Array[String]())
-  var ReduceExpression_size: Int = _
+  var size: Int = _
 
   override def description = "UNWIND $list RETURN reduce(sum = 0, n in $x | sum + n) AS result"
 
@@ -89,10 +89,10 @@ class ReduceExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: ReduceExpression, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.ReduceExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
-    list = VirtualValues.list((1 to benchmarkState.ReduceExpression_size).map(Values.intValue).toArray: _*)
+    list = VirtualValues.list((1 to benchmarkState.size).map(Values.intValue).toArray: _*)
     params = VirtualValues.map(Array("x", "list"),
                                Array(list, ReduceExpression.VALUES))
   }
