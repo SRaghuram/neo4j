@@ -32,7 +32,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.0.1</version>
+                    <version>3.1.1</version>
                     <executions>
                         <execution>
                             <id>generate-javadocs</id>
@@ -60,16 +60,11 @@
                         <links>
                             <link>https://docs.oracle.com/en/java/javase/${maven.compiler.source}/docs/api</link>
                         </links>
-
                         <!-- Defines grouping for overview -->
                         <groups>
                             <group>
                                 <title>Graph database</title>
                                 <packages>org.neo4j.graphdb:org.neo4j.dbms.api</packages>
-                            </group>
-                            <group>
-                                <title>Query language</title>
-                                <packages>org.neo4j.cypher.javacompat:org.neo4j.cypher.javacompat.*</packages>
                             </group>
                             <group>
                                 <title>Graph algorithms</title>
@@ -81,7 +76,7 @@
                             </group>
                             <group>
                                 <title>Backup (Enterprise edition)</title>
-                                <packages>org.neo4j.backup</packages>
+                                <packages>com.neo4j.backup</packages>
                             </group>
                             <group>
                                 <title>Import</title>
@@ -103,11 +98,11 @@
 
                         <!-- Include the following packages... (yes, has to be one line) -->
                         <subpackages>
-                            org.neo4j.backup:org.neo4j.graphalgo:org.neo4j.cypher.javacompat:org.neo4j.graphdb:org.neo4j.dbms.api:org.neo4j.index:org.neo4j.server.helpers:org.neo4j.server.rest.repr:org.neo4j.server.rest.web:org.neo4j.batchinsert:org.neo4j.logging:org.neo4j.procedure:org.neo4j.harness.junit:com.neo4j.harness.junit:org.neo4j.configuration
+                            com.neo4j.backup:org.neo4j.graphalgo:org.neo4j.graphdb:org.neo4j.dbms.api:org.neo4j.index:org.neo4j.server.helpers:org.neo4j.server.rest.repr:org.neo4j.server.rest.web:org.neo4j.batchinsert:org.neo4j.logging:org.neo4j.procedure:org.neo4j.harness.junit:com.neo4j.harness.junit:org.neo4j.configuration
                         </subpackages>
                         <!-- ...unless the package contains -->
                         <excludePackageNames>
-                            *.impl.*:*.internal.*:org.neo4j.logging.async:org.neo4j.server.rest.repr.formats:org.neo4j.server.rest.repr.util:org.neo4j.graphdb.factory:org.neo4j.graphdb.facade
+                            *.impl.*:*.internal.*
                         </excludePackageNames>
                     </configuration>
                 </plugin>

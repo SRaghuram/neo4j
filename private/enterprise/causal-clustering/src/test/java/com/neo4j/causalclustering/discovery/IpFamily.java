@@ -11,9 +11,9 @@ public enum IpFamily
     IPV4( "localhost", "127.0.0.1", "0.0.0.0" ),
     IPV6( "::1", "::1", "::" );
 
-    private String localhostName;
-    private String localhostAddress;
-    private String wildcardAddress;
+    private final String localhostName;
+    private final String localhostAddress;
+    private final String wildcardAddress;
 
     IpFamily( String localhostName, String localhostAddress, String wildcardAddress )
     {

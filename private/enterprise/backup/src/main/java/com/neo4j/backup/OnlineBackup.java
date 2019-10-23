@@ -14,6 +14,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import java.io.OutputStream;
 import java.nio.file.Path;
 
+import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
@@ -33,6 +34,7 @@ import static org.neo4j.util.Preconditions.checkArgument;
  * @see OnlineBackup#from(String)
  * @see OnlineBackup#from(String, int)
  */
+@PublicApi
 public class OnlineBackup
 {
     private final String hostnameOrIp;

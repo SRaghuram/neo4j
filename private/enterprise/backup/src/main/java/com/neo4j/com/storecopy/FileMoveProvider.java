@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 
+import static com.neo4j.com.storecopy.FileMoveAction.moveViaFileSystem;
 import static java.util.stream.Collectors.toList;
 
 public class FileMoveProvider
@@ -95,7 +96,7 @@ public class FileMoveProvider
         File base = basePath; // Capture effectively-final base path snapshot.
         Stream<File> files = listing.stream().filter( this::isFile );
         Stream<File> dirs = listing.stream().filter( this::isDirectory );
-        Stream<FileMoveAction> moveFiles = files.map( f -> moveFileCorrectly( f, base ) );
+        Stream<FileMoveAction> moveFiles = files.map( f -> moveViaFileSystem( f, base ) );
         Stream<FileMoveAction> traverseDirectories = dirs.flatMap( d -> traverseForMoving( d, base ) );
         return Stream.concat( moveFiles, traverseDirectories );
     }
@@ -120,14 +121,5 @@ public class FileMoveProvider
         }
 
         return Arrays.stream( fsaFiles ).distinct().collect( toList() );
-    }
-
-    /**
-     * Some files are handled via page cache for CAPI flash, others are only used on the default file system. This
-     * contains the logic for handling files between the 2 systems
-     */
-    private FileMoveAction moveFileCorrectly( File fileToMove, File basePath )
-    {
-        return FileMoveAction.moveViaFileSystem( fileToMove, basePath );
     }
 }
