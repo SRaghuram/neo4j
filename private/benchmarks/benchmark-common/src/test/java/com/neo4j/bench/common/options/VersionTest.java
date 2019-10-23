@@ -45,7 +45,7 @@ class VersionTest
     @Test
     void shouldNotAllowToVersionsThatHaveNoneNumberVales()
     {
-        exception.expect( RuntimeException.class );
+        exception.expect( IllegalArgumentException.class );
         new Version( "a.0.0" );
     }
 }
