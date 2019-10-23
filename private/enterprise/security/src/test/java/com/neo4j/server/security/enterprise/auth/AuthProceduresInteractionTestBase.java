@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -543,7 +544,15 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testSuccessfulListRoles( adminSubject, new String[]{ ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE } );
     }
 
+    // TODO: Delete this test once the ability to remove the admin role is restored
     @Test
+    void shouldNotBeAbleToDeleteAdminRole()
+    {
+        assertSystemCommandFail( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ADMIN ), "Permission denied" );
+    }
+
+    // TODO: Re-enable this test once the ability to remove the admin role is restored
+    @Ignore
     void shouldLoseAdminRightsWhenAdminRoleIsDeleted()
     {
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ADMIN ) );
