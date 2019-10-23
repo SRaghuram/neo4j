@@ -31,6 +31,7 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListe
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
@@ -66,7 +67,8 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final DiscoveryMemberFactory discoveryMemberFactory;
     private final Executor executor;
     private final Clock clock;
-    private final ReplicatedDataMonitor monitor;
+    private final ReplicatedDataMonitor replicatedDataMonitor;
+    private final ClusterSizeMonitor clusterSizeMonitor;
     private final Config config;
     private final MemberId myself;
     private final Log log;
@@ -94,8 +96,9 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         this.myself = myself;
         this.log = logProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
-        this.monitor = monitors.newMonitor( ReplicatedDataMonitor.class );
+        this.replicatedDataMonitor = monitors.newMonitor( ReplicatedDataMonitor.class );
         this.globalTopologyState = newGlobalTopologyState( logProvider, listenerService );
+        this.clusterSizeMonitor = monitors.newMonitor( ClusterSizeMonitor.class );
     }
 
     @Override
@@ -129,14 +132,15 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
                 cluster,
                 topologyBuilder,
                 config,
-                monitor );
+                replicatedDataMonitor,
+                clusterSizeMonitor );
         return actorSystemLifecycle.applicationActorOf( coreTopologyProps, CoreTopologyActor.NAME );
     }
 
     private ActorRef directoryActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<Map<DatabaseId,LeaderInfo>> directorySink,
             ActorRef rrTopologyActor )
     {
-        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, monitor );
+        Props directoryProps = DirectoryActor.props( cluster, replicator, directorySink, rrTopologyActor, replicatedDataMonitor );
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 

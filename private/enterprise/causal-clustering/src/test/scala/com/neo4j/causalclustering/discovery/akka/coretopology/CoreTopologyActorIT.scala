@@ -16,7 +16,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka._
-import com.neo4j.causalclustering.discovery.akka.monitoring.{ReplicatedDataIdentifier, ReplicatedDataMonitor}
+import com.neo4j.causalclustering.discovery.akka.monitoring.{ClusterSizeMonitor, ReplicatedDataIdentifier, ReplicatedDataMonitor}
 import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, _}
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.mockito.ArgumentMatchers.any
@@ -230,7 +230,8 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
       cluster,
       topologyBuilder,
       config,
-      mock[ReplicatedDataMonitor])
+      mock[ReplicatedDataMonitor],
+      mock[ClusterSizeMonitor])
 
     val topologyActorRef = system.actorOf(props)
 

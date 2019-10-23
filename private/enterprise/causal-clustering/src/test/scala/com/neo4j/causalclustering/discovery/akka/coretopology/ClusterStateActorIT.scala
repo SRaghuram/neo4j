@@ -15,11 +15,16 @@ import akka.cluster.ClusterEvent.{ClusterDomainEvent, UnreachableMember}
 import akka.cluster.{Cluster, ClusterEvent, Member, MemberStatus}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_detector_acceptable_heartbeat_pause, akka_failure_detector_heartbeat_interval}
-import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest.createMember
+import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
+import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, Tick}
+import org.hamcrest.Matchers.is
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
+import org.neo4j.function.ThrowingSupplier
 import org.neo4j.internal.helpers.collection.Iterators
+import org.neo4j.test.assertion.Assert.assertEventually
 
 import scala.collection.immutable.SortedSet
 import scala.concurrent.duration.FiniteDuration
@@ -59,7 +64,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
     }
     "receiving cluster messages" should {
       "send updated cluster view" when {
-        val upMembers = Seq.tabulate(3)(port => ClusterViewMessageTest.createMember(port, MemberStatus.up))
+        val upMembers = Seq.tabulate(3)(port => createMember(port, MemberStatus.up))
         val upAsSet = SortedSet[Member]() ++ upMembers
         val upAsJavaSet =
         {
@@ -110,7 +115,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
         }
         "member up event" in new Fixture {
           Given("member up event")
-          val member = ClusterViewMessageTest.createMember(99, MemberStatus.up)
+          val member = createMember(99, MemberStatus.up)
           val event = ClusterEvent.MemberUp(member)
 
           When("event sent")
@@ -121,7 +126,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
         }
         "member weakly up event" in new Fixture {
           Given("member up event")
-          val member = ClusterViewMessageTest.createMember(99, MemberStatus.weaklyUp)
+          val member = createMember(99, MemberStatus.weaklyUp)
           val event = ClusterEvent.MemberWeaklyUp(member)
 
           When("event sent")
@@ -132,7 +137,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
         }
         "member removed event" in new Fixture {
           Given("A member")
-          val member = ClusterViewMessageTest.createMember(99, MemberStatus.up)
+          val member = createMember(99, MemberStatus.up)
 
           And("an initial state with member")
           val initialEvent = ClusterEvent.MemberUp(member)
@@ -178,6 +183,22 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
           downingProbe.expectMsg(max = toWait, new ClusterViewMessage(false, upAsJavaSet, Collections.emptySet()))
         }
       }
+      "update monitor" when {
+        "tick received" in new Fixture {
+          clusterStateRef ! Tick.getInstance
+
+          assertEventually(monitor.membersSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.unreachableSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.convergedSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+        }
+        "cluster event received" in new Fixture {
+          clusterStateRef ! ClusterEvent.MemberUp(createMember(99, MemberStatus.up))
+
+          assertEventually(monitor.membersSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.unreachableSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.convergedSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+        }
+      }
     }
 
   }
@@ -191,7 +212,28 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
       .set(akka_failure_detector_heartbeat_interval, Duration.ofSeconds( 1 ) )
       .set(akka_failure_detector_acceptable_heartbeat_pause, Duration.ofSeconds( 1 ) )
       .build()
-    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config)
+    val monitor = new ClusterSizeMonitor {
+      var hasSetMembers = false
+      var hasSetUnreachable = false
+      var hasSetConverged = false
+
+      def membersSet = new ThrowingSupplier[Boolean, Exception] {
+        override def get(): Boolean = hasSetMembers
+      }
+      def unreachableSet = new ThrowingSupplier[Boolean, Exception] {
+        override def get(): Boolean = hasSetUnreachable
+      }
+      def convergedSet = new ThrowingSupplier[Boolean, Exception] {
+        override def get(): Boolean = hasSetConverged
+      }
+
+      override def setMembers(size: Int): Unit = hasSetMembers = true
+
+      override def setUnreachable(size: Int): Unit = hasSetUnreachable = true
+
+      override def setConverged(converged: Boolean): Unit = hasSetConverged = true
+    }
+    val props = ClusterStateActor.props(cluster, coreTopologyProbe.ref, downingProbe.ref, metadataPrope.ref, config, monitor)
     val clusterStateRef = system.actorOf(props)
   }
 

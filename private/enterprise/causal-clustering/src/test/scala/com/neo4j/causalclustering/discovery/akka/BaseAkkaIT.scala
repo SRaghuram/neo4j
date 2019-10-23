@@ -116,15 +116,15 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
       val fixture = newFixture
       import fixture._
       replicatedDataActorRef ! Replicator.Changed(dataKey)(data)
-      assertEventually(monitor.setVis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-      assertEventually(monitor.setInvis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.visSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.invisSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
     "update metrics on tick" in {
       val fixture = newFixture
       import fixture._
       replicatedDataActorRef ! Tick.getInstance()
-      assertEventually(monitor.setVis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-      assertEventually(monitor.setInvis, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.visSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.invisSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
   }
 
@@ -136,10 +136,10 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
       private var hasSetVisible = false
       private var hasSetInvisible = false
 
-      def setVis = new ThrowingSupplier[Boolean, Exception] {
+      def visSet = new ThrowingSupplier[Boolean, Exception] {
         override def get(): Boolean = hasSetVisible
       }
-      def setInvis = new ThrowingSupplier[Boolean, Exception] {
+      def invisSet = new ThrowingSupplier[Boolean, Exception] {
         override def get(): Boolean = hasSetInvisible
       }
 

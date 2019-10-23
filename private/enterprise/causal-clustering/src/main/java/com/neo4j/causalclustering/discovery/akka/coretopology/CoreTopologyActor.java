@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
+import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
 
@@ -31,13 +32,21 @@ import static java.util.stream.Collectors.toSet;
 
 public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 {
-    public static Props props( DiscoveryMember myself, SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
-            SourceQueueWithComplete<BootstrapState> bootstrapStateSink, ActorRef rrTopologyActor, ActorRef replicator,
-            Cluster cluster, TopologyBuilder topologyBuilder, Config config, ReplicatedDataMonitor monitor )
+    public static Props props(
+            DiscoveryMember myself,
+            SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink,
+            SourceQueueWithComplete<BootstrapState> bootstrapStateSink,
+            ActorRef rrTopologyActor,
+            ActorRef replicator,
+            Cluster cluster,
+            TopologyBuilder topologyBuilder,
+            Config config,
+            ReplicatedDataMonitor replicatedDataMonitor,
+            ClusterSizeMonitor clusterSizeMonitor )
     {
         return Props.create( CoreTopologyActor.class,
                 () -> new CoreTopologyActor( myself, topologyUpdateSink, bootstrapStateSink, rrTopologyActor, replicator,
-                        cluster, topologyBuilder, config, monitor ) );
+                        cluster, topologyBuilder, config, replicatedDataMonitor, clusterSizeMonitor ) );
     }
 
     public static final String NAME = "cc-core-topology-actor";
@@ -69,7 +78,8 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
             Cluster cluster,
             TopologyBuilder topologyBuilder,
             Config config,
-            ReplicatedDataMonitor monitor )
+            ReplicatedDataMonitor replicatedDataMonitor,
+            ClusterSizeMonitor clusterSizeMonitor )
     {
         this.topologyUpdateSink = topologyUpdateSink;
         this.bootstrapStateSink = bootstrapStateSink;
@@ -82,10 +92,10 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.config = config;
 
         // Children, who will be sending messages to us
-        metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, monitor ) );
+        metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, replicatedDataMonitor ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster ) );
-        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config ) );
-        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), monitor ) );
+        getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, clusterSizeMonitor ) );
+        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor ) );
     }
 
     @Override
