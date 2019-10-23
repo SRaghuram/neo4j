@@ -58,6 +58,17 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
       }
     }
 
+  protected def registerDummyInOutFunction(typ: Neo4jTypes.AnyType = Neo4jTypes.NTAny) =
+    registerUserDefinedFunction("my.first.func") { builder =>
+      val builder = functionSignature(Array("my", "first"), "func")
+      builder.out(typ)
+      builder.in("in", typ)
+
+      new BasicUserFunction(builder.build) {
+        override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = input.head
+      }
+    }
+
   protected def registerUserAggregationFunction(value: AnyRef, typ: Neo4jTypes.AnyType = Neo4jTypes.NTAny) =
     registerUserDefinedAggregationFunction("my.first.value") { builder =>
       val builder = functionSignature(Array("my", "first"), "value")

@@ -7,6 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.util
 
+import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.helpers.collection.MapUtil.map
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.kernel.impl.proc.Procedures
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -129,5 +131,20 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     result.hasNext shouldBe true
     result.next.get("u") should equal(true)
+  }
+
+  test("Fail when trying to pass map to function that takes string") {
+    registerDummyInOutFunction(Neo4jTypes.NTString)
+
+    val value = Map("index" -> 2, "apa" -> "monkey").asJava
+
+    val transaction = graphOps.beginTx()
+    try {
+      // When & then
+      val exception = the [QueryExecutionException] thrownBy graph.execute("RETURN my.first.func($value) as u", map("value", value)).next()
+      exception.getMessage should fullyMatch regex "Wrong argument type: Can't coerce `Map[^`]*` to String".r
+    } finally {
+      transaction.close()
+    }
   }
 }
