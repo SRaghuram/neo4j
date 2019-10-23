@@ -13,7 +13,7 @@ abstract class MorselFusingNotificationTestBase[CONTEXT <: RuntimeContext](editi
                                                                            runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite(edition, runtime) {
 
   test("should generate notification if fusing fails") {
-    nodeGraph(1)
+    given { nodeGraph(1) }
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("var0")

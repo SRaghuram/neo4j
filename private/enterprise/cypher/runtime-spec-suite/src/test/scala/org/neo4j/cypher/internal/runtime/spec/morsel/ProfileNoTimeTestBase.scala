@@ -19,8 +19,7 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
   protected val NO_PROFILE = new OperatorProfile.ConstOperatorProfile(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
 
   test("should not profile time if completely fused") {
-    // given
-    nodeGraph(sizeHint)
+    given { nodeGraph(sizeHint) }
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")

@@ -26,9 +26,11 @@ abstract class ParallelErrorHandlingTestBase(runtime: CypherRuntime[EnterpriseRu
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)), runtime) {
 
   test("should complete query with concurrent errors and close cursors") {
-    nodePropertyGraph(MORSEL_SIZE * WORKERS, {
-      case i => Map("prop" -> (i + 1) % MORSEL_SIZE)
-    })
+    given {
+      nodePropertyGraph(MORSEL_SIZE * WORKERS, {
+        case i => Map("prop" -> (i + 1) % MORSEL_SIZE)
+      })
+    }
 
     // given
     val logicalQuery = new LogicalQueryBuilder(this)

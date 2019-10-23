@@ -69,31 +69,34 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
   }
 
   def init(): Unit = {
-    try {
-      index("Label", "prop")
-      index("Label", "text")
-      index("Label", "propWithDuplicates")
-    } catch {
-      case e:IllegalStateException =>
-        // TODO This is to investigate flaky tests
-        Thread.getAllStackTraces.forEach {
-          case (thread, trace) => stringify(thread, trace)
-        }
-        throw e
+    nodes = given {
+      try {
+        index("Label", "prop")
+        index("Label", "text")
+        index("Label", "propWithDuplicates")
+      } catch {
+        case e: IllegalStateException =>
+          // TODO This is to investigate flaky tests
+          Thread.getAllStackTraces.forEach {
+            case (thread, trace) => stringify(thread, trace)
+          }
+          throw e
+      }
+      val ns = nodePropertyGraph(graphSize, {
+        case i => Map("prop" -> i, "text" -> i.toString, "propWithDuplicates" -> ((i / 2) * 2))
+      }, "Label")
+      val relTuples = (for (i <- ns.indices) yield {
+        Seq(
+          (i, (i + 1) % ns.length, "NEXT"),
+          (i, (i + 2) % ns.length, "NEXT"),
+          (i, (i + 3) % ns.length, "NEXT"),
+          (i, (i + 4) % ns.length, "NEXT"),
+          (i, (i + 5) % ns.length, "NEXT")
+        )
+      }).reduce(_ ++ _)
+      connect(ns, relTuples)
+      ns
     }
-    nodes = nodePropertyGraph(graphSize, {
-      case i => Map("prop" -> i, "text" -> i.toString, "propWithDuplicates" -> ((i/2) * 2))
-    }, "Label")
-    val relTuples = (for (i <- nodes.indices) yield {
-      Seq(
-        (i, (i + 1) % nodes.length, "NEXT"),
-        (i, (i + 2) % nodes.length, "NEXT"),
-        (i, (i + 3) % nodes.length, "NEXT"),
-        (i, (i + 4) % nodes.length, "NEXT"),
-        (i, (i + 5) % nodes.length, "NEXT")
-      )
-    }).reduce(_ ++ _)
-    connect(nodes, relTuples)
   }
 
   def allNodesNTimes(n: Int): InputValues = {

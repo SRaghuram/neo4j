@@ -18,10 +18,11 @@ class CompiledAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE.DEFAULT, Co
 class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE.DEFAULT, CompiledRuntime) {
   // Compiled only supports count, thus not extending AggregationTestBase
   test("should count(n.prop)") {
-    // given
-    nodePropertyGraph(10000, {
-      case i: Int if i % 2 == 0 => Map("num" -> i)
-    }, "Honey")
+    given {
+      nodePropertyGraph(10000, {
+        case i: Int if i % 2 == 0 => Map("num" -> i)
+      }, "Honey")
+    }
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)

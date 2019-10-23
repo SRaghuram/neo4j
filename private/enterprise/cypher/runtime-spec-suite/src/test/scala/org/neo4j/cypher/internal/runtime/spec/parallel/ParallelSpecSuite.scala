@@ -179,6 +179,7 @@ class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(ENT
 
 // NODE HASH JOIN
 class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // REACTIVE
 class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.FUSING, PARALLEL) with ParallelRuntimeSpecSuite
@@ -223,8 +224,7 @@ class ParallelRuntimeProfileNoFusingTimeTest extends ProfileTimeTestBase(ENTERPR
 class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite {
   //this test differs in Morsel and Parallel since we fuse differently
   test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
-    // given
-    circleGraph(SIZE_HINT, "X")
+    given { circleGraph(SIZE_HINT, "X") }
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)

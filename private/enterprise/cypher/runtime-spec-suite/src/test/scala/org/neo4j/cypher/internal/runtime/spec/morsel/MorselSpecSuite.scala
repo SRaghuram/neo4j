@@ -179,7 +179,9 @@ class MorselCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUS
 class MorselMiscTest extends MiscTestBase(FUSING, MORSEL) with MorselSpecSuite
 class MorselMiscNoFusingTest extends MiscTestBase(NO_FUSING, MORSEL) with MorselSpecSuite
 class MorselExpressionTest extends ExpressionTestBase(FUSING, MORSEL)
+                           with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class MorselExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, MORSEL)
+                                   with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class MorselFusingNotificationTest extends MorselFusingNotificationTestBase(FUSING, MORSEL) // not MorselSpecSuite, since we expect fusing to fail
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL) with MorselSpecSuite
 class MorselMemoryManagementTest extends MemoryManagementTestBase(FUSING, MORSEL)
@@ -205,8 +207,7 @@ class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, MORSE
 class MorselProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite {
   //this test differs in Morsel and Parallel since we fuse differently
   test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
-    // given
-    circleGraph(SIZE_HINT, "X")
+    given { circleGraph(SIZE_HINT, "X") }
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)

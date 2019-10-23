@@ -43,7 +43,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     // GIVEN
     val SIZE = 10
 
-    bipartiteGraph(SIZE,"A","B","R")
+    given { bipartiteGraph(SIZE,"A","B","R") }
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("n1", "n3")
