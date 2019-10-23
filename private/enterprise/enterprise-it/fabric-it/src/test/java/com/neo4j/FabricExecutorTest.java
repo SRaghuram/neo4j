@@ -601,15 +601,11 @@ class FabricExecutorTest
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
         );
-        try
-        {
+        assertThrows( Throwable.class, () -> {
             Transaction tx = transaction( "mega", AccessMode.READ );
             tx.run( query ).consume();
             tx.success();
-        }
-        catch ( Exception e )
-        {
-        }
+        } );
 
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
