@@ -102,9 +102,15 @@ public class BenchmarkDescription
                                                        } )
                                                 .collect( toMap( BenchmarkParamDescription::name, p -> p.values().iterator().next() ) );
 
-        String simpleName = className().substring( className().lastIndexOf( "." ) + 1 ) + "." + method.name();
-
-        return Benchmark.benchmarkFor( description(), simpleName, mode, params ).name();
+        try
+        {
+            String simpleName = Class.forName( className ).getSimpleName() + "." + method.name();
+            return Benchmark.benchmarkFor( description(), simpleName, mode, params ).name();
+        }
+        catch ( ClassNotFoundException e )
+        {
+            throw new RuntimeException( format( "Was unable to create an instance of: %s", className ), e );
+        }
     }
 
     public boolean isEnabled()

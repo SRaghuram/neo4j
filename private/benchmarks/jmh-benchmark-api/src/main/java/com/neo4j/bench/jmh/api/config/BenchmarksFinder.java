@@ -168,7 +168,7 @@ public class BenchmarksFinder
         return benchmarkMethods;
     }
 
-    // NOTE: this is a sanity check, to make sure old cold is updated to remove the class name prefixes that used to be necessary
+    // NOTE: this is a sanity check, to make sure old code is updated to remove the class name prefixes that used to be necessary
     List<Field> getParamFieldsWithClassNamePrefix()
     {
         return getParamFields().stream()
