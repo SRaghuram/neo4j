@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.EnterpriseTemporaryDatabaseFactory;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
@@ -212,7 +211,10 @@ class RaftBootstrapperIT
                 .amountOfNodes( nodeCount )
                 .build();
 
-        IdFilesDeleter.deleteIdFiles( database.layout(), fileSystem );
+        for ( File idFile : database.layout().idFiles() )
+        {
+            fileSystem.deleteFileOrThrow( idFile );
+        }
 
         StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
         LogFiles transactionLogs = buildLogFiles( database.layout() );
