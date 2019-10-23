@@ -39,7 +39,8 @@ public class TransactionManager extends LifecycleAdapter
 
     public FabricTransaction begin( FabricTransactionInfo transactionInfo )
     {
-        FabricTransactionImpl fabricTransaction = new FabricTransactionImpl( transactionInfo, remoteExecutor, localExecutor, logService, this, jobScheduler, fabricConfig );
+        FabricTransactionImpl fabricTransaction =
+                new FabricTransactionImpl( transactionInfo, remoteExecutor, localExecutor, logService, this, jobScheduler, fabricConfig );
         fabricTransaction.begin();
         openTransactions.add( fabricTransaction );
         return fabricTransaction;
