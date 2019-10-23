@@ -60,7 +60,7 @@ public class EnterpriseNeoServer extends CommunityNeoServer
             try
             {
                 ServerThreadViewSetter setter =
-                        databaseService.getDatabase().getDependencyResolver().resolveDependency( ServerThreadViewSetter.class );
+                        databaseService.getSystemDatabase().getDependencyResolver().resolveDependency( ServerThreadViewSetter.class );
                 setter.set( new ServerThreadView()
                 {
                     @Override
