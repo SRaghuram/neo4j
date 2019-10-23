@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -27,7 +26,6 @@ import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -41,7 +39,10 @@ import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.VirtualValues;
 
+import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -57,6 +58,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
+import static org.neo4j.values.storable.Values.stringArray;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
@@ -111,7 +113,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        callIndexProcedure( null, indexPattern( label, propKey ), nonDefaultSchemaIndex.providerName() );
+        callIndexProcedure( null, nonDefaultSchemaIndex.providerName(), label, propKey );
         commit();
 
         // then
@@ -134,8 +136,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        String pattern = indexPattern( "Person", "name" );
-        ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, pattern, null ) );
+        ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, null, "Person", "name" ) );
 
         // then
         assertThat( e.getMessage(), containsString( "Could not create index with specified index provider being null" ) );
@@ -156,8 +157,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        String pattern = indexPattern( "Person", "name" );
-        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, pattern, "non+existing-1.0" ) );
+        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, "non+existing-1.0", "Person", "name" ) );
         assertThat( e.getMessage(), allOf(
                 containsString( "Failed to invoke procedure" ),
                 containsString( "Tried to get index provider" ),
@@ -169,7 +169,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     @ParameterizedTest
     @MethodSource( "parameters" )
     void throwIfIndexAlreadyExists( boolean uniquenessConstraint, String indexProcedureName,
-                                    String expectedSuccessfulCreationStatus ) throws Exception
+                                    String expectedSuccessfulCreationStatus )
     {
         init( uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
         // given
@@ -184,8 +184,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        String pattern = indexPattern( label, propertyKey );
-        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, pattern, nonDefaultSchemaIndex.providerName() ) );
+        var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, nonDefaultSchemaIndex.providerName(), label, propertyKey ) );
 
         if ( uniquenessConstraint )
         {
@@ -229,26 +228,18 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return node;
     }
 
-    private static String indexPattern( String label, String... properties )
+    private RawIterator<AnyValue[],ProcedureException> callIndexProcedure( String name, String specifiedProvider, String label, String... properties )
+            throws ProcedureException
     {
-        StringJoiner pattern = new StringJoiner( ",", ":" + label + "(", ")" );
-        for ( String property : properties )
-        {
-            pattern.add( property );
-        }
-        return pattern.toString();
-    }
-
-    private RawIterator<AnyValue[],ProcedureException> callIndexProcedure( String name, String pattern, String specifiedProvider )
-            throws ProcedureException, TransactionFailureException
-    {
+        final AnyValue[] propertiesAsValues = Arrays.stream( properties ).map( Values::stringValue ).toArray( AnyValue[]::new );
         Procedures procedures = procsSchema();
         int procedureId = procedures.procedureGet( ProcedureSignature.procedureName( "db", indexProcedureName ) ).id();
         return procedures.procedureCallSchema( procedureId,
                 new AnyValue[]
                         {
                                 stringOrNoValue( name ), // name
-                                stringOrNoValue( pattern ), // index
+                                VirtualValues.list( stringValue( label ) ), // labels
+                                VirtualValues.list( propertiesAsValues ), // properties
                                 stringOrNoValue( specifiedProvider ) // providerName
                         },
                 ProcedureCallContext.EMPTY );
@@ -275,12 +266,11 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         newTransaction( AnonymousContext.full() );
-        String pattern = indexPattern( label, properties );
         String name = "MyIndex";
         String specifiedProvider = nonDefaultSchemaIndex.providerName();
-        RawIterator<AnyValue[], ProcedureException> result = callIndexProcedure( name, pattern, specifiedProvider );
+        RawIterator<AnyValue[],ProcedureException> result = callIndexProcedure( name, specifiedProvider, label, properties );
         // then
-        assertThat( Arrays.asList( result.next() ), contains( stringValue( name ), stringValue( pattern ), stringValue( specifiedProvider ),
+        assertThat( asList( result.next() ), contains( stringValue( name ), stringArray( label ), stringArray( properties ), stringValue( specifiedProvider ),
                 stringValue( expectedSuccessfulCreationStatus ) ) );
         commit();
         awaitIndexOnline();
@@ -348,7 +338,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         throws Exception
     {
         init( uniquenessConstraint, indexProcedureName, expectedSuccessfulCreationStatus );
-        assumeTrue( uniquenessConstraint, "Only relevant for exuniqueness constraints" );
+        assumeTrue( uniquenessConstraint, "Only relevant for uniqueness constraints" );
 
         // given
         String label = "SomeLabel";
@@ -389,12 +379,11 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         } );
     }
 
-    private void createConstraint( String label, String... properties ) throws TransactionFailureException, ProcedureException
+    private void createConstraint( String label, String... properties ) throws ProcedureException
     {
         newTransaction( AnonymousContext.full() );
-        String pattern = indexPattern( label, properties );
         String specifiedProvider = nonDefaultSchemaIndex.providerName();
-        callIndexProcedure( null, pattern, specifiedProvider );
+        callIndexProcedure( null, specifiedProvider, label, properties );
         commit();
     }
 
