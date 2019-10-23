@@ -235,3 +235,4 @@ Feature "SubqueryAcceptance": Scenario "CALL around union query - using returned
 Feature "SubqueryAcceptance": Scenario "CALL around union query with different return column orders - using returned vars in outer query"
 Feature "SubqueryAcceptance": Scenario "Should treat variables with the same name but different scopes correctly"
 Feature "SubqueryAcceptance": Scenario "Post-processing of a subquery result"
+Feature "SubqueryAcceptance": Scenario "Should work with preceding MATCH and aggregation"
