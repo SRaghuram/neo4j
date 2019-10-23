@@ -61,13 +61,13 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
 {
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation FindNodeRangeWithValues_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
             base = {"standard"} )
     @Param( {} )
-    public String FindNodeRangeWithValues_format;
+    public String format;
 
     /*
     NOTE: POINT is not enabled because, at present, nodes are filled using <ascending> policy and queried using <random> policy.
@@ -79,13 +79,13 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
                     DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION},
             base = {LNG, STR_SML} )
     @Param( {} )
-    public String FindNodeRangeWithValues_type;
+    public String propertyType;
 
     @ParamValues(
             allowed = {"1", "100", "10000", "1000000"},
             base = {"10000"} )
     @Param( {} )
-    public int FindNodeRangeWithValues_rangeSize;
+    public int rangeSize;
 
     @Override
     public String description()
@@ -109,9 +109,9 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        Number initial = defaultRangeFor( FindNodeRangeWithValues_type ).min();
+        Number initial = defaultRangeFor( propertyType ).min();
         // will create sequence of ascending number values, starting at 'min' and ending at 'min' + NODE_COUNT
-        PropertyDefinition propertyDefinition = ascPropertyFor( FindNodeRangeWithValues_type, initial );
+        PropertyDefinition propertyDefinition = ascPropertyFor( propertyType, initial );
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
@@ -124,7 +124,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return FindNodeRangeWithValues_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
@@ -143,11 +143,11 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
         public void setUp( FindNodeRangeWithValues benchmark ) throws Exception
         {
             initializeTx( benchmark );
-            Range range = defaultRangeFor( benchmark.FindNodeRangeWithValues_type );
+            Range range = defaultRangeFor( benchmark.propertyType );
             min = range.min().longValue();
             max = min + NODE_COUNT;
-            rangeSize = benchmark.FindNodeRangeWithValues_rangeSize;
-            type = benchmark.FindNodeRangeWithValues_type;
+            rangeSize = benchmark.rangeSize;
+            type = benchmark.propertyType;
 
             propertyKey = propertyKeyToId( ascPropertyFor( type, min ) );
 

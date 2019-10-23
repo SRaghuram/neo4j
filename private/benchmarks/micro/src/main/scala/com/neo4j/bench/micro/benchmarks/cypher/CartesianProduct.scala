@@ -22,13 +22,13 @@ class CartesianProduct extends AbstractCypherBenchmark {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(Slotted.NAME))
   @Param(Array[String]())
-  var CartesianProduct_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100", "1000"),
     base = Array("1", "1000"))
   @Param(Array[String]())
-  var CartesianProduct_rows: Int = _
+  var rows: Int = _
 
   override def description = "Cartesian Product"
 
@@ -36,12 +36,12 @@ class CartesianProduct extends AbstractCypherBenchmark {
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
-      .withNodeCount(CartesianProduct_rows)
+      .withNodeCount(rows)
       .isReusableStore(true)
       .build()
 
   override protected def afterDatabaseStart(): Unit = {
-    expectedRowCount = CartesianProduct_rows * CartesianProduct_rows
+    expectedRowCount = rows * rows
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
@@ -74,7 +74,7 @@ class CartesianProductThreadState {
 
   @Setup
   def setUp(benchmarkState: CartesianProduct): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.CartesianProduct_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 
