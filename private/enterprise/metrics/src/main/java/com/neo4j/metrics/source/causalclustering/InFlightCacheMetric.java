@@ -7,10 +7,12 @@ package com.neo4j.metrics.source.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCacheMonitor;
 
+import java.util.concurrent.atomic.LongAdder;
+
 public class InFlightCacheMetric implements InFlightCacheMonitor
 {
-    private volatile long misses;
-    private volatile long hits;
+    private final LongAdder misses = new LongAdder();
+    private final LongAdder hits = new LongAdder();
     private volatile long totalBytes;
     private volatile long maxBytes;
     private volatile int elementCount;
@@ -19,23 +21,23 @@ public class InFlightCacheMetric implements InFlightCacheMonitor
     @Override
     public void miss()
     {
-        misses++;
+        misses.increment();
     }
 
     @Override
     public void hit()
     {
-        hits++;
+        hits.increment();
     }
 
     public long getMisses()
     {
-        return misses;
+        return misses.sum();
     }
 
     public long getHits()
     {
-        return hits;
+        return hits.sum();
     }
 
     public long getMaxBytes()
