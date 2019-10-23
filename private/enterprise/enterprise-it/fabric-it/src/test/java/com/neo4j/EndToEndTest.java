@@ -32,6 +32,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.StatementType;
@@ -590,37 +591,34 @@ class EndToEndTest
     }
 
     @Test
-    void testRemoteSubqueryInRemoteSubquery()
+    void testDisallowRemoteSubqueryInRemoteSubquery()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        DatabaseException ex = assertThrows( DatabaseException.class, () ->
         {
-            var query = String.join( "\n",
-                    "UNWIND [1, 2, 3] AS x",
-                    "CALL {",
-                    "  USE mega.graph(0)",
-                    "  WITH x",
-                    "  WITH x*10 AS y",
-                    "  CALL {",
-                    "    WITH y",
-                    "    WITH y*10 AS z",
-                    "    RETURN z",
-                    "  }",
-                    "  RETURN y, z, z*10 AS w",
-                    "}",
-                    "RETURN x, y, z, w"
-            );
+            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+            {
+                var query = String.join( "\n",
+                        "UNWIND [1, 2, 3] AS x",
+                        "CALL {",
+                        "  USE mega.graph(0)",
+                        "  WITH x",
+                        "  WITH x*10 AS y",
+                        "  CALL {",
+                        "    WITH y",
+                        "    WITH y*10 AS z",
+                        "    RETURN z",
+                        "  }",
+                        "  RETURN y, z, z*10 AS w",
+                        "}",
+                        "RETURN x, y, z, w"
+                );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+                tx.run( query ).consume();
+                tx.success();
+            }
+        } );
 
-        assertThat( r.size(), equalTo( 3 ) );
-        assertThat( r.get( 0 ).keys(), contains( "x", "y", "z", "w" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ), Values.value( 10 ), Values.value( 100 ), Values.value( 1000 ) ) );
-        assertThat( r.get( 1 ).values(), contains( Values.value( 2 ), Values.value( 20 ), Values.value( 200 ), Values.value( 2000 ) ) );
-        assertThat( r.get( 2 ).values(), contains( Values.value( 3 ), Values.value( 30 ), Values.value( 300 ), Values.value( 3000 ) ) );
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "Nested subqueries in remote query-parts is not supported" ) );
     }
 
     @Test
@@ -674,6 +672,36 @@ class EndToEndTest
 
         assertThat( r.size(), is( 1 ) );
         assertThat( r.get( 0 ).get( "y" ).asNode().get( "age" ).asLong(), is( 100L ) );
+    }
+
+    @Test
+    void testSubqueryWithNamespacerRenamedVariables()
+    {
+        List<Record> r;
+
+        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        {
+            // Namespacer will rename variables in the first local query
+            var query = String.join( "\n",
+                    "WITH 1 AS x",
+                    "WITH x, 2 AS y",
+                    "WITH x, y",
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  WITH y",
+                    "  RETURN y AS z",
+                    "}",
+                    "RETURN x, y, z"
+            );
+
+            r = tx.run( query ).list();
+            tx.success();
+        }
+
+        assertThat( r.size(), is( 1 ) );
+        assertThat( r.get( 0 ).get( "x" ).asLong(), is( 1L ) );
+        assertThat( r.get( 0 ).get( "y" ).asLong(), is( 2L ) );
+        assertThat( r.get( 0 ).get( "z" ).asLong(), is( 2L ) );
     }
 
     @Test

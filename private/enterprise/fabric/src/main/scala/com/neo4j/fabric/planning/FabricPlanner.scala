@@ -131,6 +131,29 @@ case class FabricPlanner(
       case cmd: ast.Command => Errors.notSupported("Commands")
     }
 
+    case class State(
+      incoming: Seq[String],
+      locals: Seq[String],
+      imports: Seq[String],
+      fragments: Seq[Fragment] = Seq.empty
+    ) {
+
+      def columns: Columns = Columns(
+        incoming = incoming,
+        local = locals,
+        imports = imports,
+        output = Seq.empty,
+      )
+
+      def append(frag: Fragment): State =
+        copy(
+          incoming = frag.columns.output,
+          locals = frag.columns.output,
+          imports = Seq.empty,
+          fragments = fragments :+ frag,
+        )
+    }
+
     private def fragment(
       part: ast.QueryPart,
       incoming: Seq[String],
@@ -138,41 +161,19 @@ case class FabricPlanner(
       use: Option[ast.UseGraph]
     ): Fragment = {
 
-      case class State(
-        incoming: Seq[String],
-        locals: Seq[String],
-        imports: Seq[String],
-        use: Option[ast.UseGraph],
-        fragments: Seq[Fragment] = Seq.empty
-      ) {
-
-        def columns: Columns = Columns(
-          incoming = incoming,
-          local = locals,
-          imports = imports,
-          output = Seq.empty,
-        )
-
-        def append(frag: Fragment): State =
-          copy(
-            incoming = frag.columns.output,
-            locals = frag.columns.output,
-            imports = Seq.empty,
-            fragments = fragments :+ frag,
-          )
-      }
-
       part match {
         case sq: ast.SingleQuery =>
           val imports = sq.importColumns
+          val localUse = leadingUse(sq).orElse(use)
           val parts = partitioned(sq.clauses)
-          val start = State(incoming, local, imports, leadingUse(sq).orElse(use))
-          val state = parts.foldLeft(start) {
+          val initial = State(incoming, local, imports)
+
+          val result = parts.foldLeft(initial) {
             case (current, part) => part match {
 
               case Right(clauses) =>
                 val leaf = Leaf(
-                  use = current.use,
+                  use = localUse,
                   clauses = clauses.filterNot(_.isInstanceOf[ast.UseGraph]),
                   columns = current.columns.copy(
                     output = produced(clauses.last),
@@ -180,12 +181,15 @@ case class FabricPlanner(
                 )
                 current.append(Fragment.Direct(leaf, leaf.columns))
 
+              case Left(sub) if localUse.isDefined =>
+                Errors.invalid(Errors.semantic("Nested subqueries in remote query-parts is not supported", sub))
+
               case Left(sub) =>
                 val frag = fragment(
                   part = sub.part,
                   incoming = current.incoming,
                   local = Seq.empty,
-                  use = current.use
+                  use = localUse
                 )
                 current.append(Fragment.Apply(
                   frag,
@@ -197,7 +201,7 @@ case class FabricPlanner(
             }
           }
 
-          state.fragments match {
+          result.fragments match {
             case Seq(single) => single
             case many        => Chain(
               fragments = many,
@@ -225,7 +229,7 @@ case class FabricPlanner(
       val clauses = sq.clausesExceptImportWith
       val (use, rest) = clauses.headOption match {
         case Some(u: ast.UseGraph) => (Some(u), clauses.tail)
-        case _                      => (None, clauses)
+        case _                     => (None, clauses)
       }
 
       rest.filter(_.isInstanceOf[ast.UseGraph])

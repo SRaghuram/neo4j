@@ -48,22 +48,6 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
   "USE handling: " - {
 
-    "propagate USE down and in" in {
-      val q =
-        """USE g
-          |WITH 1 AS x
-          |CALL {
-          |  RETURN 2 AS y
-          |}
-          |RETURN x
-          |""".stripMargin
-
-      planner.plan(q, params).query.asChainedQuery
-        .check(_.queries(0).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
-        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
-        .check(_.queries(2).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
-    }
-
     "not propagate USE out" in {
       val q =
         """WITH 1 AS x
@@ -80,21 +64,38 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         .check(_.queries(2).asDirect.asLocalSingleQuery)
     }
 
-    "override USE in subquery" in {
+    "disallow subquery after USE" in {
       val q =
         """USE g
           |WITH 1 AS x
           |CALL {
-          |  USE h
           |  RETURN 2 AS y
           |}
           |RETURN x
           |""".stripMargin
 
+      the[Exception].thrownBy(planner.plan(q, params))
+        .getMessage.should(include("Nested subqueries in remote query-parts is not supported"))
+    }
+
+    "allow different USE in union parts" in {
+      val q =
+        """WITH 1 AS x
+          |CALL {
+          |  USE g RETURN 2 AS y
+          |  UNION
+          |  USE h RETURN 3 AS y
+          |}
+          |RETURN x
+          |""".stripMargin
+
       planner.plan(q, params).query.asChainedQuery
-        .check(_.queries(0).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
-        .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(varFor("h"))))
-        .check(_.queries(2).asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
+        .check(_.queries(0).asDirect.asLocalSingleQuery)
+        .check(_.queries(1).asApply.asUnionQuery
+            .check(_.lhs.asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
+            .check(_.rhs.asDirect.asShardQuery.use.shouldEqual(use(varFor("h"))))
+        )
+        .check(_.queries(2).asDirect.asLocalSingleQuery)
     }
 
     "disallow embedded USE" in {
@@ -330,7 +331,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         )))
     }
 
-    "local columns translated into parameters in remote trailing fragments" in {
+    // Ignored since we disallow nested queries in remote queries
+    "local columns translated into parameters in remote trailing fragments" ignore {
       val q =
         """USE g
           |WITH 1 AS x, 2 AS y
@@ -353,7 +355,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         )))
     }
 
-    "outer columns are not made into parameters in remote fragments" in {
+    // Ignored since we disallow nested queries in remote queries
+    "outer columns are not made into parameters in remote fragments" ignore {
       val q =
         """WITH 1 AS x
           |CALL {
@@ -425,8 +428,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
     "remote fragments with update" in {
       val q =
-        """USE g
-          |WITH 1 AS x
+        """WITH 1 AS x
           |CREATE (y)
           |WITH x, y
           |CALL {
@@ -439,11 +441,11 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |""".stripMargin
 
       planner.plan(q, params).query.asChainedQuery
-        .check(_.queries(0).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
-          with_(literal(1).as("x")),
-          create(nodePat("y")),
-          with_(varFor("x").aliased, varFor("y").aliased),
-          return_(varFor("x").aliased, varFor("y").aliased),
+        .check(_.queries(0).asDirect.asLocalSingleQuery.clauses.shouldEqualAst(Seq(
+          with_(literal(1).as("  x@0")),
+          create(nodePat("  y@0")),
+          with_(varFor("  x@0").aliased, varFor("  y@0").aliased),
+          return_(varFor("  x@0").aliased, varFor("  y@0").aliased),
         )))
         .check(_.queries(1).asApply.asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
           with_(parameter("@@y", CTAny).as("y")),
@@ -451,8 +453,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           create(nodePat("z")),
           return_(varFor("z").aliased)
         )))
-        .check(_.queries(2).asDirect.asShardSingleQuery.clauses.shouldEqualAst(Seq(
-          with_(parameter("@@x", CTAny).as("x"), parameter("@@y", CTAny).as("y"), parameter("@@z", CTAny).as("z")),
+        .check(_.queries(2).asDirect.asLocalSingleQuery.clauses.shouldEqualAst(Seq(
+          input(varFor("x"), varFor("y"), varFor("z")),
           return_(varFor("x").aliased, varFor("y").aliased)
         )))
     }
@@ -875,6 +877,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
     def asChainedQuery: ChainedQuery =
       a.as[ChainedQuery]
+
+    def asUnionQuery: UnionQuery =
+      a.as[UnionQuery]
 
     def asDirect: FabricQuery =
       a.as[Direct].query
