@@ -31,7 +31,7 @@ class BooleanExpression extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var BooleanExpression_engine: String = _
+  var engine: String = _
 
   override def description = "UNWIND $list RETURN ($x >= 0.0 OR $x < 0.5) AND ($x >= 0.5 OR $x < 1.0)"
 
@@ -87,7 +87,7 @@ class BooleanExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: BooleanExpression, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.BooleanExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),

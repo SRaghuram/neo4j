@@ -30,25 +30,25 @@ class In extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var In_engine: String = _
+  var engine: String = _
 
   @ParamValues(
     allowed = Array("true", "false"),
     base = Array("true", "false"))
   @Param(Array[String]())
-  var In_isConstant: Boolean = _
+  var isConstant: Boolean = _
 
   @ParamValues(
     allowed = Array("10", "100", "1000"),
     base = Array("10", "1000"))
   @Param(Array[String]())
-  var In_size: Int = _
+  var size: Int = _
 
   @ParamValues(
     allowed = Array("1", "50", "99"),
     base = Array("1", "50", "99"))
   @Param(Array[String]())
-  var In_hitRatio: Int = _
+  var hitRatio: Int = _
 
   override def description = "UNWIND $list RETURN $x in [0,1,2,...]"
 
@@ -74,16 +74,16 @@ class In extends AbstractCypherBenchmark {
   }
 
   private def listExpression =
-    if (In_isConstant) {
-      astListLiteral((0 until In_size).map(i => astLiteralFor(i, LNG)))
+    if (isConstant) {
+      astListLiteral((0 until size).map(i => astLiteralFor(i, LNG)))
     }
     else {
       //this is just to trick the expression to not be fully known at compile time
-      astListLiteral((1 to In_size).map(i => astLiteralFor(i, LNG)) :+ astParameter("foo", symbols.CTAny))
+      astListLiteral((1 to size).map(i => astLiteralFor(i, LNG)) :+ astParameter("foo", symbols.CTAny))
     }
 
   private def nextValueToCheck(rnd: SplittableRandom) =
-    longValue(rnd.nextInt((In_size * (100.0 / In_hitRatio)).intValue()))
+    longValue(rnd.nextInt((size * (100.0 / hitRatio)).intValue()))
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
@@ -112,7 +112,7 @@ class InThreadState {
 
   @Setup
   def setUp(benchmarkState: In): Unit = {
-    val useCompiledExpressions = benchmarkState.In_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     paramBuilder.add("list", In.VALUES)

@@ -26,13 +26,13 @@ class AnyInListExpression extends AbstractCypherBenchmark with ListExpressionsHe
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var AnyInListExpression_engine: String = _
+  var engine: String = _
 
   @ParamValues(
     allowed = Array("10", "100", "1000"),
     base = Array("1000"))
   @Param(Array[String]())
-  var AnyInListExpression_size: Int = _
+  var size: Int = _
 
   override def description = "UNWIND 10000_element_list AS no_used RETURN any(n in $x WHERE n > <literal>) AS result"
 
@@ -42,7 +42,7 @@ class AnyInListExpression extends AbstractCypherBenchmark with ListExpressionsHe
     listExpressionPlan(planContext, listParameter, listExpression)
   }
 
-  def midPoint: Int = AnyInListExpression_size / 2
+  def midPoint: Int = size / 2
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
@@ -63,10 +63,10 @@ class AnyInListExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: AnyInListExpression, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.AnyInListExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
-    params = benchmarkState.getParams(benchmarkState.AnyInListExpression_size)
+    params = benchmarkState.getParams(benchmarkState.size)
   }
 
   @TearDown

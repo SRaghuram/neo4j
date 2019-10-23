@@ -31,11 +31,11 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
 {
     @ParamValues( allowed = {"V2"}, base = "V2" )
     @Param( {} )
-    public ProtocolVersion ReplicatedTxRepresentation_protocolVersion;
+    public ProtocolVersion protocolVersion;
 
     @ParamValues( allowed = {"1KB", "1MB", "100MB", "1GB"}, base = {"1KB", "1MB", "100MB", "1GB"} )
     @Param( {} )
-    public String ReplicatedTxRepresentation_txSize;
+    public String txSize;
 
     @Override
     public String description()
@@ -52,13 +52,13 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
     @Override
     ProtocolVersion protocolVersion()
     {
-        return ReplicatedTxRepresentation_protocolVersion;
+        return protocolVersion;
     }
 
     @Override
     RaftMessages.ClusterIdAwareMessage<RaftMessages.RaftMessage> initializeRaftMessage()
     {
-        int expectedSize = nbrOfBytes( ReplicatedTxRepresentation_txSize );
+        int expectedSize = nbrOfBytes( txSize );
         TxFactory.commitTx( expectedSize, db() );
         ClusterTx clusterTx = popLatest();
         Log log = logProvider().getLog( getClass() );

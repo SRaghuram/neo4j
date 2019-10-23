@@ -32,7 +32,7 @@ class MathExpression extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var MathExpression_engine: String = _
+  var engine: String = _
 
   override def description = "UNWIND $list RETURN rand() * ( sin($x) * sin($x) + cos($x) * cos($x) ) AS result"
 
@@ -91,7 +91,7 @@ class MathExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: MathExpression, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.MathExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),

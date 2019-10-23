@@ -29,19 +29,19 @@ class MapProjection extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var MapProjection_engine: String = _
+  var engine: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100"),
     base = Array("1", "10", "100"))
   @Param(Array[String]())
-  var MapProjection_size: Int = _
+  var size: Int = _
 
   @ParamValues(
     allowed = Array("true", "false"),
     base = Array("true", "false"))
   @Param(Array[String]())
-  var MapProjection_includeAllProps: Boolean = _
+  var includeAllProps: Boolean = _
 
   override def description = "UNWIND $list WITH map as $map RETURN map{.*, k1: 'updated1', k2: 'updated2',...} AS result"
 
@@ -52,8 +52,8 @@ class MapProjection extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val resultColumns = List("result")
-    val mapProjections = (0 until MapProjection_size).map(i => s"k$i" -> astLiteralFor(s"updated%i", STR_SML))
-    val expression = astMapProjection("map", MapProjection_includeAllProps, mapProjections)
+    val mapProjections = (0 until size).map(i => s"k$i" -> astLiteralFor(s"updated%i", STR_SML))
+    val expression = astMapProjection("map", includeAllProps, mapProjections)
     val listType = symbols.CTList(symbols.CTAny)
     val unwindListParameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
@@ -95,7 +95,7 @@ class MapProjectionThreadState {
 
   @Setup
   def setUp(benchmarkState: MapProjection, rngState: RNGState): Unit = {
-    val useCompiledExpressions = benchmarkState.MapProjection_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("map", "list"),

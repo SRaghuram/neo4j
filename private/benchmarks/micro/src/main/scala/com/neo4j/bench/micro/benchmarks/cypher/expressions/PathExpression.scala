@@ -28,7 +28,7 @@ class PathExpression extends AbstractCypherBenchmark {
     allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
     base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
   @Param(Array[String]())
-  var PathExpression_engine: String = _
+  var engine: String = _
 
   override def description = "Path expression over a two-step expand"
 
@@ -91,7 +91,7 @@ class PathExpressionThreadState {
 
   @Setup
   def setUp(benchmarkState: PathExpression): Unit = {
-    val useCompiledExpressions = benchmarkState.PathExpression_engine == CompiledExpressionEngine.NAME
+    val useCompiledExpressions = benchmarkState.engine == CompiledExpressionEngine.NAME
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
   }

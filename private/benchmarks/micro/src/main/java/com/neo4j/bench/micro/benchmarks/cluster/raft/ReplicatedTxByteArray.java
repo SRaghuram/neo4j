@@ -28,11 +28,11 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
 {
     @ParamValues( allowed = {"V1", "V2"}, base = "V2" )
     @Param( {} )
-    public ProtocolVersion ReplicatedTxByteArray_protocolVersion;
+    public ProtocolVersion protocolVersion;
 
     @ParamValues( allowed = {"1KB", "1MB", "100MB", "999MB"}, base = {"1KB", "1MB", "100MB", "999MB"} )
     @Param( {} )
-    public String ReplicatedTxByteArray_txSize;
+    public String txSize;
 
     @Override
     public String description()
@@ -49,7 +49,7 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     @Override
     ProtocolVersion protocolVersion()
     {
-        return ReplicatedTxByteArray_protocolVersion;
+        return protocolVersion;
     }
 
     @Override
@@ -59,7 +59,7 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
                                                       new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,
                                                                                          ReplicatedTransaction.from(
                                                                                                  new byte[nbrOfBytes(
-                                                                                                         ReplicatedTxByteArray_txSize )] ) ) );
+                                                                                                         txSize )] ) ) );
     }
 
     @Benchmark

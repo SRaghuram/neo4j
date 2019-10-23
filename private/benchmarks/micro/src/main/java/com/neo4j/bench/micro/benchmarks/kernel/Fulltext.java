@@ -51,13 +51,13 @@ public class Fulltext extends AbstractKernelBenchmark
 {
     @ParamValues( allowed = {"records"}, base = "records" )
     @Param( {} )
-    public KernelImplementation Fulltext_kernelImplementation;
+    public KernelImplementation kernelImplementation;
 
     @ParamValues(
             allowed = {STR_SML},
             base = {STR_SML} )
     @Param( {} )
-    public String Fulltext_type;
+    public String propertyType;
 
     private TextValue highSelectivityValue;
     private TextValue mediumSelectivityValue;
@@ -87,11 +87,11 @@ public class Fulltext extends AbstractKernelBenchmark
     @Override
     protected DataGeneratorConfig getConfig()
     {
-        DiscreteGenerator.Bucket[] buckets = getBuckets( Fulltext_type );
+        DiscreteGenerator.Bucket[] buckets = getBuckets( propertyType );
         highSelectivityValue = (TextValue) Values.of( buckets[0].value() );
         mediumSelectivityValue = (TextValue) Values.of( buckets[1].value() );
         lowSelectivityValue = (TextValue) Values.of( buckets[2].value() );
-        PropertyDefinition propertyDefinition = getPropertyDefinition( buckets, Fulltext_type );
+        PropertyDefinition propertyDefinition = getPropertyDefinition( buckets, propertyType );
         DataGeneratorConfigBuilder builder = new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withLabels( LABEL )
@@ -103,7 +103,7 @@ public class Fulltext extends AbstractKernelBenchmark
     @Override
     protected KernelImplementation kernelImplementation()
     {
-        return Fulltext_kernelImplementation;
+        return kernelImplementation;
     }
 
     @State( Scope.Thread )
