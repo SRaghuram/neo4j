@@ -512,48 +512,12 @@ public class EnterpriseSecurityModule extends SecurityModule
                 throw illegalConfiguration( "No authorization provider found." );
             }
 
-            if ( propertyAuthorization && !parsePropertyPermissions() )
+            if ( propertyAuthorization || propertyAuthMapping != null )
             {
                 throw illegalConfiguration(
-                        "Property level authorization is enabled but there is a error in the permissions mapping." );
+                        "Property level blacklisting through configuration setting has been replaced by privilege management on roles, e.g. " +
+                        "'DENY READ {property} ON GRAPH * ELEMENTS * TO role'." );
             }
-        }
-
-        boolean parsePropertyPermissions()
-        {
-            if ( propertyAuthMapping != null && !propertyAuthMapping.isEmpty() )
-            {
-                String rolePattern = "\\s*[a-zA-Z0-9_]+\\s*";
-                String propertyPattern = "\\s*[a-zA-Z0-9_]+\\s*";
-                String roleToPerm = rolePattern + "=" + propertyPattern + "(," + propertyPattern + ")*";
-                String multiLine = roleToPerm + "(;" + roleToPerm + ")*";
-
-                boolean valid = propertyAuthMapping.matches( multiLine );
-                if ( !valid )
-                {
-                    return false;
-                }
-
-                for ( String rolesAndPermissions : propertyAuthMapping.split( ";" ) )
-                {
-                    if ( !rolesAndPermissions.isEmpty() )
-                    {
-                        String[] split = rolesAndPermissions.split( "=" );
-                        String role = split[0].trim();
-                        String permissions = split[1];
-                        List<String> permissionsList = new ArrayList<>();
-                        for ( String perm : permissions.split( "," ) )
-                        {
-                            if ( !perm.isEmpty() )
-                            {
-                                permissionsList.add( perm.trim() );
-                            }
-                        }
-                        propertyBlacklist.put( role, permissionsList );
-                    }
-                }
-            }
-            return true;
         }
 
         boolean onlyPluginAuthentication()

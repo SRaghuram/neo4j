@@ -280,21 +280,20 @@ public class SecuritySettings implements SettingsDeclaration
     // Property level security settings
     //=========================================================================
 
-    @Description( "Set to true to enable property level security." )
+    @Description( "This has been replaced by privilege management on roles." )
     @Deprecated
     public static final Setting<Boolean> property_level_authorization_enabled =
             newBuilder( "dbms.security.property_level.enabled", BOOL, false ).build();
 
-    @Description( "An authorization mapping for property level access for roles. " +
+    @Description( "This can be achieved with `DENY READ {property} ON GRAPH * ELEMENTS * TO role`. " +
+            "An authorization mapping for property level access for roles. " +
             "The map should be formatted as a semicolon separated list of key-value pairs, where the " +
             "key is the role name and the value is a comma separated list of blacklisted properties. " +
             "For example: role1=prop1;role2=prop2;role3=prop3,prop4,prop5\n" +
             "You could also use whitespaces and quotes around group names to make this mapping more readable, " +
             "for example: dbms.security.property_level.blacklist=\\\n" +
             "         \"role1\"      = ssn;    \\\n" +
-            "         \"role2\"      = ssn,income; \\\n" +
-            "Deprecated: This will be replaced by dynamic configuration in the system graph in 4.0, " +
-            "including a migration step for the existing setting value." )
+            "         \"role2\"      = ssn,income; \\\n" )
     @Deprecated
     public static final Setting<String> property_level_authorization_permissions =
             newBuilder( "dbms.security.property_level.blacklist", STRING, null ).build();

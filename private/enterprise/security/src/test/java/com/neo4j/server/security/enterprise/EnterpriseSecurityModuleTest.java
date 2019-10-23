@@ -139,41 +139,43 @@ class EnterpriseSecurityModuleTest
     }
 
     @Test
-    void shouldNotFailWithPropertyLevelPermissions()
+    void shouldFailIfPropertyLevelConfigEnabled()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
-
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
+
+        assertIllegalArgumentException(
+                "Illegal configuration: Property level blacklisting through configuration setting has been replaced by privilege management on roles, e.g. " +
+                "'DENY READ {property} ON GRAPH * ELEMENTS * TO role'." );
+    }
+
+    @Test
+    void shouldNotFailIfPropertyLevelConfigDisabled()
+    {
+        providers( SecuritySettings.NATIVE_REALM_NAME );
+        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
 
         assertSuccess();
     }
 
     @Test
-    void shouldFailOnIllegalPropertyLevelPermissions()
+    void shouldFailIfPropertyLevelPermissionsConfigured()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
+        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
 
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smithmalias" );
-
-        assertIllegalArgumentException( "Illegal configuration: Property level authorization is enabled but there is a error in the permissions mapping." );
+        assertIllegalArgumentException(
+                "Illegal configuration: Property level blacklisting through configuration setting has been replaced by privilege management on roles, e.g. " +
+                "'DENY READ {property} ON GRAPH * ELEMENTS * TO role'." );
     }
 
     @Test
-    void shouldParsePropertyLevelPermissions()
+    void shouldNotFailIfPropertyLevelPermissionsNotConfigured()
     {
         providers( SecuritySettings.NATIVE_REALM_NAME );
+        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( null );
 
-        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
-        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn(
-                "smith = alias;merovingian=alias ,location;\n abel=alias,\t\thasSilver" );
-
-        EnterpriseSecurityModule.SecurityConfig securityConfig = new EnterpriseSecurityModule.SecurityConfig( config );
-        securityConfig.validate();
-        assertThat( securityConfig.propertyBlacklist.get( "smith" ), equalTo( Collections.singletonList( "alias" ) ) );
-        assertThat( securityConfig.propertyBlacklist.get( "merovingian" ), equalTo( Arrays.asList( "alias", "location" ) ) );
-        assertThat( securityConfig.propertyBlacklist.get( "abel" ), equalTo( Arrays.asList( "alias", "hasSilver" ) ) );
+        assertSuccess();
     }
 
     @Test
