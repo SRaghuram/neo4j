@@ -288,24 +288,23 @@ public class NativeAuthIT
     @Test
     public void shouldCreateUserWithAuthDisabled() throws Exception
     {
+        // GIVEN
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
         boltUri = DriverAuthHelper.boltUri( dbRule );
         try ( Driver driver = connectDriver( boltUri, AuthTokens.none() ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
+                // WHEN
                 session.run( "CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED" ).consume();
             }
         }
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, true ) );
         boltUri = DriverAuthHelper.boltUri( dbRule );
-        try ( Driver driver = connectDriver( boltUri, "foo", "bar" ) )
-        {
-            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
-            {
-                session.run( "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'" ).consume();
-            }
-        }
+
+        // THEN
+        DriverAuthHelper.assertAuthFail( boltUri, "foo", "wrongPassword" );
+        DriverAuthHelper.assertAuth( boltUri, "foo", "bar" );
     }
 
     @Test
@@ -322,11 +321,11 @@ public class NativeAuthIT
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
         boltUri = DriverAuthHelper.boltUri( dbRule );
 
-        // WHEN
         try ( Driver driver = connectDriver( boltUri, AuthTokens.none() ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
+                // WHEN
                 session.run( "ALTER USER foo SET PASSWORD 'abc' CHANGE NOT REQUIRED" ).consume();
             }
         }
@@ -334,13 +333,8 @@ public class NativeAuthIT
 
         // THEN
         boltUri = DriverAuthHelper.boltUri( dbRule );
-        try ( Driver driver = connectDriver( boltUri, "foo", "abc" ) )
-        {
-            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
-            {
-                session.run( "ALTER CURRENT USER SET PASSWORD FROM 'abc' TO 'bar'" ).consume();
-            }
-        }
+        DriverAuthHelper.assertAuthFail( boltUri, "foo", "bar" );
+        DriverAuthHelper.assertAuth( boltUri, "foo", "abc" );
     }
 
     private void assertPropertyFunctionWorks( Session session, String user, String key, String query, Function<Record,String> mapper,
