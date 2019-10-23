@@ -14,7 +14,6 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.internal.helpers.Args;
-import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -34,7 +33,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static java.lang.String.format;
+import static java.lang.System.lineSeparator;
 import static org.neo4j.internal.helpers.progress.ProgressMonitorFactory.textual;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
@@ -143,12 +142,11 @@ public class ApplyTransactionsCommand extends ArgsCommand
     @Override
     public String toString()
     {
-        return ArrayUtil.join( new String[] {
+        return String.join( lineSeparator(),
                 "Applies transactions from the source onto the new db. Example:",
                 "  apply last : applies transactions from the currently last applied and up to the last",
                 "               transaction of source db",
                 "  apply next : applies the next transaction onto the new db",
-                "  apply 234  : applies up to and including tx 234 from the source db onto the new db" },
-                format( "%n" ) );
+                "  apply 234  : applies up to and including tx 234 from the source db onto the new db" );
     }
 }

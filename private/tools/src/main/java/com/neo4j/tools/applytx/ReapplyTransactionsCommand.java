@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.helpers.Args;
-import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.kernel.impl.api.TransactionQueue;
@@ -25,7 +24,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static java.lang.String.format;
+import static java.lang.System.lineSeparator;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.RECOVERY;
 
 /**
@@ -89,10 +88,9 @@ public class ReapplyTransactionsCommand extends ArgsCommand
     @Override
     public String toString()
     {
-        return ArrayUtil.join( new String[] {
+        return String.join( lineSeparator(),
                 "Re-applies transactions onto the db. Applied transactions won't be appended to the transaction log, only applied onto the store. Example:",
                 "  -from 134  : re-applies transactions 134 up to last committed transaction id onto the store",
-                "  -from 134 -to 256 : re-applies transactions 134-256 (inclusive) onto the store" },
-                format( "%n" ) );
+                "  -from 134 -to 256 : re-applies transactions 134-256 (inclusive) onto the store" );
     }
 }

@@ -19,8 +19,6 @@ import java.util.StringTokenizer;
 import org.neo4j.io.NullOutputStream;
 import org.neo4j.kernel.impl.util.Listener;
 
-import static org.neo4j.internal.helpers.ArrayUtil.join;
-
 public class ConsoleUtil
 {
     public static final Listener<PrintStream> NO_PROMPT = out ->
@@ -92,7 +90,7 @@ public class ConsoleUtil
 
     public static InputStream oneCommand( String... args )
     {
-        String string = join( args, " " );
+        String string = String.join( " ", args );
         return new ByteArrayInputStream( string.getBytes() );
     }
 
