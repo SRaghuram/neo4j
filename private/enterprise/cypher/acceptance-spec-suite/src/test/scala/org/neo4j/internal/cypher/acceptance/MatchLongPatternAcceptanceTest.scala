@@ -180,6 +180,47 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
     }
   }
 
+  test("multiple identical matches after collect and unwind should get planned") {
+    // Given
+    val node = createNode()
+    relate(node, node)
+    relate(node, node)
+
+    val query =
+      """
+        |MATCH (n)
+        |WITH COLLECT (n) AS collection
+        |UNWIND collection AS n
+        |
+        |MATCH (n)-[r1]->()-[r2]->()
+        |WHERE r1.prop = 1 AND r2.prop = 2
+        |WITH n
+        |
+        |MATCH (n)-[r1]->()-[r2]->()
+        |WHERE r1.prop = 1 AND r2.prop = 2
+        |WITH n
+        |
+        |MATCH (n)-[r1]->()-[r2]->()
+        |WHERE r1.prop = 1 AND r2.prop = 2
+        |WITH n
+        |
+        |MATCH (n)-[r1]->()-[r2]->()
+        |WHERE r1.prop = 1 AND r2.prop = 2
+        |WITH n
+        |
+        |MATCH (n)-[r1]->()-[r2]->()
+        |WHERE r1.prop = 1 AND r2.prop = 2
+        |
+        |RETURN n
+      """.stripMargin
+
+    // When
+    val result = executeSingle(query)
+
+    // Then: should not get a planner error
+    result.toSet should be(Set.empty)
+  }
+
   private def assertMinExpandsAndJoins(plan: InternalPlanDescription, minCounts: Map[String, Int]): Map[String, Int] = {
     val counts = countExpandsAndJoins(plan)
     Seq("expands", "joins").foreach { op =>
