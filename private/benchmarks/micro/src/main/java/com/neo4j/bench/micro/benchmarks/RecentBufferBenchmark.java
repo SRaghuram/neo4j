@@ -47,7 +47,7 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
             allowed = {"concurrentLinkedQueue", "ringBuffer"},
             base = {"concurrentLinkedQueue", "ringBuffer"} )
     @Param( {} )
-    public String RecentBufferBenchmark_impl;
+    public String impl;
 
     private RecentBuffer<Long> buffer;
 
@@ -57,7 +57,7 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
                                    Stores stores,
                                    Neo4jConfig neo4jConfig )
     {
-        switch ( RecentBufferBenchmark_impl )
+        switch ( impl )
         {
         case "concurrentLinkedQueue":
             buffer = new ConcurrentLinkedQueueRecentBuffer<>( 8192 );

@@ -29,7 +29,7 @@ class PartialSort extends AbstractCypherBenchmark {
     allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var PartialSort_runtime: String = _
+  var runtime: String = _
 
   /*
   Compiled runtime does not support Order By of Temporal/Spatial types
@@ -38,19 +38,19 @@ class PartialSort extends AbstractCypherBenchmark {
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(LNG))
   @Param(Array[String]())
-  var PartialSort_type: String = _
+  var propertyType: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100", "1000", "10000", "100000", "1000000"),
     base = Array("1000"))
   @Param(Array[Int]())
-  var PartialSort_distinctCount = 1000
+  var distinctCount = 1000
 
   @ParamValues(
     allowed = Array("PartialSort", "FullSort"),
     base = Array("PartialSort"))
   @Param(Array[String]())
-  var PartialSort_sortMode = "PartialSort"
+  var sortMode = "PartialSort"
 
   override def description = "PartialSort, e.g., UNWIND {listOfMapValuesSortedByA} AS tuples RETURN tuples ORDER BY tuples.a, tuples.b"
 
@@ -59,7 +59,7 @@ class PartialSort extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(PartialSort_type)
+    val listElementType = cypherTypeFor(propertyType)
 
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
@@ -69,7 +69,7 @@ class PartialSort extends AbstractCypherBenchmark {
     val bVariableName = "valueB"
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariableName, parameter)(IdGen)
     val projection = plans.Projection(leaf, Map(aVariableName -> astProperty(unwindVariable, "a"), bVariableName -> astProperty(unwindVariable, "b")))(IdGen)
-    val sort = PartialSort_sortMode match {
+    val sort = sortMode match {
       case "PartialSort" => plans.PartialSort(projection, List(Ascending(aVariableName)), List(Ascending(bVariableName)))(IdGen)
       case "FullSort" => plans.Sort(projection, List(Ascending(aVariableName), Ascending(bVariableName)))(IdGen)
     }
@@ -101,12 +101,12 @@ class PartialSortThreadState {
   @Setup
   def setUp(benchmarkState: PartialSort): Unit = {
     // A list with a certain number of distinct values
-    val listA = randomListOf[java.lang.Comparable[Any]](benchmarkState.PartialSort_type, benchmarkState.EXPECTED_ROW_COUNT, benchmarkState.PartialSort_distinctCount)
+    val listA = randomListOf[java.lang.Comparable[Any]](benchmarkState.propertyType, benchmarkState.EXPECTED_ROW_COUNT, benchmarkState.distinctCount)
     // Sort this list
     listA.sort(util.Comparator.naturalOrder())
 
     // A list of ascending values
-    val listB = listOf(benchmarkState.PartialSort_type, benchmarkState.EXPECTED_ROW_COUNT)
+    val listB = listOf(benchmarkState.propertyType, benchmarkState.EXPECTED_ROW_COUNT)
     // Randomize the order
     Collections.shuffle(listB)
 
@@ -123,7 +123,7 @@ class PartialSortThreadState {
     }
 
     benchmarkState.params = mapValuesOfList("list", list)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.PartialSort_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

@@ -33,11 +33,11 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
 {
     @ParamValues( allowed = {"true", "false"}, base = {"true", "false"} )
     @Param( {} )
-    private String WriteTransactionLogBenchmark_preallocation;
+    private String preallocation;
 
     @ParamValues( allowed = {"10", "1000", "10000"}, base = {"10", "1000", "10000"} )
     @Param( {} )
-    private int WriteTransactionLogBenchmark_batch_size;
+    private int batch_size;
 
     @State( Scope.Thread )
     public static class ThreadState
@@ -48,8 +48,8 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
         @Setup
         public void setUp( WriteTransactionLogBenchmark benchmark, RNGState rngState ) throws InterruptedException
         {
-            bytes = new byte[benchmark.WriteTransactionLogBenchmark_batch_size];
-            longs = rngState.rng.longs().limit( benchmark.WriteTransactionLogBenchmark_batch_size ).toArray();
+            bytes = new byte[benchmark.batch_size];
+            longs = rngState.rng.longs().limit( benchmark.batch_size ).toArray();
             rngState.rng.nextBytes(bytes);
         }
     }
@@ -58,7 +58,7 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     protected DataGeneratorConfig getConfig()
     {
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder.empty()
-                .withSetting( preallocate_logical_logs, WriteTransactionLogBenchmark_preallocation ).build();
+                .withSetting( preallocate_logical_logs, preallocation ).build();
         return new DataGeneratorConfigBuilder()
                 .withGraphWriter( TRANSACTIONAL )
                 .withNeo4jConfig( neo4jConfig )
@@ -71,7 +71,7 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     @BenchmarkMode( value = Mode.Throughput )
     public void appendLongs( ThreadState state ) throws IOException
     {
-        for ( int i = 0; i < WriteTransactionLogBenchmark_batch_size; i++ )
+        for ( int i = 0; i < batch_size; i++ )
         {
             writer.putLong( state.longs[i] );
         }
@@ -83,7 +83,7 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     @BenchmarkMode( value = Mode.Throughput )
     public void appendBytes( ThreadState state ) throws IOException
     {
-        for ( int i = 0; i < WriteTransactionLogBenchmark_batch_size; i++ )
+        for ( int i = 0; i < batch_size; i++ )
         {
             writer.put( state.bytes[i] );
         }
@@ -95,7 +95,7 @@ public class WriteTransactionLogBenchmark extends AbstractTransactionLogsBenchma
     @BenchmarkMode( value = Mode.Throughput )
     public void appendByteArray( ThreadState state ) throws IOException
     {
-        writer.put( state.bytes, WriteTransactionLogBenchmark_batch_size );
+        writer.put( state.bytes, batch_size );
         writer.prepareForFlush().flush();
     }
 

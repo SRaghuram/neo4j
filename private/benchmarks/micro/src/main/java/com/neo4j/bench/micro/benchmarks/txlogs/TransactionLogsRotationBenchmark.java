@@ -26,7 +26,7 @@ public class TransactionLogsRotationBenchmark extends AbstractTransactionLogsBen
 {
     @ParamValues( allowed = {"true", "false"}, base = {"true", "false"} )
     @Param( {} )
-    private String TransactionLogsRotationBenchmark_preallocation;
+    private String preallocation;
 
     @Override
     public String description()
@@ -38,7 +38,7 @@ public class TransactionLogsRotationBenchmark extends AbstractTransactionLogsBen
     protected DataGeneratorConfig getConfig()
     {
         Neo4jConfig neo4jConfig = Neo4jConfigBuilder.empty()
-                .withSetting( preallocate_logical_logs, TransactionLogsRotationBenchmark_preallocation ).build();
+                .withSetting( preallocate_logical_logs, preallocation ).build();
         return new DataGeneratorConfigBuilder()
                 .withGraphWriter( TRANSACTIONAL )
                 .withNeo4jConfig( neo4jConfig )

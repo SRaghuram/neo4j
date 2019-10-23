@@ -33,7 +33,7 @@ class PartialTop extends AbstractCypherBenchmark {
     allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var PartialTop_runtime: String = _
+  var runtime: String = _
 
   /*
   Compiled runtime does not support Order By of Temporal/Spatial types
@@ -42,25 +42,25 @@ class PartialTop extends AbstractCypherBenchmark {
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(LNG))
   @Param(Array[String]())
-  var PartialTop_type: String = _
+  var propertyType: String = _
 
   @ParamValues(
     allowed = Array("1", "100", "10000"),
     base = Array("1", "10000"))
   @Param(Array[String]())
-  var PartialTop_limit: Long = _
+  var limit: Long = _
 
   @ParamValues(
     allowed = Array("1", "10", "100", "1000", "10000", "100000", "1000000"),
     base = Array("1000"))
   @Param(Array[Int]())
-  var PartialTop_distinctCount = 1000
+  var distinctCount = 1000
 
   @ParamValues(
     allowed = Array("PartialTop", "NormalTop"),
     base = Array("PartialTop"))
   @Param(Array[String]())
-  var PartialTop_sortMode = "PartialTop"
+  var sortMode = "PartialTop"
 
   override def description = "PartialTop, e.g., UNWIND {listOfMapValuesSortedByA} AS tuples RETURN tuples ORDER BY tuples.a, tuples.b LIMIT {limit}"
 
@@ -69,7 +69,7 @@ class PartialTop extends AbstractCypherBenchmark {
   var params: MapValue = _
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val listElementType = cypherTypeFor(PartialTop_type)
+    val listElementType = cypherTypeFor(propertyType)
 
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
@@ -80,7 +80,7 @@ class PartialTop extends AbstractCypherBenchmark {
     val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariableName, parameter)(IdGen)
     val projection = plans.Projection(leaf, Map(aVariableName -> astProperty(unwindVariable, "a"), bVariableName -> astProperty(unwindVariable, "b")))(IdGen)
     val limitParameter = astParameter("limit", symbols.CTInteger)
-    val top = PartialTop_sortMode match {
+    val top = sortMode match {
       case "PartialTop" => plans.PartialTop(projection, List(Ascending(aVariableName)), List(Ascending(bVariableName)), limitParameter)(IdGen)
       case "NormalTop" => plans.Top(projection, List(Ascending(unwindVariableName)), limitParameter)(IdGen)
     }
@@ -100,7 +100,7 @@ class PartialTop extends AbstractCypherBenchmark {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
-    assertExpectedRowCount(PartialTop_limit.toInt, subscriber)
+    assertExpectedRowCount(limit.toInt, subscriber)
   }
 }
 
@@ -112,12 +112,12 @@ class PartialTopThreadState {
   @Setup
   def setUp(benchmarkState: PartialTop): Unit = {
     // A list with a certain number of distinct values
-    val listA = randomListOf[java.lang.Comparable[Any]](benchmarkState.PartialTop_type, benchmarkState.LIST_ITEM_COUNT, benchmarkState.PartialTop_distinctCount)
+    val listA = randomListOf[java.lang.Comparable[Any]](benchmarkState.propertyType, benchmarkState.LIST_ITEM_COUNT, benchmarkState.distinctCount)
     // Sort this list
     listA.sort(util.Comparator.naturalOrder())
 
     // A list of ascending values
-    val listB = listOf(benchmarkState.PartialTop_type, benchmarkState.LIST_ITEM_COUNT)
+    val listB = listOf(benchmarkState.propertyType, benchmarkState.LIST_ITEM_COUNT)
     // Randomize the order
     Collections.shuffle(listB)
 
@@ -135,9 +135,9 @@ class PartialTopThreadState {
 
     val paramsMap = mutable.Map[String, AnyRef](
       "list" -> list,
-      "limit" -> Long.box(benchmarkState.PartialTop_limit)).asJava
+      "limit" -> Long.box(benchmarkState.limit)).asJava
     benchmarkState.params = ValueUtils.asMapValue(paramsMap)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.PartialTop_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

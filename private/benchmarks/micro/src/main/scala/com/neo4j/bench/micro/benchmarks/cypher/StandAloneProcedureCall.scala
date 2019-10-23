@@ -26,21 +26,21 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
-  var StandAloneProcedureCall_runtime: String = _
+  var runtime: String = _
 
   @ParamValues(
     allowed = Array("1", "100", "1000"),
     base = Array("1", "100", "1000"))
   @Param(Array[String]())
-  var StandAloneProcedureCall_labels: Int = _
+  var labels: Int = _
 
   override def description = "Stand-alone procedure call, CALL db.labels"
 
   override protected def getConfig: DataGeneratorConfig = {
-    val labels = (0 until StandAloneProcedureCall_labels).map(c => Label.label(s"label$c"))
+    val configuredLabels = (0 until labels).map(c => Label.label(s"label$c"))
     new DataGeneratorConfigBuilder()
       .withNodeCount(1)
-      .withLabels(labels:_*)
+      .withLabels(configuredLabels:_*)
       .isReusableStore(true)
       .build()
   }
@@ -56,7 +56,7 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
-    assertExpectedRowCount(StandAloneProcedureCall_labels, subscriber)
+    assertExpectedRowCount(labels, subscriber)
   }
 
   override protected def procedureName: QualifiedName = QualifiedName(Seq("db"), "labels")
@@ -76,7 +76,7 @@ class StandAloneProcedureCallThreadState {
 
   @Setup
   def setUp(benchmarkState: StandAloneProcedureCall): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.StandAloneProcedureCall_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 
