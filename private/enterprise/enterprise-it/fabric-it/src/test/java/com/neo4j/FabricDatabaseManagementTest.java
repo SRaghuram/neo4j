@@ -30,6 +30,8 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.values.storable.Values;
 
 import static org.hamcrest.Matchers.containsString;
@@ -75,7 +77,7 @@ class FabricDatabaseManagementTest
         var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config, databaseDir );
         logProvider = new AssertableLogProvider();
-        testServer.setInternalLogProvider( logProvider );
+        testServer.setLogService( new SimpleLogService( NullLogProvider.getInstance(), logProvider ) );
         testServer.start();
     }
 

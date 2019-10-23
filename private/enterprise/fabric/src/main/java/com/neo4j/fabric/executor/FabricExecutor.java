@@ -51,17 +51,24 @@ public class FabricExecutor
     private final FabricPlanner planner;
     private final UseEvaluation useEvaluation;
     private final Log log;
+    private final FabricQueryMonitoring queryMonitoring;
 
-    public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, LogProvider internalLog )
+    public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, LogProvider internalLog,
+            FabricQueryMonitoring queryMonitoring )
     {
         this.config = config;
         this.planner = planner;
         this.useEvaluation = useEvaluation;
-        log = internalLog.getLog( getClass() );
+        this.log = internalLog.getLog( getClass() );
+        this.queryMonitoring = queryMonitoring;
     }
 
     public StatementResult run( FabricTransaction fabricTransaction, String statement, MapValue params )
     {
+        Thread thread = Thread.currentThread();
+        FabricQueryMonitoring.QueryMonitor queryMonitor = queryMonitoring.queryMonitor( fabricTransaction.getTransactionInfo(), statement, params, thread );
+        queryMonitor.start();
+
         FabricPlan plan = planner.plan( statement, params );
 
         if ( plan.debugOptions().logPlan() )
@@ -73,11 +80,11 @@ public class FabricExecutor
             FabricStatementExecution execution;
             if ( plan.debugOptions().logRecords() )
             {
-                execution = new FabricLoggingStatementExecution( statement, plan, params, ctx, log );
+                execution = new FabricLoggingStatementExecution( statement, plan, params, ctx, log, queryMonitor );
             }
             else
             {
-                execution = new FabricStatementExecution( statement, plan, params, ctx );
+                execution = new FabricStatementExecution( statement, plan, params, ctx, queryMonitor );
             }
             return execution.run();
         } );
@@ -90,18 +97,22 @@ public class FabricExecutor
         private final MapValue params;
         private final FabricTransaction.FabricExecutionContext ctx;
         private final MergedSummary mergedSummary;
+        private final FabricQueryMonitoring.QueryMonitor queryMonitor;
 
-        FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx )
+        FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx,
+                FabricQueryMonitoring.QueryMonitor queryMonitor)
         {
             this.originalStatement = originalStatement;
             this.plan = plan;
             this.params = params;
             this.ctx = ctx;
             this.mergedSummary = new MergedSummary( plan );
+            this.queryMonitor = queryMonitor;
         }
 
         StatementResult run()
         {
+            queryMonitor.startExecution();
             var query = plan.query();
             Flux<Record> unit = Flux.just( Records.empty() );
             Flux<String> columns = Flux.fromIterable( asJavaIterable( query.columns().output() ) );
@@ -116,7 +127,12 @@ public class FabricExecutor
             {
                 records = run( query, unit );
             }
-            return StatementResults.create( columns, records, summary );
+            return StatementResults.create(
+                    columns,
+                    records.doOnComplete( queryMonitor::endSuccess )
+                            .doOnError( queryMonitor::endFailure ),
+                    summary
+            );
         }
 
         Flux<Record> run( FabricQuery query, Flux<Record> input )
@@ -306,9 +322,10 @@ public class FabricExecutor
         private final AtomicInteger step;
         private final Log log;
 
-        FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx, Log log )
+        FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx, Log log,
+                FabricQueryMonitoring.QueryMonitor queryMonitor)
         {
-            super( originalStatement, plan, params, ctx );
+            super( originalStatement, plan, params, ctx, queryMonitor );
             this.step = new AtomicInteger( 0 );
             this.log = log;
         }

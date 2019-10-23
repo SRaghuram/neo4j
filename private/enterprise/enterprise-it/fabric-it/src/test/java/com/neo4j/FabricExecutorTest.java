@@ -9,6 +9,7 @@ import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
+import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
@@ -32,7 +33,6 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.Notification;
@@ -42,14 +42,24 @@ import org.neo4j.driver.summary.StatementType;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.impl.notification.NotificationCode;
+import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
+import static com.neo4j.AssertableQueryExecutionMonitor.endFailure;
+import static com.neo4j.AssertableQueryExecutionMonitor.endSuccess;
+import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
+import static com.neo4j.AssertableQueryExecutionMonitor.query;
+import static com.neo4j.AssertableQueryExecutionMonitor.start;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsInRelativeOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,7 +83,8 @@ class FabricExecutorTest
             "fabric.graph.1.uri", "bolt://localhost:2222",
             "fabric.routing.servers", "localhost:" + ports.bolt,
             "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
-            "dbms.connector.bolt.enabled", "true"
+            "dbms.connector.bolt.enabled", "true",
+            "dbms.logs.query.enabled", "true"
     );
 
     private static final Config config = Config.newBuilder()
@@ -88,6 +99,7 @@ class FabricExecutorTest
     private static final AutoCommitStatementResult graph0Result = mock( AutoCommitStatementResult.class );
     private static final AutoCommitStatementResult graph1Result = mock( AutoCommitStatementResult.class );
     private static AssertableLogProvider internalLogProvider;
+    private static AssertableQueryExecutionMonitor.Monitor queryExecutionMonitor;
 
     @BeforeAll
     static void setUp()
@@ -96,8 +108,12 @@ class FabricExecutorTest
 
         testServer.addMocks( driverPool );
         internalLogProvider = new AssertableLogProvider();
-        testServer.setInternalLogProvider( internalLogProvider );
+        testServer.setLogService( new SimpleLogService( NullLogProvider.getInstance(), internalLogProvider ) );
         testServer.start();
+
+        queryExecutionMonitor = new AssertableQueryExecutionMonitor.Monitor();
+        testServer.getDependencies().resolveDependency( Monitors.class )
+                .addMonitorListener( queryExecutionMonitor );
 
         clientDriver = GraphDatabase.driver(
                 "bolt://localhost:" + ports.bolt,
@@ -533,6 +549,81 @@ class FabricExecutorTest
                 inLog( FabricExecutor.class ).debug(
                         allOf( containsString( "local" ), containsString( "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" ) ) )
         );
+    }
+
+    @Test
+    void testQueryLogging()
+    {
+        when( graph0Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
+        );
+
+        when( graph1Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
+        );
+
+        Transaction tx = transaction( "mega", AccessMode.READ );
+        String query = String.join( "\n",
+                "UNWIND [0, 1] AS s",
+                "CALL { USE mega.graph(s) RETURN 2 AS y }",
+                "RETURN s, y ORDER BY s, y"
+        );
+        tx.run( query ).consume();
+        tx.success();
+
+        assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
+                start()
+                        .where( "query", e -> e.query, query()
+                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
+                        .where( "status", e -> e.snapshot.status(), is( "planning" ) ),
+                endSuccess()
+                        .where( "query", e -> e.query, query()
+                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
+                        .where( "status", e -> e.snapshot.status(), is( "running" ) )
+        ) );
+    }
+
+    @Test
+    void testQueryLoggingFailure()
+    {
+        when( graph0Result.records() ).thenReturn(
+                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
+        );
+
+        when( graph1Result.records() ).thenReturn(
+                Flux.error( new Exception( "my failure!" ) )
+        );
+
+        String query = String.join( "\n",
+                "UNWIND [0, 1] AS s",
+                "CALL { USE mega.graph(s) RETURN 2 AS y }",
+                "RETURN s, y ORDER BY s, y"
+        );
+        try
+        {
+            Transaction tx = transaction( "mega", AccessMode.READ );
+            tx.run( query ).consume();
+            tx.success();
+        }
+        catch ( Exception e )
+        {
+        }
+
+        assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
+                start()
+                        .where( "query", e -> e.query, query()
+                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
+                        .where( "status", e -> e.snapshot.status(), is( "planning" ) ),
+                endFailure()
+                        .where( "query", e -> e.query, query()
+                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
+                        .where( "failure", e -> e.failure, throwable( is( FabricException.class ), containsString( "my failure!" ) ) )
+                        .where( "status", e -> e.snapshot.status(), is( "running" ) )
+        ) );
     }
 
     private String codeOf( NotificationCode notificationCode )

@@ -30,6 +30,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
 {
     private static final AtomicLong ID_GENERATOR = new AtomicLong();
 
+    private final FabricTransactionInfo transactionInfo;
     private final FabricRemoteExecutor remoteExecutor;
     private final FabricLocalExecutor localExecutor;
     private final Log userLog;
@@ -44,10 +45,11 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
     private boolean terminated;
     private Status terminationStatus;
 
-    FabricTransactionImpl( FabricRemoteExecutor remoteExecutor, FabricLocalExecutor localExecutor, LogService logService,
+    FabricTransactionImpl( FabricTransactionInfo transactionInfo, FabricRemoteExecutor remoteExecutor, FabricLocalExecutor localExecutor, LogService logService,
             TransactionManager transactionManager, JobScheduler jobScheduler,
             FabricConfig fabricConfig )
     {
+        this.transactionInfo = transactionInfo;
         this.remoteExecutor = remoteExecutor;
         this.localExecutor = localExecutor;
         this.userLog = logService.getUserLog( FabricTransactionImpl.class );
@@ -56,6 +58,12 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         this.jobScheduler = jobScheduler;
         this.fabricConfig = fabricConfig;
         this.id = ID_GENERATOR.incrementAndGet();
+    }
+
+    @Override
+    public FabricTransactionInfo getTransactionInfo()
+    {
+        return transactionInfo;
     }
 
     @Override
@@ -70,7 +78,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         return localTransaction;
     }
 
-    public void begin( FabricTransactionInfo transactionInfo )
+    public void begin()
     {
         internalLog.debug( "Starting transaction %d", id );
 

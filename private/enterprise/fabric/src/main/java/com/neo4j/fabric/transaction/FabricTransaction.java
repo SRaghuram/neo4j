@@ -17,7 +17,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 public interface FabricTransaction
 {
 
-    void begin( FabricTransactionInfo transactionInfo );
+    void begin();
 
     void commit();
 
@@ -28,6 +28,8 @@ public interface FabricTransaction
     void markForTermination( Status reason );
 
     Optional<Status> getReasonIfTerminated();
+
+    FabricTransactionInfo getTransactionInfo();
 
     interface FabricExecutionContext
     {

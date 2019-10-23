@@ -19,6 +19,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
 
 public class TestServer implements AutoCloseable
 {
@@ -30,8 +31,7 @@ public class TestServer implements AutoCloseable
     private Path directory;
     private boolean databaseRootDirProvided;
     private TestFabricDatabaseManagementServiceBuilder dbmsBuilder;
-    private LogProvider userLogProvider;
-    private LogProvider internalLogProvider;
+    private LogService logService;
 
     public TestServer()
     {
@@ -56,14 +56,10 @@ public class TestServer implements AutoCloseable
         this.mocks.addAll( Arrays.asList( mocks ) );
     }
 
-    public void setUserLogProvider( LogProvider userLogProvider )
+    public void setLogService( LogService logService )
     {
-        this.userLogProvider = userLogProvider;
-    }
-
-    public void setInternalLogProvider( LogProvider internalLogProvider )
-    {
-        this.internalLogProvider = internalLogProvider;
+        this.logService = logService;
+        addMocks( logService );
     }
 
     public void start()
@@ -73,13 +69,14 @@ public class TestServer implements AutoCloseable
             this.directory = createDirectory();
         }
         var dbmsBuilder = new TestFabricDatabaseManagementServiceBuilder( directory.toFile(), mocks );
-        if ( internalLogProvider != null )
+
+        if ( logService != null && logService.getInternalLogProvider() != null )
         {
-            dbmsBuilder.setInternalLogProvider( internalLogProvider );
+            dbmsBuilder.setInternalLogProvider( logService.getInternalLogProvider() );
         }
-        if ( userLogProvider != null )
+        if ( logService != null && logService.getUserLogProvider() != null )
         {
-            dbmsBuilder.setUserLogProvider( userLogProvider );
+            dbmsBuilder.setUserLogProvider( logService.getUserLogProvider() );
         }
         this.dbms = dbmsBuilder.setConfig( config )
                 .build();
