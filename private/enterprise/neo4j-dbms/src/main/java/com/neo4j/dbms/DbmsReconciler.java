@@ -335,7 +335,9 @@ public class DbmsReconciler implements DatabaseStateService
             currentStates.compute( databaseName, ( name, previousState ) ->
             {
                 var failedState = handleReconciliationErrors( throwable, request, result, databaseName, previousState );
-                return failedState.orElse( result.state() );
+                // failedState.isEmpty() and result == null cannot both be true, *however* the method reference form result::state cannot be used here
+                // as the left hand side of the :: is evaluated (and NPE thrown) even if the supplier itself is never called.
+                return failedState.orElseGet( () -> result.state() );
             } );
         }
         finally
@@ -353,7 +355,8 @@ public class DbmsReconciler implements DatabaseStateService
     {
         if ( throwable != null )
         {
-            // An exception which was not wrapped in a DatabaseManagementException has occured. E.g. an InterruptedException in the reconciler itself
+            // An exception which was not wrapped in a DatabaseManagementException has occurred. E.g. we looked up an unknown state transition or there was
+            // an InterruptedException in the reconciler job itself
             var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
             if ( previousState == null )
             {
