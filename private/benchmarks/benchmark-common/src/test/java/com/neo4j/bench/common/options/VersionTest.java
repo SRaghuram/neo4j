@@ -22,11 +22,9 @@ class VersionTest
     void getMainVersion()
     {
         Version version = new Version( "3.4.0" );
-        assertThat( "3", equalTo( version.getMainVersion() ) );
-        assertThat( "4", equalTo( version.getMinorVersion() ) );
-        assertThat( "3.4", equalTo( version.getMainAndMinorVersion() ) );
-        assertThat( "0", equalTo( version.getPatchVersion() ) );
-        assertThat( "3.4.0", equalTo( version.getMainAndMinorAndPatchVersion() ) );
+        assertThat( "3", equalTo( version.mainVersion() ) );
+        assertThat( "3.4", equalTo( version.minorVersion() ) );
+        assertThat( "3.4.0", equalTo( version.patchVersion() ) );
     }
 
     @Test

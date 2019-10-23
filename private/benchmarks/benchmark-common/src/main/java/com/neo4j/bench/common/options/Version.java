@@ -16,35 +16,31 @@ public class Version
         String[] split = versionString.split( "\\." );
         if ( split.length != 3 )
         {
-            throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.xx.xx , but this version is %s", versionString ) );
+            throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
         }
         mainVersion = split[0];
         minorVersion = split[1];
         patchVersion = split[2];
     }
 
-    public String getMainVersion()
+    public String mainVersion()
     {
         return mainVersion;
     }
 
-    public String getMinorVersion()
+    public String minorVersion()
     {
-        return minorVersion;
+        return String.format( "%s.%s", mainVersion, minorVersion );
     }
 
-    public String getPatchVersion()
-    {
-        return patchVersion;
-    }
-
-    public String getMainAndMinorAndPatchVersion()
+    public String patchVersion()
     {
         return String.format( "%s.%s.%s", mainVersion, minorVersion, patchVersion );
     }
 
-    public String getMainAndMinorVersion()
+    @Override
+    public String toString()
     {
-        return String.format( "%s.%s", mainVersion, minorVersion );
+        return patchVersion();
     }
 }

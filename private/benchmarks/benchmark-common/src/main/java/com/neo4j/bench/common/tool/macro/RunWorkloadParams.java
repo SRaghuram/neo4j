@@ -383,7 +383,7 @@ public class RunWorkloadParams
         map.put( CMD_RECREATE_SCHEMA, Boolean.toString( recreateSchema ) );
         map.put( CMD_SKIP_FLAMEGRAPHS, Boolean.toString( skipFlameGraphs ) );
         map.put( CMD_NEO4J_COMMIT, neo4jCommit );
-        map.put( CMD_NEO4J_VERSION, neo4jVersion.getMainAndMinorAndPatchVersion() );
+        map.put( CMD_NEO4J_VERSION, neo4jVersion.patchVersion() );
         map.put( CMD_NEO4J_BRANCH, neo4jBranch );
         map.put( CMD_NEO4J_OWNER, neo4jBranchOwner );
         map.put( CMD_TOOL_COMMIT, toolCommit );

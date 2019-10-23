@@ -55,7 +55,7 @@ public class RunWorkerCommand extends BaseInfraCommand
 
             // download & extract dataset
             Version neo4jVersion = runWorkloadParams.neo4jVersion();
-            Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.getMainAndMinorVersion(), infraParams.storeName() );
+            Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.minorVersion(), infraParams.storeName() );
             dataset.extractInto( macroDir );
 
             // download artifacts
@@ -63,7 +63,7 @@ public class RunWorkerCommand extends BaseInfraCommand
             Files.setPosixFilePermissions( macroDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
 
             Workspace.assertMacroWorkspace( infraParams.workspaceDir(), runWorkloadParams.neo4jEdition(),
-                                            runWorkloadParams.neo4jVersion().getMainAndMinorAndPatchVersion() );
+                                            neo4jVersion );
 
             Path neo4jConfigFile = infraParams.workspaceDir().resolve( "neo4j.conf" );
             BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile );
@@ -136,7 +136,7 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    infraParams.resultsStoreUsername(),
                                    infraParams.resultsStorePassword(),
                                    runWorkloadParams.neo4jCommit(),
-                                   runWorkloadParams.neo4jVersion().getMainAndMinorAndPatchVersion(),
+                                   runWorkloadParams.neo4jVersion().patchVersion(),
                                    runWorkloadParams.neo4jBranch(),
                                    runWorkloadParams.neo4jBranchOwner(),
                                    runWorkloadParams.toolCommit(),
