@@ -87,10 +87,6 @@ class MorselNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestB
 class MorselArgumentTest extends ArgumentTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
 class MorselArgumentNoFusingTest extends ArgumentTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
 
-// APPLY
-class MorselApplyStressTest extends ApplyStressTestBase(ENTERPRISE.FUSING, MORSEL) with MorselSpecSuite
-class MorselApplyNoFusingStressTest extends ApplyStressTestBase(ENTERPRISE.NO_FUSING, MORSEL) with MorselSpecSuite
-
 // EXPAND ALL
 class MorselExpandAllTest extends ExpandAllTestBase(FUSING, MORSEL, SIZE_HINT)
                           with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
