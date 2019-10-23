@@ -30,15 +30,6 @@ import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
-object FabricPlanner {
-  private var printPlans: Boolean = false
-  private var printBasePlans: Boolean = false
-  private var printFragments: Boolean = false
-  def setPrintPlans(enabled: Boolean): Unit = printPlans = enabled
-  def setPrintBasePlans(enabled: Boolean): Unit = printBasePlans = enabled
-  def setPrintFragments(enabled: Boolean): Unit = printFragments = enabled
-}
-
 case class FabricPlanner(
   config: FabricConfig,
   cypherConfig: CypherConfiguration,
@@ -61,18 +52,8 @@ case class FabricPlanner(
   def plan(
     query: String,
     parameters: MapValue
-  ): FabricPlan = {
-
-    val result = queryCache.computeIfAbsent(
-      query, parameters, (q, p) => init(q, p).plan
-    )
-
-    if (FabricPlanner.printPlans) {
-      FabricQuery.pretty.pprint(result.query)
-    }
-
-    result
-  }
+  ): FabricPlan =
+    queryCache.computeIfAbsent(query, parameters, (q, p) => init(q, p).plan)
 
   def init(
     query: String,
@@ -292,13 +273,8 @@ case class FabricPlanner(
       FabricPlan(fabricQuery, queryType, executionType)
     }
 
-    def fabricQuery: FabricQuery = {
-      val frag = fragment
-      if (FabricPlanner.printFragments) {
-        Fragment.pretty.pprint(frag)
-      }
-      fabricQuery(frag)
-    }
+    def fabricQuery: FabricQuery =
+      fabricQuery(fragment)
 
     private def fabricQuery(fragment: Fragment): FabricQuery = fragment match {
 
@@ -355,10 +331,6 @@ case class FabricPlanner(
               ),
               columns = leaf.columns
             )
-        }
-
-        if (FabricPlanner.printBasePlans) {
-          FabricQuery.pretty.pprint(base)
         }
 
         base
