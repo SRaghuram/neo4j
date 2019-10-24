@@ -6,6 +6,7 @@
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +27,7 @@ import static java.lang.String.format;
  */
 public class Workspace
 {
-    public static Workspace assertMacroWorkspace( Path workspaceDir, Edition neo4jEdition, String neo4jVersion )
+    public static Workspace assertMacroWorkspace( Path workspaceDir, Edition neo4jEdition, Version neo4jVersion )
     {
         return Workspace
                 .create( workspaceDir.toAbsolutePath() )
@@ -34,7 +35,7 @@ public class Workspace
                         // required artifacts
                         Paths.get( "neo4j.conf" ),
                         Paths.get( "benchmark-infra-worker.jar" ),
-                        Paths.get( format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion ) ),
+                        Paths.get( format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion.patchVersion() ) ),
                         Paths.get( "macro/target/macro.jar" ),
                         Paths.get( "macro/run-report-benchmarks.sh" )
                 ).build();
