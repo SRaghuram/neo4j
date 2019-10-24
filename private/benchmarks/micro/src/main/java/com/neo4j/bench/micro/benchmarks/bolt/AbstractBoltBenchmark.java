@@ -63,8 +63,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         DependencyResolver resolver = db.getDependencyResolver();
         DatabaseManagementService managementService = resolver.resolveDependency( DatabaseManagementService.class );
         Config config = resolver.resolveDependency( Config.class );
-        Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
-                                                                 resolver.resolveDependency( UserManagerSupplier.class ) );
+        Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ) );
 
         SystemNanoClock clock = Clocks.nanoClock();
         ReconciledTransactionTracker reconciledTxTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
