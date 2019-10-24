@@ -23,7 +23,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureHandle;
-import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.ProcedureITBase;
@@ -63,8 +62,7 @@ class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
     {
         // When
         GraphDatabaseAPI system = getGraphDatabaseAPI();
-        Kernel kernel = system.getDependencyResolver().resolveDependency( Kernel.class );
-        KernelTransaction transaction = kernel.beginTransaction( implicit, AnonymousContext.read() );
+        KernelTransaction transaction = system.beginTransaction( implicit, AnonymousContext.read() ).kernelTransaction();
         ProcedureHandle procedures = transaction.procedures().procedureGet( procedureName( "dbms", "procedures" ) );
         RawIterator<AnyValue[],ProcedureException> stream =
                 transaction.procedures().procedureCallRead( procedures.id(), new AnyValue[0], ProcedureCallContext.EMPTY );
