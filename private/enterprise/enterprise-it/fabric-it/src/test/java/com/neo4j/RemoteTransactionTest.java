@@ -25,6 +25,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -43,6 +44,7 @@ import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.scheduler.JobHandle;
@@ -72,7 +74,7 @@ class RemoteTransactionTest
     private static final PooledDriver shard2Driver = mock( PooledDriver.class );
     private static final PooledDriver shard3Driver = mock( PooledDriver.class );
     private static final JobScheduler jobScheduler = mock( JobScheduler.class );
-    private static final DatabaseManagementService databaseManagementService = mock(DatabaseManagementService.class);
+    private static final DatabaseManagementService databaseManagementService = mock( DatabaseManagementService.class );
     private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
 
     private final CountDownLatch latch = new CountDownLatch( 3 );
@@ -153,6 +155,10 @@ class RemoteTransactionTest
         when( fabricDatabaseManager.getDatabase( any() ) ).thenReturn( graphDatabaseFacade );
         when( fabricDatabaseManager.isFabricDatabase( "mega" ) ).thenReturn( true );
 
+        DatabaseIdRepository idRepository = mock( DatabaseIdRepository.class );
+        when( idRepository.getByName( "mega" ) ).thenReturn( Optional.of( databaseId ) );
+        when( fabricDatabaseManager.databaseIdRepository() ).thenReturn( idRepository );
+
         InternalTransaction internalTransaction = mock( InternalTransaction.class );
         when( graphDatabaseFacade.beginTransaction( any(), any(), any(), anyLong(), any() ) ).thenReturn( internalTransaction );
 
@@ -163,7 +169,6 @@ class RemoteTransactionTest
         when( dr.resolveDependency( GraphDatabaseQueryService.class ) ).thenReturn( graphDatabaseQueryService );
 
         when( graphDatabaseQueryService.getDependencyResolver() ).thenReturn( dr );
-
     }
 
     private void mockShardDriver( PooledDriver shardDriver, Mono<FabricDriverTransaction> transaction )
@@ -172,7 +177,7 @@ class RemoteTransactionTest
         when( shardDriver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( transaction );
 
         var result = mock( AutoCommitStatementResult.class );
-        when( result.columns() ).thenReturn( Flux.fromIterable(List.of( "a", "b" )) );
+        when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( result.records() ).thenReturn( Flux.empty() );
         when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
 
@@ -189,7 +194,7 @@ class RemoteTransactionTest
     {
         var tx = mock( FabricDriverTransaction.class );
         var result = mock( StatementResult.class );
-        when( result.columns() ).thenReturn( Flux.fromIterable(List.of( "a", "b" )) );
+        when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( result.records() ).thenReturn( Flux.empty() );
         when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
 
@@ -216,7 +221,7 @@ class RemoteTransactionTest
 
         waitForDriverRelease( 2 );
         verifyCommitted( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver );
     }
 
     @Test
@@ -234,7 +239,7 @@ class RemoteTransactionTest
 
         waitForDriverRelease( 2 );
         verifyRolledBack( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver );
     }
 
     @Test
@@ -264,7 +269,7 @@ class RemoteTransactionTest
         }
 
         waitForDriverRelease( 3 );
-        verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -295,7 +300,7 @@ class RemoteTransactionTest
 
         waitForDriverRelease( 3 );
         verifyCommitted( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -326,7 +331,7 @@ class RemoteTransactionTest
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -360,7 +365,7 @@ class RemoteTransactionTest
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -396,9 +401,9 @@ class RemoteTransactionTest
             }
         }
 
-        waitForDriverRelease(3);
+        waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver, shard3Driver);
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -413,7 +418,7 @@ class RemoteTransactionTest
                 session.reset();
 
                 verifyRolledBack( tx1 );
-                verifyDriverReturned(shard1Driver, shard2Driver );
+                verifyDriverReturned( shard1Driver, shard2Driver );
             }
         }
     }
@@ -449,7 +454,7 @@ class RemoteTransactionTest
         }
 
         verifyRolledBack( tx1 );
-        verifyDriverReturned(shard1Driver, shard2Driver );
+        verifyDriverReturned( shard1Driver, shard2Driver );
     }
 
     private void verifyCommitted( FabricDriverTransaction tx )

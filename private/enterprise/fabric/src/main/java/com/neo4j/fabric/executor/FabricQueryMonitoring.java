@@ -5,14 +5,13 @@
  */
 package com.neo4j.fabric.executor;
 
+import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 
 import java.util.Map;
 import java.util.function.LongSupplier;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.query.ExecutingQuery;
@@ -102,8 +101,7 @@ public class FabricQueryMonitoring
     {
         if ( databaseIdRepository == null )
         {
-            var databaseManager = (DatabaseManager<DatabaseContext>) dependencyResolver.resolveDependency( DatabaseManager.class );
-            databaseIdRepository = databaseManager.databaseIdRepository();
+            databaseIdRepository = dependencyResolver.resolveDependency( FabricDatabaseManager.class ).databaseIdRepository();
         }
         return databaseIdRepository;
     }

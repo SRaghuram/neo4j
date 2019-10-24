@@ -57,6 +57,11 @@ public class FabricDatabaseManager extends LifecycleAdapter
         databaseIdRepository = databaseManager.databaseIdRepository();
     }
 
+    public DatabaseIdRepository databaseIdRepository()
+    {
+        return databaseIdRepository;
+    }
+
     public void manageFabricDatabases( GraphDatabaseService system, boolean update )
     {
 
