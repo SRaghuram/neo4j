@@ -111,7 +111,7 @@ public class UserAggregationFunctionIT
 
         // Expect
         exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Can't coerce `Long(42)` to String" );
+        exception.expectMessage( "Wrong argument type: Can't coerce `Long(42)` to String" );
 
         // When
         db.execute( "MATCH (n) RETURN org.neo4j.procedure.count(n.prop) AS count" );
