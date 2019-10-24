@@ -128,7 +128,7 @@ class AggregationFunctionIT
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class,
                                   () -> transaction.execute( "MATCH (n) RETURN com.neo4j.procedure.count(n.prop) AS count" ).resultAsString() );
-            assertThat( exception.getMessage(), equalTo( "Can't coerce `Long(42)` to String" ) );
+            assertThat( exception.getMessage(), equalTo( "Wrong argument type: Can't coerce `Long(42)` to String" ) );
         }
     }
 

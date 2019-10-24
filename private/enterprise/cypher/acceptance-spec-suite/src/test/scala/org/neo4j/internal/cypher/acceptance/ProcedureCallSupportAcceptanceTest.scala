@@ -18,6 +18,8 @@ import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.stringValue
 
+import scala.collection.JavaConverters._
+
 class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
   test("should return correctly typed map result (even if converting to and from scala representation internally)") {
@@ -151,5 +153,19 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
       tx.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)])").stream().toArray.toList should equal(List(
         java.util.Collections.singletonMap("out0", java.util.Collections.singletonList(18L))
       ))})
+  }
+
+  test("Fail when trying to pass map to procedure that takes string") {
+    // Given
+    registerDummyInOutProcedure(Neo4jTypes.NTString)
+    val value = Map("a" -> "b").asJava
+    val transaction = graphOps.beginTx()
+    try {
+      // When & then
+      val exception = the[QueryExecutionException] thrownBy transaction.execute("CALL my.first.proc($p)", map("p", value)).next()
+      exception.getMessage should fullyMatch regex "Wrong argument type: Can't coerce `Map[^`]*` to String".r
+    } finally {
+      transaction.close()
+    }
   }
 }
