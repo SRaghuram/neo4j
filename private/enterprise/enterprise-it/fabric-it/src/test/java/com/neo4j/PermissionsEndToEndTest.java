@@ -8,7 +8,6 @@ package com.neo4j;
 import com.neo4j.utils.CustomFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -19,6 +18,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.internal.InProcessNeo4j;
@@ -26,16 +26,18 @@ import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.kernel.api.exceptions.Status.Security.Forbidden;
+import static org.neo4j.kernel.api.exceptions.Status.Statement.ExecutionFailed;
 
 class PermissionsEndToEndTest
 {
 
     private static Driver adminDriver;
-    private static Driver readerDriver;
-    private static Driver driverWithoutRole;
+    private static Driver accessDriver;
+    private static Driver noPermissionDriver;
     private static TestServer testServer;
     private static InProcessNeo4j remote;
 
@@ -75,14 +77,17 @@ class PermissionsEndToEndTest
 
         try ( var tx = adminDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ).beginTransaction() )
         {
-            tx.run( "CREATE USER userWithReaderPermission SET PASSWORD '1234' CHANGE NOT REQUIRED" ).consume();
-            tx.run( "GRANT ROLE reader TO userWithReaderPermission" ).consume();
+            tx.run( "CREATE ROLE access" ).consume();
+            tx.run( "GRANT ACCESS ON DATABASE * TO access" ).consume();
+            tx.run( "CREATE USER userWithAccessPermission SET PASSWORD '1234' CHANGE NOT REQUIRED" ).consume();
+            tx.run( "GRANT ROLE access TO userWithAccessPermission" ).consume();
+
             tx.run( "CREATE USER userWithNoPermission SET PASSWORD '1234' CHANGE NOT REQUIRED" ).consume();
             tx.success();
         }
 
-        readerDriver = createDriver( "userWithReaderPermission", "1234", ports.bolt );
-        driverWithoutRole = createDriver( "userWithNoPermission", "1234", ports.bolt );
+        accessDriver = createDriver( "userWithAccessPermission", "1234", ports.bolt );
+        noPermissionDriver = createDriver( "userWithNoPermission", "1234", ports.bolt );
     }
 
     @AfterAll
@@ -94,14 +99,14 @@ class PermissionsEndToEndTest
             adminDriver.close();
         }
 
-        if ( readerDriver != null )
+        if ( accessDriver != null )
         {
-            readerDriver.close();
+            accessDriver.close();
         }
 
-        if ( driverWithoutRole != null )
+        if ( noPermissionDriver != null )
         {
-            driverWithoutRole.close();
+            noPermissionDriver.close();
         }
 
         remote.close();
@@ -126,9 +131,9 @@ class PermissionsEndToEndTest
     }
 
     @Test
-    void testReaderCanUseFabric()
+    void testUserWithAccessCanUseFabric()
     {
-        try ( var tx = begin( readerDriver, "mega" ) )
+        try ( var tx = begin( accessDriver, "mega" ) )
         {
             var query = joinAsLines(
                     "UNWIND [0] AS gid",
@@ -143,65 +148,91 @@ class PermissionsEndToEndTest
         }
     }
 
-    @Disabled
     @Test
-    void testUserWithoutReadPermissionsCannotUseFunctionsInUseClause()
+    void testWithoutPermissionsCannotUseFabric()
     {
-        try ( var tx = begin( driverWithoutRole, "mega" ) )
+        var e = assertThrows( ClientException.class, () ->
         {
-            var query = "USE mega.graph(com.neo4j.utils.myPlusOne(-1)) RETURN 1";
-            tx.run( query ).consume();
-            fail( "Exception expected" );
-        }
-        catch ( ClientException e )
+            try ( var tx = begin( noPermissionDriver, "mega" ) )
+            {
+                var query = "RETURN 1";
+                tx.run( query ).consume();
+            }
+        } );
+
+        assertEquals( Forbidden.code().serialize(), e.code() );
+        assertEquals( "Database access is not allowed for user 'userWithNoPermission' with roles [].", e.getMessage() );
+    }
+
+    @Test
+    void testAdminCanUseLocalMatch()
+    {
+        try ( var tx = begin( adminDriver, "mega" ) )
         {
-            assertEquals( Forbidden.code().serialize(), e.code() );
-            assertEquals( "Database access is not allowed for user 'userWithNoPermission' with roles [].", e.getMessage() );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception: " + e );
+            var query = "MATCH (n) RETURN n";
+            var result = tx.run( query );
+            assertEquals( 0, result.list().size() );
         }
     }
 
     @Test
-    void testUserWithoutReadPermissionsCannotUseFunctionsInLocalQueries()
+    void testUserWithAccessCanUseLocalMatch()
     {
-        try ( var tx = begin( driverWithoutRole, "mega" ) )
+        try ( var tx = begin( accessDriver, "mega" ) )
         {
-            var query = "RETURN com.neo4j.utils.myPlusOne(-1)";
-            tx.run( query ).consume();
-            fail( "Exception expected" );
-        }
-        catch ( ClientException e )
-        {
-            assertEquals( Forbidden.code().serialize(), e.code() );
-            assertEquals( "Database access is not allowed for user 'userWithNoPermission' with roles [].", e.getMessage() );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception: " + e );
+            var query = "MATCH (n) RETURN n";
+            var result = tx.run( query );
+            assertEquals( 0, result.list().size() );
         }
     }
 
     @Test
     void testAdminCannotWriteToFabricDatabase()
     {
-        try ( var tx = begin( adminDriver, "mega" ) )
+        var e = assertThrows( ClientException.class, () ->
         {
-            var query = "CREATE (n)";
-            tx.run( query ).consume();
-            fail( "Exception expected" );
-        }
-        catch ( ClientException e )
+            try ( var tx = begin( adminDriver, "mega" ) )
+            {
+                var query = "CREATE (n)";
+                tx.run( query ).consume();
+            }
+        } );
+
+        assertEquals( Forbidden.code().serialize(), e.code() );
+        assertEquals( "Write operations are not allowed for user 'neo4j' with roles [admin] restricted to READ.", e.getMessage() );
+    }
+
+    @Test
+    void testUserWithAccessCannotWriteToFabricDatabase()
+    {
+        var e = assertThrows( ClientException.class, () ->
         {
-            assertEquals( Forbidden.code().serialize(), e.code() );
-            assertEquals( "Write operations are not allowed for user 'neo4j' with roles [admin] restricted to READ.", e.getMessage() );
-        }
-        catch ( Exception e )
+            try ( var tx = begin( accessDriver, "mega" ) )
+            {
+                var query = "CREATE (n)";
+                tx.run( query ).consume();
+            }
+        } );
+
+        assertEquals( Forbidden.code().serialize(), e.code() );
+        assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [access] restricted to READ.", e.getMessage() );
+    }
+
+    // TODO: This should fail on permissions instead of on evaluation
+    @Test
+    void testAdminCannotAccessDataInUse()
+    {
+        var e = assertThrows( DatabaseException.class, () ->
         {
-            fail( "Unexpected exception: " + e );
-        }
+            try ( var tx = begin( adminDriver, "mega" ) )
+            {
+                var query = "USE mega.graph(size([p = (x)-->(y) | p])) RETURN 1";
+                tx.run( query ).consume();
+            }
+        } );
+
+        assertEquals( ExecutionFailed.code().serialize(), e.code() );
+        assertEquals( "should have been rewritten away", e.getMessage() );
     }
 
     private static Driver createDriver( String user, String password, int boltPort )

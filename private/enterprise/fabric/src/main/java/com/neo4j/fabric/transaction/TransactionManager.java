@@ -6,6 +6,7 @@
 package com.neo4j.fabric.transaction;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Exceptions;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 
@@ -13,6 +14,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.exceptions.KernelException;
+import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -39,11 +43,25 @@ public class TransactionManager extends LifecycleAdapter
 
     public FabricTransaction begin( FabricTransactionInfo transactionInfo )
     {
+        authorize( transactionInfo.getLoginContext(), transactionInfo.getDatabaseName() );
+
         FabricTransactionImpl fabricTransaction =
                 new FabricTransactionImpl( transactionInfo, remoteExecutor, localExecutor, logService, this, jobScheduler, fabricConfig );
         fabricTransaction.begin();
         openTransactions.add( fabricTransaction );
         return fabricTransaction;
+    }
+
+    private void authorize( LoginContext loginContext, String dbName )
+    {
+        try
+        {
+            loginContext.authorize( LoginContext.IdLookup.EMPTY, dbName );
+        }
+        catch ( KernelException e )
+        {
+            throw Exceptions.transform( Status.Security.Forbidden, e );
+        }
     }
 
     @Override
