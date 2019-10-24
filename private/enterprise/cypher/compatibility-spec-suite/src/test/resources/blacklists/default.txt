@@ -14,13 +14,5 @@ Feature "MiscellaneousErrorAcceptance": Scenario "Failing when setting a list of
 // Bug in TCK parser
 Feature "LargeCreateQuery": Scenario "Generate the movie graph correctly"
 
-// Test asserts on incorrect behavior. Should be removed from blacklist after updating dependency to TCK M15
-Feature "OrderByAcceptance": Scenario "ORDER BY with negative parameter for LIMIT should not generate errors"
-
 // TCK expects error but query is valid
 Feature "SemanticErrorAcceptance": Scenario "Failing when using MATCH after OPTIONAL MATCH"
-
-// TODO: queries with old syntax, remove once a new TCK release is out
-Feature "ListComprehension": Scenario "Using a list comprehension in a WHERE"
-Feature "FunctionsAcceptance": Scenario "Functions should return null if they get path containing unbound"
-Feature "ListOperations": Scenario "Collect and filter using a list comprehension"
