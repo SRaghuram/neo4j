@@ -526,9 +526,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // WHEN
-    an[AuthorizationViolationException] should be thrownBy {
+    the[AuthorizationViolationException] thrownBy {
       execute(s"DROP ROLE ${PredefinedRoles.ADMIN}")
-    }
+    } should have message "Permission denied."
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)

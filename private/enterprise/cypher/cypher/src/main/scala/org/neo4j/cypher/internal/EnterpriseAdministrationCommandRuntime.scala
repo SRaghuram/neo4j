@@ -42,9 +42,8 @@ import scala.util.{Failure, Success, Try}
   * This runtime takes on queries that require no planning, such as multidatabase administration commands
   */
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
-  private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver)
+  private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
   private val maxDBLimit: Long = resolver.resolveDependency( classOf[Config] ).get(EnterpriseEditionSettings.maxNumberOfDatabases)
-  private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
   override def name: String = "enterprise administration-commands"
 
@@ -66,7 +65,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     resolver.resolveDependency(classOf[EnterpriseAuthManager])
   }
 
-  val logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, SecurityContext) => ExecutionPlan] = {
+  // This allows both community and enterprise commands to be considered together, and chained together
+  private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
+
+  private def logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, SecurityContext) => ExecutionPlan] = {
+    // Special case where the admin role cannot be deleted (only in 4.0)
+    case CheckFrozenRole(source, roleName) => (context, parameterMapping, securityContext) =>
+      AuthorizationPredicateExecutionPlan(() => roleName != PredefinedRoles.ADMIN,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+
     // SHOW USERS
     case ShowUsers(source) => (context, parameterMapping, securityContext) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
@@ -711,5 +718,5 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   }
 
   override def isApplicableAdministrationCommand(logicalPlanState: LogicalPlanState): Boolean =
-    (logicalToExecutable orElse communityCommandRuntime.logicalToExecutable).isDefinedAt(logicalPlanState.maybeLogicalPlan.get)
+    fullLogicalToExecutable.isDefinedAt(logicalPlanState.maybeLogicalPlan.get)
 }
