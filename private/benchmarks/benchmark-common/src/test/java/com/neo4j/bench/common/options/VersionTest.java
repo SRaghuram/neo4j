@@ -6,20 +6,19 @@
 package com.neo4j.bench.common.options;
 
 import org.junit.Rule;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-class VersionTest
+public class VersionTest
 {
     @Rule
     public final ExpectedException exception = ExpectedException.none();
 
     @Test
-    void getMainVersion()
+    public void getMainVersion()
     {
         Version version = new Version( "3.4.0" );
         assertThat( "3", equalTo( version.mainVersion() ) );
@@ -28,22 +27,22 @@ class VersionTest
     }
 
     @Test
-    void shouldNotAllowToLongVersions()
+    public void shouldNotAllowToLongVersions() throws Exception
     {
         exception.expect( IllegalArgumentException.class );
         new Version( "3.4.0.0" );
     }
 
     @Test
-    void shouldNotAllowToShortVersions()
+    public void shouldNotAllowToShortVersions() throws Exception
     {
         exception.expect( IllegalArgumentException.class );
-        exception.expectMessage( is( "Neo4j version have always been on the form x.xx.xx , but this version is 3.4" ) );
+        exception.expectMessage( "Neo4j version have always been on the form x.y.z , but this version is 3.4" );
         new Version( "3.4" );
     }
 
     @Test
-    void shouldNotAllowToVersionsThatHaveNoneNumberVales()
+    public void shouldNotAllowToVersionsThatHaveNoneNumberVales() throws Exception
     {
         exception.expect( IllegalArgumentException.class );
         new Version( "a.0.0" );
