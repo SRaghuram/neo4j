@@ -504,12 +504,14 @@ class FabricExecutorTest
     @Test
     void testPlanLogging()
     {
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        tx.run( String.join( "\n",
-                "CYPHER debug=fabriclogplan",
-                "RETURN 1"
-        ) ).consume();
-        tx.success();
+        try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
+        {
+            tx.run( String.join( "\n",
+                    "CYPHER debug=fabriclogplan",
+                    "RETURN 1"
+            ) ).consume();
+            tx.success();
+        }
 
         internalLogProvider.assertAtLeastOnce(
                 inLog( FabricExecutor.class ).debug( containsString( "Fabric plan:" ) )
@@ -527,14 +529,16 @@ class FabricExecutorTest
                 recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
-        Transaction tx = transaction( "mega", AccessMode.READ );
-        tx.run( String.join( "\n",
-                "CYPHER debug=fabriclogrecords",
-                "UNWIND [0, 1] AS s",
-                "CALL { USE mega.graph(s) RETURN 2 AS y }",
-                "RETURN s, y ORDER BY s, y"
-        ) ).consume();
-        tx.success();
+        try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
+        {
+            tx.run( String.join( "\n",
+                    "CYPHER debug=fabriclogrecords",
+                    "UNWIND [0, 1] AS s",
+                    "CALL { USE mega.graph(s) RETURN 2 AS y }",
+                    "RETURN s, y ORDER BY s, y"
+            ) ).consume();
+            tx.success();
+        }
 
         internalLogProvider.assertAtLeastOnce(
                 inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "UNWIND [0, 1] AS s" ) ) )
@@ -562,14 +566,16 @@ class FabricExecutorTest
                 recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
-        Transaction tx = transaction( "mega", AccessMode.READ );
         String query = String.join( "\n",
                 "UNWIND [0, 1] AS s",
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
         );
-        tx.run( query ).consume();
-        tx.success();
+        try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
+        {
+            tx.run( query ).consume();
+            tx.success();
+        }
 
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
@@ -601,10 +607,13 @@ class FabricExecutorTest
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
         );
-        assertThrows( Throwable.class, () -> {
-            Transaction tx = transaction( "mega", AccessMode.READ );
-            tx.run( query ).consume();
-            tx.success();
+        assertThrows( Throwable.class, () ->
+        {
+            try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
+            {
+                tx.run( query ).consume();
+                tx.success();
+            }
         } );
 
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
