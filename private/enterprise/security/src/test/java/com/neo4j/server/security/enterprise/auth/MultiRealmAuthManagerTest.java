@@ -57,8 +57,7 @@ class MultiRealmAuthManagerTest
 
     private MultiRealmAuthManager createAuthManager( boolean logSuccessfulAuthentications ) throws Throwable
     {
-        SecureHasher secureHasher = new SecureHasher();
-        realm = new InMemoryUserManager( Config.defaults(), secureHasher, authStrategy );
+        realm = new InMemoryUserManager( Config.defaults(), authStrategy );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
                 new MemoryConstrainedCacheManager(), new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications );

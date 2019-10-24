@@ -283,7 +283,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
     @Override
     public EnterpriseUserManager getUserManager( AuthSubject authSubject, boolean isUserManager )
     {
-        return new PersonalUserManager( userManager, authSubject, securityLog, isUserManager );
+        return new PersonalUserManager( userManager, isUserManager );
     }
 
     @Override

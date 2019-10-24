@@ -23,14 +23,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.BasicInMemoryUserManager;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
@@ -45,17 +44,15 @@ public class InMemoryUserManager extends SystemGraphRealm
     private Map<String,RoleRecord> roles = new HashMap<>();
     private Map<String,Set<ResourcePrivilege>> rolePrivileges = new HashMap<>();
 
-    public InMemoryUserManager( Config config, SecureHasher secureHasher ) throws InvalidArgumentsException
+    public InMemoryUserManager( Config config ) throws InvalidArgumentsException
     {
-       this( config, secureHasher, new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config ) );
+       this( config, new RateLimitedAuthenticationStrategy( Clocks.systemClock(), config ) );
     }
 
-    public InMemoryUserManager( Config config, SecureHasher secureHasher, AuthenticationStrategy authStrategy ) throws InvalidArgumentsException
+    public InMemoryUserManager( Config config, AuthenticationStrategy authStrategy ) throws InvalidArgumentsException
     {
         super( null,
                 SecurityGraphInitializer.NO_OP,
-                secureHasher,
-                new BasicPasswordPolicy(),
                 authStrategy,
                 true,
                 true );
@@ -130,16 +127,9 @@ public class InMemoryUserManager extends SystemGraphRealm
         }
     }
 
-    @Override
-    public User newUser( String username, byte[] initialPassword, boolean requirePasswordChange ) throws InvalidArgumentsException
+    public void newUser( String username, byte[] initialPassword, boolean requirePasswordChange ) throws InvalidArgumentsException
     {
-        return basic.newUser( username, initialPassword, requirePasswordChange );
-    }
-
-    @Override
-    public void setUserPassword( String username, byte[] password, boolean requirePasswordChange ) throws InvalidArgumentsException
-    {
-        basic.setUserPassword( username, password, requirePasswordChange );
+        basic.newUser( username, initialPassword, requirePasswordChange );
     }
 
     @Override
@@ -192,7 +182,6 @@ public class InMemoryUserManager extends SystemGraphRealm
         }
     }
 
-
     public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
         assertValidRoleName( roleName );
@@ -227,4 +216,18 @@ public class InMemoryUserManager extends SystemGraphRealm
         }
         return privileges;
     }
+
+    private void assertValidRoleName( String name ) throws InvalidArgumentsException
+    {
+        if ( name == null || name.isEmpty() )
+        {
+            throw new InvalidArgumentsException( "The provided role name is empty." );
+        }
+        if ( !roleNamePattern.matcher( name ).matches() )
+        {
+            throw new InvalidArgumentsException( "Role name '" + name + "' contains illegal characters. Use simple ascii characters and numbers." );
+        }
+    }
+
+    private static final Pattern roleNamePattern = Pattern.compile( "^[a-zA-Z0-9_]+$" );
 }

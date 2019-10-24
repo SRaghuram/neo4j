@@ -32,10 +32,10 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     private final SystemGraphOperations systemGraphOperations;
 
     public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SecurityGraphInitializer systemGraphInitializer,
-            SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
+             AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
             boolean authorizationEnabled )
     {
-        super( systemGraphOperations, systemGraphInitializer, secureHasher, passwordPolicy, authenticationStrategy, authenticationEnabled );
+        super( systemGraphOperations, systemGraphInitializer, authenticationStrategy, authenticationEnabled );
         setName( SecuritySettings.NATIVE_REALM_NAME );
         this.authorizationEnabled = authorizationEnabled;
         this.systemGraphOperations = systemGraphOperations;
@@ -87,19 +87,5 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     public void clearCacheForRoles()
     {
         systemGraphOperations.clearCacheForRoles();
-    }
-
-    private static final Pattern roleNamePattern = Pattern.compile( "^[a-zA-Z0-9_]+$" );
-
-    static void assertValidRoleName( String name ) throws InvalidArgumentsException
-    {
-        if ( name == null || name.isEmpty() )
-        {
-            throw new InvalidArgumentsException( "The provided role name is empty." );
-        }
-        if ( !roleNamePattern.matcher( name ).matches() )
-        {
-            throw new InvalidArgumentsException( "Role name '" + name + "' contains illegal characters. Use simple ascii characters and numbers." );
-        }
     }
 }

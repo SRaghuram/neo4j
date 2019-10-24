@@ -5,97 +5,20 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.log.SecurityLog;
-
 import java.util.Set;
 
 import org.neo4j.graphdb.security.AuthorizationViolationException;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.impl.security.User;
-
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 
 class PersonalUserManager implements EnterpriseUserManager
 {
     private final EnterpriseUserManager userManager;
-    private final SecurityLog securityLog;
-    private final AuthSubject subject;
     private final boolean isUserManager;
 
-    PersonalUserManager( EnterpriseUserManager userManager, AuthSubject subject, SecurityLog securityLog, boolean isUserManager )
+    PersonalUserManager( EnterpriseUserManager userManager, boolean isUserManager )
     {
         this.userManager = userManager;
-        this.securityLog = securityLog;
-        this.subject = subject;
         this.isUserManager = isUserManager;
-    }
-
-    @Override
-    public User newUser( String username, byte[] initialPassword, boolean requirePasswordChange )
-            throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            User user = userManager.newUser( username, initialPassword, requirePasswordChange );
-            securityLog.info( subject, "created user `%s`%s", username,
-                    requirePasswordChange ? ", with password change required" : "" );
-            return user;
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to create user `%s`: %s", username, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public User getUser( String username ) throws InvalidArgumentsException
-    {
-        return userManager.getUser( username );
-    }
-
-    @Override
-    public User silentlyGetUser( String username )
-    {
-        return userManager.silentlyGetUser( username );
-    }
-
-    @Override
-    public void setUserPassword( String username, byte[] password, boolean requirePasswordChange )
-            throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        if ( subject.hasUsername( username ) )
-        {
-            try
-            {
-                userManager.setUserPassword( username, password, requirePasswordChange );
-                securityLog.info( subject, "changed password%s",
-                        requirePasswordChange ? ", with password change required" : "" );
-            }
-            catch ( AuthorizationViolationException | InvalidArgumentsException e )
-            {
-                securityLog.error( subject, "tried to change password: %s", e.getMessage() );
-                throw e;
-            }
-        }
-        else
-        {
-            try
-            {
-                assertUserManager();
-                userManager.setUserPassword( username, password, requirePasswordChange );
-                securityLog.info( subject, "changed password for user `%s`%s", username,
-                        requirePasswordChange ? ", with password change required" : "" );
-            }
-            catch ( AuthorizationViolationException | InvalidArgumentsException e )
-            {
-                securityLog.error( subject, "tried to change password for user `%s`: %s", username,
-                        e.getMessage() );
-                throw e;
-            }
-        }
     }
 
     @Override

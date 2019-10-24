@@ -5,11 +5,9 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import java.util.Arrays;
 import java.util.Set;
 
 import org.neo4j.kernel.api.security.UserManager;
-import org.neo4j.kernel.impl.security.User;
 
 import static java.util.Collections.emptySet;
 
@@ -33,37 +31,6 @@ public interface EnterpriseUserManager extends UserManager
         @Override
         public void clearCacheForRoles()
         {
-        }
-
-        @Override
-        public User newUser( String username, byte[] initialPassword, boolean requirePasswordChange )
-        {
-            if ( initialPassword != null )
-            {
-                Arrays.fill( initialPassword, (byte) 0 );
-            }
-            return null;
-        }
-
-        @Override
-        public User getUser( String username )
-        {
-            return null;
-        }
-
-        @Override
-        public User silentlyGetUser( String username )
-        {
-            return null;
-        }
-
-        @Override
-        public void setUserPassword( String username, byte[] password, boolean requirePasswordChange )
-        {
-            if ( password != null )
-            {
-                Arrays.fill( password, (byte) 0 );
-            }
         }
     };
 }

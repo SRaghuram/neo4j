@@ -42,7 +42,7 @@ class EnterpriseLoginContextTest
     void setup() throws Throwable
     {
         SecureHasher secureHasher = new SecureHasher();
-        userManager = new InMemoryUserManager( Config.defaults(), secureHasher );
+        userManager = new InMemoryUserManager( Config.defaults() );
         authManager =
                 new MultiRealmAuthManager( userManager, Collections.singleton( userManager ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
         authManager.start();

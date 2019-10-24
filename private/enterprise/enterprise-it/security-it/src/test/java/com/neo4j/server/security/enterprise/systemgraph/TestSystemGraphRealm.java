@@ -70,8 +70,7 @@ class TestSystemGraphRealm extends TestBasicSystemGraphRealm
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( dbManager, systemGraphInitializer, securityLog, importOptions, secureHasher );
 
-        SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations, securityGraphInitializer, secureHasher, new BasicPasswordPolicy(),
-                newRateLimitedAuthStrategy(), true, true );
+        SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations, securityGraphInitializer, newRateLimitedAuthStrategy(), true, true );
 
         realm.initialize();
         realm.start();

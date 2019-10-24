@@ -62,7 +62,6 @@ import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
@@ -281,8 +280,6 @@ public class EnterpriseSecurityModule extends SecurityModule
         return new SystemGraphRealm(
                 systemGraphOperations,
                 securityGraphInitializer,
-                secureHasher,
-                new BasicPasswordPolicy(),
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
                 securityConfig.nativeAuthentication,
                 securityConfig.nativeAuthorization

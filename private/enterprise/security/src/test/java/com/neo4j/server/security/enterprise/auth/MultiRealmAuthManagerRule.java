@@ -14,43 +14,25 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import java.io.StringWriter;
-import java.time.Clock;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.cypher.internal.security.SecureHasher;
-import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.fail;
 
 public class MultiRealmAuthManagerRule implements TestRule
 {
-    private AuthenticationStrategy authStrategy;
     private MultiRealmAuthManager manager;
-    private StringWriter securityLogWriter;
 
-    public MultiRealmAuthManagerRule()
-    {
-        this.authStrategy = new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() );
-    }
-
-    private void setupAuthManager( AuthenticationStrategy authStrategy ) throws Throwable
+    private void setupAuthManager() throws Throwable
     {
         FormattedLog.Builder builder = FormattedLog.withUTCTimeZone();
-        securityLogWriter = new StringWriter();
+        StringWriter securityLogWriter = new StringWriter();
         Log log = builder.toWriter( securityLogWriter );
-        SecureHasher secureHasher = new SecureHasher();
         SecurityLog securityLog = new SecurityLog( log );
-        InMemoryUserManager realm = new InMemoryUserManager( Config.defaults(), secureHasher );
+        InMemoryUserManager realm = new InMemoryUserManager( Config.defaults() );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), securityLog, true );
         manager.init();
@@ -59,11 +41,6 @@ public class MultiRealmAuthManagerRule implements TestRule
     public EnterpriseAuthAndUserManager getManager()
     {
         return manager;
-    }
-
-    public LoginContext makeLoginContext( ShiroSubject shiroSubject )
-    {
-        return new StandardEnterpriseLoginContext( manager, shiroSubject );
     }
 
     @Override
@@ -76,7 +53,7 @@ public class MultiRealmAuthManagerRule implements TestRule
             {
                 try
                 {
-                    setupAuthManager( authStrategy );
+                    setupAuthManager();
                     base.evaluate();
                 }
                 catch ( Throwable t )
@@ -103,25 +80,5 @@ public class MultiRealmAuthManagerRule implements TestRule
     {
         manager.stop();
         manager.shutdown();
-    }
-
-    public FullSecurityLog getFullSecurityLog()
-    {
-        return new FullSecurityLog( securityLogWriter.getBuffer().toString().split( "\n" ) );
-    }
-
-    public static class FullSecurityLog
-    {
-        List<String> lines;
-
-        private FullSecurityLog( String[] logLines )
-        {
-            lines = Arrays.asList( logLines );
-        }
-
-        public void assertHasLine( String subject, String msg )
-        {
-            assertThat( lines, hasItem( containsString( "[" + subject + "]: " + msg ) ) );
-        }
     }
 }

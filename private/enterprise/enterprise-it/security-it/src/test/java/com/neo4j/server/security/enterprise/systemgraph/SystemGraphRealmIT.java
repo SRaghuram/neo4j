@@ -28,7 +28,6 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.string.UTF8;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -205,13 +204,15 @@ class SystemGraphRealmIT
     @Test
     void shouldNotLoadInitialUserWithInitialPasswordOnRestartWhenAlreadyChanged() throws Throwable
     {
-        // Given started and stopped database
+        // Given
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( dbManager, testDirectory, securityLog );
-        realm.setUserPassword( INITIAL_USER_NAME, UTF8.encode( "neo4j2" ), false );
         realm.stop();
-        simulateSetInitialPasswordCommand(testDirectory);
+        simulateSetInitialPasswordCommand( testDirectory, "neo4j2" );
+        realm.start();
+        realm.stop();
 
         // When
+        simulateSetInitialPasswordCommand(testDirectory);
         realm.start();
 
         // Then
@@ -303,7 +304,7 @@ class SystemGraphRealmIT
         assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
 
         // When a default admin is set by command
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+        TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
                 .defaultAdmins( "trinity" )
@@ -322,7 +323,7 @@ class SystemGraphRealmIT
     @Test
     void shouldNotAssignAdminWhenExplicitlyImportingRole() throws Throwable
     {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+        TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldPerformImport()
                 .mayNotPerformMigration()
                 .importUsers( "alice" )
