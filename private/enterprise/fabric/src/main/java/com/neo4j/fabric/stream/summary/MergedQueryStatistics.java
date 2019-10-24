@@ -44,7 +44,7 @@ public class MergedQueryStatistics implements QueryStatistics
         {
             containsUpdates = true;
         }
-        if ( delta.containsUpdates() )
+        if ( delta.containsSystemUpdates() )
         {
             containsSystemUpdates = true;
         }
