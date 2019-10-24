@@ -48,7 +48,6 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;
 import static org.neo4j.kernel.api.exceptions.Status.HasStatus;
 
@@ -168,7 +167,7 @@ class TokenReplicationStressIT
         if ( error instanceof HasStatus )
         {
             var status = ((HasStatus) error).status();
-            return status == NotALeader || status == NoLeaderAvailable;
+            return status == NotALeader;
         }
         return false;
     }

@@ -351,9 +351,9 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Integer> global_session_tracker_state_size =
             newBuilder( "causal_clustering.global_session_tracker_state_size", INT, 1000 ).build();
 
-    @Description( "The maximum file size before the replicated lock token state file is rotated (in unit of entries)" )
-    public static final Setting<Integer> replicated_barrier_token_state_size =
-            newBuilder( "causal_clustering.replicated_lock_token_state_size", INT, 1000 ).build();
+    @Description( "The maximum file size before the replicated lease state file is rotated (in unit of entries)" )
+    public static final Setting<Integer> replicated_lease_state_size =
+            newBuilder( "causal_clustering.replicated_lease_state_size", INT, 1000 ).build();
 
     @Description( "The initial timeout until replication is retried. The timeout will increase exponentially." )
     public static final Setting<Duration> replication_retry_timeout_base =

@@ -11,7 +11,7 @@ class ContentCodes
     static final byte RAFT_MEMBER_SET_TYPE = 1;
     static final byte TOKEN_REQUEST_TYPE = 4;
     static final byte NEW_LEADER_BARRIER_TYPE = 5;
-    static final byte LOCK_TOKEN_REQUEST = 6;
+    static final byte LEASE_REQUEST = 6;
     static final byte DISTRIBUTED_OPERATION = 7;
     static final byte DUMMY_REQUEST = 8;
 }

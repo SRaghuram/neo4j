@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import com.neo4j.causalclustering.core.state.version.ClusterStateVersion;
@@ -28,7 +28,7 @@ import org.neo4j.graphdb.config.Setting;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.global_session_tracker_state_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.last_flushed_state_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_membership_state_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.replicated_barrier_token_state_size;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.replicated_lease_state_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.term_state_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.vote_state_size;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
@@ -57,9 +57,9 @@ public class CoreStateFiles<STATE>
 
     // per-database state
 
-    public static final CoreStateFiles<ReplicatedBarrierTokenState> BARRIER_TOKEN =
-            new CoreStateFiles<>( "barrier-token", DATABASE, new ReplicatedBarrierTokenState.Marshal(), replicated_barrier_token_state_size,
-                    CoreStateType.BARRIER_TOKEN );
+    public static final CoreStateFiles<ReplicatedLeaseState> LEASE =
+            new CoreStateFiles<>( "lease", DATABASE, new ReplicatedLeaseState.Marshal(), replicated_lease_state_size,
+                    CoreStateType.LEASE );
     public static final CoreStateFiles<GlobalSessionTrackerState> SESSION_TRACKER =
             new CoreStateFiles<>( "session-tracker", DATABASE, new GlobalSessionTrackerState.Marshal(), global_session_tracker_state_size,
                     CoreStateType.SESSION_TRACKER );
@@ -86,7 +86,7 @@ public class CoreStateFiles<STATE>
 
     static
     {
-        List<CoreStateFiles<?>> all = asList( VERSION, BARRIER_TOKEN, RAFT_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
+        List<CoreStateFiles<?>> all = asList( VERSION, LEASE, RAFT_ID, CORE_MEMBER_ID, RAFT_LOG, RAFT_TERM, RAFT_VOTE, RAFT_MEMBERSHIP, RAFT_CORE_STATE,
                 LAST_FLUSHED, SESSION_TRACKER );
         all.sort( Comparator.comparingInt( CoreStateFiles::typeId ) );
         VALUES = Collections.unmodifiableList( all );

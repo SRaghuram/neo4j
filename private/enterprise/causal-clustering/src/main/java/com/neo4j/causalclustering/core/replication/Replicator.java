@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.core.state.Result;
-
 /**
  * Replicate content across a cluster of servers.
   */
@@ -18,7 +16,7 @@ public interface Replicator
      * mechanisms must be used to achieve required delivery semantics.
      *
      * @param content      The content to replicated.
-     * @return A {@link Result}
+     * @return A {@link ReplicationResult}
      */
-    Result replicate( ReplicatedContent content ) throws ReplicationFailureException;
+    ReplicationResult replicate( ReplicatedContent content );
 }

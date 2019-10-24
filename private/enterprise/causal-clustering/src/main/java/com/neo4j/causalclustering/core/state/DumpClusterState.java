@@ -93,7 +93,7 @@ public class DumpClusterState
             dumpSimpleState( CoreStateFiles.RAFT_ID, storageFactory.createRaftIdStorage( databaseToDump, nullDatabaseLogProvider() ) );
 
             dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
-            dumpState( CoreStateFiles.BARRIER_TOKEN, storageFactory.createBarrierTokenStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
+            dumpState( CoreStateFiles.LEASE, storageFactory.createLeaseStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
             dumpState( CoreStateFiles.SESSION_TRACKER, storageFactory.createSessionTrackerStorage( databaseToDump, life, nullDatabaseLogProvider() ) );
 
             /* raft state */

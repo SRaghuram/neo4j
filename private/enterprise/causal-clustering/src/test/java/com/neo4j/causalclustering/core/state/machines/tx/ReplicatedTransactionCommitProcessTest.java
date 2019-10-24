@@ -6,71 +6,110 @@
 package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.replication.ReplicationFailureException;
+import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
-import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
-import org.neo4j.storageengine.api.TransactionApplicationMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
+import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 class ReplicatedTransactionCommitProcessTest
 {
     private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase();
-    private Replicator replicator = mock( Replicator.class );
+
+    private final ClusterLeaseCoordinator leaseCoordinator = mock( ClusterLeaseCoordinator.class );
+    private final Replicator replicator = mock( Replicator.class );
+
     private TransactionRepresentation tx = mock( TransactionRepresentation.class );
+    private ReplicatedTransactionCommitProcess commitProcess;
 
     @BeforeEach
     void tx()
     {
         when( tx.additionalHeader() ).thenReturn( new byte[]{} );
+        commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, leaseCoordinator );
     }
 
     @Test
-    void shouldReplicateTransaction() throws Exception
+    void shouldReturnTransactionIdWhenReplicationSucceeds() throws Exception
     {
         // given
-        long resultTxId = 5L;
+        long expectedTxId = 5;
 
-        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( resultTxId ) );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, mock( DatabasePanicker.class ) );
+        ReplicationResult replicationResult = ReplicationResult.applied( StateMachineResult.of( expectedTxId ) );
+        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( replicationResult );
 
         // when
-        long txId = commitProcess.commit( new TransactionToApply( tx ), CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
+        long txId = commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL );
 
         // then
-        assertEquals( 5, txId );
+        assertEquals( expectedTxId, txId );
     }
 
     @Test
-    void shouldPanicOnUnexpectedException() throws ReplicationFailureException
+    void shouldThrowTransactionFailureReplicatorFailsWithNotReplicated()
     {
         // given
-        IllegalArgumentException resultError = new IllegalArgumentException( "Result error" );
-        DatabasePanicker panicker = mock( DatabasePanicker.class );
+        RuntimeException replicatorFailure = new RuntimeException();
 
-        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( Result.of( resultError ) );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, DATABASE_ID, panicker );
+        ReplicationResult replicationResult = ReplicationResult.notReplicated( replicatorFailure );
+        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( replicationResult );
 
         // when
-        RuntimeException commitException = assertThrows( RuntimeException.class,
-                () -> commitProcess.commit( new TransactionToApply( tx ), CommitEvent.NULL, TransactionApplicationMode.EXTERNAL ) );
+        TransactionFailureException commitException = assertThrows(
+                TransactionFailureException.class, () -> commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL ) );
 
         // then
-        assertEquals( resultError, commitException.getCause() );
-        verify( panicker ).panic( resultError );
+        assertEquals( replicatorFailure, commitException.getCause() );
+    }
+
+    @Test
+    void shouldThrowTransactionFailureAndInvalidateLeaseReplicatorFailsWithMaybeReplicated()
+    {
+        // given
+        RuntimeException replicatorFailure = new RuntimeException();
+        ReplicationResult replicationResult = ReplicationResult.maybeReplicated( replicatorFailure );
+
+        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( replicationResult );
+
+        // when
+        TransactionFailureException commitException = assertThrows(
+                TransactionFailureException.class, () -> commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL ) );
+
+        // then
+        assertEquals( replicatorFailure, commitException.getCause() );
+        verify( leaseCoordinator ).invalidateLease( anyInt() );
+    }
+
+    @Test
+    void shouldThrowTransactionFailureAndInvalidateLeaseWhenReplicatorFailsExceptionally()
+    {
+        // given
+        RuntimeException replicatorException = new RuntimeException();
+        when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenThrow( replicatorException );
+
+        // when
+        TransactionFailureException commitException = assertThrows(
+                TransactionFailureException.class, () -> commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL ) );
+
+        // then
+        assertEquals( replicatorException, commitException.getCause() );
+        verify( leaseCoordinator ).invalidateLease( anyInt() );
     }
 }

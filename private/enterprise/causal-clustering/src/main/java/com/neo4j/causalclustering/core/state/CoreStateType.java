@@ -9,9 +9,8 @@ public enum CoreStateType
 {
     DUMMY( -1 ),
     VERSION( 0 ),
-//    LOCK_TOKEN( 1 ),
     SESSION_TRACKER( 1 ),
-    BARRIER_TOKEN( 2 ),
+    LEASE( 2 ),
     RAFT_CORE_STATE( 3 ),
     DB_NAME( 4 ),
     RAFT_ID( 5 ),

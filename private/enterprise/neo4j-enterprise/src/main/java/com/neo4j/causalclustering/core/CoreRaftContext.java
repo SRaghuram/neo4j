@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.replication.Replicator;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.identity.RaftBinder;
 
 class CoreRaftContext

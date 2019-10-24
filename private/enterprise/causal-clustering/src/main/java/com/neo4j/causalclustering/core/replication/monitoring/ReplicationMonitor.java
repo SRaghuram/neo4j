@@ -7,11 +7,13 @@ package com.neo4j.causalclustering.core.replication.monitoring;
 
 public interface ReplicationMonitor
 {
-    void startReplication();
+    void clientRequest();
 
     void replicationAttempt();
 
-    void successfulReplication();
+    void notReplicated();
 
-    void failedReplication( Throwable t );
+    void maybeReplicated();
+
+    void successfullyReplicated();
 }

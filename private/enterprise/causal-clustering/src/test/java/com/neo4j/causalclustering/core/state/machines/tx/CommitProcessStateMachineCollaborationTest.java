@@ -7,10 +7,10 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
 import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -32,37 +32,38 @@ class CommitProcessStateMachineCollaborationTest
     private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
-    void shouldFailTransactionIfLockSessionChanges()
+    void shouldFailTransactionIfLeaseChanges()
     {
         // given
-        int initialLockSessionId = 23;
-        TransactionToApply transactionToApply = new TransactionToApply( physicalTx( initialLockSessionId ) );
+        int initialLeaseId = 23;
+        TransactionToApply transactionToApply = new TransactionToApply( physicalTx( initialLeaseId ) );
 
-        int finalLockSessionId = 24;
+        int finalLeaseId = 24;
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         ReplicatedTransactionStateMachine stateMachine = new ReplicatedTransactionStateMachine( new DummyStateMachineCommitHelper(),
-                lockState( finalLockSessionId ), 16, NullLogProvider.getInstance() );
+                leaseState( finalLeaseId ), 16, NullLogProvider.getInstance() );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId, mock( DatabasePanicker.class ) );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseId,
+                mock( ClusterLeaseCoordinator.class ) );
 
         // when
         assertThrows( TransactionFailureException.class, () -> commitProcess.commit( transactionToApply, NULL, EXTERNAL ) );
     }
 
-    private static PhysicalTransactionRepresentation physicalTx( int lockSessionId )
+    private static PhysicalTransactionRepresentation physicalTx( int leaseSessionId )
     {
         PhysicalTransactionRepresentation physicalTx = mock( PhysicalTransactionRepresentation.class );
-        when( physicalTx.getEpochTokenId() ).thenReturn( lockSessionId );
+        when( physicalTx.getLeaseId() ).thenReturn( leaseSessionId );
         return physicalTx;
     }
 
-    private ReplicatedBarrierTokenStateMachine lockState( int lockSessionId )
+    private ReplicatedLeaseStateMachine leaseState( int leaseId )
     {
-        ReplicatedBarrierTokenRequest lockTokenRequest = new ReplicatedBarrierTokenRequest( null, lockSessionId, databaseId );
-        ReplicatedBarrierTokenStateMachine lockState = mock( ReplicatedBarrierTokenStateMachine.class );
-        when( lockState.snapshot() ).thenReturn( new ReplicatedBarrierTokenState( -1, lockTokenRequest ) );
-        return lockState;
+        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( null, leaseId, databaseId );
+        ReplicatedLeaseStateMachine leaseState = mock( ReplicatedLeaseStateMachine.class );
+        when( leaseState.snapshot() ).thenReturn( new ReplicatedLeaseState( -1, leaseRequest ) );
+        return leaseState;
     }
 }

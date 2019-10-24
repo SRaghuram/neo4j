@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 
 import java.util.concurrent.Semaphore;
 
@@ -20,7 +20,7 @@ public class Progress
     private final Semaphore resultSignal = new Semaphore( 0 );
 
     private volatile boolean isReplicated;
-    private volatile Result result;
+    private volatile StateMachineResult result;
 
     public void triggerReplicationEvent()
     {
@@ -54,13 +54,13 @@ public class Progress
         return isReplicated;
     }
 
-    void registerResult( Result result )
+    void registerResult( StateMachineResult result )
     {
         this.result = result;
         resultSignal.release();
     }
 
-    public Result result()
+    public StateMachineResult result()
     {
         return result;
     }

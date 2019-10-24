@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
@@ -65,9 +65,9 @@ public class ClusterStateStorageFactory
         return createSimpleStorage( layout.raftIdStateFile( databaseName ), CoreStateFiles.RAFT_ID, logProvider );
     }
 
-    public StateStorage<ReplicatedBarrierTokenState> createBarrierTokenStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
+    public StateStorage<ReplicatedLeaseState> createLeaseStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )
     {
-        return createDurableStorage( layout.barrierTokenStateDirectory( databaseName ), CoreStateFiles.BARRIER_TOKEN, life, logProvider );
+        return createDurableStorage( layout.leaseStateDirectory( databaseName ), CoreStateFiles.LEASE, life, logProvider );
     }
 
     public StateStorage<Long> createLastFlushedStorage( String databaseName, LifeSupport life, DatabaseLogProvider logProvider )

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;

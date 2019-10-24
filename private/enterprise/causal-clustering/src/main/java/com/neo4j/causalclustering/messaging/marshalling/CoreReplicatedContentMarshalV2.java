@@ -12,8 +12,8 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSetSerializer;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenMarshalV2;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseMarshalV2;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
@@ -91,10 +91,10 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
         }
 
         @Override
-        public void handle( ReplicatedBarrierTokenRequest replicatedLockTokenRequest ) throws IOException
+        public void handle( ReplicatedLeaseRequest replicatedLeaseRequest ) throws IOException
         {
-            writableChannel.put( ContentCodes.LOCK_TOKEN_REQUEST );
-            ReplicatedBarrierTokenMarshalV2.marshal( replicatedLockTokenRequest, writableChannel );
+            writableChannel.put( ContentCodes.LEASE_REQUEST );
+            ReplicatedLeaseMarshalV2.marshal( replicatedLeaseRequest, writableChannel );
         }
 
         @Override
@@ -124,8 +124,8 @@ public class CoreReplicatedContentMarshalV2 extends SafeChannelMarshal<Replicate
             return ContentBuilder.finished( ReplicatedTokenRequestMarshalV2.unmarshal( channel ) );
         case ContentCodes.NEW_LEADER_BARRIER_TYPE:
             return ContentBuilder.finished( new NewLeaderBarrier() );
-        case ContentCodes.LOCK_TOKEN_REQUEST:
-            return ContentBuilder.finished( ReplicatedBarrierTokenMarshalV2.unmarshal( channel ) );
+        case ContentCodes.LEASE_REQUEST:
+            return ContentBuilder.finished( ReplicatedLeaseMarshalV2.unmarshal( channel ) );
         case ContentCodes.DISTRIBUTED_OPERATION:
             return DistributedOperation.deserialize( channel );
         case ContentCodes.DUMMY_REQUEST:

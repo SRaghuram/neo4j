@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 
 /**
  * Keeps track of operations in progress. Operations move through two phases:
@@ -36,9 +36,9 @@ public interface ProgressTracker
      * available.
      *
      * @param operation The operation that has been applied.
-     * @param result The result of the operation.
+     * @param result The result of the operation. May not be null.
      */
-    void trackResult( DistributedOperation operation, Result result );
+    void trackResult( DistributedOperation operation, StateMachineResult result );
 
     /**
      * Called when an operation should be abnormally aborted

@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSetSerializer;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenMarshalV2;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseMarshalV2;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequestMarshalV2;
@@ -85,10 +85,10 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         }
 
         @Override
-        public void handle( ReplicatedBarrierTokenRequest replicatedLockTokenRequest )
+        public void handle( ReplicatedLeaseRequest replicatedLeaseRequest )
         {
-            output.add( ChunkedReplicatedContent.single( ContentCodes.LOCK_TOKEN_REQUEST,
-                    channel -> ReplicatedBarrierTokenMarshalV2.marshal( replicatedLockTokenRequest, channel ) ) );
+            output.add( ChunkedReplicatedContent.single( ContentCodes.LEASE_REQUEST,
+                    channel -> ReplicatedLeaseMarshalV2.marshal( replicatedLeaseRequest, channel ) ) );
         }
 
         @Override

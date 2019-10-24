@@ -28,7 +28,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.unsafe.UnsafeUtil;
 import org.neo4j.kernel.DeadlockDetectedException;
-import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.LockAcquisitionTimeoutException;
 import org.neo4j.kernel.impl.locking.LockClientStateHolder;
@@ -160,9 +160,9 @@ public class ForsetiClient implements Locks.Client
     }
 
     @Override
-    public void initialize( Epoch epoch )
+    public void initialize( LeaseClient leaseClient )
     {
-        // we don't need epoch here
+        // we don't need a lease here
     }
 
     @Override

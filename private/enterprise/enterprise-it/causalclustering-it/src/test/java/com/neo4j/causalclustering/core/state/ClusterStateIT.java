@@ -64,7 +64,7 @@ class ClusterStateIT
             File sessionTrackerStateDir = new File( defaultDatabaseStateDir, "session-tracker-state" );
             File termStateDir = new File( defaultDatabaseStateDir, "term-state" );
             File voteStateDir = new File( defaultDatabaseStateDir, "vote-state" );
-            File barrierTokenStateDir = new File( defaultDatabaseStateDir, "barrier-token-state" );
+            File leaseStateDir = new File( defaultDatabaseStateDir, "lease-state" );
 
             // database specific raft log
             File raftLogDir = new File( defaultDatabaseStateDir, "raft-log" );
@@ -77,7 +77,7 @@ class ClusterStateIT
             assertTrue( termStateDir.isDirectory() );
             assertTrue( voteStateDir.isDirectory() );
             assertTrue( raftLogDir.isDirectory() );
-            assertTrue( barrierTokenStateDir.isDirectory() );
+            assertTrue( leaseStateDir.isDirectory() );
 
             assertTrue( new File( raftIdStateDir, "raft-id" ).isFile() );
             assertTrue( new File( coreMemberIdStateDir, "core-member-id" ).isFile() );
@@ -99,8 +99,8 @@ class ClusterStateIT
 
             assertTrue( new File( raftLogDir, "raft.log.0" ).isFile() );
 
-            assertTrue( new File( barrierTokenStateDir, "barrier-token.a" ).isFile() );
-            assertTrue( new File( barrierTokenStateDir, "barrier-token.b" ).isFile() );
+            assertTrue( new File( leaseStateDir, "lease.a" ).isFile() );
+            assertTrue( new File( leaseStateDir, "lease.b" ).isFile() );
         }
     }
 }

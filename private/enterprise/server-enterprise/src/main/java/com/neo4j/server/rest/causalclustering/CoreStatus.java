@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;

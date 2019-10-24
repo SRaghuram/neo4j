@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
-import com.neo4j.causalclustering.core.replication.ReplicationFailureException;
+import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 
 import java.util.ArrayList;
@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.function.Supplier;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.api.txstate.TransactionState;
@@ -75,16 +76,20 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     protected int createToken( String tokenName, boolean internal )
     {
         ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseId, type, tokenName, createCommands( tokenName, internal ) );
+        ReplicationResult replicationResult = replicator.replicate( tokenRequest );
+
+        if ( replicationResult.outcome() != ReplicationResult.Outcome.APPLIED )
+        {
+            throw new TransactionFailureException( "Could not replicate token", replicationResult.failure() );
+        }
+
         try
         {
-            return (int) replicator.replicate( tokenRequest ).consume();
-        }
-        catch ( ReplicationFailureException e )
-        {
-            throw new org.neo4j.graphdb.TransactionFailureException( "Could not create token", e );
+            return replicationResult.stateMachineResult().consume();
         }
         catch ( Exception e )
         {
+            // the ReplicatedTokenStateMachine does not produce exceptions as a result
             throw new IllegalStateException( e );
         }
     }

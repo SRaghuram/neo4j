@@ -3,47 +3,47 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.barrier;
+package com.neo4j.causalclustering.core.state.machines.lease;
+
+import com.neo4j.causalclustering.core.state.CommandDispatcher;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
 
 import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import com.neo4j.causalclustering.core.state.CommandDispatcher;
-import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler;
-
 import org.neo4j.kernel.database.DatabaseId;
 
 import static java.lang.String.format;
+import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
 
-public class ReplicatedBarrierTokenRequest implements CoreReplicatedContent, BarrierToken
+public class ReplicatedLeaseRequest implements CoreReplicatedContent, Lease
 {
     private final MemberId owner;
-    private final int candidateId;
+    private final int leaseId;
     private final DatabaseId databaseId;
 
-    static final ReplicatedBarrierTokenRequest INVALID_REPLICATED_BARRIER_TOKEN_REQUEST =
-            new ReplicatedBarrierTokenRequest( null, INVALID_BARRIER_TOKEN_ID, null );
+    static final ReplicatedLeaseRequest INVALID_LEASE_REQUEST = new ReplicatedLeaseRequest( null, NO_LEASE, null );
 
-    public ReplicatedBarrierTokenRequest( ReplicatedBarrierTokenState state, DatabaseId databaseId )
+    public ReplicatedLeaseRequest( ReplicatedLeaseState state, DatabaseId databaseId )
     {
-        this( state.owner(), state.candidateId(), databaseId );
+        this( state.owner(), state.leaseId(), databaseId );
     }
 
-    public ReplicatedBarrierTokenRequest( MemberId owner, int candidateId, DatabaseId databaseId )
+    public ReplicatedLeaseRequest( MemberId owner, int leaseId, DatabaseId databaseId )
     {
         this.owner = owner;
-        this.candidateId = candidateId;
+        this.leaseId = leaseId;
         this.databaseId = databaseId;
     }
 
     @Override
     public int id()
     {
-        return candidateId;
+        return leaseId;
     }
 
     @Override
@@ -63,24 +63,24 @@ public class ReplicatedBarrierTokenRequest implements CoreReplicatedContent, Bar
         {
             return false;
         }
-        ReplicatedBarrierTokenRequest that = (ReplicatedBarrierTokenRequest) o;
-        return candidateId == that.candidateId && Objects.equals( owner, that.owner );
+        ReplicatedLeaseRequest that = (ReplicatedLeaseRequest) o;
+        return leaseId == that.leaseId && Objects.equals( owner, that.owner );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( owner, candidateId );
+        return Objects.hash( owner, leaseId );
     }
 
     @Override
     public String toString()
     {
-        return format( "ReplicatedBarrierTokenRequest{owner=%s, candidateId=%d}", owner, candidateId );
+        return format( "ReplicatedLeaseRequest{owner=%s, leaseId=%d}", owner, leaseId );
     }
 
     @Override
-    public void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback )
+    public void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<StateMachineResult> callback )
     {
         commandDispatcher.dispatch( this, commandIndex, callback );
     }

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.id;
+package com.neo4j.causalclustering.core.state.machines;
 
 /**
  * Keeps track of the raft command index of last applied transaction.

@@ -57,10 +57,12 @@ public class CoreMetrics extends LifecycleAdapter
     private static final String REPLICATION_NEW_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
     @Documented( "Raft replication attempt count." )
     private static final String REPLICATION_ATTEMPT_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );
-    @Documented( "Raft Replication success count." )
-    private static final String REPLICATION_SUCCESS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_success" );
     @Documented( "Raft Replication fail count." )
     private static final String REPLICATION_FAIL_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
+    @Documented( "Raft Replication maybe count." )
+    private static final String REPLICATION_MAYBE_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_maybe" );
+    @Documented( "Raft Replication success count." )
+    private static final String REPLICATION_SUCCESS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_success" );
     @Documented( "Discovery cluster member size." )
     public static final String DISCOVERY_CLUSTER_MEMBERS = name( CAUSAL_CLUSTERING_PREFIX, "discovery", "cluster", "members" );
     @Documented( "Discovery cluster unreachable size." )
@@ -84,8 +86,9 @@ public class CoreMetrics extends LifecycleAdapter
     private final String discoveryReplicatedData;
     private final String replicationNew;
     private final String replicationAttempt;
-    private final String replicationSuccess;
     private final String replicationFail;
+    private final String replicationMaybe;
+    private final String replicationSuccess;
     private final String discoveryClusterConverged;
     private final String discoveryClusterMembers;
     private final String discoveryClusterUnreachable;
@@ -123,8 +126,9 @@ public class CoreMetrics extends LifecycleAdapter
         this.discoveryReplicatedData = name( metricsPrefix, DISCOVERY_REPLICATED_DATA_TEMPLATE );
         this.replicationNew = name( metricsPrefix, REPLICATION_NEW_TEMPLATE );
         this.replicationAttempt = name( metricsPrefix, REPLICATION_ATTEMPT_TEMPLATE );
-        this.replicationSuccess = name( metricsPrefix, REPLICATION_SUCCESS_TEMPLATE );
         this.replicationFail = name( metricsPrefix, REPLICATION_FAIL_TEMPLATE );
+        this.replicationMaybe = name( metricsPrefix, REPLICATION_MAYBE_TEMPLATE );
+        this.replicationSuccess = name( metricsPrefix, REPLICATION_SUCCESS_TEMPLATE );
         this.discoveryClusterConverged = name( metricsPrefix, DISCOVERY_CLUSTER_CONVERGED );
         this.discoveryClusterMembers = name( metricsPrefix, DISCOVERY_CLUSTER_MEMBERS );
         this.discoveryClusterUnreachable = name( metricsPrefix, DISCOVERY_CLUSTER_UNREACHABLE );
@@ -162,8 +166,9 @@ public class CoreMetrics extends LifecycleAdapter
         registry.register( timer, raftMessageProcessingMetric.timer() );
         registry.register( replicationNew, new MetricsCounter( replicationMetric::newReplicationCount ) );
         registry.register( replicationAttempt, new MetricsCounter( replicationMetric::attemptCount ) );
-        registry.register( replicationSuccess, new MetricsCounter( replicationMetric::successCount ) );
         registry.register( replicationFail, new MetricsCounter( replicationMetric::failCount ) );
+        registry.register( replicationMaybe, new MetricsCounter( replicationMetric::maybeCount ) );
+        registry.register( replicationSuccess, new MetricsCounter( replicationMetric::successCount ) );
         registry.register( discoveryClusterConverged, discoveryClusterSizeMetric.converged() );
         registry.register( discoveryClusterMembers, discoveryClusterSizeMetric.members() );
         registry.register( discoveryClusterUnreachable, discoveryClusterSizeMetric.unreachable() );
@@ -198,8 +203,9 @@ public class CoreMetrics extends LifecycleAdapter
         registry.remove( timer );
         registry.remove( replicationNew );
         registry.remove( replicationAttempt );
-        registry.remove( replicationSuccess );
         registry.remove( replicationFail );
+        registry.remove( replicationMaybe );
+        registry.remove( replicationSuccess );
         registry.remove( discoveryClusterConverged );
         registry.remove( discoveryClusterMembers );
         registry.remove( discoveryClusterUnreachable );

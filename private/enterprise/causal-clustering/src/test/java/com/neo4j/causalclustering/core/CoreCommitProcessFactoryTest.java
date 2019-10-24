@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
+import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
@@ -29,13 +29,13 @@ class CoreCommitProcessFactoryTest
     private final DatabaseId databaseId = TestDatabaseIdRepository.randomDatabaseId();
     private final Replicator replicator = mock( Replicator.class );
     private final CoreStateMachines coreStateMachines = mock( CoreStateMachines.class );
-    private final DatabasePanicker panicker = mock( DatabasePanicker.class );
+    private final ClusterLeaseCoordinator leaseCoordinator = mock( ClusterLeaseCoordinator.class );
 
     private final TransactionAppender appender = mock( TransactionAppender.class );
     private final StorageEngine storageEngine = mock( StorageEngine.class );
     private final Config config = Config.defaults();
 
-    private final CoreCommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, coreStateMachines, panicker );
+    private final CoreCommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, coreStateMachines, leaseCoordinator );
 
     @Test
     void shouldCreateReplicatedCommitProcess()

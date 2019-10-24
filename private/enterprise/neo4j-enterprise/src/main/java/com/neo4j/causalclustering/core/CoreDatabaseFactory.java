@@ -31,14 +31,14 @@ import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
-import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
-import com.neo4j.causalclustering.core.state.machines.barrier.LeaderOnlyLockManager;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
+import com.neo4j.causalclustering.core.state.machines.lease.LeaderOnlyLockManager;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedLabelTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKeyTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedRelationshipTypeTokenHolder;
@@ -236,7 +236,7 @@ class CoreDatabaseFactory
         Replicator replicator = raftContext.replicator();
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine = createBarrierTokenStateMachine( databaseId, life, debugLog, kernelResolvers );
+        ReplicatedLeaseStateMachine replicatedLeaseStateMachine = createLeaseStateMachine( databaseId, life, debugLog, kernelResolvers );
 
         DatabaseIdContext idContext = createIdContext( databaseId );
 
@@ -262,7 +262,7 @@ class CoreDatabaseFactory
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, propertyKeyTokenRegistry, debugLog );
         ReplicatedTokenStateMachine relTypeTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, relationshipTypeTokenRegistry, debugLog );
 
-        ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedBarrierTokenStateMachine,
+        ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedLeaseStateMachine,
                 config.get( state_machine_apply_max_batch_size ), debugLog );
 
         Locks lockManager = createLockManager( config, clock, logService );
@@ -270,17 +270,19 @@ class CoreDatabaseFactory
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
         CoreStateMachines stateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relTypeTokenStateMachine,
-                propertyKeyTokenStateMachine, replicatedBarrierTokenStateMachine, new DummyMachine(), consensusLogIndexRecovery );
+                propertyKeyTokenStateMachine, replicatedLeaseStateMachine, new DummyMachine(), consensusLogIndexRecovery );
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
-        DatabasePanicker panicker = panicService.panickerFor( databaseId );
-        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, stateMachines, panicker );
+        ClusterLeaseCoordinator leaseCoordinator = new ClusterLeaseCoordinator(
+                myIdentity, replicator, raftGroup.raftMachine(), replicatedLeaseStateMachine, databaseId );
+
+        CommitProcessFactory commitProcessFactory = new CoreCommitProcessFactory( databaseId, replicator, stateMachines, leaseCoordinator );
 
         AccessCapabilityFactory accessCapabilityFactory = AccessCapabilityFactory.fixed( new LeaderCanWrite( raftGroup.raftMachine() ) );
 
         return new CoreEditionKernelComponents( commitProcessFactory, lockManager, tokenHolders, idContext, stateMachines, accessCapabilityFactory,
-                () -> new BarrierState( myIdentity, replicator, raftGroup.raftMachine(), replicatedBarrierTokenStateMachine, databaseId ) );
+                leaseCoordinator );
     }
 
     CoreDatabaseLife createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -425,12 +427,11 @@ class CoreDatabaseFactory
         return idContextFactory.createIdContext( databaseId );
     }
 
-    private ReplicatedBarrierTokenStateMachine createBarrierTokenStateMachine( DatabaseId databaseId, LifeSupport life,
+    private ReplicatedLeaseStateMachine createLeaseStateMachine( DatabaseId databaseId, LifeSupport life,
             DatabaseLogProvider databaseLogProvider, CoreKernelResolvers resolvers )
     {
-        StateStorage<ReplicatedBarrierTokenState> barrierTokenStorage = storageFactory.createBarrierTokenStorage(
-                databaseId.name(), life, databaseLogProvider );
-        return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage, () -> resolvers.idGeneratorFactory().get().clearCache() );
+        StateStorage<ReplicatedLeaseState> leaseStorage = storageFactory.createLeaseStorage( databaseId.name(), life, databaseLogProvider );
+        return new ReplicatedLeaseStateMachine( leaseStorage, () -> resolvers.idGeneratorFactory().get().clearCache() );
     }
 
     private Locks createLockManager( final Config config, Clock clock, LogService logService )

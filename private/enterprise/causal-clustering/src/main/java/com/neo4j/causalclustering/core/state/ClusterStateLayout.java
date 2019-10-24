@@ -63,9 +63,9 @@ public class ClusterStateLayout
         return globalClusterStateFile( CoreStateFiles.CORE_MEMBER_ID );
     }
 
-    public File barrierTokenStateDirectory( String databaseName )
+    public File leaseStateDirectory( String databaseName )
     {
-        return databaseClusterStateDirectory( CoreStateFiles.BARRIER_TOKEN, databaseName );
+        return databaseClusterStateDirectory( CoreStateFiles.LEASE, databaseName );
     }
 
     public File lastFlushedStateDirectory( String databaseName )

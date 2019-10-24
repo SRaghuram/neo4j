@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
@@ -15,17 +14,17 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.replication.session.OperationContext;
-import com.neo4j.causalclustering.core.state.Result;
-
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.internal.helpers.TimeoutStrategy;
-import org.neo4j.internal.helpers.TimeoutStrategy.Timeout;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Duration;
 
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.helpers.TimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy.Timeout;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
@@ -69,68 +68,82 @@ public class RaftReplicator implements Replicator, LeaderListener
     }
 
     @Override
-    public Result replicate( ReplicatedContent command ) throws ReplicationFailureException
+    public ReplicationResult replicate( ReplicatedContent command )
     {
+        replicationMonitor.clientRequest();
         try
         {
-            return replicate0( command );
+            assertDatabaseAvailable();
         }
-        catch ( Exception e )
+        catch ( UnavailableException e )
         {
-            if ( e instanceof InterruptedException )
-            {
-                Thread.currentThread().interrupt();
-            }
-            throw new ReplicationFailureException( "Failure during replication", e );
+            replicationMonitor.notReplicated();
+            return ReplicationResult.notReplicated( e );
         }
-    }
 
-    private Result replicate0( ReplicatedContent command ) throws NoLeaderFoundException, InterruptedException, UnavailableException
-    {
         // Awaiting the leader early allows us to avoid eating through local sessions unnecessarily.
-        MemberId leader = leaderProvider.awaitLeaderOrThrow();
+        MemberId leader;
 
-        replicationMonitor.startReplication();
+        try
+        {
+            leader = leaderProvider.awaitLeaderOrThrow();
+        }
+        catch ( InterruptedException e )
+        {
+            Thread.currentThread().interrupt();
+            replicationMonitor.notReplicated();
+            return ReplicationResult.notReplicated( e );
+        }
+        catch ( NoLeaderFoundException e )
+        {
+            replicationMonitor.notReplicated();
+            return ReplicationResult.notReplicated( e );
+        }
+
         OperationContext session = sessionPool.acquireSession();
 
         DistributedOperation operation = new DistributedOperation( command, session.globalSession(), session.localOperationId() );
+        StateMachineResult stateMachineResult = null;
         Progress progress = progressTracker.start( operation );
-
-        Timeout progressTimeout = progressTimeoutStrategy.newTimeout();
-
-        Result result = null;
-        ReplicationLogger logger = new ReplicationLogger( log );
         try
         {
+            Timeout progressTimeout = progressTimeoutStrategy.newTimeout();
+            ReplicationLogger logger = new ReplicationLogger( log );
+
             do
             {
                 logger.newAttempt( operation, leader );
-                if ( tryReplicate( command, leader, operation, progress, progressTimeout ) )
+                if ( tryReplicate( leader, operation, progress, progressTimeout ) )
                 {
                     // We can only release a session which successfully replicated.
                     sessionPool.releaseSession( session );
-                    replicationMonitor.successfulReplication();
+                    replicationMonitor.successfullyReplicated();
                     logger.success( operation );
 
                     // Here we are awaiting the outcome of the command application, which will be registered in the progress tracker.
                     progress.awaitResult();
-                    result = progress.result();
+                    stateMachineResult = progress.result();
                 }
                 else
                 {
+                    assertDatabaseAvailable();
                     // Refreshing the leader, in case a leader switch is the reason we failed to replicate!
                     leader = leaderProvider.awaitLeaderOrThrow();
                 }
             }
-            while ( result == null );
+            while ( stateMachineResult == null );
         }
         catch ( Throwable t )
         {
+            if ( t instanceof InterruptedException )
+            {
+                Thread.currentThread().interrupt();
+            }
             progressTracker.abort( operation );
-            replicationMonitor.failedReplication( t );
-            throw t;
+            replicationMonitor.maybeReplicated();
+            return ReplicationResult.maybeReplicated( t );
         }
-        return result;
+        return ReplicationResult.applied( stateMachineResult );
     }
 
     /**
@@ -138,12 +151,9 @@ public class RaftReplicator implements Replicator, LeaderListener
      *
      * @return true if the replication was successful, otherwise false.
      */
-    private boolean tryReplicate( ReplicatedContent command, MemberId leader, DistributedOperation operation, Progress progress, Timeout replicationTimeout )
-            throws UnavailableException, InterruptedException
+    private boolean tryReplicate( MemberId leader, DistributedOperation operation, Progress progress, Timeout replicationTimeout ) throws InterruptedException
     {
         replicationMonitor.replicationAttempt();
-
-        assertDatabaseAvailable();
 
         // blocking at least until the send has succeeded or failed before retrying
         outbound.send( leader, new RaftMessages.NewEntry.Request( me, operation ), true );
@@ -176,7 +186,9 @@ public class RaftReplicator implements Replicator, LeaderListener
                 .orElseThrow( IllegalStateException::new );
 
         database.getDatabaseAvailabilityGuard().await( availabilityTimeoutMillis );
-
-        database.getDatabaseHealth().assertHealthy( IllegalStateException.class );
+        if ( !database.getDatabaseHealth().isHealthy() )
+        {
+            throw new UnavailableException( "Database is not healthy." );
+        }
     }
 }

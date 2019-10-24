@@ -5,34 +5,34 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-public class Result
+public class StateMachineResult
 {
     private final Exception exception;
     private final Object result;
 
-    private Result( Exception exception )
+    private StateMachineResult( Exception exception )
     {
         this.exception = exception;
         this.result = null;
     }
 
-    private Result( Object result )
+    private StateMachineResult( Object result )
     {
         this.result = result;
         this.exception = null;
     }
 
-    public static Result of( Object result )
+    public static StateMachineResult of( Object result )
     {
-        return new Result( result );
+        return new StateMachineResult( result );
     }
 
-    public static Result of( Exception exception )
+    public static StateMachineResult of( Exception exception )
     {
-        return new Result( exception );
+        return new StateMachineResult( exception );
     }
 
-    public Object consume() throws Exception
+    public <T> T consume() throws Exception
     {
         if ( exception != null )
         {
@@ -40,7 +40,8 @@ public class Result
         }
         else
         {
-            return result;
+            //noinspection unchecked
+            return (T) result;
         }
     }
 

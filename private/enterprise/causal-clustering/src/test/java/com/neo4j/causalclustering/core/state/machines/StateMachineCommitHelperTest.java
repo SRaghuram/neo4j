@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.Test;

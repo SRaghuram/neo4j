@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.DummyStateMachineCommitHelper;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,14 +48,14 @@ class ReplicatedTransactionStateMachineTest
     void shouldCommitTransaction() throws Exception
     {
         // given
-        int lockSessionId = 23;
+        int leaseId = 23;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( lockSessionId ), DATABASE_ID );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( leaseId ), DATABASE_ID );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         PageCursorTracer cursorTracer = mock( PageCursorTracer.class );
 
-        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( lockSessionId ), cursorTracer );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( leaseId ), cursorTracer );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         // when
@@ -69,17 +69,17 @@ class ReplicatedTransactionStateMachineTest
     }
 
     @Test
-    void shouldFailFutureForTransactionCommittedUnderWrongLockSession()
+    void shouldFailFutureForTransactionCommittedUnderWrongLease()
     {
         // given
-        int txLockSessionId = 23;
-        int currentLockSessionId = 24;
+        int txLeaseId = 23;
+        int currentLeaseId = 24;
 
-        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
+        ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( txLeaseId ), DATABASE_ID );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
-        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( currentLockSessionId ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( currentLeaseId ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -89,7 +89,7 @@ class ReplicatedTransactionStateMachineTest
             // then
             called.set( true );
             TransactionFailureException exception = assertThrows( TransactionFailureException.class, result::consume );
-            assertEquals( Status.Transaction.LockSessionExpired, exception.status() );
+            assertEquals( Status.Transaction.LeaseExpired, exception.status() );
         } );
         stateMachine.ensuredApplied();
 
@@ -108,7 +108,7 @@ class ReplicatedTransactionStateMachineTest
 
         TransactionCommitProcess localCommitProcess = createFakeTransactionCommitProcess( txId );
 
-        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( currentLockSessionId ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( currentLockSessionId ) );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         AtomicBoolean called = new AtomicBoolean();
@@ -135,7 +135,7 @@ class ReplicatedTransactionStateMachineTest
         long updatedCommandIndex = 2468;
 
         // and
-        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( lockState( txLockSessionId ) );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( txLockSessionId ) );
 
         ReplicatedTransaction replicatedTransaction = ReplicatedTransaction.from( physicalTx( txLockSessionId ), DATABASE_ID );
 
@@ -173,27 +173,27 @@ class ReplicatedTransactionStateMachineTest
         return localCommitProcess;
     }
 
-    private static PhysicalTransactionRepresentation physicalTx( int lockSessionId )
+    private static PhysicalTransactionRepresentation physicalTx( int leaseId )
     {
         PhysicalTransactionRepresentation physicalTx = mock( PhysicalTransactionRepresentation.class );
-        when( physicalTx.getEpochTokenId() ).thenReturn( lockSessionId );
+        when( physicalTx.getLeaseId() ).thenReturn( leaseId );
         return physicalTx;
     }
 
-    private static ReplicatedBarrierTokenStateMachine lockState( int lockSessionId )
+    private static ReplicatedLeaseStateMachine leaseState( int leaseId )
     {
-        ReplicatedBarrierTokenRequest lockTokenRequest = new ReplicatedBarrierTokenRequest( null, lockSessionId, DATABASE_ID );
-        ReplicatedBarrierTokenStateMachine lockState = mock( ReplicatedBarrierTokenStateMachine.class );
-        when( lockState.snapshot() ).thenReturn( new ReplicatedBarrierTokenState( -1, lockTokenRequest ) );
-        return lockState;
+        ReplicatedLeaseRequest leaseRequest = new ReplicatedLeaseRequest( null, leaseId, DATABASE_ID );
+        ReplicatedLeaseStateMachine leaseState = mock( ReplicatedLeaseStateMachine.class );
+        when( leaseState.snapshot() ).thenReturn( new ReplicatedLeaseState( -1, leaseRequest ) );
+        return leaseState;
     }
 
-    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedBarrierTokenStateMachine lockState )
+    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine leaseState )
     {
-        return newTransactionStateMachine( lockState, PageCursorTracer.NULL );
+        return newTransactionStateMachine( leaseState, PageCursorTracer.NULL );
     }
 
-    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedBarrierTokenStateMachine lockState, PageCursorTracer pageCursorTracer )
+    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine lockState, PageCursorTracer pageCursorTracer )
     {
         var batchSize = 16;
         var commitHelper = new DummyStateMachineCommitHelper( commandIndexTracker, pageCursorTracer );

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
@@ -229,7 +229,7 @@ public class RaftBootstrapper
         var coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftCoreState );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, sessionTrackerState );
-        coreSnapshot.add( CoreStateFiles.BARRIER_TOKEN, ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN );
+        coreSnapshot.add( CoreStateFiles.LEASE, ReplicatedLeaseState.INITIAL_LEASE_STATE );
         return coreSnapshot;
     }
 

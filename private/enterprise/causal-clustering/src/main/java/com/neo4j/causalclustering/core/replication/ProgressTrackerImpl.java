@@ -7,10 +7,12 @@ package com.neo4j.causalclustering.core.replication;
 
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static java.util.Objects.requireNonNull;
 
 public class ProgressTrackerImpl implements ProgressTracker
 {
@@ -48,8 +50,10 @@ public class ProgressTrackerImpl implements ProgressTracker
     }
 
     @Override
-    public void trackResult( DistributedOperation operation, Result result )
+    public void trackResult( DistributedOperation operation, StateMachineResult result )
     {
+        requireNonNull( result, "Illegal result for operation: " + operation );
+
         if ( !operation.globalSession().equals( myGlobalSession ) )
         {
             return;

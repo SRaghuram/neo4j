@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines.dummy;
 
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.ByteArrayChunkedEncoder;
@@ -50,7 +50,7 @@ public class DummyRequest implements CoreReplicatedContent
     }
 
     @Override
-    public void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<Result> callback )
+    public void dispatch( CommandDispatcher commandDispatcher, long commandIndex, Consumer<StateMachineResult> callback )
     {
         commandDispatcher.dispatch( this, commandIndex, callback );
     }

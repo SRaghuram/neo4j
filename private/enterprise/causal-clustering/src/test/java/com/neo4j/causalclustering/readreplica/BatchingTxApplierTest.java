@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import org.junit.After;
 import org.junit.Before;

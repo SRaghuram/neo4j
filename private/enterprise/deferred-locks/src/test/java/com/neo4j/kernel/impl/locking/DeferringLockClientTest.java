@@ -15,7 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.LockClientStoppedException;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -340,7 +340,7 @@ class DeferringLockClientTest
         private final Set<LockUnit> actualLockUnits = new LinkedHashSet<>();
 
         @Override
-        public void initialize( Epoch epoch )
+        public void initialize( LeaseClient leaseClient )
         {
         }
 

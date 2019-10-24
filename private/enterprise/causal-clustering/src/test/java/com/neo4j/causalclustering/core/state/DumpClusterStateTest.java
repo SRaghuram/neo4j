@@ -92,7 +92,7 @@ class DumpClusterStateTest
         StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DEFAULT_DATABASE_NAME, life, nullDatabaseLogProvider() );
 
         // But still need to create all the other state, otherwise the read only DumpClusterState tool will throw
-        storageFactory.createBarrierTokenStorage( DEFAULT_DATABASE_NAME, life, nullDatabaseLogProvider() );
+        storageFactory.createLeaseStorage( DEFAULT_DATABASE_NAME, life, nullDatabaseLogProvider() );
         storageFactory.createSessionTrackerStorage( DEFAULT_DATABASE_NAME, life, nullDatabaseLogProvider() );
         storageFactory.createLastFlushedStorage( DEFAULT_DATABASE_NAME, life, nullDatabaseLogProvider() );
         storageFactory.createRaftMembershipStorage( DEFAULT_DATABASE_NAME, life, nullDatabaseLogProvider() );

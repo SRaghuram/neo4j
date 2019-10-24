@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.core.state.Result;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 
 import java.util.ArrayList;
@@ -127,8 +126,14 @@ public class ReplicationBenchmarkProcedure
             {
                 while ( !stopped )
                 {
-                    Result result = replicator.replicate( new DummyRequest( new byte[blockSize] ) );
-                    DummyRequest request = (DummyRequest) result.consume();
+                    ReplicationResult replicationResult = replicator.replicate( new DummyRequest( new byte[blockSize] ) );
+
+                    if ( replicationResult.outcome() != ReplicationResult.Outcome.APPLIED )
+                    {
+                        throw new RuntimeException( "Failed to replicate", replicationResult.failure() );
+                    }
+
+                    DummyRequest request = replicationResult.stateMachineResult().consume();
                     totalRequests++;
                     totalBytes += request.byteCount();
                 }

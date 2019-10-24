@@ -11,13 +11,19 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ReplicationMetric implements ReplicationMonitor
 {
-    private final AtomicLong  newReplication = new AtomicLong(  );
-    private final AtomicLong attempts = new AtomicLong(  );
-    private final AtomicLong success = new AtomicLong(  );
-    private final AtomicLong fail = new AtomicLong(  );
+    /* total client requests */
+    private final AtomicLong newReplication = new AtomicLong();
+
+    /* total active attempts */
+    private final AtomicLong attempts = new AtomicLong();
+
+    /* final outcomes */
+    private final AtomicLong notReplicated = new AtomicLong();
+    private final AtomicLong maybeReplicated = new AtomicLong();
+    private final AtomicLong successfullyReplicated = new AtomicLong();
 
     @Override
-    public void startReplication()
+    public void clientRequest()
     {
         newReplication.getAndIncrement();
     }
@@ -29,15 +35,21 @@ public class ReplicationMetric implements ReplicationMonitor
     }
 
     @Override
-    public void successfulReplication()
+    public void notReplicated()
     {
-        success.getAndIncrement();
+        notReplicated.getAndIncrement();
     }
 
     @Override
-    public void failedReplication( Throwable t )
+    public void maybeReplicated()
     {
-        fail.getAndIncrement();
+        maybeReplicated.getAndIncrement();
+    }
+
+    @Override
+    public void successfullyReplicated()
+    {
+        successfullyReplicated.getAndIncrement();
     }
 
     long newReplicationCount()
@@ -50,13 +62,18 @@ public class ReplicationMetric implements ReplicationMonitor
         return attempts.get();
     }
 
-    long successCount()
-    {
-        return success.get();
-    }
-
     long failCount()
     {
-        return fail.get();
+        return notReplicated.get();
+    }
+
+    long maybeCount()
+    {
+        return maybeReplicated.get();
+    }
+
+    long successCount()
+    {
+        return successfullyReplicated.get();
     }
 }

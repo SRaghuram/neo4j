@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 
 import java.io.IOException;
 import java.util.function.Consumer;
@@ -19,7 +19,7 @@ public interface StateMachine<Command>
      * @param commandIndex The index of the command.
      * @param callback To be called when a result is produced.
      */
-    void applyCommand( Command command, long commandIndex, Consumer<Result> callback );
+    void applyCommand( Command command, long commandIndex, Consumer<StateMachineResult> callback );
 
     /**
      * Flushes state to durable storage.

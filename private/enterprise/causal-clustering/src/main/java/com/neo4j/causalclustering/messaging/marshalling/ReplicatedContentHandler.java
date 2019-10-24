@@ -10,7 +10,7 @@ import java.io.IOException;
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.tx.ByteArrayReplicatedTransaction;
@@ -28,7 +28,7 @@ public interface ReplicatedContentHandler
 
     void handle( NewLeaderBarrier newLeaderBarrier ) throws IOException;
 
-    void handle( ReplicatedBarrierTokenRequest replicatedLockTokenRequest ) throws IOException;
+    void handle( ReplicatedLeaseRequest replicatedLeaseRequest ) throws IOException;
 
     void handle( DistributedOperation distributedOperation ) throws IOException;
 

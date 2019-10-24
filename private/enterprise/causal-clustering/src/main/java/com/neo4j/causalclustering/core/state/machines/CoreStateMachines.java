@@ -10,9 +10,9 @@ import java.util.function.Consumer;
 
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
@@ -31,7 +31,7 @@ public class CoreStateMachines
     private final ReplicatedTokenStateMachine labelTokenStateMachine;
     private final ReplicatedTokenStateMachine relationshipTypeTokenStateMachine;
     private final ReplicatedTokenStateMachine propertyKeyTokenStateMachine;
-    private final ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine;
+    private final ReplicatedLeaseStateMachine replicatedLeaseStateMachine;
     private final DummyMachine benchmarkMachine;
 
     private final RecoverConsensusLogIndex consensusLogIndexRecovery;
@@ -43,7 +43,7 @@ public class CoreStateMachines
             ReplicatedTokenStateMachine labelTokenStateMachine,
             ReplicatedTokenStateMachine relationshipTypeTokenStateMachine,
             ReplicatedTokenStateMachine propertyKeyTokenStateMachine,
-            ReplicatedBarrierTokenStateMachine replicatedBarrierTokenStateMachine,
+            ReplicatedLeaseStateMachine replicatedLeaseStateMachine,
             DummyMachine benchmarkMachine,
             RecoverConsensusLogIndex consensusLogIndexRecovery )
     {
@@ -51,7 +51,7 @@ public class CoreStateMachines
         this.labelTokenStateMachine = labelTokenStateMachine;
         this.relationshipTypeTokenStateMachine = relationshipTypeTokenStateMachine;
         this.propertyKeyTokenStateMachine = propertyKeyTokenStateMachine;
-        this.replicatedBarrierTokenStateMachine = replicatedBarrierTokenStateMachine;
+        this.replicatedLeaseStateMachine = replicatedLeaseStateMachine;
         this.benchmarkMachine = benchmarkMachine;
         this.consensusLogIndexRecovery = consensusLogIndexRecovery;
         this.dispatcher = new StateMachineCommandDispatcher();
@@ -64,7 +64,7 @@ public class CoreStateMachines
 
     public long getLastAppliedIndex()
     {
-        return replicatedBarrierTokenStateMachine.lastAppliedIndex();
+        return replicatedLeaseStateMachine.lastAppliedIndex();
     }
 
     public void flush() throws IOException
@@ -75,18 +75,18 @@ public class CoreStateMachines
         relationshipTypeTokenStateMachine.flush();
         propertyKeyTokenStateMachine.flush();
 
-        replicatedBarrierTokenStateMachine.flush();
+        replicatedLeaseStateMachine.flush();
     }
 
     public void augmentSnapshot( CoreSnapshot coreSnapshot )
     {
-        coreSnapshot.add( CoreStateFiles.BARRIER_TOKEN, replicatedBarrierTokenStateMachine.snapshot() );
+        coreSnapshot.add( CoreStateFiles.LEASE, replicatedLeaseStateMachine.snapshot() );
         // transactions and tokens live in the store
     }
 
     public void installSnapshot( CoreSnapshot coreSnapshot )
     {
-        replicatedBarrierTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.BARRIER_TOKEN ) );
+        replicatedLeaseStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.LEASE ) );
         // transactions and tokens live in the store
     }
 
@@ -104,13 +104,13 @@ public class CoreStateMachines
     private class StateMachineCommandDispatcher implements CommandDispatcher
     {
         @Override
-        public void dispatch( ReplicatedTransaction transaction, long commandIndex, Consumer<Result> callback )
+        public void dispatch( ReplicatedTransaction transaction, long commandIndex, Consumer<StateMachineResult> callback )
         {
             replicatedTxStateMachine.applyCommand( transaction, commandIndex, callback );
         }
 
         @Override
-        public void dispatch( ReplicatedTokenRequest tokenRequest, long commandIndex, Consumer<Result> callback )
+        public void dispatch( ReplicatedTokenRequest tokenRequest, long commandIndex, Consumer<StateMachineResult> callback )
         {
             replicatedTxStateMachine.ensuredApplied();
             switch ( tokenRequest.type() )
@@ -130,14 +130,14 @@ public class CoreStateMachines
         }
 
         @Override
-        public void dispatch( ReplicatedBarrierTokenRequest barrierTokenRequest, long commandIndex, Consumer<Result> callback )
+        public void dispatch( ReplicatedLeaseRequest leaseRequest, long commandIndex, Consumer<StateMachineResult> callback )
         {
             replicatedTxStateMachine.ensuredApplied();
-            replicatedBarrierTokenStateMachine.applyCommand( barrierTokenRequest, commandIndex, callback );
+            replicatedLeaseStateMachine.applyCommand( leaseRequest, commandIndex, callback );
         }
 
         @Override
-        public void dispatch( DummyRequest dummyRequest, long commandIndex, Consumer<Result> callback )
+        public void dispatch( DummyRequest dummyRequest, long commandIndex, Consumer<StateMachineResult> callback )
         {
             benchmarkMachine.applyCommand( dummyRequest, commandIndex, callback );
         }

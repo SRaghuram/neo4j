@@ -3,13 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.state.machines.barrier;
+package com.neo4j.causalclustering.core.state.machines.lease;
 
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
@@ -18,24 +18,23 @@ import org.neo4j.lock.ResourceType;
 
 /**
  * Each member of the cluster uses its own {@link LeaderOnlyLockManager} which wraps a local {@link Locks} manager.
- * The validity of local lock managers is synchronized by using a token which gets requested by each server as necessary
- * and if the request is granted then the associated id can be used to identify a unique lock session in the cluster.
+ * The validity of local lock managers is synchronized by using a lease which gets requested by each server as necessary
+ * and if the request is granted then the associated id can be used to demarcate a unique lease period in the cluster.
  * <p/>
  * The fundamental strategy is to only allow locks on the leader. This has the benefit of minimizing the synchronization
- * to only concern the single token but it also means that non-leaders should not even attempt to request the token or
+ * to only concern the single lease but it also means that non-leaders should not even attempt to request a lease or
  * significant churn of this single resource will lead to a high level of aborted transactions.
  * <p/>
- * The token requests carry a candidate id and they get ordered with respect to the transactions in the consensus
- * machinery.
+ * The lease carries an id and transactions get ordered with respect to it in the consensus machinery.
+ *
  * The latest request which gets accepted (see {@link ReplicatedTransactionStateMachine}) defines the currently valid
- * lock session id in this ordering. Each transaction that uses locking gets marked with a lock session id that was
- * valid
- * at the time of acquiring it, but by the time a transaction commits it might no longer be valid, which in such case
- * would lead to the transaction being rejected and failed.
+ * lease id in this ordering. Each transaction that uses locking gets marked with the lease that was
+ * valid at the time of acquiring it, but by the time a transaction is about to be committed it might no longer be valid,
+ * which in such case would lead to the transaction being aborted.
  * <p/>
- * The {@link ReplicatedBarrierTokenStateMachine} handles the token requests and considers only one to be valid at a time.
+ * The {@link ReplicatedLeaseStateMachine} handles the lease requests and considers only one to be valid at a time.
  * Meanwhile, {@link ReplicatedTransactionStateMachine} rejects any transactions that get committed under an
- * invalid token.
+ * lease.
  */
 
 // TODO: Fix lock exception usage when lock exception hierarchy has been fixed.
@@ -68,14 +67,14 @@ public class LeaderOnlyLockManager implements Locks
 
     /**
      * The LeaderOnlyLockClient delegates to a local lock client for taking locks, but makes
-     * sure that it holds the cluster locking token before actually taking locks. If the token
+     * sure that it holds the cluster lease before actually taking locks. If the lease
      * is lost during a locking session then a transaction will either fail on a subsequent
      * local locking operation or during commit time.
      */
-    private class LeaderOnlyLockClient implements Locks.Client
+    private static class LeaderOnlyLockClient implements Locks.Client
     {
         private final Client localClient;
-        private Epoch epoch;
+        private LeaseClient leaseClient;
 
         LeaderOnlyLockClient( Client localClient )
         {
@@ -83,9 +82,9 @@ public class LeaderOnlyLockManager implements Locks
         }
 
         @Override
-        public void initialize( Epoch epoch )
+        public void initialize( LeaseClient leaseClient )
         {
-            this.epoch = epoch;
+            this.leaseClient = leaseClient;
         }
 
         @Override
@@ -160,7 +159,7 @@ public class LeaderOnlyLockManager implements Locks
         @Override
         public int getLockSessionId()
         {
-            return epoch.tokenId();
+            return leaseClient.leaseId();
         }
 
         @Override
@@ -177,7 +176,7 @@ public class LeaderOnlyLockManager implements Locks
 
         void ensureExclusiveLockCanBeAcquired()
         {
-            epoch.ensureHoldingToken();
+            leaseClient.ensureValid();
         }
     }
 }

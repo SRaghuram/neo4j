@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.replication.ReplicationResult;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import org.junit.Test;
 
 import java.util.Collection;
@@ -90,8 +91,8 @@ public class ReplicatedTokenHolderTest
 
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
-        ReplicatedTokenHolder tokenHolder =
-                new ReplicatedLabelTokenHolder( databaseId, registry, content -> Result.of( generatedTokenId ), idGeneratorFactory, storageEngineSupplier );
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseId, registry,
+                content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ), idGeneratorFactory, storageEngineSupplier );
 
         // when
         Integer tokenId = tokenHolder.getOrCreateId( "name1" );

@@ -75,7 +75,7 @@ public class ReplicatedTransactionFactory
                 long latestCommittedTxWhenStarted = channel.getLong();
                 long timeStarted = channel.getLong();
                 long timeCommitted = channel.getLong();
-                int lockSessionId = channel.getInt();
+                int leaseId = channel.getInt();
 
                 int headerLength = channel.getInt();
                 byte[] header;
@@ -99,7 +99,7 @@ public class ReplicatedTransactionFactory
                 }
 
                 PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( commands );
-                tx.setHeader( header, timeStarted, latestCommittedTxWhenStarted, timeCommitted, lockSessionId );
+                tx.setHeader( header, timeStarted, latestCommittedTxWhenStarted, timeCommitted, leaseId );
 
                 return tx;
             }
@@ -122,7 +122,7 @@ public class ReplicatedTransactionFactory
                 channel.putLong( tx.getLatestCommittedTxWhenStarted() );
                 channel.putLong( tx.getTimeStarted() );
                 channel.putLong( tx.getTimeCommitted() );
-                channel.putInt( tx.getEpochTokenId() );
+                channel.putInt( tx.getLeaseId() );
 
                 byte[] additionalHeader = tx.additionalHeader();
                 if ( additionalHeader != null )

@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.core.state.machines;
 import java.util.function.Consumer;
 
 import com.neo4j.causalclustering.core.state.CommandDispatcher;
-import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenStateMachine;
@@ -62,7 +62,7 @@ public class CoreStateMachinesTest
             dispatcher.dispatch( replicatedTransaction, 5, callback );
             dispatcher.dispatch( replicatedTransaction, 6, callback );
 
-            dispatcher.dispatch( barrierTokenRequest, 7, callback );
+            dispatcher.dispatch( leaseRequest, 7, callback );
 
             dispatcher.dispatch( replicatedTransaction, 8, callback );
             dispatcher.dispatch( replicatedTransaction, 9, callback );
@@ -81,7 +81,7 @@ public class CoreStateMachinesTest
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 6, callback );
         verifier.verify( txSM ).ensuredApplied();
 
-        verifier.verify( barrierTokenSM ).applyCommand( barrierTokenRequest, 7, callback );
+        verifier.verify( leaseSM ).applyCommand( leaseRequest, 7, callback );
 
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 8, callback );
         verifier.verify( txSM ).applyCommand( replicatedTransaction, 9, callback );
@@ -97,7 +97,7 @@ public class CoreStateMachinesTest
         StateMachine<?>[] txSMs = new StateMachine[]{labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, txSM};
 
         // these have separate storage
-        StateMachine<?>[] otherSMs = new StateMachine[]{barrierTokenSM};
+        StateMachine<?>[] otherSMs = new StateMachine[]{leaseSM};
 
         int totalDistinctSMs = otherSMs.length + 1; // distinct meaning backed by different storage
         // here we try to order all the distinct state machines in different orders to prove that,
@@ -130,12 +130,12 @@ public class CoreStateMachinesTest
     private final ReplicatedTokenStateMachine labelTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine relationshipTypeTokenSM = mock( ReplicatedTokenStateMachine.class );
     private final ReplicatedTokenStateMachine propertyKeyTokenSM = mock( ReplicatedTokenStateMachine.class );
-    private final ReplicatedBarrierTokenStateMachine barrierTokenSM = mock( ReplicatedBarrierTokenStateMachine.class );
+    private final ReplicatedLeaseStateMachine leaseSM = mock( ReplicatedLeaseStateMachine.class );
     private final DummyMachine dummySM = mock( DummyMachine.class );
     private final RecoverConsensusLogIndex recoverConsensusLogIndex = mock( RecoverConsensusLogIndex.class );
 
     private final CoreStateMachines coreStateMachines = new CoreStateMachines( txSM, labelTokenSM,
-            relationshipTypeTokenSM, propertyKeyTokenSM, barrierTokenSM, dummySM, recoverConsensusLogIndex );
+            relationshipTypeTokenSM, propertyKeyTokenSM, leaseSM, dummySM, recoverConsensusLogIndex );
 
     private final ReplicatedTransaction replicatedTransaction = mock( ReplicatedTransaction.class );
     private final ReplicatedTokenRequest relationshipTypeTokenRequest = mock( ReplicatedTokenRequest.class );
@@ -144,11 +144,11 @@ public class CoreStateMachinesTest
     }
 
     @SuppressWarnings( "unchecked" )
-    private final ReplicatedBarrierTokenRequest barrierTokenRequest = mock( ReplicatedBarrierTokenRequest.class );
+    private final ReplicatedLeaseRequest leaseRequest = mock( ReplicatedLeaseRequest.class );
 
     @SuppressWarnings( "unchecked" )
-    private final Consumer<Result> callback = mock( Consumer.class );
+    private final Consumer<StateMachineResult> callback = mock( Consumer.class );
 
     private final InOrder verifier =
-            inOrder( txSM, labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, barrierTokenSM );
+            inOrder( txSM, labelTokenSM, relationshipTypeTokenSM, propertyKeyTokenSM, leaseSM );
 }

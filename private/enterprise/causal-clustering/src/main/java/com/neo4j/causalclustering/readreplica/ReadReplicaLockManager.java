@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import java.util.stream.Stream;
 
 import org.neo4j.kernel.api.exceptions.ReadOnlyDbException;
-import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.lock.AcquireLockTimeoutException;
@@ -33,10 +33,10 @@ public class ReadReplicaLockManager implements Locks
     {
     }
 
-    private class Client implements Locks.Client
+    private static class Client implements Locks.Client
     {
         @Override
-        public void initialize( Epoch epoch )
+        public void initialize( LeaseClient leaseClient )
         {
         }
 

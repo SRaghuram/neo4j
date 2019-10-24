@@ -13,9 +13,7 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
-import com.neo4j.causalclustering.core.state.Result;
-import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
-import org.neo4j.internal.helpers.TimeoutStrategy;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
@@ -28,6 +26,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.time.Duration;
 import java.util.UUID;
 
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
@@ -44,17 +44,17 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.core.replication.ReplicationResult.Outcome.MAYBE_REPLICATED;
+import static com.neo4j.causalclustering.core.replication.ReplicationResult.Outcome.NOT_REPLICATED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -117,16 +117,14 @@ class RaftReplicatorTest
 
         // when
         capturedProgress.last.setReplicated();
-        capturedProgress.last.registerResult( Result.of( 5 ) );
+        capturedProgress.last.registerResult( StateMachineResult.of( 5 ) );
 
         // then
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
         assertEquals( leaderInfo.memberId(), outbound.lastTo );
 
-        verify( replicationMonitor ).startReplication();
         verify( replicationMonitor, atLeast( 1 ) ).replicationAttempt();
-        verify( replicationMonitor ).successfulReplication();
-        verify( replicationMonitor, never() ).failedReplication( any() );
+        verify( replicationMonitor ).successfullyReplicated();
     }
 
     @Test
@@ -152,13 +150,11 @@ class RaftReplicatorTest
 
         // cleanup
         capturedProgress.last.setReplicated();
-        capturedProgress.last.registerResult( Result.of( 5 ) );
+        capturedProgress.last.registerResult( StateMachineResult.of( 5 ) );
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
 
-        verify( replicationMonitor ).startReplication();
         verify( replicationMonitor, atLeast( 2 ) ).replicationAttempt();
-        verify( replicationMonitor ).successfulReplication();
-        verify( replicationMonitor, never() ).failedReplication( any() );
+        verify( replicationMonitor ).successfullyReplicated();
     }
 
     @Test
@@ -183,7 +179,7 @@ class RaftReplicatorTest
 
         // when
         capturedProgress.last.setReplicated();
-        capturedProgress.last.registerResult( Result.of( 5 ) );
+        capturedProgress.last.registerResult( StateMachineResult.of( 5 ) );
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
 
         // then
@@ -207,15 +203,14 @@ class RaftReplicatorTest
 
         // when
         replicatingThread.start();
-
         availabilityGuard.shutdown();
         replicatingThread.join();
-        assertThat( replicatingThread.getReplicationException().getCause(), Matchers.instanceOf( UnavailableException.class ) );
 
-        verify( replicationMonitor ).startReplication();
-        verify( replicationMonitor, atLeast( 1 ) ).replicationAttempt();
-        verify( replicationMonitor, never() ).successfulReplication();
-        verify( replicationMonitor ).failedReplication( any() );
+        ReplicationResult replicationResult = replicatingThread.getReplicationResult();
+        assertThat( replicationResult.outcome(), either( equalTo( NOT_REPLICATED ) ).or( equalTo( MAYBE_REPLICATED ) ) );
+        assertThat( replicationResult.failure(), Matchers.instanceOf( UnavailableException.class ) );
+
+        verify( replicationMonitor ).notReplicated();
     }
 
     @Test
@@ -232,16 +227,18 @@ class RaftReplicatorTest
 
         // when
         replicatingThread.start();
-
         availabilityGuard.require( () -> "Database not unavailable" );
         replicatingThread.join();
-        assertThat( replicatingThread.getReplicationException().getCause(), Matchers.instanceOf( UnavailableException.class ) );
+
+        ReplicationResult replicationResult = replicatingThread.getReplicationResult();
+        assertThat( replicationResult.outcome(), either( equalTo( NOT_REPLICATED ) ).or( equalTo( MAYBE_REPLICATED ) ) );
+        assertThat( replicationResult.failure(), Matchers.instanceOf( UnavailableException.class ) );
     }
 
     @Test
     void stopReplicationWhenUnHealthy() throws InterruptedException
     {
-        health.panic( new ReplicationFailureException( "" ) );
+        health.panic( new RuntimeException( "" ) );
 
         CapturingProgressTracker capturedProgress = new CapturingProgressTracker();
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
@@ -256,7 +253,7 @@ class RaftReplicatorTest
         replicatingThread.start();
 
         replicatingThread.join();
-        Assertions.assertNotNull( replicatingThread.getReplicationException() );
+        Assertions.assertNotNull( replicatingThread.getReplicationResult() );
     }
 
     @Test
@@ -270,15 +267,16 @@ class RaftReplicatorTest
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
 
         // when
-        assertThrows( ReplicationFailureException.class, () -> replicator.replicate( content ) );
+        ReplicationResult replicationResult = replicator.replicate( content );
+        assertEquals( NOT_REPLICATED , replicationResult.outcome() );
     }
 
     @Test
-    void shouldListenToLeaderUpdates() throws ReplicationFailureException
+    void shouldListenToLeaderUpdates()
     {
         OneProgressTracker oneProgressTracker = new OneProgressTracker();
         oneProgressTracker.last.setReplicated();
-        oneProgressTracker.last.registerResult( Result.of( null ) );
+        oneProgressTracker.last.registerResult( StateMachineResult.of( null ) );
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
         RaftReplicator replicator = getReplicator( outbound, oneProgressTracker, new Monitors() );
         ReplicatedInteger content = ReplicatedInteger.valueOf( 5 );
@@ -316,7 +314,7 @@ class RaftReplicatorTest
         assertEventually( "send count", () -> outbound.count, greaterThan( 1 ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         replicator.onLeaderSwitch( new LeaderInfo( null, 1 ) );
         capturedProgress.last.setReplicated();
-        capturedProgress.last.registerResult( Result.of( 5 ) );
+        capturedProgress.last.registerResult( StateMachineResult.of( 5 ) );
         replicator.onLeaderSwitch( leaderInfo );
 
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
@@ -333,12 +331,11 @@ class RaftReplicatorTest
         return new ReplicatingThread( replicator, content );
     }
 
-    private class ReplicatingThread extends Thread
+    private static class ReplicatingThread extends Thread
     {
-
         private final RaftReplicator replicator;
         private final ReplicatedInteger content;
-        private volatile Exception replicationException;
+        private volatile ReplicationResult replicationResult;
 
         ReplicatingThread( RaftReplicator replicator, ReplicatedInteger content )
         {
@@ -349,23 +346,16 @@ class RaftReplicatorTest
         @Override
         public void run()
         {
-            try
-            {
-                replicator.replicate( content ).consume();
-            }
-            catch ( Exception e )
-            {
-                replicationException = e;
-            }
+            replicationResult = replicator.replicate( content );
         }
 
-        Exception getReplicationException()
+        ReplicationResult getReplicationResult()
         {
-            return replicationException;
+            return replicationResult;
         }
     }
 
-    private class OneProgressTracker extends ProgressTrackerAdaptor
+    private static class OneProgressTracker extends ProgressTrackerAdaptor
     {
         OneProgressTracker()
         {
@@ -379,7 +369,7 @@ class RaftReplicatorTest
         }
     }
 
-    private class CapturingProgressTracker extends ProgressTrackerAdaptor
+    private static class CapturingProgressTracker extends ProgressTrackerAdaptor
     {
         @Override
         public Progress start( DistributedOperation operation )
@@ -389,7 +379,7 @@ class RaftReplicatorTest
         }
     }
 
-    private abstract class ProgressTrackerAdaptor implements ProgressTracker
+    private abstract static class ProgressTrackerAdaptor implements ProgressTracker
     {
         protected Progress last;
 
@@ -400,7 +390,7 @@ class RaftReplicatorTest
         }
 
         @Override
-        public void trackResult( DistributedOperation operation, Result result )
+        public void trackResult( DistributedOperation operation, StateMachineResult result )
         {
             last.registerResult( result );
         }

@@ -7,7 +7,7 @@ package com.neo4j.server.rest.causalclustering;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -19,14 +19,11 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
-import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
@@ -156,6 +153,7 @@ class ReadReplicaStatusTest
                 .map( memberId -> memberId.getUuid().toString() )
                 .collect( toList() );
         var responseJson = responseAsMap( description );
+        //noinspection unchecked
         var actualVotingMembers = (List<String>) responseJson.get( "votingMembers" );
         Collections.sort( expectedVotingMembers );
         Collections.sort( actualVotingMembers );
@@ -218,18 +216,10 @@ class ReadReplicaStatusTest
         assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 
-    static Collection<MemberId> randomMembers( int size )
-    {
-        return IntStream.range( 0, size )
-                .mapToObj( i -> UUID.randomUUID() )
-                .map( MemberId::new )
-                .collect( toList() );
-    }
-
     static Map<String,Object> responseAsMap( Response response ) throws IOException
     {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue( response.getEntity().toString(), new TypeReference<Map<String,Object>>()
+        return objectMapper.readValue( response.getEntity().toString(), new TypeReference<>()
         {
         } );
     }

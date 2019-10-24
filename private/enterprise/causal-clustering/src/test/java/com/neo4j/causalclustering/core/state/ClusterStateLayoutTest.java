@@ -56,9 +56,9 @@ class ClusterStateLayoutTest
     }
 
     @Test
-    void shouldExposeLockTokenStateDirectory()
+    void shouldExposeLeaseStateDirectory()
     {
-        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "barrier-token-state" ), layout.barrierTokenStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "lease-state" ), layout.leaseStateDirectory( DATABASE_NAME ) );
     }
 
     @Test

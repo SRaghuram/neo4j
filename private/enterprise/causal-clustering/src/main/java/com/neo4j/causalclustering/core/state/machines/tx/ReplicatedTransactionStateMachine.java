@@ -5,16 +5,16 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenStateMachine;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseStateMachine;
 
 import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.impl.api.Epoch;
+import org.neo4j.kernel.impl.api.LeaseService;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -26,12 +26,12 @@ import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader;
 import static java.lang.String.format;
-import static org.neo4j.kernel.api.exceptions.Status.Transaction.LockSessionExpired;
+import static org.neo4j.kernel.api.exceptions.Status.Transaction.LeaseExpired;
 
 public class ReplicatedTransactionStateMachine implements StateMachine<ReplicatedTransaction>
 {
     private final StateMachineCommitHelper commitHelper;
-    private final ReplicatedBarrierTokenStateMachine lockTokenStateMachine;
+    private final ReplicatedLeaseStateMachine leaseStateMachine;
     private final int maxBatchSize;
     private final Log log;
     private final LogEntryReader reader = new VersionAwareLogEntryReader();
@@ -39,11 +39,11 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     private TransactionQueue queue;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTransactionStateMachine( StateMachineCommitHelper commitHelper, ReplicatedBarrierTokenStateMachine lockStateMachine,
+    public ReplicatedTransactionStateMachine( StateMachineCommitHelper commitHelper, ReplicatedLeaseStateMachine leaseStateMachine,
             int maxBatchSize, LogProvider logProvider )
     {
         this.commitHelper = commitHelper;
-        this.lockTokenStateMachine = lockStateMachine;
+        this.leaseStateMachine = leaseStateMachine;
         this.maxBatchSize = maxBatchSize;
         this.log = logProvider.getLog( getClass() );
     }
@@ -57,7 +57,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     }
 
     @Override
-    public synchronized void applyCommand( ReplicatedTransaction replicatedTx, long commandIndex, Consumer<Result> callback )
+    public synchronized void applyCommand( ReplicatedTransaction replicatedTx, long commandIndex, Consumer<StateMachineResult> callback )
     {
         if ( commandIndex <= lastCommittedIndex )
         {
@@ -68,20 +68,19 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
         byte[] extraHeader = encodeLogIndexAsTxHeader( commandIndex );
         TransactionRepresentation tx = ReplicatedTransactionFactory.extractTransactionRepresentation( replicatedTx, extraHeader, reader );
 
-        int currentTokenId = lockTokenStateMachine.snapshot().candidateId();
-        int txTokenId = tx.getEpochTokenId();
+        int currentLeaseId = leaseStateMachine.snapshot().leaseId();
+        int leaseId = tx.getLeaseId();
 
-        if ( currentTokenId != txTokenId && txTokenId != Epoch.NO_EPOCH )
+        if ( currentLeaseId != leaseId && leaseId != LeaseService.NO_LEASE )
         {
-            callback.accept( Result.of( new TransactionFailureException( LockSessionExpired,
-                    "The epoch token in the cluster has changed: [current token id:%d, tx token id:%d]",
-                    currentTokenId, txTokenId ) ) );
+            callback.accept( StateMachineResult.of( new TransactionFailureException( LeaseExpired,
+                    "The lease used for the transaction has expired: [current lease id:%d, transaction lease id:%d]", currentLeaseId, leaseId ) ) );
         }
         else
         {
             try
             {
-                LongConsumer txCommittedCallback = committedTxId -> callback.accept( Result.of( committedTxId ) );
+                LongConsumer txCommittedCallback = committedTxId -> callback.accept( StateMachineResult.of( committedTxId ) );
                 TransactionToApply transaction = commitHelper.newTransactionToApply( tx, commandIndex, txCommittedCallback );
                 queue.queue( transaction );
             }
@@ -103,7 +102,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     {
         if ( queue == null )
         {
-            /** See {@link #installCommitProcess}. */
+            /* See installCommitProcess method. */
             throw new IllegalStateException( "Value has not been installed" );
         }
         return lastCommittedIndex;

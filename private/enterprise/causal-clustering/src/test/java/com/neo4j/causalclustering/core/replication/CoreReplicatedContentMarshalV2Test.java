@@ -119,7 +119,7 @@ class CoreReplicatedContentMarshalV2Test
         {
             // hackishly set additional header to empty array...
             ((PhysicalTransactionRepresentation) tx)
-                    .setHeader( new byte[0], tx.getTimeStarted(), tx.getLatestCommittedTxWhenStarted(), tx.getTimeCommitted(), tx.getEpochTokenId() );
+                    .setHeader( new byte[0], tx.getTimeStarted(), tx.getLatestCommittedTxWhenStarted(), tx.getTimeCommitted(), tx.getLeaseId() );
             extraHeader = tx.additionalHeader();
         }
         TransactionRepresentation representation =

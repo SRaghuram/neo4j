@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 

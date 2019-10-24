@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.function.LongConsumer;

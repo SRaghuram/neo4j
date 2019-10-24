@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
+import com.neo4j.causalclustering.core.state.machines.lease.ClusterLeaseCoordinator;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
-import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;
@@ -23,21 +23,21 @@ public class CoreCommitProcessFactory implements CommitProcessFactory
     private final DatabaseId databaseId;
     private final Replicator replicator;
     private final CoreStateMachines coreStateMachines;
-    private final DatabasePanicker panicker;
+    private final ClusterLeaseCoordinator leaseCoordinator;
 
-    CoreCommitProcessFactory( DatabaseId databaseId, Replicator replicator, CoreStateMachines coreStateMachines, DatabasePanicker panicker )
+    CoreCommitProcessFactory( DatabaseId databaseId, Replicator replicator, CoreStateMachines coreStateMachines, ClusterLeaseCoordinator leaseCoordinator )
     {
         this.databaseId = databaseId;
         this.replicator = replicator;
         this.coreStateMachines = coreStateMachines;
-        this.panicker = panicker;
+        this.leaseCoordinator = leaseCoordinator;
     }
 
     @Override
     public TransactionCommitProcess create( TransactionAppender appender, StorageEngine storageEngine, Config config )
     {
         initializeCommitProcessForStateMachines( appender, storageEngine );
-        return new ReplicatedTransactionCommitProcess( replicator, databaseId, panicker );
+        return new ReplicatedTransactionCommitProcess( replicator, databaseId, leaseCoordinator );
     }
 
     /**

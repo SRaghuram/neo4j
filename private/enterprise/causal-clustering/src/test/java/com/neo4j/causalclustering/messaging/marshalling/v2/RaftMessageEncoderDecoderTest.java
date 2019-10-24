@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
@@ -92,7 +92,7 @@ class RaftMessageEncoderDecoderTest
                 new RaftMessages.AppendEntries.Request( MEMBER_ID, 1, 2, 3,
                         new RaftLogEntry[]{
                                 new RaftLogEntry( 0, new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "name", new byte[]{2, 3, 4} ) ),
-                                new RaftLogEntry( 1, new ReplicatedBarrierTokenRequest( MEMBER_ID, 2, databaseId ) )
+                                new RaftLogEntry( 1, new ReplicatedLeaseRequest( MEMBER_ID, 2, databaseId ) )
                         }, 5 ),
                 new RaftMessages.AppendEntries.Response( MEMBER_ID, 1, true, 2, 3 ),
                 new RaftMessages.Vote.Request( MEMBER_ID, Long.MAX_VALUE, MEMBER_ID, Long.MIN_VALUE, 1 ),

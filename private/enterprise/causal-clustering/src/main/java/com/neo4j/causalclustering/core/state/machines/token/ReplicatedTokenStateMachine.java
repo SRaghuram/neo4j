@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 import com.neo4j.causalclustering.core.state.machines.StateMachineCommitHelper;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
@@ -51,7 +51,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
 
     @Override
     public synchronized void applyCommand( ReplicatedTokenRequest tokenRequest, long commandIndex,
-            Consumer<Result> callback )
+            Consumer<StateMachineResult> callback )
     {
         if ( commandIndex <= lastCommittedIndex )
         {
@@ -72,13 +72,13 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
             // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
             // Thus there is no need for us to update the token registry directly.
             applyToStore( commands, commandIndex );
-            callback.accept( Result.of( newTokenId ) );
+            callback.accept( StateMachineResult.of( newTokenId ) );
         }
         else
         {
             // This should be rare so a warning is in order.
             log.warn( format( "Ignored %s (newTokenId=%d) since it already exists with existingTokenId=%d", tokenRequest, newTokenId, existingTokenId ) );
-            callback.accept( Result.of( existingTokenId ) );
+            callback.accept( StateMachineResult.of( existingTokenId ) );
         }
     }
 

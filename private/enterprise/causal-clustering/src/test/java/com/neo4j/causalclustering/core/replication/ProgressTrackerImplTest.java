@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.replication;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import org.junit.Test;
 
 import java.util.UUID;
@@ -131,7 +131,7 @@ public class ProgressTrackerImplTest
 
         // when
         String result = "result";
-        tracker.trackResult( operationA, Result.of( result ) );
+        tracker.trackResult( operationA, StateMachineResult.of( result ) );
 
         // then
         assertEquals( result, progress.result().consume() );
@@ -153,7 +153,7 @@ public class ProgressTrackerImplTest
 
         // when
         tracker.trackReplication( aliasUnderSessionB );
-        tracker.trackResult( aliasUnderSessionB, Result.of( "result" ) );
+        tracker.trackResult( aliasUnderSessionB, StateMachineResult.of( "result" ) );
 
         // then
         assertFalse( progressA.isReplicated() );

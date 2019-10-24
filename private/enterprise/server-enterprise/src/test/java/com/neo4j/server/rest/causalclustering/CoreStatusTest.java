@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 

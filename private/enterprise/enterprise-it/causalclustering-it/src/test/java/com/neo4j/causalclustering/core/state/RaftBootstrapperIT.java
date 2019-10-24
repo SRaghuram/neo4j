@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.EnterpriseTemporaryDatabaseFactory;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
@@ -49,7 +49,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenState.INITIAL_BARRIER_TOKEN;
+import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState.INITIAL_LEASE_STATE;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -89,8 +89,6 @@ class RaftBootstrapperIT
 
     private File neo4jHome;
     private File dataDirectory;
-    private File storeDirectory; // "databases"
-    private File txLogsDirectory;
     private Config defaultConfig;
     private StorageEngineFactory storageEngineFactory;
 
@@ -101,8 +99,6 @@ class RaftBootstrapperIT
         this.neo4jHome = testDirectory.homeDir();
         this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() );
         this.dataDirectory = defaultConfig.get( GraphDatabaseSettings.data_directory ).toFile();
-        this.storeDirectory = defaultConfig.get( GraphDatabaseSettings.databases_root_path ).toFile();
-        this.txLogsDirectory = defaultConfig.get( transaction_logs_root_path ).toFile();
         this.storageEngineFactory = StorageEngineFactory.selectStorageEngine();
     }
 
@@ -319,9 +315,9 @@ class RaftBootstrapperIT
 
     private void verifyDatabaseSpecificState( Function<CoreStateFiles<?>,?> databaseSpecific )
     {
-        ReplicatedBarrierTokenState barrierTokenState = (ReplicatedBarrierTokenState) databaseSpecific.apply( CoreStateFiles.BARRIER_TOKEN );
+        ReplicatedLeaseState leaseState = (ReplicatedLeaseState) databaseSpecific.apply( CoreStateFiles.LEASE );
 
-        assertEquals( INITIAL_BARRIER_TOKEN, barrierTokenState );
+        assertEquals( INITIAL_LEASE_STATE, leaseState );
     }
 
     private void verifyDatabase( DatabaseLayout databaseLayout, PageCache pageCache, Config config ) throws IOException

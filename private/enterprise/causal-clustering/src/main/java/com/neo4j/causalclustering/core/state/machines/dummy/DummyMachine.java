@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.dummy;
 
-import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.core.state.machines.StateMachine;
 
 import java.util.function.Consumer;
@@ -13,9 +13,9 @@ import java.util.function.Consumer;
 public class DummyMachine implements StateMachine<DummyRequest>
 {
     @Override
-    public void applyCommand( DummyRequest dummyRequest, long commandIndex, Consumer<Result> callback )
+    public void applyCommand( DummyRequest dummyRequest, long commandIndex, Consumer<StateMachineResult> callback )
     {
-        callback.accept( Result.of( dummyRequest ) );
+        callback.accept( StateMachineResult.of( dummyRequest ) );
     }
 
     @Override

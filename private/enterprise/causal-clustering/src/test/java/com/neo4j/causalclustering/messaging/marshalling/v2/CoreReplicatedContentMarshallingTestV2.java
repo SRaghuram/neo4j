@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalOperationId;
-import com.neo4j.causalclustering.core.state.machines.barrier.ReplicatedBarrierTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
+import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
@@ -52,7 +52,7 @@ public class CoreReplicatedContentMarshallingTestV2
         return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseId ),
                 new MemberIdSet( Set.of( new MemberId( UUID.randomUUID() ) ) ),
                 new ReplicatedTokenRequest( databaseId, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
-                new ReplicatedBarrierTokenRequest( new MemberId( UUID.randomUUID() ), 2, databaseId ), new DistributedOperation(
+                new ReplicatedLeaseRequest( new MemberId( UUID.randomUUID() ), 2, databaseId ), new DistributedOperation(
                 new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseId ),
                         new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 1, 2 ) ),
                 new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 4, 5 ) )};
