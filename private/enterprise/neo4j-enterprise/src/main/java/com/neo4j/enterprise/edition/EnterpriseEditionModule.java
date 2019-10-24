@@ -309,7 +309,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
             }
 
             @Override
-            public CustomBookmarkFormatParser getCustomBookmarkFormatParser()
+            public Optional<CustomBookmarkFormatParser> getCustomBookmarkFormatParser()
             {
                 return fabricDatabaseManagementService.getCustomBookmarkFormatParser();
             }

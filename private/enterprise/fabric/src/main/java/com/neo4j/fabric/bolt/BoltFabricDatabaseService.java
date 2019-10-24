@@ -134,7 +134,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         }
 
         @Override
-        public BookmarkMetadata getBookmark()
+        public BookmarkMetadata getBookmarkMetadata()
         {
             return new FabricBookmark( databaseId, List.of() );
         }

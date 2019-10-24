@@ -17,8 +17,6 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 public class FabricBookmark extends BookmarkMetadata implements Bookmark
 {
-    private static String BOOKMARK_KEY = "bookmark";
-
     private final List<RemoteState> remoteStates;
 
     public FabricBookmark( DatabaseId databaseId, List<RemoteState> remoteStates )
