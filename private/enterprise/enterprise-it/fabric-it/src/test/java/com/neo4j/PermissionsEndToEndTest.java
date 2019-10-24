@@ -27,7 +27,6 @@ import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.kernel.api.exceptions.Status.Security.Forbidden;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ExecutionFailed;
@@ -199,7 +198,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Write operations are not allowed for user 'neo4j' with roles [admin] restricted to READ.", e.getMessage() );
+        assertEquals( "Write operations are not allowed for user 'neo4j' with roles [admin] restricted to ACCESS.", e.getMessage() );
     }
 
     @Test
@@ -215,7 +214,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [access] restricted to READ.", e.getMessage() );
+        assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [access] restricted to ACCESS.", e.getMessage() );
     }
 
     // TODO: This should fail on permissions instead of on evaluation

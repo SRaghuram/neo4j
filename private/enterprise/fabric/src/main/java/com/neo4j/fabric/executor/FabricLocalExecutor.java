@@ -188,7 +188,7 @@ public class FabricLocalExecutor
         public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
         {
             var originalSecurityContext = inner.authorize( idLookup, dbName );
-            var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.READ );
+            var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.ACCESS );
             return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), action -> false );
         }
     }
