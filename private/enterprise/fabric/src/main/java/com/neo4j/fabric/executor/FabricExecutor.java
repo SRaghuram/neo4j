@@ -100,7 +100,7 @@ public class FabricExecutor
         private final FabricQueryMonitoring.QueryMonitor queryMonitor;
 
         FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx,
-                FabricQueryMonitoring.QueryMonitor queryMonitor)
+                FabricQueryMonitoring.QueryMonitor queryMonitor )
         {
             this.originalStatement = originalStatement;
             this.plan = plan;
@@ -323,7 +323,7 @@ public class FabricExecutor
         private final Log log;
 
         FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx, Log log,
-                FabricQueryMonitoring.QueryMonitor queryMonitor)
+                FabricQueryMonitoring.QueryMonitor queryMonitor )
         {
             super( originalStatement, plan, params, ctx, queryMonitor );
             this.step = new AtomicInteger( 0 );

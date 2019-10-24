@@ -540,10 +540,10 @@ class FabricExecutorTest
                 inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "UNWIND [0, 1] AS s" ) ) )
         );
         internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 0" ), containsString( "RETURN 2 AS y" ) ) )
+                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 0" ), containsString( "RETURN 2 AS `y`" ) ) )
         );
         internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 1" ), containsString( "RETURN 2 AS y" ) ) )
+                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 1" ), containsString( "RETURN 2 AS `y`" ) ) )
         );
         internalLogProvider.assertAtLeastOnce(
                 inLog( FabricExecutor.class ).debug(
