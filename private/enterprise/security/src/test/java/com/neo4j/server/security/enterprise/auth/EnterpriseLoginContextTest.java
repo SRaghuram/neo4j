@@ -44,8 +44,7 @@ class EnterpriseLoginContextTest
         SecureHasher secureHasher = new SecureHasher();
         InMemoryUserManager realm = new InMemoryUserManager( Config.defaults(), secureHasher );
         authManager =
-                new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ),
-                        false, false, Collections.emptyMap() );
+                new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
         authManager.start();
 
         userManager = authManager.getUserManager();

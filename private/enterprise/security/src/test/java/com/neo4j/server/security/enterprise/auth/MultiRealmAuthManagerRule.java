@@ -52,8 +52,7 @@ public class MultiRealmAuthManagerRule implements TestRule
         SecurityLog securityLog = new SecurityLog( log );
         InMemoryUserManager realm = new InMemoryUserManager( Config.defaults(), secureHasher );
 
-        manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
-                new MemoryConstrainedCacheManager(), securityLog, true, false, Collections.emptyMap() );
+        manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), securityLog, true );
         manager.init();
     }
 

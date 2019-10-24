@@ -25,8 +25,6 @@ import org.apache.shiro.realm.CachingRealm;
 import org.apache.shiro.realm.Realm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.util.Initializable;
-import org.eclipse.collections.api.set.primitive.MutableIntSet;
-import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,12 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
@@ -56,11 +52,9 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
     private final CacheManager cacheManager;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
-    private final boolean propertyAuthorization;
-    private final Map<String,List<String>> roleToPropertyBlacklist;
 
     public MultiRealmAuthManager( EnterpriseUserManager userManager, Collection<Realm> realms, CacheManager cacheManager,
-            SecurityLog securityLog, boolean logSuccessfulLogin, boolean propertyAuthorization, Map<String,List<String>> roleToPropertyBlacklist )
+            SecurityLog securityLog, boolean logSuccessfulLogin )
     {
         this.userManager = userManager;
         this.realms = realms;
@@ -69,8 +63,6 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
         securityManager = new DefaultSecurityManager( realms );
         this.securityLog = securityLog;
         this.logSuccessfulLogin = logSuccessfulLogin;
-        this.propertyAuthorization = propertyAuthorization;
-        this.roleToPropertyBlacklist = roleToPropertyBlacklist;
         securityManager.setSubjectFactory( new ShiroSubjectFactory() );
         ((ModularRealmAuthenticator) securityManager.getAuthenticator())
                 .setAuthenticationStrategy( new ShiroAuthenticationStrategy() );
@@ -346,25 +338,5 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
     Set<ResourcePrivilege> getPermissions( Set<String> roles )
     {
         return userManager.getPrivilegesForRoles( roles );
-    }
-
-    MutableIntSet getPropertyPermissions( Set<String> roles, LoginContext.IdLookup tokenLookup ) throws KernelException
-    {
-        final MutableIntSet blackListed = new IntHashSet();
-        if ( propertyAuthorization )
-        {
-            for ( String role : roles )
-            {
-                if ( roleToPropertyBlacklist.containsKey( role ) )
-                {
-                    assert roleToPropertyBlacklist.get( role ) != null : "Blacklist has to contain properties";
-                    for ( String propName : roleToPropertyBlacklist.get( role ) )
-                    {
-                        blackListed.add( tokenLookup.getOrCreatePropertyKeyId( propName ) );
-                    }
-                }
-            }
-        }
-        return blackListed;
     }
 }

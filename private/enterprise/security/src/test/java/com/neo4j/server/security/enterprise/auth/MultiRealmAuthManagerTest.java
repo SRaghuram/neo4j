@@ -61,8 +61,7 @@ class MultiRealmAuthManagerTest
         realm = new InMemoryUserManager( Config.defaults(), secureHasher, authStrategy );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
-                new MemoryConstrainedCacheManager(), new SecurityLog( logProvider.getLog( this.getClass() ) ),
-                logSuccessfulAuthentications, false, Collections.emptyMap() );
+                new MemoryConstrainedCacheManager(), new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications );
 
         manager.init();
         return manager;

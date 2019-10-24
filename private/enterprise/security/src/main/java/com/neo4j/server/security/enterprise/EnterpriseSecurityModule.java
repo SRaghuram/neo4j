@@ -37,10 +37,8 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -242,8 +240,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         }
 
         return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config ),
-                securityLog, config.get( SecuritySettings.security_log_successful_authentication ),
-                securityConfig.propertyAuthorization, securityConfig.propertyBlacklist );
+                securityLog, config.get( SecuritySettings.security_log_successful_authentication ) );
     }
 
     private SecurityConfig getValidatedSecurityConfig( Config config )
@@ -458,9 +455,8 @@ public class EnterpriseSecurityModule extends SecurityModule
         final boolean ldapAuthorization;
         final boolean pluginAuthentication;
         final boolean pluginAuthorization;
-        final boolean propertyAuthorization;
+        private final boolean propertyAuthorization;
         private final String propertyAuthMapping;
-        final Map<String,List<String>> propertyBlacklist = new HashMap<>();
         final boolean nativeAuthEnabled;
 
         SecurityConfig( Config config )

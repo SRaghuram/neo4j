@@ -35,7 +35,6 @@ import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
@@ -83,7 +82,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         {
             accessModeBuilder.withAccess();
         }
-        accessModeBuilder.addBlacklistedPropertyPermissions( authManager.getPropertyPermissions( roles(), resolver ) );
 
         StandardAccessMode mode = accessModeBuilder.build();
         if ( !mode.allowsAccess )
@@ -548,15 +546,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     this.relationshipProperties.put( privilegeType, IntSets.mutable.empty() );
                     this.nodeSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
                     this.relationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
-                }
-            }
-
-            private void addBlacklistedPropertyPermissions( MutableIntSet propertyPermissions )
-            {
-                for ( int property : propertyPermissions.toArray() )
-                {
-                    nodeProperties.get( DENY ).add( property );
-                    relationshipProperties.get( DENY ).add( property );
                 }
             }
 
