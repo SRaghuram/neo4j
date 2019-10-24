@@ -12,7 +12,6 @@ import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.subject.SimplePrincipalCollection;
 
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -79,26 +78,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
-    {
-        assertValidRoleName( roleName );
-        systemGraphOperations.newRole( roleName, usernames );
-    }
-
-    @Override
-    public void assertRoleExists( String roleName ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.assertRoleExists( roleName );
-    }
-
-    @Override
-    public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
-    {
-        systemGraphOperations.addRoleToUser( roleName, username );
-        clearCachedAuthorizationInfoForUser( username );
-    }
-
-    @Override
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );
@@ -122,10 +101,5 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         {
             throw new InvalidArgumentsException( "Role name '" + name + "' contains illegal characters. Use simple ascii characters and numbers." );
         }
-    }
-
-    private void clearCachedAuthorizationInfoForUser( String username )
-    {
-        clearCachedAuthorizationInfo( new SimplePrincipalCollection( username, this.getName() ) );
     }
 }

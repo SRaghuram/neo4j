@@ -170,7 +170,6 @@ public class InMemoryUserManager extends SystemGraphRealm
         return new SimpleAuthorizationInfo( rolesForUsers.getOrDefault( username, Collections.emptySet() ) );
     }
 
-    @Override
     public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
     {
         if ( roles.containsKey( roleName ) )
@@ -185,8 +184,7 @@ public class InMemoryUserManager extends SystemGraphRealm
         }
     }
 
-    @Override
-    public void assertRoleExists( String roleName ) throws InvalidArgumentsException
+    private void assertRoleExists( String roleName ) throws InvalidArgumentsException
     {
         if ( !roles.containsKey( roleName ) )
         {
@@ -194,7 +192,7 @@ public class InMemoryUserManager extends SystemGraphRealm
         }
     }
 
-    @Override
+
     public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
         assertValidRoleName( roleName );

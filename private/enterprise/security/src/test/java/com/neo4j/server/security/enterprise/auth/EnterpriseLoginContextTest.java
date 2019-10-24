@@ -36,18 +36,16 @@ class EnterpriseLoginContextTest
     private static final String user = "user";
 
     private MultiRealmAuthManager authManager;
-    private EnterpriseUserManager userManager;
+    private InMemoryUserManager userManager;
 
     @BeforeEach
     void setup() throws Throwable
     {
         SecureHasher secureHasher = new SecureHasher();
-        InMemoryUserManager realm = new InMemoryUserManager( Config.defaults(), secureHasher );
+        userManager = new InMemoryUserManager( Config.defaults(), secureHasher );
         authManager =
-                new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
+                new MultiRealmAuthManager( userManager, Collections.singleton( userManager ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
         authManager.start();
-
-        userManager = authManager.getUserManager();
         userManager.newUser( user, password( "password" ), false );
     }
 

@@ -30,9 +30,7 @@ import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.NodeValue;
 
-import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.assertValidRoleName;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assertValidUsername;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class SystemGraphOperations extends BasicSystemGraphOperations
@@ -122,54 +120,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         }
 
         return new SimpleAuthorizationInfo( roleNames );
-    }
-
-    void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
-    {
-        String query = "CREATE (r:Role {name: $name})";
-        Map<String,Object> params = Collections.singletonMap( "name", roleName );
-
-        queryExecutor.executeQueryWithConstraint( query, params,
-                "The specified role '" + roleName + "' already exists." );
-
-        // NOTE: This adding users thing is used by tests only so we do not need to optimize this into a more advanced single Cypher query
-        for ( String username : usernames )
-        {
-            addRoleToUser( roleName, username );
-        }
-    }
-
-    void assertRoleExists( String roleName ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (r:Role {name: $name}) RETURN r.name";
-        Map<String,Object> params = map( "name", roleName );
-        String errorMsg = "Role '" + roleName + "' does not exist.";
-
-        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
-    void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
-    {
-        assertValidRoleName( roleName );
-        assertValidUsername( username );
-
-        String query =
-                "MATCH (u:User {name: $user}), (r:Role {name: $role}) " +
-                "OPTIONAL MATCH (u)-[h:HAS_ROLE]->(r) " +
-                "WITH u, r WHERE h IS NULL " +
-                "CREATE (u)-[:HAS_ROLE]->(r) " +
-                "RETURN 0";
-        Map<String,Object> params = map( "user", username, "role", roleName );
-
-        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
-
-        if ( !success )
-        {
-            // We need to decide the cause of this failure
-            getUser( username, false ); // This throws InvalidArgumentException if user does not exist
-            assertRoleExists( roleName ); //This throws InvalidArgumentException if role does not exist
-            // If the user already had the role, we should silently fall through
-        }
     }
 
     Set<ResourcePrivilege> getPrivilegeForRoles( Set<String> roles )

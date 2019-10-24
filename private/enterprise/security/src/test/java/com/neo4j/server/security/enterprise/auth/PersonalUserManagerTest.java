@@ -130,39 +130,6 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "newRoleException" );
-            }
-            delegate.newRole( roleName, usernames );
-        }
-
-        @Override
-        public void assertRoleExists( String roleName ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "getRoleException" );
-            }
-            delegate.assertRoleExists( roleName );
-        }
-
-        @Override
-        public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "addRoleToUserException" );
-            }
-            delegate.addRoleToUser( roleName, username );
-        }
-
-        @Override
         public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
         {
             return delegate.getPrivilegesForRoles( roles );

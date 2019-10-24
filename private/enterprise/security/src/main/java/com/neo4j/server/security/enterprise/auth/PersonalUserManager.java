@@ -63,22 +63,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.newRole( roleName, usernames );
-            securityLog.info( subject, "created role `%s`", roleName );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to create role `%s`: %s", roleName, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public void setUserPassword( String username, byte[] password, boolean requirePasswordChange )
             throws InvalidArgumentsException, AuthorizationViolationException
     {
@@ -111,29 +95,6 @@ class PersonalUserManager implements EnterpriseUserManager
                         e.getMessage() );
                 throw e;
             }
-        }
-    }
-
-    @Override
-    public void assertRoleExists( String roleName ) throws InvalidArgumentsException
-    {
-        userManager.assertRoleExists( roleName );
-    }
-
-    @Override
-    public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            userManager.addRoleToUser( roleName, username );
-            securityLog.info( subject, "added role `%s` to user `%s`", roleName, username );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to add role `%s` to user `%s`: %s", roleName, username,
-                    e.getMessage() );
-            throw e;
         }
     }
 
