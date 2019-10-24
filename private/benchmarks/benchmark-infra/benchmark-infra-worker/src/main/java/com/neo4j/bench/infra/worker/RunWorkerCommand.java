@@ -8,6 +8,7 @@ package com.neo4j.bench.infra.worker;
 import com.amazonaws.SdkClientException;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -53,14 +54,16 @@ public class RunWorkerCommand extends BaseInfraCommand
             }
 
             // download & extract dataset
-            Dataset dataset = artifactStorage.downloadDataset( runWorkloadParams.neo4jBranch(), infraParams.storeName() );
+            Version neo4jVersion = runWorkloadParams.neo4jVersion();
+            Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.minorVersion(), infraParams.storeName() );
             dataset.extractInto( macroDir );
 
             // download artifacts
             artifactStorage.downloadBuildArtifacts( infraParams.workspaceDir(), infraParams.artifactBaseUri() );
             Files.setPosixFilePermissions( macroDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
 
-            Workspace.assertMacroWorkspace( infraParams.workspaceDir(), runWorkloadParams.neo4jEdition(), runWorkloadParams.neo4jVersion() );
+            Workspace.assertMacroWorkspace( infraParams.workspaceDir(), runWorkloadParams.neo4jEdition(),
+                                            neo4jVersion );
 
             Path neo4jConfigFile = infraParams.workspaceDir().resolve( "neo4j.conf" );
             BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile );
@@ -133,7 +136,7 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    infraParams.resultsStoreUsername(),
                                    infraParams.resultsStorePassword(),
                                    runWorkloadParams.neo4jCommit(),
-                                   runWorkloadParams.neo4jVersion(),
+                                   runWorkloadParams.neo4jVersion().patchVersion(),
                                    runWorkloadParams.neo4jBranch(),
                                    runWorkloadParams.neo4jBranchOwner(),
                                    runWorkloadParams.toolCommit(),
