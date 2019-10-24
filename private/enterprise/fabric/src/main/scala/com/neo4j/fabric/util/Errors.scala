@@ -61,7 +61,7 @@ object Errors {
   def openCypherUnexpected(exp: String, got: ASTNode): Nothing = openCypherUnexpected(exp, got.position)
 
   def openCypherUnknownFunction(qualifiedName : String, pos: InputPosition): Nothing = openCypherFailure(SemanticError(s"Unknown function '$qualifiedName'", pos))
-  
+
   def wrongType(exp: String, got: String): Nothing = throw new CypherTypeException(s"Expected: $exp, got: $got")
 
   def wrongArity(exp: Int, got: Int, pos: InputPosition): Nothing = syntax(s"$exp arguments", s"$got arguments", pos)
@@ -69,10 +69,10 @@ object Errors {
   def syntax(msg: String, query: String, pos: InputPosition): Nothing = throw new SyntaxException(msg, query, pos.offset)
 
   def semantic(message: String) = throw new InvalidSemanticsException(message)
-  
+
   def ddlNotSupported(ddl: CatalogDDL) = throw new DatabaseAdministrationException(
     s"This is an administration command and it should be executed against the system database: ${ddl.name}")
-  
+
   def notSupported(feature:String) = semantic(s"$feature not supported in Fabric database")
 
   def entityNotFound(kind: String, needle: String): Nothing = throw new EntityNotFoundException(s"$kind not found: $needle")
@@ -82,7 +82,7 @@ object Errors {
     try block catch {
       case e: HasErrors => throw e.update {
         case SemanticError(msg, InputPosition.NONE, _*) => syntax(msg, query, node.position)
-        case SemanticError(msg, pos, _*) => syntax(msg, query, pos)  
+        case SemanticError(msg, pos, _*) => syntax(msg, query, pos)
         case FeatureError(msg, InputPosition.NONE) => syntax(msg, query, node.position)
         case FeatureError(msg, pos) => syntax(msg, query, pos)
         case o => o
@@ -94,7 +94,7 @@ object Errors {
   def show(t: CypherType): String = t.toNeoTypeString
 
   def show(av: AnyValue): String = av match {
-    case v: Value => s"${v.prettyPrint()}: ${v.getTypeName}"
+    case v: Value => v.prettyPrint()
     case x        => x.getTypeName
   }
 

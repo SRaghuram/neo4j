@@ -8,10 +8,8 @@ package com.neo4j.fabric.pipeline
 import java.util.Optional
 import java.util.function.Supplier
 
-import com.neo4j.fabric.util.Errors
-import org.neo4j.cypher.internal.logical.plans.{CypherValue, FieldSignature, ProcedureAccessMode, ProcedureDbmsAccess, ProcedureReadOnlyAccess, ProcedureReadWriteAccess, ProcedureSchemaWriteAccess, ProcedureSignature, QualifiedName, UserFunctionSignature}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTList, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType}
 import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.internal.kernel.api.procs

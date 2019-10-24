@@ -35,7 +35,7 @@ object Catalog {
     def cast[T <: AnyValue](a: Arg[T], v: AnyValue, args: Seq[AnyValue]): T =
       try a.tpe.cast(v)
       catch {
-        case e: ClassCastException => Errors.wrongType(show(signature), show(args))
+        case _: ClassCastException => Errors.wrongType(show(signature), show(args))
       }
   }
 
@@ -68,7 +68,7 @@ object Catalog {
       CatalogName(namespace, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(sid =>
         RemoteGraph(graphs
           .find(_.getId == sid.longValue())
-          .getOrElse(Errors.notFound("Graph with id", show(sid), InputPosition.NONE))
+          .getOrElse(Errors.entityNotFound("Graph", show(sid)))
         )
       )
     ))

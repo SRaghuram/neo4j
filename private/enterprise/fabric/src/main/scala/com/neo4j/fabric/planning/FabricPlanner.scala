@@ -14,6 +14,7 @@ import com.neo4j.fabric.planning.FabricQuery._
 import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten._
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.logical.plans.{ResolvedCall, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticState, SemanticTable}
@@ -24,7 +25,6 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
-import org.neo4j.cypher.internal._
 import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
 import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
 import org.neo4j.monitoring.Monitors
@@ -97,7 +97,7 @@ case class FabricPlanner(
   }
 
   case class PlannerContext(
-    query: String,                       
+    query: String,
     original: Statement,
     parameters: MapValue,
     semantic: SemanticState,
@@ -163,7 +163,7 @@ case class FabricPlanner(
                 current.append(Fragment.Direct(leaf, leaf.columns))
 
               case Left(sub) if localUse.isDefined =>
-                Errors.invalid(Errors.semantic("Nested subqueries in remote query-parts is not supported", sub))
+                Errors.syntax("Nested subqueries in remote query-parts is not supported", query, sub.position)
 
               case Left(sub) =>
                 val frag = fragment(
@@ -215,7 +215,7 @@ case class FabricPlanner(
 
       rest.filter(_.isInstanceOf[ast.UseGraph])
         .map(clause => Errors.syntax("USE can only appear at the beginning of a (sub-)query", query, clause.position))
-      
+
       use
     }
 

@@ -334,7 +334,7 @@ class ErrorsEndToEndTest
         catch ( ClientException e )
         {
             assertEquals(EntityNotFound.code().serialize(), e.code());
-            assertEquals("Catalog entry not found: mega.graph1", e.getMessage());
+            assertEquals("Graph not found: 1", e.getMessage());
         }
         catch ( Exception e )
         {
@@ -444,7 +444,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = "USE mega.graph0 RETURN $a";
+            var query = "USE mega.graph(0) RETURN $a";
 
             tx.run( query ).list();
             fail("Exception expected");
@@ -465,7 +465,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = "USE mega.graph0 UNWIND[1, 0] AS a RETURN 1/a AS aa";
+            var query = "USE mega.graph(0) UNWIND[1, 0] AS a RETURN 1/a AS aa";
 
             tx.run( query ).list();
             fail("Exception expected");

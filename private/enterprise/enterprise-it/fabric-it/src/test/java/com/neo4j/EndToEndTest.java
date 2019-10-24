@@ -32,7 +32,6 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.StatementType;
@@ -593,7 +592,7 @@ class EndToEndTest
     @Test
     void testDisallowRemoteSubqueryInRemoteSubquery()
     {
-        DatabaseException ex = assertThrows( DatabaseException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () ->
         {
             try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
             {

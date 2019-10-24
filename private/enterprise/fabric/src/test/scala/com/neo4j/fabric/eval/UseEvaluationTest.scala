@@ -19,6 +19,7 @@ import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph
 import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.TestName
+import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
@@ -52,9 +53,9 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
   }
 
   "Fails for:" - {
-    "USE mega.graph0" in { the[EvaluationFailedException].thrownBy(eval()).getMessage.should(include("not found: mega.graph0")) }
-    "USE mega.graph1" in { the[EvaluationFailedException].thrownBy(eval()).getMessage.should(include("not found: mega.graph1")) }
-    "USE mega.graph(10)" in { the[EvaluationFailedException].thrownBy(eval()).getMessage.should(include("not found: 10")) }
+    "USE mega.graph0" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega.graph0")) }
+    "USE mega.graph1" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega.graph1")) }
+    "USE mega.graph(10)" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: 10")) }
   }
 
   object eval {
