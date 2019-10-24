@@ -101,17 +101,6 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public boolean deleteUser( String username ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "deleteUserException" );
-            }
-            return delegate.deleteUser( username );
-        }
-
-        @Override
         public User getUser( String username ) throws InvalidArgumentsException
         {
             if ( failNextCall )
@@ -141,12 +130,6 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public Set<String> getAllUsernames()
-        {
-            return delegate.getAllUsernames();
-        }
-
-        @Override
         public void newRole( String roleName, String... usernames ) throws InvalidArgumentsException
         {
             if ( failNextCall )
@@ -155,17 +138,6 @@ class PersonalUserManagerTest
                 throw new InvalidArgumentsException( "newRoleException" );
             }
             delegate.newRole( roleName, usernames );
-        }
-
-        @Override
-        public boolean deleteRole( String roleName ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "deleteRoleException" );
-            }
-            return delegate.deleteRole( roleName );
         }
 
         @Override
@@ -200,29 +172,6 @@ class PersonalUserManagerTest
         public void clearCacheForRoles()
         {
             delegate.clearCacheForRoles();
-        }
-
-        @Override
-        public Set<String> getAllRoleNames()
-        {
-            return delegate.getAllRoleNames();
-        }
-
-        @Override
-        public Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException
-        {
-            if ( failNextCall )
-            {
-                failNextCall = false;
-                throw new InvalidArgumentsException( "getUsernamesForRoleException" );
-            }
-            return delegate.getUsernamesForRole( roleName );
-        }
-
-        @Override
-        public Set<String> silentlyGetUsernamesForRole( String roleName )
-        {
-            return delegate.silentlyGetUsernamesForRole( roleName );
         }
     }
 

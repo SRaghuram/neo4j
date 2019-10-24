@@ -16,10 +16,7 @@ import static java.util.Collections.emptySet;
 
 public interface EnterpriseUserManager extends UserManager
 {
-
     void newRole( String roleName, String... usernames ) throws InvalidArgumentsException;
-
-    boolean deleteRole( String roleName ) throws InvalidArgumentsException;
 
     void assertRoleExists( String roleName ) throws InvalidArgumentsException;
 
@@ -39,24 +36,12 @@ public interface EnterpriseUserManager extends UserManager
      */
     void clearCacheForRoles();
 
-    Set<String> getAllRoleNames();
-
-    Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException;
-
-    Set<String> silentlyGetUsernamesForRole( String roleName );
-
     EnterpriseUserManager NOOP = new EnterpriseUserManager()
     {
 
         @Override
         public void newRole( String roleName, String... usernames )
         {
-        }
-
-        @Override
-        public boolean deleteRole( String roleName )
-        {
-            return false;
         }
 
         @Override
@@ -81,24 +66,6 @@ public interface EnterpriseUserManager extends UserManager
         }
 
         @Override
-        public Set<String> getAllRoleNames()
-        {
-            return emptySet();
-        }
-
-        @Override
-        public Set<String> getUsernamesForRole( String roleName )
-        {
-            return emptySet();
-        }
-
-        @Override
-        public Set<String> silentlyGetUsernamesForRole( String roleName )
-        {
-            return emptySet();
-        }
-
-        @Override
         public User newUser( String username, byte[] initialPassword, boolean requirePasswordChange )
         {
             if ( initialPassword != null )
@@ -106,12 +73,6 @@ public interface EnterpriseUserManager extends UserManager
                 Arrays.fill( initialPassword, (byte) 0 );
             }
             return null;
-        }
-
-        @Override
-        public boolean deleteUser( String username )
-        {
-            return false;
         }
 
         @Override
@@ -133,12 +94,6 @@ public interface EnterpriseUserManager extends UserManager
             {
                 Arrays.fill( password, (byte) 0 );
             }
-        }
-
-        @Override
-        public Set<String> getAllUsernames()
-        {
-            return emptySet();
         }
     };
 }

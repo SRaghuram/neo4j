@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
 import java.util.Set;
@@ -52,27 +51,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public boolean deleteUser( String username ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            if ( subject.hasUsername( username ) )
-            {
-                throw new InvalidArgumentsException( "Deleting yourself (user '" + username + "') is not allowed." );
-            }
-            boolean wasDeleted = userManager.deleteUser( username );
-            securityLog.info( subject, "deleted user `%s`", username );
-            return wasDeleted;
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to delete user `%s`: %s", username, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public User getUser( String username ) throws InvalidArgumentsException
     {
         return userManager.getUser( username );
@@ -96,23 +74,6 @@ class PersonalUserManager implements EnterpriseUserManager
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             securityLog.error( subject, "tried to create role `%s`: %s", roleName, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public boolean deleteRole( String roleName ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            boolean wasDeleted = userManager.deleteRole( roleName );
-            securityLog.info( subject, "deleted role `%s`", roleName );
-            return wasDeleted;
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to delete role `%s`: %s", roleName, e.getMessage() );
             throw e;
         }
     }
@@ -154,21 +115,6 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public Set<String> getAllUsernames() throws AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            return userManager.getAllUsernames();
-        }
-        catch ( AuthorizationViolationException e )
-        {
-            securityLog.error( subject, "tried to list users: %s", e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
     public void assertRoleExists( String roleName ) throws InvalidArgumentsException
     {
         userManager.assertRoleExists( roleName );
@@ -202,50 +148,6 @@ class PersonalUserManager implements EnterpriseUserManager
     public void clearCacheForRoles()
     {
         userManager.clearCacheForRoles();
-    }
-
-    @Override
-    public Set<String> getAllRoleNames() throws AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            return userManager.getAllRoleNames();
-        }
-        catch ( AuthorizationViolationException e )
-        {
-            securityLog.error( subject, "tried to list roles: %s", e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException, AuthorizationViolationException
-    {
-        try
-        {
-            assertUserManager();
-            return userManager.getUsernamesForRole( roleName );
-        }
-        catch ( AuthorizationViolationException | InvalidArgumentsException e )
-        {
-            securityLog.error( subject, "tried to list users for role `%s`: %s", roleName, e.getMessage() );
-            throw e;
-        }
-    }
-
-    @Override
-    public Set<String> silentlyGetUsernamesForRole( String roleName )
-    {
-        return userManager.silentlyGetUsernamesForRole( roleName );
-    }
-
-    private void assertSelfOrUserManager( String username )
-    {
-        if ( !subject.hasUsername( username ) )
-        {
-            assertUserManager();
-        }
     }
 
     private void assertUserManager() throws AuthorizationViolationException

@@ -11,11 +11,9 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authz.AuthorizationInfo;
-import org.apache.shiro.cache.Cache;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 
-import java.util.Collections;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -88,14 +86,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     }
 
     @Override
-    public boolean deleteRole( String roleName ) throws InvalidArgumentsException
-    {
-        boolean success = systemGraphOperations.deleteRole( roleName );
-        clearCachedAuthorizationInfo();
-        return success;
-    }
-
-    @Override
     public void assertRoleExists( String roleName ) throws InvalidArgumentsException
     {
         systemGraphOperations.assertRoleExists( roleName );
@@ -120,31 +110,6 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         systemGraphOperations.clearCacheForRoles();
     }
 
-    @Override
-    public Set<String> getAllRoleNames()
-    {
-        return systemGraphOperations.getAllRoleNames();
-    }
-
-    @Override
-    public Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException
-    {
-        return systemGraphOperations.getUsernamesForRole( roleName );
-    }
-
-    @Override
-    public Set<String> silentlyGetUsernamesForRole( String roleName )
-    {
-        try
-        {
-            return getUsernamesForRole( roleName );
-        }
-        catch ( InvalidArgumentsException e )
-        {
-            return Collections.emptySet();
-        }
-    }
-
     private static final Pattern roleNamePattern = Pattern.compile( "^[a-zA-Z0-9_]+$" );
 
     static void assertValidRoleName( String name ) throws InvalidArgumentsException
@@ -162,14 +127,5 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
     private void clearCachedAuthorizationInfoForUser( String username )
     {
         clearCachedAuthorizationInfo( new SimplePrincipalCollection( username, this.getName() ) );
-    }
-
-    private void clearCachedAuthorizationInfo()
-    {
-        Cache<Object, AuthorizationInfo> cache = getAuthorizationCache();
-        if ( cache != null )
-        {
-            cache.clear();
-        }
     }
 }

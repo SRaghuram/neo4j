@@ -143,31 +143,9 @@ public class InMemoryUserManager extends SystemGraphRealm
     }
 
     @Override
-    public Set<String> getAllUsernames()
-    {
-        return basic.getAllUsernames();
-    }
-
-    @Override
     public User getUser( String username ) throws InvalidArgumentsException
     {
         return basic.getUser( username );
-    }
-
-    @Override
-    public boolean deleteUser( String username ) throws InvalidArgumentsException
-    {
-        Set<String> rolesForUser = rolesForUsers.remove( username );
-        if ( rolesForUser != null )
-        {
-            for ( String role : rolesForUser )
-            {
-                RoleRecord roleRecord = roles.get( role );
-                roles.put( role, roleRecord.augment().withoutUser( username ).build() );
-            }
-        }
-
-        return basic.deleteUser( username );
     }
 
     @Override
@@ -205,19 +183,6 @@ public class InMemoryUserManager extends SystemGraphRealm
         {
             addRoleToUser( roleName, username );
         }
-    }
-
-    @Override
-    public boolean deleteRole( String roleName ) throws InvalidArgumentsException
-    {
-        RoleRecord role = roles.get( roleName );
-        if ( role == null )
-        {
-            throw new InvalidArgumentsException( "Role '" + roleName + "' does not exist." );
-        }
-        roles.remove( roleName );
-        removeRoleFromUsers( roleName, role.users() );
-        return true;
     }
 
     @Override
@@ -263,27 +228,5 @@ public class InMemoryUserManager extends SystemGraphRealm
             }
         }
         return privileges;
-    }
-
-    @Override
-    public Set<String> getAllRoleNames()
-    {
-        return roles.keySet();
-    }
-
-    @Override
-    public Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException
-    {
-        assertRoleExists( roleName );
-        return roles.get( roleName ).users();
-    }
-
-    private void removeRoleFromUsers( String roleName, Set<String> users )
-    {
-        for ( String user : users )
-        {
-            Set<String> roles = rolesForUsers.get( user );
-            roles.remove( roleName );
-        }
     }
 }

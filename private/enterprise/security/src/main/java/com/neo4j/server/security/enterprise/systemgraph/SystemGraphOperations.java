@@ -6,11 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.neo4j.server.security.enterprise.auth.LabelSegment;
-import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
-import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.Segment;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -143,16 +139,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
         }
     }
 
-    boolean deleteRole( String roleName ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (r:Role {name: $name}) DETACH DELETE r RETURN 0";
-
-        Map<String,Object> params = map( "name", roleName );
-        String errorMsg = "Role '" + roleName + "' does not exist.";
-
-        return queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
-    }
-
     void assertRoleExists( String roleName ) throws InvalidArgumentsException
     {
         String query = "MATCH (r:Role {name: $name}) RETURN r.name";
@@ -183,76 +169,6 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
             getUser( username, false ); // This throws InvalidArgumentException if user does not exist
             assertRoleExists( roleName ); //This throws InvalidArgumentException if role does not exist
             // If the user already had the role, we should silently fall through
-        }
-    }
-
-    private Map<String,Object> makePrivilegeParameters( String roleName, ResourcePrivilege resourcePrivilege )
-    {
-        assert resourcePrivilege.isAllDatabases() || !resourcePrivilege.getDbName().isEmpty();
-        Resource resource = resourcePrivilege.getResource();
-        return map(
-                "roleName", roleName,
-                "dbName", resourcePrivilege.getDbName(),
-                "action", resourcePrivilege.getAction().toString(),
-                "resource", resource.type().toString(),
-                "arg1", resource.getArg1(),
-                "arg2", resource.getArg2()
-        );
-    }
-
-    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
-    {
-        Map<String,Object> params = makePrivilegeParameters( roleName, resourcePrivilege );
-        String databaseMatch = resourcePrivilege.isAllDatabases() ? "MERGE (db:DatabaseAll {name: '*'})" : "MATCH (db:Database {name: $dbName})";
-        Segment segment = resourcePrivilege.getSegment();
-        String qualifierLabel;
-        String qualifierType;
-        String qualifierArg;
-        if ( segment instanceof LabelSegment )
-        {
-            boolean fullSegment = segment.equals( LabelSegment.ALL );
-            qualifierLabel = fullSegment ? "LabelQualifierAll" : "LabelQualifier";
-            qualifierType = "node";
-            qualifierArg = fullSegment ? "*" : ((LabelSegment) segment).getLabel();
-        }
-        else if ( segment instanceof RelTypeSegment )
-        {
-            boolean fullSegment = segment.equals( RelTypeSegment.ALL );
-            qualifierLabel = fullSegment ? "RelationshipQualifierAll" : "RelationshipQualifier";
-            qualifierType = "relationship";
-            qualifierArg = fullSegment ? "*" : ((RelTypeSegment) segment).getRelType();
-        }
-        else
-        {
-            qualifierLabel = "DatabaseQualifier";
-            qualifierType = "database";
-            qualifierArg = "";
-        }
-
-        String query = String.format(
-                "MATCH (r:Role {name: $roleName}) " +
-                "%s " +
-                "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) " +
-                "MERGE (q:%s {type: '%s', label: '%s'}) " +
-                "MERGE (db)<-[:FOR]-(segment:Segment)-[:QUALIFIED]->(q) " +
-                "MERGE (segment)<-[:SCOPE]-(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
-                "MERGE (r)-[:GRANTED]->(p) " +
-                "RETURN id(p)",
-                databaseMatch, qualifierLabel, qualifierType, qualifierArg
-        );
-        assertPrivilegeSuccess( roleName, query, params, resourcePrivilege );
-    }
-
-    private void assertPrivilegeSuccess( String roleName, String query, Map<String,Object> params, ResourcePrivilege resourcePrivilege )
-            throws InvalidArgumentsException
-    {
-        if ( !queryExecutor.executeQueryWithParamCheck( query, params ) )
-        {
-            assertRoleExists( roleName );
-            if ( !resourcePrivilege.isAllDatabases() )
-            {
-                assertDbExists( resourcePrivilege.getDbName() );
-            }
         }
     }
 
@@ -374,29 +290,5 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
     void clearCacheForRoles()
     {
         privilegeCache.invalidateAll();
-    }
-
-    Set<String> getAllRoleNames()
-    {
-        String query = "MATCH (r:Role) RETURN r.name";
-        return queryExecutor.executeQueryWithResultSet( query );
-    }
-
-    Set<String> getUsernamesForRole( String roleName ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (r:Role {name: $role}) OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r) RETURN u.name";
-        Map<String,Object> params = map( "role", roleName );
-        String errorMsg = "Role '" + roleName + "' does not exist.";
-
-        return queryExecutor.executeQueryWithResultSetAndParamCheck( query, params, errorMsg );
-    }
-
-    private void assertDbExists( String dbName ) throws InvalidArgumentsException
-    {
-        String query = "MATCH (db:Database {name: $name}) RETURN db.name";
-        Map<String,Object> params = map( "name", dbName );
-        String errorMsg = "Database '" + dbName + "' does not exist.";
-
-        queryExecutor.executeQueryWithParamCheck( query, params, errorMsg );
     }
 }
