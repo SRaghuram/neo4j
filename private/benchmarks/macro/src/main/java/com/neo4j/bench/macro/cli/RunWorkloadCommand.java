@@ -231,7 +231,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                     testRun,
                     benchmarkConfig,
                     Sets.newHashSet( new Neo4j( params.neo4jCommit(),
-                                                BranchAndVersion.toSanitizeVersion( Repository.NEO4J, params.neo4jVersion() ),
+                                                BranchAndVersion.toSanitizeVersion( Repository.NEO4J, params.neo4jVersion().patchVersion() ),
                                                 params.neo4jEdition(),
                                                 params.neo4jBranch(),
                                                 params.neo4jBranchOwner() ) ),

@@ -8,6 +8,7 @@ package com.neo4j.bench.common.tool.macro;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
@@ -90,7 +91,7 @@ public class RunWorkloadParams
     private final String neo4jCommit;
 
     public static final String CMD_NEO4J_VERSION = "--neo4j-version";
-    private final String neo4jVersion;
+    private final Version neo4jVersion;
 
     public static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
     private final String neo4jBranch;
@@ -180,7 +181,7 @@ public class RunWorkloadParams
         // Result Client Report Results Args
         // -----------------------------------------------------------------------
         this.neo4jCommit = neo4jCommit;
-        this.neo4jVersion = neo4jVersion;
+        this.neo4jVersion = new Version( neo4jVersion );
         this.neo4jBranch = neo4jBranch;
         this.neo4jBranchOwner = neo4jBranchOwner;
         this.toolCommit = toolCommit;
@@ -286,7 +287,7 @@ public class RunWorkloadParams
         return neo4jCommit;
     }
 
-    public String neo4jVersion()
+    public Version neo4jVersion()
     {
         return neo4jVersion;
     }
@@ -382,7 +383,7 @@ public class RunWorkloadParams
         map.put( CMD_RECREATE_SCHEMA, Boolean.toString( recreateSchema ) );
         map.put( CMD_SKIP_FLAMEGRAPHS, Boolean.toString( skipFlameGraphs ) );
         map.put( CMD_NEO4J_COMMIT, neo4jCommit );
-        map.put( CMD_NEO4J_VERSION, neo4jVersion );
+        map.put( CMD_NEO4J_VERSION, neo4jVersion.patchVersion() );
         map.put( CMD_NEO4J_BRANCH, neo4jBranch );
         map.put( CMD_NEO4J_OWNER, neo4jBranchOwner );
         map.put( CMD_TOOL_COMMIT, toolCommit );
