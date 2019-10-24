@@ -59,8 +59,7 @@ public class EnterpriseNeoServer extends CommunityNeoServer
             assert threadPool != null;
             try
             {
-                ServerThreadViewSetter setter =
-                        databaseService.getSystemDatabase().getDependencyResolver().resolveDependency( ServerThreadViewSetter.class );
+                ServerThreadViewSetter setter = getSystemDatabaseDependencyResolver().resolveDependency( ServerThreadViewSetter.class );
                 setter.set( new ServerThreadView()
                 {
                     @Override
