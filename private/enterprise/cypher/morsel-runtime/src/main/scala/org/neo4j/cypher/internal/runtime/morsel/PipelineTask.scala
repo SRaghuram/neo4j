@@ -47,7 +47,9 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
       _output = pipelineState.allocateMorsel(workUnitEvent, state)
       executeOperators(resources, queryProfiler)
     }
-    executeOutputOperator(resources, queryProfiler)
+    val output = executeOutputOperator(resources, queryProfiler)
+    DebugSupport.logPipelines(MorselDebugSupport.prettyWorkDone)
+    output
   }
 
   private def executeOperators(resources: QueryResources,

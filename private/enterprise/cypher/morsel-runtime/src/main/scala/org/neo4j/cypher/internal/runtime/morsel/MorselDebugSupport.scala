@@ -59,6 +59,10 @@ object MorselDebugSupport {
     ).map(row => MORSEL_INDENT+row)
   }
 
+  def prettyWorkDone: Seq[String] = {
+    Seq("------------------------------------------------------------------------------------")
+  }
+
   private def prettyStreamedData(streamedData: MorselData): Seq[String] = {
     Array(s"MorselData with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
       streamedData.morsels.flatMap(morsel => prettyMorselWithHeader("", morsel)) ++
