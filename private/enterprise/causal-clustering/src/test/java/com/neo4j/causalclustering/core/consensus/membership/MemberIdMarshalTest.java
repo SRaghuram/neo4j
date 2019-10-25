@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus.membership;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
@@ -31,7 +31,7 @@ public class MemberIdMarshalTest
         // when
         ByteBuf buffer = Unpooled.buffer( 1_000 );
         marshal.marshal( member, new BoundedNetworkWritableChannel( buffer ) );
-        final MemberId recovered = marshal.unmarshal( new NetworkReadableClosableChannelNetty4( buffer ) );
+        final MemberId recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
 
         // then
         assertEquals( member, recovered );
@@ -54,7 +54,7 @@ public class MemberIdMarshalTest
         // when
         try
         {
-            marshal.unmarshal( new NetworkReadableClosableChannelNetty4( bufferWithMissingBytes ) );
+            marshal.unmarshal( new NetworkReadableChannel( bufferWithMissingBytes ) );
             fail( "Should have thrown exception" );
         }
         catch ( EndOfStreamException e )

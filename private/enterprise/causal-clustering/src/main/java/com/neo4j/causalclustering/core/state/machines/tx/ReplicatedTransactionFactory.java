@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -64,11 +64,11 @@ public class ReplicatedTransactionFactory
         public TransactionRepresentation extract( ByteArrayReplicatedTransaction replicatedTransaction )
         {
             ByteBuf buffer = Unpooled.wrappedBuffer( replicatedTransaction.getTxBytes() );
-            NetworkReadableClosableChannelNetty4 channel = new NetworkReadableClosableChannelNetty4( buffer );
+            NetworkReadableChannel channel = new NetworkReadableChannel( buffer );
             return read( channel );
         }
 
-        private TransactionRepresentation read( NetworkReadableClosableChannelNetty4 channel )
+        private TransactionRepresentation read( NetworkReadableChannel channel )
         {
             try
             {

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup.v3.storecopy;
 
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +21,7 @@ public class CoreSnapshotRequestDecoder extends ByteToMessageDecoder
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out ) throws IOException, EndOfStreamException
     {
-        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableClosableChannelNetty4( in ) );
+        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableChannel( in ) );
         out.add( new CoreSnapshotRequest( databaseId ) );
     }
 }

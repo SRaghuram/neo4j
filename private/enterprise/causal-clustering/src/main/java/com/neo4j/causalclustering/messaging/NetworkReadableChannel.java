@@ -13,11 +13,11 @@ import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 
-public class NetworkReadableClosableChannelNetty4 implements ReadableClosablePositionAwareChannel
+public class NetworkReadableChannel implements ReadableClosablePositionAwareChannel
 {
     private final ByteBuf delegate;
 
-    public NetworkReadableClosableChannelNetty4( ByteBuf input )
+    public NetworkReadableChannel( ByteBuf input )
     {
         this.delegate = input;
     }

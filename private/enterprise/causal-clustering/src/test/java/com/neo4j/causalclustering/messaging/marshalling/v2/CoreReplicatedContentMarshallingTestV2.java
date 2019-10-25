@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.helpers.Buffers;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import io.netty.buffer.ByteBuf;
@@ -66,7 +66,7 @@ public class CoreReplicatedContentMarshallingTestV2
         BoundedNetworkWritableChannel channel = new BoundedNetworkWritableChannel( buffer );
         coreReplicatedContentMarshal.marshal( replicatedContent, channel );
 
-        NetworkReadableClosableChannelNetty4 readChannel = new NetworkReadableClosableChannelNetty4( buffer );
+        NetworkReadableChannel readChannel = new NetworkReadableChannel( buffer );
         ReplicatedContent result = coreReplicatedContentMarshal.unmarshal( readChannel );
 
         assertEquals( replicatedContent, result );

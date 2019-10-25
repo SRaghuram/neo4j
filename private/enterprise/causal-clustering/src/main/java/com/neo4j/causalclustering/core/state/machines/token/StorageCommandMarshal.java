@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines.token;
 
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -51,7 +51,7 @@ public class StorageCommandMarshal
     static Collection<StorageCommand> bytesToCommands( byte[] commandBytes )
     {
         ByteBuf txBuffer = Unpooled.wrappedBuffer( commandBytes );
-        NetworkReadableClosableChannelNetty4 channel = new NetworkReadableClosableChannelNetty4( txBuffer );
+        NetworkReadableChannel channel = new NetworkReadableChannel( txBuffer );
 
         LogEntryReader reader = new VersionAwareLogEntryReader();
 

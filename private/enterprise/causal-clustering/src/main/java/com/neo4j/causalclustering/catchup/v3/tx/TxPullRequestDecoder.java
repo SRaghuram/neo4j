@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.v3.tx;
 
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
@@ -22,7 +22,7 @@ public class TxPullRequestDecoder extends ByteToMessageDecoder
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out ) throws Exception
     {
-        NetworkReadableClosableChannelNetty4 channel = new NetworkReadableClosableChannelNetty4( byteBuf );
+        NetworkReadableChannel channel = new NetworkReadableChannel( byteBuf );
         DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         long txId = byteBuf.readLong();
         StoreId storeId = StoreIdMarshal.INSTANCE.unmarshal( channel );

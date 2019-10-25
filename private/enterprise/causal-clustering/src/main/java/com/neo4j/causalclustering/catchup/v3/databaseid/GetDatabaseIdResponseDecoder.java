@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.v3.databaseid;
 
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -18,7 +18,7 @@ public class GetDatabaseIdResponseDecoder extends ByteToMessageDecoder
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf msg, List<Object> out ) throws Exception
     {
-        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableClosableChannelNetty4( msg ) );
+        var databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableChannel( msg ) );
         out.add( new GetDatabaseIdResponse( databaseId ) );
     }
 }

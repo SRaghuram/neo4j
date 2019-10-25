@@ -72,7 +72,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             if ( log.isDebugEnabled() || !f.isSuccess() )
             {
                 String message =
-                        format( "Streamed transactions [%d--%d] to %s", txPullingContext.firstTxId, txStream.lastTxId(), ctx.channel().remoteAddress() );
+                        format( "Streamed transactions [%d--%d] to %s", txPullingContext.firstTxId(), txStream.lastTxId(), ctx.channel().remoteAddress() );
                 if ( f.isSuccess() )
                 {
                     log.debug( message );
@@ -190,7 +190,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
 
         static Prepare readyToSend( TxPullingContext txPullingContext )
         {
-            return new Prepare( null, txPullingContext.txIdPromise, txPullingContext );
+            return new Prepare( null, txPullingContext.txIdPromise(), txPullingContext );
         }
 
         static Prepare nothingToSend( long txIdPromise )

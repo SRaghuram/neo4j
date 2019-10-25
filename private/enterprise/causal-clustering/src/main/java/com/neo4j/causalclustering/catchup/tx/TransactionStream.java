@@ -45,10 +45,10 @@ public class TransactionStream implements ChunkedInput<Object>
     TransactionStream( Log log, TxPullingContext txPullingContext, CatchupServerProtocol protocol )
     {
         this.log = log;
-        this.storeId = txPullingContext.localStoreId;
-        this.expectedTxId = txPullingContext.firstTxId;
-        this.txIdPromise = txPullingContext.txIdPromise;
-        this.txCursor = txPullingContext.transactions;
+        this.storeId = txPullingContext.localStoreId();
+        this.expectedTxId = txPullingContext.firstTxId();
+        this.txIdPromise = txPullingContext.txIdPromise();
+        this.txCursor = txPullingContext.transactions();
         this.protocol = protocol;
     }
 
@@ -86,8 +86,6 @@ public class TransactionStream implements ChunkedInput<Object>
         }
         else if ( txCursor.next() )
         {
-            assert pending.isEmpty();
-
             boolean isFirst = lastTxId == 0;
 
             CommittedTransactionRepresentation tx = txCursor.get();
@@ -102,8 +100,6 @@ public class TransactionStream implements ChunkedInput<Object>
         }
         else
         {
-            assert pending.isEmpty();
-
             if ( lastTxId != 0 )
             {
                 // only send if at least one tx was sent. This lets the encoder know that all txs have been sent.

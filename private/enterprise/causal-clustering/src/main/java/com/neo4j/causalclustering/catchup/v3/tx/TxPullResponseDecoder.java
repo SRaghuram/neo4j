@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.v3.tx;
 
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.ReadableNetworkChannelDelegator;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
@@ -18,7 +18,6 @@ import java.util.List;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.ServiceLoadingCommandReaderFactory;
-import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.StoreId;
@@ -26,21 +25,21 @@ import org.neo4j.storageengine.api.StoreId;
 public class TxPullResponseDecoder extends ByteToMessageDecoder
 {
 
-    private PhysicalTransactionCursor<ReadableNetworkChannelDelegator> transactionCursor;
+    private static final ServiceLoadingCommandReaderFactory commandReaderFactory = new ServiceLoadingCommandReaderFactory();
+    private PhysicalTransactionCursor transactionCursor;
     private NextTxInfo nextTxInfo;
     private StoreId storeId;
-    private LogEntryReader<ReadableNetworkChannelDelegator> reader =
-            new VersionAwareLogEntryReader<>( new ServiceLoadingCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
+    private LogEntryReader reader = new VersionAwareLogEntryReader( commandReaderFactory );
     private ReadableNetworkChannelDelegator delegatingChannel = new ReadableNetworkChannelDelegator();
 
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out ) throws Exception
     {
-        delegatingChannel.delegateTo( new NetworkReadableClosableChannelNetty4( in ) );
+        delegatingChannel.delegateTo( new NetworkReadableChannel( in ) );
         if ( isFirstChunk() )
         {
             storeId = StoreIdMarshal.INSTANCE.unmarshal( delegatingChannel );
-            transactionCursor = new PhysicalTransactionCursor<>( delegatingChannel, reader );
+            transactionCursor = new PhysicalTransactionCursor( delegatingChannel, reader );
             nextTxInfo = new NextTxInfo();
         }
 

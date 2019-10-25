@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.v3.storecopy;
 
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.DatabaseIdMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
@@ -25,7 +25,7 @@ public class GetStoreFileRequestDecoder extends ByteToMessageDecoder
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out ) throws Exception
     {
-        NetworkReadableClosableChannelNetty4 channel = new NetworkReadableClosableChannelNetty4( in );
+        NetworkReadableChannel channel = new NetworkReadableChannel( in );
         DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( channel );
         StoreId storeId = StoreIdMarshal.INSTANCE.unmarshal( channel );
         long requiredTransactionId = in.readLong();

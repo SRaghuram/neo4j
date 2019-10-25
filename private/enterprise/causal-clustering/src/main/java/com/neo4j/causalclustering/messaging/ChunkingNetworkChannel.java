@@ -169,19 +169,8 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
         {
             return;
         }
-        try
-        {
-            while ( !byteBuffs.offer( current ) )
-            {
-                Thread.sleep( 10 );
-            }
-            current = null;
-        }
-        catch ( InterruptedException e )
-        {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException( "Unable to flush. Thread interrupted" );
-        }
+        byteBuffs.add( current );
+        current = null;
     }
 
     private void releaseCurrent()

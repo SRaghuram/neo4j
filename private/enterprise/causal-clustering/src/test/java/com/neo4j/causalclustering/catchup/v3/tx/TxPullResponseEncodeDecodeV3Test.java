@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup.v3.tx;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 class TxPullResponseEncodeDecodeV3Test
 {
     private static final int TX_SIZE = sizeOfSingleDecodedTransaction();
+    private EmbeddedChannel channel;
     private enum ChunkSize
     {
         LESS_THAN_TX( TX_SIZE / 2 ),
@@ -43,12 +45,19 @@ class TxPullResponseEncodeDecodeV3Test
         }
     }
 
+    @AfterEach
+    void completeChannel()
+    {
+        channel.finishAndReleaseAll();
+        channel = null;
+    }
+
     @ParameterizedTest( name = "Chunk size {0}" )
     @EnumSource( ChunkSize.class )
     void shouldEncodeAndDecodePullResponseMessage( ChunkSize chunkSize )
     {
         // given
-        EmbeddedChannel channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
+        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
         TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
@@ -63,7 +72,7 @@ class TxPullResponseEncodeDecodeV3Test
     void shouldDecodeTwoTransactionsAfterOneAnther( ChunkSize chunkSize )
     {
         // given
-        EmbeddedChannel channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
+        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
         TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
@@ -84,7 +93,7 @@ class TxPullResponseEncodeDecodeV3Test
     void shouldDecodeStreamOfTransactions( ChunkSize chunkSize )
     {
         // given
-        EmbeddedChannel channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
+        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
         TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
@@ -129,7 +138,7 @@ class TxPullResponseEncodeDecodeV3Test
                 TxPullResponse.EMPTY );
         ByteBuf byteBuf = embeddedChannel.readOutbound();
         // remove tailing metadata
-        var txSize = byteBuf.writerIndex() - 4;
+        var txSize = byteBuf.writerIndex() - Integer.BYTES;
         byteBuf.release();
         return txSize;
     }

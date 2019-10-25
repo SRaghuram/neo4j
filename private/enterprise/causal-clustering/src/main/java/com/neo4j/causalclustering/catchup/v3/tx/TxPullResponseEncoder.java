@@ -84,14 +84,7 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
         assert pendingChunks.isEmpty();
         if ( isFirstTx() )
         {
-            if ( isEndOfTxStream( msg ) )
-            {
-                throw new IllegalArgumentException( "Requires at least one transaction." );
-            }
-            this.channel = new ChunkingNetworkChannel( ctx.alloc(), chunkSize, pendingChunks );
-
-            // meta data for initial chunk
-            StoreIdMarshal.INSTANCE.marshal( msg.storeId(), channel );
+            handleFirstTx( ctx, msg );
         }
         var metadataIndex = channel.currentIndex();
         channel.putInt( PLACEHOLDER_TX_INFO );
@@ -114,6 +107,11 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
         {
             channel.flush();
         }
+        writePendingChunks( ctx, promise );
+    }
+
+    private void writePendingChunks( ChannelHandlerContext ctx, ChannelPromise promise )
+    {
         if ( pendingChunks.isEmpty() )
         {
             promise.setSuccess();
@@ -129,6 +127,18 @@ public class TxPullResponseEncoder extends ChannelOutboundHandlerAdapter
             }
             while ( !pendingChunks.isEmpty() );
         }
+    }
+
+    private void handleFirstTx( ChannelHandlerContext ctx, TxPullResponse msg ) throws IOException
+    {
+        if ( isEndOfTxStream( msg ) )
+        {
+            throw new IllegalArgumentException( "Requires at least one transaction." );
+        }
+        this.channel = new ChunkingNetworkChannel( ctx.alloc(), chunkSize, pendingChunks );
+
+        // meta data for initial chunk
+        StoreIdMarshal.INSTANCE.marshal( msg.storeId(), channel );
     }
 
     /**

@@ -8,12 +8,12 @@ package com.neo4j.causalclustering.catchup.tx;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.storageengine.api.StoreId;
 
-public class TxPullingContext
+class TxPullingContext
 {
-    final TransactionCursor transactions;
-    final StoreId localStoreId;
-    final long firstTxId;
-    final long txIdPromise;
+    private final TransactionCursor transactions;
+    private final StoreId localStoreId;
+    private final long firstTxId;
+    private final long txIdPromise;
 
     TxPullingContext( TransactionCursor transactions, StoreId localStoreId, long firstTxId, long txIdPromise )
     {
@@ -21,5 +21,25 @@ public class TxPullingContext
         this.localStoreId = localStoreId;
         this.firstTxId = firstTxId;
         this.txIdPromise = txIdPromise;
+    }
+
+    long firstTxId()
+    {
+        return firstTxId;
+    }
+
+    long txIdPromise()
+    {
+        return txIdPromise;
+    }
+
+    StoreId localStoreId()
+    {
+        return localStoreId;
+    }
+
+    TransactionCursor transactions()
+    {
+        return transactions;
     }
 }

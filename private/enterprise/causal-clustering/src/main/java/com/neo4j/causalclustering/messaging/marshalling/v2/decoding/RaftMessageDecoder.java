@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,7 +38,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
     @Override
     public void decode( ChannelHandlerContext ctx, ByteBuf buffer, List<Object> list ) throws Exception
     {
-        ReadableChannel channel = new NetworkReadableClosableChannelNetty4( buffer );
+        ReadableChannel channel = new NetworkReadableChannel( buffer );
         RaftId raftId = RaftId.Marshal.INSTANCE.unmarshal( channel );
 
         int messageTypeWire = channel.getInt();

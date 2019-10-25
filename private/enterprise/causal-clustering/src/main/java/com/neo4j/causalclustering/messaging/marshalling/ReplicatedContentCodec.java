@@ -23,7 +23,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.ChunkedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 
 import org.neo4j.kernel.database.DatabaseId;
@@ -115,7 +115,7 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         case ContentCodes.DUMMY_REQUEST:
             return ContentBuilder.finished( DummyRequest.decode( buffer ) );
         default:
-            return CoreReplicatedContentMarshalV2.unmarshal( contentType, new NetworkReadableClosableChannelNetty4( buffer ) );
+            return CoreReplicatedContentMarshalV2.unmarshal( contentType, new NetworkReadableChannel( buffer ) );
         }
     }
 
@@ -125,7 +125,7 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
      */
     private static ReplicatedTransaction decodeTx( ByteBuf byteBuf ) throws IOException, EndOfStreamException
     {
-        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableClosableChannelNetty4( byteBuf ) );
+        DatabaseId databaseId = DatabaseIdMarshal.INSTANCE.unmarshal( new NetworkReadableChannel( byteBuf ) );
         int length = byteBuf.readableBytes();
         byte[] bytes = new byte[length];
         byteBuf.readBytes( bytes );

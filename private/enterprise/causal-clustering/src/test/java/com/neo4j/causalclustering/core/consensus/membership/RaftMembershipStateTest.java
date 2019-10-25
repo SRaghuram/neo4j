@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.membership;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
@@ -126,7 +126,7 @@ public class RaftMembershipStateTest
         // when
         ByteBuf buffer = Unpooled.buffer( 1_000 );
         marshal.marshal( state, new BoundedNetworkWritableChannel( buffer ) );
-        final RaftMembershipState recovered = marshal.unmarshal( new NetworkReadableClosableChannelNetty4( buffer ) );
+        final RaftMembershipState recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
 
         // then
         assertEquals( state, recovered );
