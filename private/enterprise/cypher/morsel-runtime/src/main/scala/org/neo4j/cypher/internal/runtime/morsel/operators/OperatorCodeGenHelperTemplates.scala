@@ -148,6 +148,8 @@ object OperatorCodeGenHelperTemplates {
   val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
   val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
   val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
+  val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
+
 
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(
@@ -233,8 +235,29 @@ object OperatorCodeGenHelperTemplates {
   def relationshipTypeId(typeName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName))
 
   // Profiling
+
+  def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
+    /**
+      * {{{
+      *   val tmp = cursor.next()
+      *   event.row(tmp)
+      *   tmp
+      * }}}
+      */
+    val hasNext = "tmp_" + id.x
+    block(
+      declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
+      invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)),
+                       method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext)),
+      load(hasNext)
+      )
+  }
   def profileRow(id: Id): IntermediateRepresentation = {
     invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("row"))
+  }
+
+  def profileRow(id: Id, hasRow: IntermediateRepresentation): IntermediateRepresentation = {
+    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow)
   }
 
   def profileRows(id: Id, nRows: Int): IntermediateRepresentation = {

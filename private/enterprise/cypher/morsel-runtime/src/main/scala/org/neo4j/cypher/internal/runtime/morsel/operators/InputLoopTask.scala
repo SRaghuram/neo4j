@@ -183,15 +183,13 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                 block(
                   genCloseInnerLoop,
                   setField(innerLoop, constant(false)),
-                  INPUT_ROW_MOVE_TO_NEXT,
-                  setField(canContinue, INPUT_ROW_IS_VALID)
+                  doIfInnerCantContinue(block(INPUT_ROW_MOVE_TO_NEXT, setField(canContinue, INPUT_ROW_IS_VALID)))
                 )
               )
             )
-          )( // Else move to the next input row
-            block(
-              INPUT_ROW_MOVE_TO_NEXT
-            )
+          )(
+            // Else if no inner operator can proceed we move to the next input row
+            doIfInnerCantContinue(INPUT_ROW_MOVE_TO_NEXT)
           ),
           innermost.resetCachedPropertyVariables
         )
@@ -240,9 +238,6 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
             )
           ),
           innermost.resetCachedPropertyVariables,
-          condition(and(loadField(canContinue), not(innermost.predicate)))(
-            break(OUTER_LOOP_LABEL_NAME)
-          )
         )
       )
     )

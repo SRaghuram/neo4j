@@ -209,7 +209,7 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
             loadField(nodeIndexCursorField),
             searchPredicate(property.propertyKeyId,
                             cast[TextValue](load(seekVariable))), indexOrder, needsValues),
-          setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
           assign(hasInnerLoop, loadField(canContinue))
         )
        ),
@@ -238,9 +238,8 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
                                              method[NodeValueIndexCursor, Value, Int]("propertyValue"),
                                              constant(0) ))
           ).getOrElse(noop()),
-        profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)))
         )
       )
   }

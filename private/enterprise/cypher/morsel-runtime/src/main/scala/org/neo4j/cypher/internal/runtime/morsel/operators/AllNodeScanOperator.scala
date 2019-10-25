@@ -193,37 +193,32 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     /**
-     * {{{
-     *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
-     *   context.transactionalContext.dataRead.allNodesScan(cursor)
-     *   this.canContinue = nodeCursor.next()
-     *   if (this.canContinue) {
-     *     profileRow()
-     *   }
-     *   true
-     * }}}
-     */
+      * {{{
+      *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+      *   context.transactionalContext.dataRead.allNodesScan(cursor)
+      *   val tmp = nodeCursor.next()
+      *   profileRow(tmp)
+      *   this.canContinue = tmp
+      *   true
+      * }}}
+      */
     block(
       allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       allNodeScan(loadField(nodeCursorField)),
-      setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
-      condition(loadField(canContinue)) {
-        profileRow(id)
-      },
+      setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id)),
       constant(true)
     )
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
-     /**
+    /**
       * {{{
       *   while (hasDemand && this.canContinue) {
       *     ...
       *     << inner.genOperate >>
-      *     this.canContinue = this.nodeCursor.next()
-      *     if (this.canContinue) {
-      *       profileRow()
-      *     }
+      *   val tmp = nodeCursor.next()
+      *   profileRow(tmp)
+      *   this.canContinue = tmp
       *   }
       * }}}
       */
@@ -234,10 +229,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeCursor](loadField(nodeCursorField))),
-        condition(loadField(canContinue)) {
-          profileRow(id)
-        },
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id))),
         endInnerLoop
         )
       )

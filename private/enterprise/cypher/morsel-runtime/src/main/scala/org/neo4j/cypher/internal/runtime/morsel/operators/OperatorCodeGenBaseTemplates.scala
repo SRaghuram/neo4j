@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.codegen.{TypeReference, api}
+import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.api.CodeGeneration.{CodeGenerationMode, compileClass}
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
@@ -352,6 +352,9 @@ trait OperatorTaskTemplate {
 
     block(setTracerCalls ++ declarations ++ assignments :+ body:_*)
   }
+
+  protected def doIfInnerCantContinue(op: IntermediateRepresentation): IntermediateRepresentation =
+    inner.genCanContinue.map(innerCanContinue => condition(not(innerCanContinue)) (op)).getOrElse(op)
 
   protected def genOperate: IntermediateRepresentation
 

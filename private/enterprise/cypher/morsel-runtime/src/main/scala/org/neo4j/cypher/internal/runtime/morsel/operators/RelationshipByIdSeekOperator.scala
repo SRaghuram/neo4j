@@ -369,8 +369,8 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(relationshipOffset, load(idVariable)),
         codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
         codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-        profileRow(id),
         inner.genOperateWithExpressions,
+        doIfInnerCantContinue(profileRow(id)),
         setField(canContinue, constant(false)))
       )
   }
@@ -440,8 +440,8 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
                               invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             setField(forwardDirection, constant(true)))
         },
-        profileRow(id),
         inner.genOperateWithExpressions,
+        doIfInnerCantContinue(profileRow(id)),
         setField(canContinue, not(loadField(forwardDirection)))))
   }
 }

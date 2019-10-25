@@ -196,13 +196,19 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
         setField(inputCursorField, newInstance(constructor[MutatingInputCursor, InputDataStream],
                                                invoke(QUERY_STATE,
                                                       method[QueryState, InputDataStream]("input"))))),
-      condition(not(loadField(canContinue)))(setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput")))),
+      condition(not(loadField(canContinue)))(
+        block(
+          setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
+          profileRow(id, loadField(canContinue)))),
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(innermost.predicate, loadField(canContinue)))(
         block(
           setters,
-          profileRow(id),
           inner.genOperateWithExpressions,
-          setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
+          doIfInnerCantContinue(
+            block(
+              setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
+              profileRow(id, loadField(canContinue))
+          )),
           innermost.resetCachedPropertyVariables
         )
       )

@@ -9,13 +9,13 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.morsel.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.morsel.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.morsel.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
@@ -77,9 +77,9 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
       labeledLoop(OUTER_LOOP_LABEL_NAME, and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-          profileRow(id),
           inner.genOperateWithExpressions,
-          INPUT_ROW_MOVE_TO_NEXT,
+          // Else if no inner operator can proceed we move to the next input row
+          doIfInnerCantContinue(block(INPUT_ROW_MOVE_TO_NEXT,  profileRow(id))),
           innermost.resetCachedPropertyVariables
         )
       )

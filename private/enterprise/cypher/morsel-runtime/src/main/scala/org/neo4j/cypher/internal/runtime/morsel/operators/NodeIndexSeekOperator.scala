@@ -241,7 +241,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
           nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), predicate, order, needsValues),
-          setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField)))
+          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))
           )),
       load(hasInnerLoopVar)
       )
@@ -264,9 +264,8 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
-        profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
         endInnerLoop
       )
     )

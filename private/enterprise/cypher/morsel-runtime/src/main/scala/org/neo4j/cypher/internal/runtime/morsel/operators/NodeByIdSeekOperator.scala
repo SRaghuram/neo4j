@@ -167,8 +167,8 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, load(idVariable)),
-        profileRow(id),
         inner.genOperateWithExpressions,
+        doIfInnerCantContinue(profileRow(id)),
         setField(canContinue, constant(false)),
         endInnerLoop),
       )

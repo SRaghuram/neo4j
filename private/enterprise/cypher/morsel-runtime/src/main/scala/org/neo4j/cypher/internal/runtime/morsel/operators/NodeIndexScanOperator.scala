@@ -110,14 +110,16 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
           * {{{
           *   this.nodeIndexCursor = resources.cursorPools.nodeValuIndexCursorPool.allocate()
           *   context.transactionalContext.dataRead.nodeIndexScan(session, cursor, indexOrder, needsValues)
-          *   this.canContinue = nodeIndexCursor.next()
+          *   val tmp = nodeCursor.next()
+          *   profileRow(tmp)
+          *   this.canContinue = tmp
           *   true
           * }}}
           */
         block(
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
           nodeIndexScan(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), indexOrder, needsValues),
-          setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+          setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
           constant(true)
           )
     }
@@ -139,8 +141,9 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
       *     setCachedPropertyAt(cacheOffset2, nodeIndexCursor.propertyValue(1))
       *     ...
       *     << inner.genOperate >>
-      *     this.canContinue = this.nodeIndexCursor.next()
-      *   }
+      *     val tmp = nodeCursor.next()
+      *     profileRow(tmp)
+      *     this.canContinue = tmp      *   }
       * }}}
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
@@ -148,9 +151,8 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         block(cacheProperties:_*),
-        profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue, cursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField))),
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
         endInnerLoop
         )
       )
