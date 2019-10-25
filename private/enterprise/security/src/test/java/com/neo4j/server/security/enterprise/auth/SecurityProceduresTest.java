@@ -42,7 +42,6 @@ public class SecurityProceduresTest
 
         procedures = new SecurityProcedures();
         procedures.securityContext = ctx;
-        procedures.userManager = mock( EnterpriseUserManager.class );
     }
 
     @Test

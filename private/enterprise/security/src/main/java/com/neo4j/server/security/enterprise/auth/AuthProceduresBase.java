@@ -36,9 +36,6 @@ public class AuthProceduresBase
     @Context
     public SecurityLog securityLog;
 
-    @Context
-    public EnterpriseUserManager userManager;
-
     // ----------------- helpers ---------------------
 
     public static class StringResult

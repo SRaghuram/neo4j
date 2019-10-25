@@ -41,7 +41,7 @@ import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.UserSecurityGraphInitializer;
 
-import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assertValidUsername;
 
 public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitializer

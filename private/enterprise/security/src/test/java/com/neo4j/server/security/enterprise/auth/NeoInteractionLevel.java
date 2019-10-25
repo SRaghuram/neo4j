@@ -17,8 +17,6 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 public interface NeoInteractionLevel<S>
 {
-    EnterpriseUserManager getLocalUserManager() throws Exception;
-
     GraphDatabaseFacade getLocalGraph();
 
     GraphDatabaseFacade getSystemGraph();

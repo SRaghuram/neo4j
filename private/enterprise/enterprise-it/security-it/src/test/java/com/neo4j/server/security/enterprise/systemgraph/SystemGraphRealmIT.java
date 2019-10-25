@@ -25,7 +25,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -54,8 +53,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
-import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
-import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
+import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
@@ -132,14 +131,14 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
-                .initialUsers( UserManager.INITIAL_USER_NAME )
+                .initialUsers( INITIAL_USER_NAME )
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertTrue( dbManager.userHasRole( UserManager.INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
-        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME );
+        assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
+        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME );
         log.assertExactly(
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME )
         );
     }
 
@@ -153,9 +152,9 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertTrue( dbManager.userHasRole( UserManager.INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
-        assertIncorrectCredentials( realm, UserManager.INITIAL_USER_NAME, UserManager.INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME,  SIMULATED_INITIAL_PASSWORD  );
+        assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
+        assertIncorrectCredentials( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME,  SIMULATED_INITIAL_PASSWORD  );
     }
 
     @Test
@@ -408,14 +407,14 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
-                .initialUsers( UserManager.INITIAL_USER_NAME )
+                .initialUsers( INITIAL_USER_NAME )
                 .build(), securityLog, dbManager, defaultConfig
         );
 
-        assertTrue( dbManager.userHasRole( UserManager.INITIAL_USER_NAME, PredefinedRoles.ADMIN  ));
-        assertAuthenticationSucceeds( realm, UserManager.INITIAL_USER_NAME );
+        assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN  ));
+        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME );
         log.assertExactly(
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, UserManager.INITIAL_USER_NAME )
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME )
         );
     }
 

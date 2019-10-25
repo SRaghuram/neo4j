@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.InMemoryUserManager;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
@@ -25,6 +26,7 @@ import static org.junit.Assert.fail;
 public class MultiRealmAuthManagerRule implements TestRule
 {
     private MultiRealmAuthManager manager;
+    private InMemoryUserManager realm;
 
     private void setupAuthManager() throws Throwable
     {
@@ -32,13 +34,18 @@ public class MultiRealmAuthManagerRule implements TestRule
         StringWriter securityLogWriter = new StringWriter();
         Log log = builder.toWriter( securityLogWriter );
         SecurityLog securityLog = new SecurityLog( log );
-        InMemoryUserManager realm = new InMemoryUserManager( Config.defaults() );
+        realm = new InMemoryUserManager( Config.defaults() );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), securityLog, true );
         manager.init();
     }
 
-    public EnterpriseAuthAndUserManager getManager()
+    InMemoryUserManager getUserManager()
+    {
+        return realm;
+    }
+
+    EnterpriseAuthManager getManager()
     {
         return manager;
     }

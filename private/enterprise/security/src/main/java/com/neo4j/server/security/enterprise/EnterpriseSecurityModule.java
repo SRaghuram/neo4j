@@ -10,8 +10,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
@@ -58,7 +56,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
-import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -89,7 +86,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
     private SystemGraphInitializer systemGraphInitializer;
-    private EnterpriseAuthAndUserManager authManager;
+    private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
 
     @Override
@@ -142,8 +139,6 @@ public class EnterpriseSecurityModule extends SecurityModule
         if ( securityConfig.nativeAuthEnabled )
         {
             // TODO shouldn't this be registered always now with assignable privileges?
-            globalProcedures.registerComponent( EnterpriseUserManager.class,
-                    ctx -> authManager.getUserManager( ctx.securityContext().subject(), ctx.securityContext().isAdmin() ), true );
             if ( config.get( SecuritySettings.authentication_providers ).size() > 1 || config.get( SecuritySettings.authorization_providers ).size() > 1 )
             {
                 globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users." );
@@ -153,22 +148,12 @@ public class EnterpriseSecurityModule extends SecurityModule
                 globalProcedures.registerProcedure( UserManagementProcedures.class, true );
             }
         }
-        else
-        {
-            globalProcedures.registerComponent( EnterpriseUserManager.class, ctx -> EnterpriseUserManager.NOOP, true );
-        }
 
         globalProcedures.registerProcedure( SecurityProcedures.class, true );
     }
 
     @Override
     public AuthManager authManager()
-    {
-        return authManager;
-    }
-
-    @Override
-    public UserManagerSupplier userManagerSupplier()
     {
         return authManager;
     }
@@ -209,15 +194,15 @@ public class EnterpriseSecurityModule extends SecurityModule
         throw new RuntimeException( "Expected " + EnterpriseSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
-    EnterpriseAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem )
+    EnterpriseAuthManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog );
-        realms.add( (Realm) internalRealm );
+        SystemGraphRealm internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog );
+        realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )
         {

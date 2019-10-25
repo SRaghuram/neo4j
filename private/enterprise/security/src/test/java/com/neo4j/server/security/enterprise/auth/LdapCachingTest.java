@@ -9,6 +9,7 @@ import com.google.common.testing.FakeTicker;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -55,11 +56,11 @@ class LdapCachingTest
         testRealm = new TestRealm( getLdapConfig(), securityLog, new SecureHasher() );
 
         fakeTicker = new FakeTicker();
-        EnterpriseUserManager userManager = mock( EnterpriseUserManager.class );
-        when( userManager.getPrivilegesForRoles( anySet() ) ).thenReturn( Collections.singleton(
+        SystemGraphRealm systemGraphRealm = mock( SystemGraphRealm.class );
+        when( systemGraphRealm.getPrivilegesForRoles( anySet() ) ).thenReturn( Collections.singleton(
                 new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL ) ) );
 
-        authManager = new MultiRealmAuthManager( userManager, Collections.singletonList( testRealm ),
+        authManager = new MultiRealmAuthManager( systemGraphRealm, Collections.singletonList( testRealm ),
                                                  new ShiroCaffeineCache.Manager( fakeTicker::read, 100, 10, true ),
                                                  securityLog, false );
         authManager.init();

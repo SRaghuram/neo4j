@@ -37,7 +37,7 @@ public class EnterpriseSecurityContextDescriptionTest
     public void setUp() throws Throwable
     {
         authManagerRule.getManager().start();
-        manager = (InMemoryUserManager) authManagerRule.getManager().getUserManager();
+        manager = authManagerRule.getUserManager();
         manager.newUser( "mats", password( "foo" ), false );
     }
 

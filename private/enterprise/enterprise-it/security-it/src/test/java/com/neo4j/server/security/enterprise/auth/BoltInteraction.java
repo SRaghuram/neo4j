@@ -95,16 +95,6 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     }
 
     @Override
-    public EnterpriseUserManager getLocalUserManager() throws Exception
-    {
-        if ( authManager instanceof EnterpriseAuthAndUserManager )
-        {
-            return ((EnterpriseAuthAndUserManager) authManager).getUserManager();
-        }
-        throw new Exception( "The used configuration does not have a user manager" );
-    }
-
-    @Override
     public GraphDatabaseFacade getLocalGraph()
     {
         return (GraphDatabaseFacade) server.graphDatabaseService();

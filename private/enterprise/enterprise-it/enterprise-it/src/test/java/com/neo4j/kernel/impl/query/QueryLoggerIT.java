@@ -7,8 +7,6 @@ package com.neo4j.kernel.impl.query;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +31,6 @@ import java.util.TimeZone;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -697,13 +694,6 @@ class QueryLoggerIT
             execute.close();
             transaction.commit();
         }
-    }
-
-    private EnterpriseUserManager getUserManager()
-    {
-        DependencyResolver dependencyResolver = db.getDependencyResolver();
-        EnterpriseAuthAndUserManager enterpriseAuthManager = dependencyResolver.resolveDependency( EnterpriseAuthAndUserManager.class );
-        return enterpriseAuthManager.getUserManager();
     }
 
     private EnterpriseAuthManager getAuthManager()

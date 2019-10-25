@@ -14,8 +14,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 
 import java.io.File;
@@ -93,16 +91,6 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         DependencyResolver dependencyResolver = this.server.getDatabaseService().getSystemDatabase().getDependencyResolver();
         authManager = dependencyResolver.resolveDependency( EnterpriseAuthManager.class );
         connectorPortRegister = dependencyResolver.resolveDependency( ConnectorPortRegister.class );
-    }
-
-    @Override
-    public EnterpriseUserManager getLocalUserManager() throws Exception
-    {
-        if ( authManager instanceof EnterpriseAuthAndUserManager )
-        {
-            return ((EnterpriseAuthAndUserManager) authManager).getUserManager();
-        }
-        throw new Exception( "The used configuration does not have a user manager" );
     }
 
     @Override

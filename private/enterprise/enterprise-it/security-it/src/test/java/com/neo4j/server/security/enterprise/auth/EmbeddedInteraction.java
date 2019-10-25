@@ -43,7 +43,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     private ConnectorPortRegister connectorRegister;
     private DatabaseManagementService managementService;
 
-    EmbeddedInteraction( Map<Setting<?>, String> config, TestDirectory testDirectory ) throws Throwable
+    EmbeddedInteraction( Map<Setting<?>, String> config, TestDirectory testDirectory )
     {
         DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
         init( builder, config );
@@ -66,16 +66,6 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
-    }
-
-    @Override
-    public EnterpriseUserManager getLocalUserManager() throws Exception
-    {
-        if ( authManager instanceof EnterpriseAuthAndUserManager )
-        {
-            return ((EnterpriseAuthAndUserManager) authManager).getUserManager();
-        }
-        throw new Exception( "The configuration used does not have a user manager" );
     }
 
     @Override

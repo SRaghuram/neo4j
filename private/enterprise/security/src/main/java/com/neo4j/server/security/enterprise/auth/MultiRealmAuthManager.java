@@ -5,8 +5,10 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
@@ -34,7 +36,6 @@ import java.util.Set;
 
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
-import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
@@ -44,19 +45,19 @@ import org.neo4j.server.security.auth.ShiroAuthToken;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
-public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
+public class MultiRealmAuthManager implements EnterpriseAuthManager
 {
-    private final EnterpriseUserManager userManager;
+    private final SystemGraphRealm systemGraphRealm;
     private final Collection<Realm> realms;
     private final DefaultSecurityManager securityManager;
     private final CacheManager cacheManager;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
 
-    public MultiRealmAuthManager( EnterpriseUserManager userManager, Collection<Realm> realms, CacheManager cacheManager,
+    public MultiRealmAuthManager( SystemGraphRealm systemGraphRealm, Collection<Realm> realms, CacheManager cacheManager,
             SecurityLog securityLog, boolean logSuccessfulLogin )
     {
-        this.userManager = userManager;
+        this.systemGraphRealm = systemGraphRealm;
         this.realms = realms;
         this.cacheManager = cacheManager;
 
@@ -193,7 +194,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
         boolean initUserManager = true;
         for ( Realm realm : realms )
         {
-            if ( userManager == realm )
+            if ( systemGraphRealm == realm )
             {
                 initUserManager = false;
             }
@@ -213,18 +214,9 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
 
         if ( initUserManager )
         {
-            if ( userManager instanceof Initializable )
-            {
-                ((Initializable) userManager).init();
-            }
-            if ( userManager instanceof CachingRealm )
-            {
-                ((CachingRealm) userManager).setCacheManager( cacheManager );
-            }
-            if ( userManager instanceof RealmLifecycle )
-            {
-                ((RealmLifecycle) userManager).initialize();
-            }
+            systemGraphRealm.init();
+            systemGraphRealm.setCacheManager( cacheManager );
+            systemGraphRealm.initialize();
         }
     }
 
@@ -234,7 +226,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
         boolean startUserManager = true;
         for ( Realm realm : realms )
         {
-            if ( userManager == realm )
+            if ( systemGraphRealm == realm )
             {
                 startUserManager = false;
             }
@@ -245,10 +237,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
         }
         if ( startUserManager )
         {
-            if ( userManager instanceof RealmLifecycle )
-            {
-                ((RealmLifecycle) userManager).start();
-            }
+            systemGraphRealm.start();
         }
     }
 
@@ -281,18 +270,6 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
     }
 
     @Override
-    public EnterpriseUserManager getUserManager( AuthSubject authSubject, boolean isUserManager )
-    {
-        return new PersonalUserManager( userManager, isUserManager );
-    }
-
-    @Override
-    public EnterpriseUserManager getUserManager()
-    {
-        return userManager;
-    }
-
-    @Override
     public void clearAuthCache()
     {
         for ( Realm realm : realms )
@@ -314,7 +291,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
                 }
             }
         }
-        userManager.clearCacheForRoles();
+        systemGraphRealm.clearCacheForRoles();
     }
 
     Collection<AuthorizationInfo> getAuthorizationInfo( PrincipalCollection principalCollection )
@@ -337,6 +314,6 @@ public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
 
     Set<ResourcePrivilege> getPermissions( Set<String> roles )
     {
-        return userManager.getPrivilegesForRoles( roles );
+        return systemGraphRealm.getPrivilegesForRoles( roles );
     }
 }

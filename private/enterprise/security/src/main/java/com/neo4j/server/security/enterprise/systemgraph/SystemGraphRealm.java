@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
@@ -14,11 +13,7 @@ import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.subject.PrincipalCollection;
 
 import java.util.Set;
-import java.util.regex.Pattern;
 
-import org.neo4j.cypher.internal.security.SecureHasher;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.security.PasswordPolicy;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
@@ -26,7 +21,7 @@ import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 /**
  * Shiro realm using a Neo4j graph to store users and roles
  */
-public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider
+public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLifecycle, ShiroAuthorizationInfoProvider
 {
     private final boolean authorizationEnabled;
     private final SystemGraphOperations systemGraphOperations;
@@ -77,13 +72,11 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         return getAuthorizationInfo( principalCollection );
     }
 
-    @Override
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );
     }
 
-    @Override
     public void clearCacheForRoles()
     {
         systemGraphOperations.clearCacheForRoles();
