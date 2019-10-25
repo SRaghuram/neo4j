@@ -125,6 +125,10 @@ class ParallelRuntimeExpandIntoTestNoFusing extends ExpandIntoTestBase(ENTERPRIS
 class ParallelRuntimeOptionalExpandAllTest extends OptionalExpandAllTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
 class ParallelRuntimeOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
 
+// OPTIONAL EXPAND INTO
+class ParallelRuntimeOptionalExpandIntoTest extends OptionalExpandIntoTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
+class ParallelRuntimeOptionalExpandIntoTestNoFusing extends OptionalExpandIntoTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT)  with ParallelRuntimeSpecSuite
+
 // VAR EXPAND
 class ParallelRuntimeVarLengthExpandTest extends VarLengthExpandTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

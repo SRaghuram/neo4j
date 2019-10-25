@@ -107,6 +107,10 @@ class MorselExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, MORSEL,
 class MorselOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
 class MorselOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
 
+// OPTIONAL EXPAND INTO
+class MorselOptionalExpandIntoTest extends OptionalExpandIntoTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalExpandIntoTestNoFusing extends OptionalExpandIntoTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+
 // VAR EXPAND
 class MorselVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
 class MorselNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
