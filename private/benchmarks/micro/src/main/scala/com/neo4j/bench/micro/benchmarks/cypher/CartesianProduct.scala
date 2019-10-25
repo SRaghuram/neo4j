@@ -41,7 +41,6 @@ class CartesianProduct extends AbstractCypherBenchmark {
       .build()
 
   override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
-    super.afterDatabaseStart(config)
     expectedRowCount = rows * rows
   }
 
