@@ -50,6 +50,18 @@ class VarExpand extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var length: Int = _
 
+  @ParamValues(
+    allowed = Array("true", "false"),
+    base = Array("false"))
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "while", "black"),
+    base = Array("full"))
+  @Param(Array[String]())
+  var user: String = _
+
   override def description = "MATCH (a:Label{k1:42})-[:*1..3]->(b) RETURN a,b"
 
   private val nodeCount = 100000
