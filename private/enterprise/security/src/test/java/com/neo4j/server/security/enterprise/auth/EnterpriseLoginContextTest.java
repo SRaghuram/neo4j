@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -41,7 +40,6 @@ class EnterpriseLoginContextTest
     @BeforeEach
     void setup() throws Throwable
     {
-        SecureHasher secureHasher = new SecureHasher();
         userManager = new InMemoryUserManager( Config.defaults() );
         authManager =
                 new MultiRealmAuthManager( userManager, Collections.singleton( userManager ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );

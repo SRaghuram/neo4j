@@ -144,11 +144,6 @@ public class InMemoryUserManager extends SystemGraphRealm
             return null;
         }
 
-        return doGetAuthorizationInfo( username );
-    }
-
-    private AuthorizationInfo doGetAuthorizationInfo( String username )
-    {
         User user = basic.users.get( username );
         if ( user == null || user.passwordChangeRequired() || user.hasFlag( IS_SUSPENDED ) )
         {
