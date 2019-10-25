@@ -24,9 +24,9 @@ import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.utils.StringUtils.lines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ArithmeticError;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.EntityNotFound;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.NotSystemDatabaseError;
@@ -96,7 +96,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "Invalid input 'o': expected 'h/H', 't/T' or 'e/E' (line 1, column 2 (offset: 1))",
                     "\"Some Garbage\"",
                     "  ^"
@@ -123,7 +123,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "Variable `b` not defined (line 1, column 26 (offset: 25))",
                     "\"UNWIND[1, 0] AS a RETURN b\"",
                     "                          ^"
@@ -170,7 +170,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "Invalid input ' ': expected 'r/R' (line 1, column 31 (offset: 30))",
                     "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"",
                     "                               ^"
@@ -214,7 +214,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "Invalid input 'N': expected 'p/P' (line 1, column 31 (offset: 30))",
                     "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"",
                     "                               ^"
@@ -233,7 +233,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "USE mega.graph0",
                     "UNWIND[1, 0] AS a",
                     "USE mega.graph1",
@@ -245,7 +245,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "USE can only appear at the beginning of a (sub-)query",
                     "\"USE mega.graph1\"",
                     "     ^"
@@ -264,7 +264,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND[1, 0] AS a",
                     "USE mega.graph0",
                     "RETURN a"
@@ -275,7 +275,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "USE can only appear at the beginning of a (sub-)query",
                     "\"USE mega.graph0\"",
                     "     ^"
@@ -294,7 +294,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "USE mega.graph2",
                     "UNWIND[1, 0] AS a",
                     "RETURN a"
@@ -319,7 +319,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0, 1] AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
@@ -348,7 +348,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [1, 0] AS a",
                     "CALL {",
                     "  USE mega.graph((1 - a)/a)",
@@ -426,7 +426,7 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = lines(
+            var expectedMessage = joinAsLines(
                     "Unknown function 'somewhere.nonExistentFunction'",
                     "\"USE mega.graph(somewhere.nonExistentFunction()) RETURN 1\"",
                     "                ^"
@@ -487,7 +487,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
@@ -514,7 +514,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",

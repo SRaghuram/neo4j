@@ -26,9 +26,9 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static com.neo4j.utils.StringUtils.lines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 class LocalQueryEndToEndTest
 {
@@ -91,7 +91,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -119,7 +119,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -146,7 +146,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -173,7 +173,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (x)",
@@ -201,7 +201,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (n)",
@@ -228,7 +228,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (n)-[r]->()",
@@ -255,7 +255,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -284,7 +284,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",

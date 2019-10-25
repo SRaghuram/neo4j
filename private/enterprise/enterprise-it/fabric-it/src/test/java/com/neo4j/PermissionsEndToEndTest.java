@@ -25,9 +25,9 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static com.neo4j.utils.StringUtils.lines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.kernel.api.exceptions.Status.Security.Forbidden;
 
 class PermissionsEndToEndTest
@@ -53,7 +53,7 @@ class PermissionsEndToEndTest
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
                 "dbms.connector.bolt.enabled", "true",
-                "dbms.security.auth_enabled", "true");
+                "dbms.security.auth_enabled", "true" );
         var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config );
 
@@ -112,7 +112,7 @@ class PermissionsEndToEndTest
     {
         try ( var tx = begin( adminDriver, "mega" ) )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(com.neo4j.utils.myPlusOne(gid -1))",
@@ -121,7 +121,7 @@ class PermissionsEndToEndTest
                     "RETURN com.neo4j.utils.myPlusOne(1)" );
 
             var result = tx.run( query );
-            assertEquals(1, result.list().size());
+            assertEquals( 1, result.list().size() );
         }
     }
 
@@ -130,7 +130,7 @@ class PermissionsEndToEndTest
     {
         try ( var tx = begin( readerDriver, "mega" ) )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(com.neo4j.utils.myPlusOne(gid -1))",
@@ -139,7 +139,7 @@ class PermissionsEndToEndTest
                     "RETURN com.neo4j.utils.myPlusOne(1)" );
 
             var result = tx.run( query );
-            assertEquals(1, result.list().size());
+            assertEquals( 1, result.list().size() );
         }
     }
 
@@ -151,7 +151,7 @@ class PermissionsEndToEndTest
         {
             var query = "USE mega.graph(com.neo4j.utils.myPlusOne(-1)) RETURN 1";
             tx.run( query ).consume();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
@@ -171,7 +171,7 @@ class PermissionsEndToEndTest
         {
             var query = "RETURN com.neo4j.utils.myPlusOne(-1)";
             tx.run( query ).consume();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {

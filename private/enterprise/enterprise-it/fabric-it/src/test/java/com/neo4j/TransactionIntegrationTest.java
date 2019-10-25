@@ -44,12 +44,12 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static com.neo4j.utils.StringUtils.lines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 class TransactionIntegrationTest
 {
@@ -159,7 +159,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "UNWIND [0, 1] AS gid",
                 "CALL {",
                 "  USE mega.graph(gid)",
@@ -205,7 +205,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -240,7 +240,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  UNWIND range(0, 100) AS i",
@@ -272,7 +272,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  UNWIND range(0, 100) AS i",
@@ -310,7 +310,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -336,7 +336,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -362,7 +362,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = lines(
+        var statement = joinAsLines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",

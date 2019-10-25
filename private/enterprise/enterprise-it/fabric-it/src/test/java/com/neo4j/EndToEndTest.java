@@ -41,7 +41,6 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static com.neo4j.utils.StringUtils.lines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
@@ -52,6 +51,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 class EndToEndTest
 {
@@ -263,7 +263,7 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             Map<String,Object> uid = Map.of( "uid", 100 );
-            r = tx.run( lines(
+            r = tx.run( joinAsLines(
                     "USE mega.graph(com.neo4j.utils.personShard($uid))",
                     "MATCH (n {uid: $uid})",
                     "RETURN n"
@@ -284,7 +284,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            r = tx.run( lines(
+            r = tx.run( joinAsLines(
                     "USE mega.graph(0) MATCH (n) RETURN n",
                     "UNION ALL",
                     "USE mega.graph(1) MATCH (n) RETURN n"
@@ -307,7 +307,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            r = tx.run( lines(
+            r = tx.run( joinAsLines(
                     "USE mega.graph(0) MATCH (n) RETURN n",
                     "UNION",
                     "USE mega.graph(1) MATCH (n) RETURN n"
@@ -329,7 +329,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            r = tx.run( lines(
+            r = tx.run( joinAsLines(
                     "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
                     "UNION ALL",
                     "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
@@ -347,7 +347,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            r = tx.run( lines(
+            r = tx.run( joinAsLines(
                     "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
                     "UNION",
                     "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
@@ -398,7 +398,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0, 1] AS x",
                     "CALL {",
                     "  USE mega.graph(x)",
@@ -433,7 +433,7 @@ class EndToEndTest
         List<Record> r;
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND mega.graphIds() AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
@@ -475,7 +475,7 @@ class EndToEndTest
         List<Record> r;
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND mega.graphIds() AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
@@ -502,7 +502,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0, 1] AS x",
                     "CALL {",
                     "  USE mega.graph(x)",
@@ -529,7 +529,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [0, 1] AS x",
                     "CALL {",
                     "  USE mega.graph(x)",
@@ -562,7 +562,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "WITH 1 AS x",
                     "CALL {",
                     "  RETURN 2 AS y",
@@ -597,7 +597,7 @@ class EndToEndTest
         {
             try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
             {
-                var query = lines(
+                var query = joinAsLines(
                         "UNWIND [1, 2, 3] AS x",
                         "CALL {",
                         "  USE mega.graph(0)",
@@ -628,7 +628,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "WITH 1 AS x",
                     "CALL {",
                     "  USE mega.graph(0)",
@@ -655,7 +655,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "WITH 1 AS x",
                     "CALL {",
                     "  USE mega.graph(0)",
@@ -682,7 +682,7 @@ class EndToEndTest
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
             // Namespacer will rename variables in the first local query
-            var query = lines(
+            var query = joinAsLines(
                     "WITH 1 AS x",
                     "WITH x, 2 AS y",
                     "WITH x, y",
@@ -711,7 +711,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "WITH 1 AS x",
                     "CALL {",
                     "  USE mega.graph(0)",
@@ -755,7 +755,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [10, 20] AS x",
                     "CALL {",
                     "  USE mega.graph(0)",
@@ -783,7 +783,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "WITH",
                     "  null AS nothing,",
                     "  true AS boolean,",
@@ -877,7 +877,7 @@ class EndToEndTest
         {
             try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
             {
-                var query = lines(
+                var query = joinAsLines(
                         "CALL {",
                         "  USE mega.graph(0)",
                         "  CREATE (n:Test)",
@@ -906,7 +906,7 @@ class EndToEndTest
         {
             try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
             {
-                var query = lines(
+                var query = joinAsLines(
                         "CALL {",
                         "  USE mega.graph(0)",
                         "  CREATE (:Test)-[r:Rel]->(:Test)",
@@ -935,7 +935,7 @@ class EndToEndTest
         {
             try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
             {
-                var query = lines(
+                var query = joinAsLines(
                         "CALL {",
                         "  USE mega.graph(0)",
                         "  CREATE p = (:T)-[:R]->(:T)",
@@ -964,7 +964,7 @@ class EndToEndTest
         {
             try ( Session s = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
             {
-                var query = lines(
+                var query = joinAsLines(
                         "CYPHER planner=cost",
                         "USING PERIODIC COMMIT",
                         "WHAT EVER"
@@ -984,7 +984,7 @@ class EndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = lines(
+            var query = joinAsLines(
                     "UNWIND [1, 2, 3] AS x",
                     "CALL {",
                     "  WITH x",

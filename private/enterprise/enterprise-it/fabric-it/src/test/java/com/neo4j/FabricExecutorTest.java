@@ -52,10 +52,9 @@ import org.neo4j.values.storable.Values;
 
 import static com.neo4j.AssertableQueryExecutionMonitor.endFailure;
 import static com.neo4j.AssertableQueryExecutionMonitor.endSuccess;
-import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
 import static com.neo4j.AssertableQueryExecutionMonitor.query;
 import static com.neo4j.AssertableQueryExecutionMonitor.start;
-import static com.neo4j.utils.StringUtils.lines;
+import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
@@ -71,6 +70,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class FabricExecutorTest
@@ -288,7 +288,7 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
-            List<Record> list = tx.run( lines( "RETURN 1 AS x" ) ).list();
+            List<Record> list = tx.run( joinAsLines( "RETURN 1 AS x" ) ).list();
 
             assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
         }
@@ -299,7 +299,7 @@ class FabricExecutorTest
     {
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
-            List<Record> list = tx.run( lines(
+            List<Record> list = tx.run( joinAsLines(
                     "UNWIND [1, 2] AS x",
                     "CALL { RETURN 'y' AS y }",
                     "CALL { UNWIND [8, 9] AS z RETURN z }",
@@ -338,7 +338,7 @@ class FabricExecutorTest
 
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
-            List<Record> list = tx.run( lines(
+            List<Record> list = tx.run( joinAsLines(
                     "UNWIND [0, 1] AS s",
                     "CALL { USE mega.graph(s) RETURN '' AS y }",
                     "RETURN s, y ORDER BY s, y"
@@ -410,7 +410,7 @@ class FabricExecutorTest
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
             ResultSummary summary =
-                    tx.run( lines(
+                    tx.run( joinAsLines(
                             "CALL { USE mega.graph(0) RETURN 1 AS x }",
                             "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
                             "RETURN 1"
@@ -453,7 +453,7 @@ class FabricExecutorTest
         try ( var tx = transaction( "mega", AccessMode.READ ) )
         {
             ResultSummary summary =
-                    tx.run( lines(
+                    tx.run( joinAsLines(
                             "EXPLAIN",
                             "CALL { USE mega.graph(0) RETURN 1 AS x }",
                             "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
@@ -488,7 +488,7 @@ class FabricExecutorTest
             assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
             Plan c1c0c0 = c1c0.children().get( 0 );
             assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
-            assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( lines( "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
+            assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( joinAsLines( "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
             assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
 
             Plan c2 = plan.children().get( 2 );
@@ -505,7 +505,7 @@ class FabricExecutorTest
     {
         try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
         {
-            tx.run( lines(
+            tx.run( joinAsLines(
                     "CYPHER debug=fabriclogplan",
                     "RETURN 1"
             ) ).consume();
@@ -530,7 +530,7 @@ class FabricExecutorTest
 
         try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
         {
-            tx.run( lines(
+            tx.run( joinAsLines(
                     "CYPHER debug=fabriclogrecords",
                     "UNWIND [0, 1] AS s",
                     "CALL { USE mega.graph(s) RETURN 2 AS y }",
@@ -565,7 +565,7 @@ class FabricExecutorTest
                 recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
-        String query = lines(
+        String query = joinAsLines(
                 "UNWIND [0, 1] AS s",
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
@@ -601,7 +601,7 @@ class FabricExecutorTest
                 Flux.error( new Exception( "my failure!" ) )
         );
 
-        String query = lines(
+        String query = joinAsLines(
                 "UNWIND [0, 1] AS s",
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
