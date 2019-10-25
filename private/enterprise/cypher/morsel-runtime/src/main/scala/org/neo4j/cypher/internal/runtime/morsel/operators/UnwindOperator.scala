@@ -98,12 +98,12 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   import OperatorCodeGenHelperTemplates._
 
-  private val iteratorField = field[java.util.Iterator[AnyValue]](codeGen.namer.nextVariableName())
+  private val cursorField = field[IteratorCursor](codeGen.namer.nextVariableName())
   private var listExpression: IntermediateExpression = _
 
   override final def scopeId: String = "unwind" + id.x
 
-  override def genMoreFields: Seq[Field] = Seq(iteratorField)
+  override def genMoreFields: Seq[Field] = Seq(cursorField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
@@ -116,16 +116,19 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
     /**
       * {{{
-      *   this.iterator = asList([expression]).iterator()
-      *   this.canContinue = iterator.hasNext
-      *   canContinue
+      *   this.cursor = IteratorCursor(asList([expression]).iterator())
+      *   this.canContinue = this.cursor.next()
+      *   true
       * }}}
       */
     block(
-      setField(iteratorField, invoke(
-        invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), nullCheckIfRequired(listExpression)),
-        method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-      setField(canContinue, invoke(loadField(iteratorField), method[java.util.Iterator[_], Boolean]("hasNext"))),
+      setField(cursorField,
+        invokeStatic(method[IteratorCursor, IteratorCursor, java.util.Iterator[_]]("apply"),
+               invoke(
+                 invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"),
+                              nullCheckIfRequired(listExpression)),
+                 method[ListValue, java.util.Iterator[AnyValue]]("iterator")))),
+      setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id)),
       constant(true)
       )
   }
@@ -134,20 +137,23 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
     /**
       * {{{
       *   while (hasDemand && this.canContinue) {
-      *     setRefAt(offset, iterator.next())
+      *     setRefAt(offset, cursor.value)
       *     << inner.genOperate >>
-      *     this.canContinue = iterator.hasNext()
+      *     this.canContinue = cursor.next()
       *   }
       * }}}
       */
-    loop(and(innermost.predicate, loadField(canContinue)))(
-      block(
-        codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.inputSlotConfiguration.numberOfReferences),
-        codeGen.setRefAt(offset, cast[AnyValue](invoke(loadField(iteratorField), method[java.util.Iterator[_], Object]("next")))),
-        profileRow(id),
-        inner.genOperateWithExpressions,
-        setField(canContinue, invoke(loadField(iteratorField), method[java.util.Iterator[_], Boolean]("hasNext"))),
-        endInnerLoop
+    block(
+      loop(and(innermost.predicate, loadField(canContinue)))(
+        block(
+          codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs,
+                                codeGen.inputSlotConfiguration.numberOfReferences),
+          codeGen.setRefAt(offset,
+            invoke(loadField(cursorField), method[IteratorCursor, AnyValue]("value"))),
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id))),
+          endInnerLoop
+          )
         )
       )
   }
@@ -156,4 +162,6 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
     noop()
   }
 }
+
+
 

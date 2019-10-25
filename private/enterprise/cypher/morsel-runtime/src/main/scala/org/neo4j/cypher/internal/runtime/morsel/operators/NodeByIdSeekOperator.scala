@@ -106,10 +106,10 @@ object NodeByIdSeekOperator  {
 
   val asIdMethod: Method = method[NumericHelper, Long, AnyValue]("asLongEntityIdPrimitive")
 
-  def isValidNode(idVariable: String): IntermediateRepresentation =
-    and(greaterThanOrEqual(load(idVariable), constant(0L)),
+  def isValidNode(nodeId: IntermediateRepresentation): IntermediateRepresentation =
+    and(greaterThanOrEqual(nodeId, constant(0L)),
         invoke(loadField(DATA_READ), method[Read, Boolean, Long]("nodeExists"),
-               load(idVariable)))
+               nodeId))
 }
 
 class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
@@ -147,7 +147,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
       */
     block(
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(nodeId))),
-      setField(canContinue, isValidNode(idVariable.name)),
+      setField(canContinue, isValidNode(load(idVariable.name))),
       invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
       constant(true))
   }
@@ -189,10 +189,10 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   import OperatorCodeGenHelperTemplates._
 
-  private val idIterator = field[java.util.Iterator[AnyValue]](codeGen.namer.nextVariableName())
+  private val idCursor = field[IteratorCursor](codeGen.namer.nextVariableName())
   private var nodeIds: IntermediateExpression= _
 
-  override def genMoreFields: Seq[Field] = Seq(idIterator)
+  override def genMoreFields: Seq[Field] = Seq(idCursor)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
@@ -205,15 +205,16 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
 
     /**
       * {{{
-      *   this.idIterator = ((ListValue) <<nodeIdExpr>>)).iterator()
-      *   this.canContinue = idIterator.hasNext
+      *   this.idCursor = IteratorCursor(((ListValue) <<nodeIdExpr>>)).iterator())
+      *   this.canContinue = idCursor.next()
       *   true
       * }}}
       */
     block(
-      setField(idIterator,
-               invoke(cast[ListValue](nullCheckIfRequired(nodeIds)), method[ListValue, util.Iterator[AnyValue]]("iterator"))),
-      setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))),
+      setField(idCursor,
+               invokeStatic(method[IteratorCursor, IteratorCursor, java.util.Iterator[_]]("apply"),
+                            invoke(cast[ListValue](nullCheckIfRequired(nodeIds)), method[ListValue, util.Iterator[AnyValue]]("iterator")))),
+      setField(canContinue, cursorNext[IteratorCursor](loadField(idCursor))),
       constant(true))
   }
 
@@ -222,31 +223,31 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
     /**
       * {{{
       *   while (hasDemand && this.canContinue) {
-      *     val id = asId(idIterator.next())
+      *     val id = asId(idCursor.value()
       *     tracer.onNode(id)
       *     if (id >= 0 && read.nodeExists(id)) {
       *       setLongAt(offset, id)
       *       << inner.genOperate >>
       *     }
-      *     this.canContinue = itIterator.hasNext()
+      *     this.canContinue = idCursor.next()
       *   }
       * }}}
       */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         declareAndAssign(typeRefOf[Long], idVariable,
-                         invokeStatic(asIdMethod, cast[AnyValue](
-                           invoke(loadField(idIterator),
-                                  method[java.util.Iterator[AnyValue], Object]("next"))))),
+                         invokeStatic(asIdMethod,
+                           invoke(loadField(idCursor),
+                                  method[IteratorCursor, AnyValue]("value")))),
         invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
-        condition(isValidNode(idVariable))(
+        condition(isValidNode(load(idVariable)))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
             codeGen.setLongAt(offset, load(idVariable)),
-            profileRow(id),
-            inner.genOperateWithExpressions
+            inner.genOperateWithExpressions,
+            doIfInnerCantContinue(profileRow(id))
             )),
-        setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))),
+        doIfInnerCantContinue(block(setField(canContinue, cursorNext[IteratorCursor](loadField(idCursor))))),
         endInnerLoop)
       )
   }

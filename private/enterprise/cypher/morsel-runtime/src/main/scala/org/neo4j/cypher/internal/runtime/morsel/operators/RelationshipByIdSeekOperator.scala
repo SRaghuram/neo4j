@@ -467,7 +467,7 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
 
   import OperatorCodeGenHelperTemplates._
 
-  protected val idIterator: InstanceField = field[java.util.Iterator[AnyValue]](codeGen.namer.nextVariableName())
+  protected val idCursor: InstanceField = field[IteratorCursor](codeGen.namer.nextVariableName())
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
@@ -484,9 +484,11 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
       */
     block(
       setField(cursor, ALLOCATE_REL_SCAN_CURSOR),
-      setField(idIterator,
-               invoke(cast[ListValue](nullCheckIfRequired(relationshipExpression)), method[ListValue, util.Iterator[AnyValue]]("iterator"))),
-      setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))),
+      setField(idCursor,
+               invokeStatic(method[IteratorCursor, IteratorCursor, java.util.Iterator[_]]("apply"),
+                            invoke(cast[ListValue](nullCheckIfRequired(relationshipExpression)),
+                                   method[ListValue, util.Iterator[AnyValue]]("iterator")))),
+      setField(canContinue, cursorNext[IteratorCursor](loadField(idCursor))),
       loadField(canContinue))
   }
 }
@@ -511,7 +513,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                 codeGen) {
   import OperatorCodeGenHelperTemplates._
 
-  override def genMoreFields: Seq[Field] = Seq(cursor, idIterator)
+  override def genMoreFields: Seq[Field] = Seq(cursor, idCursor)
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     val idVariable = codeGen.namer.nextVariableName()
@@ -536,8 +538,8 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
       block(
         declareAndAssign(typeRefOf[Long], idVariable,
                          invokeStatic(asIdMethod, cast[AnyValue](
-                           invoke(loadField(idIterator),
-                                  method[java.util.Iterator[AnyValue], Object]("next"))))),
+                                  invoke(loadField(idCursor),
+                                         method[IteratorCursor, AnyValue]("value"))))),
         condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
           singleRelationship(load(idVariable), loadField(cursor)) },
 
@@ -547,10 +549,10 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             codeGen.setLongAt(relationshipOffset, load(idVariable)),
             codeGen.setLongAt(fromOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
             codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
-            profileRow(id),
-            inner.genOperateWithExpressions
+            inner.genOperateWithExpressions,
+            doIfInnerCantContinue(profileRow(id))
             )),
-        setField(canContinue, invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext"))))
+        doIfInnerCantContinue(setField(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))))
       )
   }
 }
@@ -582,7 +584,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
     * will not progress the cursor and just write (end) -> (start)
     */
   private val forwardDirection: Field = field[Boolean](codeGen.namer.nextVariableName(), constant(true))
-  override def genMoreFields: Seq[Field] = Seq(idIterator,cursor, forwardDirection)
+  override def genMoreFields: Seq[Field] = Seq(idCursor, cursor, forwardDirection)
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     val idVariable = codeGen.namer.nextVariableName()
@@ -615,7 +617,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
         declareAndAssign(typeRefOf[Long], idVariable,
                          ternary(loadField(forwardDirection),
                                  invokeStatic(asIdMethod, cast[AnyValue](
-                                   invoke(loadField(idIterator),
+                                   invoke(loadField(idCursor),
                                           method[java.util.Iterator[AnyValue], Object]("next")))),
                                  invoke(loadField(cursor), method[RelationshipScanCursor, Long]("relationshipReference")))),
         condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
@@ -636,10 +638,12 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
               codeGen.setLongAt(toOffset,
                                 invoke(loadField(cursor), method[RelationshipScanCursor, Long]("sourceNodeReference"))),
               setField(forwardDirection, constant(true)))),
-            profileRow(id),
-            inner.genOperateWithExpressions
+            inner.genOperateWithExpressions,
+            doIfInnerCantContinue(profileRow(id))
             )),
-        setField(canContinue, or(not(loadField(forwardDirection)), invoke(loadField(idIterator), method[util.Iterator[_], Boolean]("hasNext")))))
+        doIfInnerCantContinue(
+          setField(canContinue,
+                   or(not(loadField(forwardDirection)), cursorNext[IteratorCursor](loadField(idCursor))))))
       )
   }
 }
