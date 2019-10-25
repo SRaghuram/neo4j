@@ -26,6 +26,18 @@ class Expand extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var runtime: String = _
 
+  @ParamValues(
+    allowed = Array("true", "false"),
+    base = Array("false"))
+  @Param(Array[String]())
+  var auth: Boolean = _
+
+  @ParamValues(
+    allowed = Array("full", "while", "black"),
+    base = Array("full"))
+  @Param(Array[String]())
+  var user: String = _
+
   override def description = "Expand one step, with many relationship types"
 
   private val NODE_COUNT = 10000
