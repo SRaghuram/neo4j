@@ -84,6 +84,53 @@ class FabricConfigTest
     }
 
     @Test
+    void testDuplicateGraphNames()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "fabric.graph.0.uri", "bolt://localhost:7687",
+                "fabric.graph.1.uri", "bolt://localhost:7687",
+                "fabric.graph.0.name", "foo",
+                "fabric.graph.1.name", "foo"
+        );
+
+        var config = Config.newBuilder()
+                .setRaw( properties )
+                .build();
+
+        var e = assertThrows( IllegalArgumentException.class,
+                () -> FabricConfig.from( config ) );
+
+        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, have conflicting names: foo");
+    }
+
+    @Test
+    void testDuplicateGraphNamesNormalized()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "fabric.graph.3.uri", "bolt://localhost:7687",
+                "fabric.graph.0.uri", "bolt://localhost:7687",
+                "fabric.graph.1.uri", "bolt://localhost:7687",
+                "fabric.graph.2.uri", "bolt://localhost:7687",
+                "fabric.graph.1.name", "Foo",
+                "fabric.graph.2.name", "bar",
+                "fabric.graph.3.name", "FOO",
+                "fabric.graph.0.name", "foo"
+
+        );
+
+        var config = Config.newBuilder()
+                .setRaw( properties )
+                .build();
+
+        var e = assertThrows( IllegalArgumentException.class,
+                () -> FabricConfig.from( config ) );
+
+        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, 3, have conflicting names: foo, Foo, FOO");
+    }
+
+    @Test
     void testInvalidDatabaseName()
     {
         var properties = Map.of(

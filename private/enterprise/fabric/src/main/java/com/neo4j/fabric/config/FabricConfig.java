@@ -8,9 +8,12 @@ package com.neo4j.fabric.config;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
+import org.eclipse.collections.impl.factory.Multimaps;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -180,6 +183,8 @@ public class FabricConfig
             return new Graph( graphId, config.get( graphSetting.uri ), config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
         } ).collect( Collectors.toSet() );
 
+        validateGraphNames( graphSettings );
+
         return Optional.of( new Database( databaseName, graphSettings ) );
     }
 
@@ -193,6 +198,25 @@ public class FabricConfig
         {
             throw new IllegalArgumentException( "Graph key must be a number, found: " + graphKey );
         }
+    }
+
+    private static void validateGraphNames( Set<Graph> graphSettings )
+    {
+        MutableSetMultimap<String,Graph> graphsByName = Multimaps.mutable.set.empty();
+        graphSettings.stream()
+                .filter( g -> g.name != null )
+                .forEach( g -> graphsByName.put( new NormalizedDatabaseName( g.name ).name(), g ) );
+
+        graphsByName.multiValuesView().forEach( graphs ->
+        {
+            if ( graphs.size() > 1 )
+            {
+                var sortedGraphs = graphs.toSortedList( Comparator.comparingLong( Graph::getId ) );
+                var names = sortedGraphs.collect( Graph::getName ).distinct().makeString( ", " );
+                var ids = sortedGraphs.collect( Graph::getId ).distinct().makeString( ", " );
+                throw new IllegalArgumentException( "Graphs with ids: " + ids + ", have conflicting names: " + names );
+            }
+        } );
     }
 
     public static class Database
