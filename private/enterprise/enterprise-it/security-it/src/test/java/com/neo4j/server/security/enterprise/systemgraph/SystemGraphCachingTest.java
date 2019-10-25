@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 
@@ -24,6 +26,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -38,8 +41,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 class SystemGraphCachingTest
 {
     private GraphDatabaseService database;
-    private TestSystemGraphOperations graphOperations;
-    private SystemGraphRealm realm;
+    private TestCachingSystemGraphRealm realm;
 
     @Inject
     private TestDirectory testDirectory;
@@ -58,8 +60,18 @@ class SystemGraphCachingTest
         DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
-        graphOperations = new TestSystemGraphOperations( databaseManager, new SecureHasher() );
-        realm = TestSystemGraphRealm.testRealm( graphOperations, securityLog, databaseManager, Config.defaults() );
+        SecureHasher secureHasher = new SecureHasher();
+
+        EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( databaseManager, Config.defaults() );
+        SystemGraphImportOptions importOptions = new ImportOptionsBuilder().build();
+        EnterpriseSecurityGraphInitializer securityGraphInitializer =
+                new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog, importOptions, secureHasher );
+
+        realm = new TestCachingSystemGraphRealm( securityGraphInitializer, databaseManager, secureHasher,
+                new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ) );
+
+        realm.initialize();
+        realm.start();
     }
 
     @AfterEach
@@ -76,20 +88,20 @@ class SystemGraphCachingTest
     void shouldCachePrivilegeForRole()
     {
         // Given
-        graphOperations.takeAccessFlag();
+        realm.takeAccessFlag();
         realm.clearCacheForRoles();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
 
         // Then
-        assertTrue( graphOperations.takeAccessFlag(), "Should have looked up privilege for role in system graph" );
+        assertTrue( realm.takeAccessFlag(), "Should have looked up privilege for role in system graph" );
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
 
         // Then
-        assertFalse( graphOperations.takeAccessFlag(), "Should have looked up privilege for role in cache" );
+        assertFalse( realm.takeAccessFlag(), "Should have looked up privilege for role in cache" );
     }
 
     @Test
@@ -98,28 +110,29 @@ class SystemGraphCachingTest
         // Given
         realm.getPrivilegesForRoles( Set.of( READER ) );
         realm.clearCacheForRoles();
-        graphOperations.takeAccessFlag();
+        realm.takeAccessFlag();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER, EDITOR ) );
 
         // Then
-        assertTrue( graphOperations.takeAccessFlag(), "Should have looked up privilege for roles in system graph" );
+        assertTrue( realm.takeAccessFlag(), "Should have looked up privilege for roles in system graph" );
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER, EDITOR ) );
 
         // Then
-        assertFalse( graphOperations.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
+        assertFalse( realm.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
     }
 
-    private static class TestSystemGraphOperations extends SystemGraphOperations
+    private static class TestCachingSystemGraphRealm extends SystemGraphRealm
     {
         private boolean systemAccess;
 
-        TestSystemGraphOperations(  DatabaseManager<?> databaseManager, SecureHasher secureHasher )
+        TestCachingSystemGraphRealm( EnterpriseSecurityGraphInitializer securityGraphInitializer, DatabaseManager<?> databaseManager, SecureHasher secureHasher,
+                RateLimitedAuthenticationStrategy rateLimitedAuthenticationStrategy )
         {
-            super( databaseManager, secureHasher );
+            super( securityGraphInitializer, databaseManager, secureHasher, rateLimitedAuthenticationStrategy, true, true );
         }
 
         boolean takeAccessFlag()

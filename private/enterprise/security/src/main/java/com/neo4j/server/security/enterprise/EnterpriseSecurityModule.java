@@ -25,7 +25,6 @@ import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
@@ -253,15 +252,15 @@ public class EnterpriseSecurityModule extends SecurityModule
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
     {
         SecureHasher secureHasher = new SecureHasher();
-        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( databaseManager, secureHasher );
 
         SecurityGraphInitializer securityGraphInitializer =
                 isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog,
                         configureImportOptions( config, logProvider, fileSystem ), secureHasher );
 
         return new SystemGraphRealm(
-                systemGraphOperations,
                 securityGraphInitializer,
+                databaseManager,
+                secureHasher,
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
                 securityConfig.nativeAuthentication,
                 securityConfig.nativeAuthorization

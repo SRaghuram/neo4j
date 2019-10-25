@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
@@ -51,11 +52,7 @@ public class InMemoryUserManager extends SystemGraphRealm
 
     public InMemoryUserManager( Config config, AuthenticationStrategy authStrategy ) throws InvalidArgumentsException
     {
-        super( null,
-                SecurityGraphInitializer.NO_OP,
-                authStrategy,
-                true,
-                true );
+        super( SecurityGraphInitializer.NO_OP, null, new SecureHasher(), authStrategy, true, true );
         basic = new BasicInMemoryUserManager( config );
         setupDefaultRolesAndPrivileges();
     }

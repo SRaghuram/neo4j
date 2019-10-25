@@ -15,7 +15,6 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.Config;
 import org.neo4j.cypher.security.TestBasicSystemGraphRealm;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
@@ -54,25 +53,11 @@ class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
-        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( dbManager, secureHasher );
-        return testRealm( importOptions, systemGraphOperations, securityLog, dbManager, config );
-    }
-
-    static SystemGraphRealm testRealm( SystemGraphOperations systemGraphOperations, SecurityLog securityLog, DatabaseManager dbManager, Config config )
-            throws Throwable
-    {
-        SystemGraphImportOptions importOptions = new ImportOptionsBuilder().build();
-        return testRealm( importOptions, systemGraphOperations, securityLog, dbManager, config );
-    }
-
-    private static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SystemGraphOperations systemGraphOperations, SecurityLog securityLog,
-            DatabaseManager dbManager, Config config ) throws Throwable
-    {
         EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( dbManager, config );
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( dbManager, systemGraphInitializer, securityLog, importOptions, secureHasher );
 
-        SystemGraphRealm realm = new SystemGraphRealm( systemGraphOperations, securityGraphInitializer, newRateLimitedAuthStrategy(), true, true );
+        SystemGraphRealm realm = new SystemGraphRealm( securityGraphInitializer, dbManager, secureHasher, newRateLimitedAuthStrategy(), true, true );
 
         realm.initialize();
         realm.start();
