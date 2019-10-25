@@ -53,15 +53,15 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
   var length: Int = _
 
   @ParamValues(
-    allowed = Array( "true", "false"),
-    base = Array("false")
+    allowed = Array("true", "false"),
+    base = Array("true", "false")
   )
   @Param(Array[String]())
   var auth: Boolean = _
 
   @ParamValues(
     allowed = Array("full", "white", "black"),
-    base = Array("full")
+    base = Array("full", "white", "black")
   )
   @Param(Array[String]())
   var user: String = _
