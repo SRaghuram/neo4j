@@ -25,7 +25,6 @@ import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.test.TestLabels;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.values.storable.Value;
 
@@ -33,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.space_filling_curve_max_bits;
+import static org.neo4j.test.TestLabels.LABEL_ONE;
 
 @ClusterExtension
 class IndexConfigCausalClusterIT
@@ -41,7 +41,6 @@ class IndexConfigCausalClusterIT
     private static ClusterFactory clusterFactory;
 
     private static Cluster cluster;
-    private final TestLabels label = TestLabels.LABEL_ONE;
     private final String prop = "prop";
     private IndexDescriptor index;
 
@@ -60,7 +59,7 @@ class IndexConfigCausalClusterIT
     @Test
     void indexConfigForSpatialIndexMustPropagateInCluster() throws Exception
     {
-        // Make sure spatial settings are indeed unqiue per core member.
+        // Make sure spatial settings are indeed unique per core member.
         Set<Integer> existingSettingsValues = new HashSet<>();
         for ( CoreClusterMember coreMember : cluster.coreMembers() )
         {
@@ -71,7 +70,7 @@ class IndexConfigCausalClusterIT
         // Create index and make sure it propagates to all cores.
         cluster.coreTx( ( db, tx ) ->
         {
-            IndexDefinitionImpl indexDefinition = (IndexDefinitionImpl) tx.schema().indexFor( label ).on( prop ).create();
+            IndexDefinitionImpl indexDefinition = (IndexDefinitionImpl) tx.schema().indexFor( LABEL_ONE ).on( prop ).create();
             index = indexDefinition.getIndexReference();
             tx.commit();
         } );
