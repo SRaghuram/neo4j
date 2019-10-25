@@ -25,6 +25,7 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
+import static com.neo4j.utils.StringUtils.lines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.kernel.api.exceptions.Status.Security.Forbidden;
@@ -111,7 +112,7 @@ class PermissionsEndToEndTest
     {
         try ( var tx = begin( adminDriver, "mega" ) )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(com.neo4j.utils.myPlusOne(gid -1))",
@@ -129,7 +130,7 @@ class PermissionsEndToEndTest
     {
         try ( var tx = begin( readerDriver, "mega" ) )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(com.neo4j.utils.myPlusOne(gid -1))",

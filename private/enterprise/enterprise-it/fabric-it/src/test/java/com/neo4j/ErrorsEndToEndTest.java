@@ -24,6 +24,7 @@ import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
+import static com.neo4j.utils.StringUtils.lines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.ArithmeticError;
@@ -62,7 +63,7 @@ class ErrorsEndToEndTest
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
-                "dbms.connector.bolt.enabled", "true");
+                "dbms.connector.bolt.enabled", "true" );
         var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config );
 
@@ -91,22 +92,22 @@ class ErrorsEndToEndTest
         try ( var tx = begin() )
         {
             tx.run( "Some Garbage" ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
-                 "Invalid input 'o': expected 'h/H', 't/T' or 'e/E' (line 1, column 2 (offset: 1))",
+            var expectedMessage = lines(
+                    "Invalid input 'o': expected 'h/H', 't/T' or 'e/E' (line 1, column 2 (offset: 1))",
                     "\"Some Garbage\"",
                     "  ^"
             );
 
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
 
         verifyCleanUp();
@@ -118,11 +119,11 @@ class ErrorsEndToEndTest
         try ( var tx = begin() )
         {
             tx.run( "UNWIND[1, 0] AS a RETURN b" ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
+            var expectedMessage = lines(
                     "Variable `b` not defined (line 1, column 26 (offset: 25))",
                     "\"UNWIND[1, 0] AS a RETURN b\"",
                     "                          ^"
@@ -130,12 +131,12 @@ class ErrorsEndToEndTest
 
             // even though this error is reported as Syntax error to the user,
             // it is created during semantic analysis phase of query processing
-            assertEquals(SyntaxError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SyntaxError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -144,18 +145,18 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            tx.run(  "CREATE USER me SET PASSWORD 'secret1234'" ).list();
+            tx.run( "CREATE USER me SET PASSWORD 'secret1234'" ).list();
             fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
             var expectedMessage = "This is an administration command and it should be executed against the system database: CREATE USER";
-            assertEquals(NotSystemDatabaseError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( NotSystemDatabaseError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -164,22 +165,22 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            tx.run(  "USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'" ).list();
+            tx.run( "USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'" ).list();
             fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
+            var expectedMessage = lines(
                     "Invalid input ' ': expected 'r/R' (line 1, column 31 (offset: 30))",
                     "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"",
                     "                               ^"
             );
-            assertEquals(SyntaxError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SyntaxError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -188,18 +189,18 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            tx.run(  "CREATE INDEX ON :Person(firstname)" ).list();
-            fail("Exception expected");
+            tx.run( "CREATE INDEX ON :Person(firstname)" ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
             var expectedMessage = "Commands not supported in Fabric database";
-            assertEquals(SemanticError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SemanticError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -208,22 +209,22 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            tx.run(  "USE mega.graph0 CREATE INDEX ON :Person(firstname)" ).list();
-            fail("Exception expected");
+            tx.run( "USE mega.graph0 CREATE INDEX ON :Person(firstname)" ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
+            var expectedMessage = lines(
                     "Invalid input 'N': expected 'p/P' (line 1, column 31 (offset: 30))",
                     "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"",
                     "                               ^"
             );
-            assertEquals(SyntaxError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SyntaxError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -232,29 +233,29 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "USE mega.graph0",
                     "UNWIND[1, 0] AS a",
                     "USE mega.graph1",
                     "RETURN a"
             );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
+            var expectedMessage = lines(
                     "USE can only appear at the beginning of a (sub-)query",
                     "\"USE mega.graph1\"",
                     "     ^"
             );
-            assertEquals(SyntaxError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SyntaxError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -263,28 +264,28 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND[1, 0] AS a",
                     "USE mega.graph0",
                     "RETURN a"
             );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
+            var expectedMessage = lines(
                     "USE can only appear at the beginning of a (sub-)query",
                     "\"USE mega.graph0\"",
                     "     ^"
             );
-            assertEquals(SyntaxError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SyntaxError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -293,23 +294,23 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "USE mega.graph2",
                     "UNWIND[1, 0] AS a",
                     "RETURN a"
             );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(EntityNotFound.code().serialize(), e.code());
-            assertEquals( "Catalog entry not found: mega.graph2", e.getMessage());
+            assertEquals( EntityNotFound.code().serialize(), e.code() );
+            assertEquals( "Catalog entry not found: mega.graph2", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -318,7 +319,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND [0, 1] AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
@@ -326,19 +327,19 @@ class ErrorsEndToEndTest
                     "  RETURN c",
                     "}",
                     "WITH *",
-                    "RETURN c.name AS name");
+                    "RETURN c.name AS name" );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(EntityNotFound.code().serialize(), e.code());
-            assertEquals("Graph not found: 1", e.getMessage());
+            assertEquals( EntityNotFound.code().serialize(), e.code() );
+            assertEquals( "Graph not found: 1", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -347,7 +348,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND [1, 0] AS a",
                     "CALL {",
                     "  USE mega.graph((1 - a)/a)",
@@ -355,19 +356,19 @@ class ErrorsEndToEndTest
                     "  RETURN c",
                     "}",
                     "WITH *",
-                    "RETURN c.name AS name");
+                    "RETURN c.name AS name" );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(ArithmeticError.code().serialize(), e.code());
-            assertEquals("/ by zero", e.getMessage());
+            assertEquals( ArithmeticError.code().serialize(), e.code() );
+            assertEquals( "/ by zero", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -379,16 +380,16 @@ class ErrorsEndToEndTest
             var query = "RETURN $a";
 
             tx.run( query ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(ParameterMissing.code().serialize(), e.code());
-            assertEquals("Expected parameter(s): a", e.getMessage());
+            assertEquals( ParameterMissing.code().serialize(), e.code() );
+            assertEquals( "Expected parameter(s): a", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -400,16 +401,16 @@ class ErrorsEndToEndTest
             var query = "UNWIND[1, 0] AS a RETURN 1/a AS aa";
 
             tx.run( query ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(ArithmeticError.code().serialize(), e.code());
-            assertEquals("/ by zero", e.getMessage());
+            assertEquals( ArithmeticError.code().serialize(), e.code() );
+            assertEquals( "/ by zero", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -421,21 +422,21 @@ class ErrorsEndToEndTest
             var query = "USE mega.graph(somewhere.nonExistentFunction()) RETURN 1";
 
             tx.run( query ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            var expectedMessage = String.join(  "\n",
+            var expectedMessage = lines(
                     "Unknown function 'somewhere.nonExistentFunction'",
                     "\"USE mega.graph(somewhere.nonExistentFunction()) RETURN 1\"",
                     "                ^"
             );
-            assertEquals(SyntaxError.code().serialize(), e.code());
-            assertEquals(expectedMessage, e.getMessage());
+            assertEquals( SyntaxError.code().serialize(), e.code() );
+            assertEquals( expectedMessage, e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -447,16 +448,16 @@ class ErrorsEndToEndTest
             var query = "USE mega.graph(0) RETURN $a";
 
             tx.run( query ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(ParameterMissing.code().serialize(), e.code());
-            assertEquals("Expected parameter(s): a", e.getMessage());
+            assertEquals( ParameterMissing.code().serialize(), e.code() );
+            assertEquals( "Expected parameter(s): a", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -468,7 +469,7 @@ class ErrorsEndToEndTest
             var query = "USE mega.graph(0) UNWIND[1, 0] AS a RETURN 1/a AS aa";
 
             tx.run( query ).list();
-            fail("Exception expected");
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
@@ -477,7 +478,7 @@ class ErrorsEndToEndTest
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -486,25 +487,25 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
                     "  RETURN $a",
                     "}",
-                    "RETURN *");
+                    "RETURN *" );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
-            assertEquals(ParameterMissing.code().serialize(), e.code());
-            assertEquals( "Expected parameter(s): a", e.getMessage());
+            assertEquals( ParameterMissing.code().serialize(), e.code() );
+            assertEquals( "Expected parameter(s): a", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 
@@ -513,7 +514,7 @@ class ErrorsEndToEndTest
     {
         try ( var tx = begin() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "UNWIND [0] AS gid",
                     "CALL {",
                     "  USE mega.graph(gid)",
@@ -522,19 +523,19 @@ class ErrorsEndToEndTest
                     "  RETURN c, 1/a AS aa",
                     "}",
                     "WITH *",
-                    "RETURN c.name AS name, aa");
+                    "RETURN c.name AS name, aa" );
 
-            tx.run(  query ).list();
-            fail("Exception expected");
+            tx.run( query ).list();
+            fail( "Exception expected" );
         }
         catch ( ClientException e )
         {
             assertEquals( ArithmeticError.code().serialize(), e.code() );
-            assertEquals("/ by zero", e.getMessage());
+            assertEquals( "/ by zero", e.getMessage() );
         }
         catch ( Exception e )
         {
-            fail("Unexpected exception: " + e);
+            fail( "Unexpected exception: " + e );
         }
     }
 

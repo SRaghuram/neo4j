@@ -44,6 +44,7 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
+import static com.neo4j.utils.StringUtils.lines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -158,7 +159,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "UNWIND [0, 1] AS gid",
                 "CALL {",
                 "  USE mega.graph(gid)",
@@ -182,15 +183,15 @@ class TransactionIntegrationTest
                 "  RETURN n",
                 "}",
                 "RETURN n"
-            );
+        );
 
-        var records = Flux.from(tx.run( statement ).records()).collectList().block();
-        assertEquals(1, records.size());
+        var records = Flux.from( tx.run( statement ).records() ).collectList().block();
+        assertEquals( 1, records.size() );
         var node = records.get( 0 ).get( 0 ).asNode();
         assertEquals( "someValue", node.get( "someProperty" ).asString() );
 
-        var records2 = Flux.from(tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records()).collectList().block();
-        assertEquals(1, records2.size());
+        var records2 = Flux.from( tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records() ).collectList().block();
+        assertEquals( 1, records2.size() );
         assertEquals( "someValue", records2.get( 0 ).get( 0 ).asString() );
 
         commit( tx );
@@ -204,7 +205,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -224,8 +225,8 @@ class TransactionIntegrationTest
                 "RETURN count(n) AS count"
         );
 
-        var records = Flux.from(tx.run( statement ).records()).collectList().block();
-        assertEquals(1, records.size());
+        var records = Flux.from( tx.run( statement ).records() ).collectList().block();
+        assertEquals( 1, records.size() );
         assertEquals( 100, records.get( 0 ).get( 0 ).asInt() );
 
         commit( tx );
@@ -239,7 +240,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  UNWIND range(0, 100) AS i",
@@ -271,7 +272,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  UNWIND range(0, 100) AS i",
@@ -309,7 +310,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -335,7 +336,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -361,7 +362,7 @@ class TransactionIntegrationTest
     {
         var tx = begin();
 
-        var statement = String.join( "\n",
+        var statement = lines(
                 "CALL {",
                 "  USE mega.graph(0)",
                 "  CREATE ({someProperty: 'someValue'})",
@@ -380,8 +381,8 @@ class TransactionIntegrationTest
         assertTrue( subscriber.latch.await( 1, TimeUnit.SECONDS ) );
 
         // the result stream is canceled, but the transaction should be still open with all its data
-        var records = Flux.from(tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records()).collectList().block();
-        assertEquals(1, records.size());
+        var records = Flux.from( tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records() ).collectList().block();
+        assertEquals( 1, records.size() );
         assertEquals( "someValue", records.get( 0 ).get( 0 ).asString() );
 
         commit( tx );
@@ -417,8 +418,8 @@ class TransactionIntegrationTest
     private void verifyNoOpenTransactions()
     {
         verifyNoFabricTransactions();
-        verifyNoRemoteTransactions(remote0);
-        verifyNoRemoteTransactions(remote1);
+        verifyNoRemoteTransactions( remote0 );
+        verifyNoRemoteTransactions( remote1 );
     }
 
     private void verifyNoFabricTransactions()

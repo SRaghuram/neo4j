@@ -26,6 +26,7 @@ import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
+import static com.neo4j.utils.StringUtils.lines;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -57,7 +58,7 @@ class LocalQueryEndToEndTest
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
-                "dbms.connector.bolt.enabled", "true");
+                "dbms.connector.bolt.enabled", "true" );
         var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config );
 
@@ -90,7 +91,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -98,7 +99,7 @@ class LocalQueryEndToEndTest
                     "}",
                     "WITH *",
                     "WHERE e.name = 'Bob' AND r.since > date('2019-01-30')",
-                    "RETURN c.name AS name");
+                    "RETURN c.name AS name" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -118,7 +119,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -126,7 +127,7 @@ class LocalQueryEndToEndTest
                     "}",
                     "WITH *",
                     "WHERE r.since >= date('2019-02-01') AND r.since < date('2019-03-01')",
-                    "RETURN c.name AS name");
+                    "RETURN c.name AS name" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -145,7 +146,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
@@ -153,7 +154,7 @@ class LocalQueryEndToEndTest
                     "}",
                     "WITH *",
                     "WHERE e.name <> 'Carrie' AND r.since > date('2019-01-30')",
-                    "RETURN e.name AS name, r.since AS since");
+                    "RETURN e.name AS name, r.since AS since" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -172,7 +173,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (x)",
@@ -181,7 +182,7 @@ class LocalQueryEndToEndTest
                     "WITH *",
                     "WHERE x:Employee ",
                     "RETURN x.name AS name",
-                    "ORDER BY name");
+                    "ORDER BY name" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -200,7 +201,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (n)",
@@ -208,7 +209,7 @@ class LocalQueryEndToEndTest
                     "}",
                     "WITH *",
                     "WHERE NOT EXISTS(n.age) ",
-                    "RETURN n.name AS name");
+                    "RETURN n.name AS name" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -227,7 +228,7 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (n)-[r]->()",
@@ -235,7 +236,7 @@ class LocalQueryEndToEndTest
                     "}",
                     "WITH *",
                     "WHERE EXISTS(r.dummyMarker) ",
-                    "RETURN n.name AS name");
+                    "RETURN n.name AS name" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -254,14 +255,14 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
                     "WITH *",
-                    "RETURN keys(c) AS keys");
+                    "RETURN keys(c) AS keys" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
@@ -283,14 +284,14 @@ class LocalQueryEndToEndTest
 
         try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
         {
-            var query = String.join( "\n",
+            var query = lines(
                     "CALL {",
                     "  USE mega.graph(0)",
                     "  MATCH (e:Employee)-[r:RESPONSIBLE_FOR]->(c:Customer)",
                     "  RETURN e, r, c",
                     "}",
                     "WITH *",
-                    "RETURN keys(r) AS keys");
+                    "RETURN keys(r) AS keys" );
 
             List<Record> records = tx.run( query ).list();
             r = records.stream()
