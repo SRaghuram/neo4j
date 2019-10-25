@@ -31,6 +31,7 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Version;
 import org.apache.commons.compress.utils.IOUtils;
 import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.tooling.ImportTool;
@@ -214,7 +215,7 @@ public class Main
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
     {
         // trim anything like '-M01' from end of Neo4j version string
-        neo4jVersion = BranchAndVersion.toSanitizeVersion( NEO4J, neo4jVersion );
+        neo4jVersion = Version.toSanitizeVersion( neo4jVersion );
         if ( !BranchAndVersion.isPersonalBranch( NEO4J, neo4jBranchOwner ) )
         {
             BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );

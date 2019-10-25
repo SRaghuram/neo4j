@@ -14,7 +14,7 @@ public class Version
 
     public Version( String versionString )
     {
-        String[] split = versionString.split( "[\\.-]" );
+        String[] split = versionString.split( "[.-]" );
         if ( split.length != 3 && split.length != 4 )
         {
             throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
@@ -54,6 +54,11 @@ public class Version
     public String fullVersion()
     {
         return String.format( "%s.%s.%s-%s", mainVersion, minorVersion, patchVersion, preReleaseBranch );
+    }
+
+    public static String toSanitizeVersion( String version )
+    {
+        return new Version( version ).patchVersion();
     }
 
     @Override
