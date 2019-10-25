@@ -10,24 +10,30 @@ public class Version
     private String mainVersion;
     private String minorVersion;
     private String patchVersion;
+    private String preReleaseBranch;
 
     public Version( String versionString )
     {
-        String[] split = versionString.split( "\\." );
-        if ( split.length != 3 )
+        String[] split = versionString.split( "[\\.-]" );
+        if ( split.length != 3 && split.length != 4 )
         {
             throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
         }
-        for ( String s : split )
+        for ( int i = 0; i < 3; i++ )
         {
-            if ( !s.matches( "[0-9]+" ) )
+            String current = split[i];
+            if ( !current.matches( "[0-9]+" ) )
             {
-                throw new IllegalArgumentException( String.format( "Neo4j version should be numbers, but found %s", s ) );
+                throw new IllegalArgumentException( String.format( "Neo4j version should be numbers, but found %s", current ) );
             }
         }
         mainVersion = split[0];
         minorVersion = split[1];
         patchVersion = split[2];
+        if ( split.length > 3 )
+        {
+            preReleaseBranch = split[3];
+        }
     }
 
     public String mainVersion()
@@ -45,9 +51,14 @@ public class Version
         return String.format( "%s.%s.%s", mainVersion, minorVersion, patchVersion );
     }
 
+    public String fullVersion()
+    {
+        return String.format( "%s.%s.%s-%s", mainVersion, minorVersion, patchVersion, preReleaseBranch );
+    }
+
     @Override
     public String toString()
     {
-        return patchVersion();
+        return fullVersion();
     }
 }
