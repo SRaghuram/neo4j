@@ -13,19 +13,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
-import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -40,7 +38,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 class SystemGraphCachingTest
 {
     private GraphDatabaseService database;
-    private TestQueryExecutor systemGraphExecutor;
+    private TestSystemGraphOperations graphOperations;
     private SystemGraphRealm realm;
 
     @Inject
@@ -58,11 +56,10 @@ class SystemGraphCachingTest
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
         DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
-        systemGraphExecutor = new TestQueryExecutor( databaseManager );
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
-        realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(),
-                securityLog, databaseManager, systemGraphExecutor, Config.defaults() );
+        graphOperations = new TestSystemGraphOperations( databaseManager, new SecureHasher() );
+        realm = TestSystemGraphRealm.testRealm( graphOperations, securityLog, databaseManager, Config.defaults() );
     }
 
     @AfterEach
@@ -79,20 +76,20 @@ class SystemGraphCachingTest
     void shouldCachePrivilegeForRole()
     {
         // Given
-        systemGraphExecutor.takeAccessFlag();
+        graphOperations.takeAccessFlag();
         realm.clearCacheForRoles();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
 
         // Then
-        assertTrue( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for role in system graph" );
+        assertTrue( graphOperations.takeAccessFlag(), "Should have looked up privilege for role in system graph" );
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
 
         // Then
-        assertFalse( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for role in cache" );
+        assertFalse( graphOperations.takeAccessFlag(), "Should have looked up privilege for role in cache" );
     }
 
     @Test
@@ -101,28 +98,28 @@ class SystemGraphCachingTest
         // Given
         realm.getPrivilegesForRoles( Set.of( READER ) );
         realm.clearCacheForRoles();
-        systemGraphExecutor.takeAccessFlag();
+        graphOperations.takeAccessFlag();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER, EDITOR ) );
 
         // Then
-        assertTrue( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for roles in system graph" );
+        assertTrue( graphOperations.takeAccessFlag(), "Should have looked up privilege for roles in system graph" );
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER, EDITOR ) );
 
         // Then
-        assertFalse( systemGraphExecutor.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
+        assertFalse( graphOperations.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
     }
 
-    private static class TestQueryExecutor extends SystemGraphQueryExecutor
+    private static class TestSystemGraphOperations extends SystemGraphOperations
     {
         private boolean systemAccess;
 
-        TestQueryExecutor( DatabaseManager<?> databaseManager )
+        TestSystemGraphOperations(  DatabaseManager<?> databaseManager, SecureHasher secureHasher )
         {
-            super( databaseManager );
+            super( databaseManager, secureHasher );
         }
 
         boolean takeAccessFlag()
@@ -133,10 +130,10 @@ class SystemGraphCachingTest
         }
 
         @Override
-        public void executeQuery( String query, Map<String,Object> params, ErrorPreservingQuerySubscriber subscriber )
+        protected GraphDatabaseService getSystemDb()
         {
             systemAccess = true;
-            super.executeQuery( query, params, subscriber );
+            return super.getSystemDb();
         }
     }
 }

@@ -12,34 +12,34 @@ import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Stream;
 
 import org.neo4j.cypher.internal.security.SecureHasher;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.server.security.systemgraph.BasicSystemGraphOperations;
-import org.neo4j.server.security.systemgraph.ErrorPreservingQuerySubscriber;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
-import org.neo4j.values.AnyValue;
-import org.neo4j.values.storable.BooleanValue;
-import org.neo4j.values.storable.TextValue;
-import org.neo4j.values.virtual.NodeValue;
 
-import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.values.storable.Values.NO_VALUE;
+import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 public class SystemGraphOperations extends BasicSystemGraphOperations
 {
     private com.github.benmanes.caffeine.cache.Cache<String,Set<ResourcePrivilege>> privilegeCache;
 
-    public SystemGraphOperations( QueryExecutor queryExecutor, SecureHasher secureHasher )
+    public SystemGraphOperations( DatabaseManager<?> databaseManager, SecureHasher secureHasher )
     {
-        super( queryExecutor, secureHasher );
+        super( databaseManager, secureHasher );
         Caffeine<Object,Object> builder = Caffeine.newBuilder()
                 .maximumSize( 10000 )
                 .executor( ForkJoinPool.commonPool() )
@@ -49,72 +49,33 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
     AuthorizationInfo doGetAuthorizationInfo( String username )
     {
-        MutableBoolean existingUser = new MutableBoolean( false );
-        MutableBoolean passwordChangeRequired = new MutableBoolean( false );
-        MutableBoolean suspended = new MutableBoolean( false );
+        boolean existingUser = false;
+        boolean passwordChangeRequired = false;
+        boolean suspended = false;
         Set<String> roleNames = new TreeSet<>();
 
-        String query =
-                "MATCH (u:User {name: $username}) " +
-                "OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role) " +
-                "RETURN u.passwordChangeRequired, u.suspended, r.name";
-
-        Map<String,Object> params = map( "username", username );
-
-        final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
+        try ( Transaction tx = getSystemDb().beginTx() )
         {
-            private int currentOffset = -1;
+            Node userNode = tx.findNode( Label.label( "User" ), "name", username );
 
-            @Override
-            public void onRecord()
+            if ( userNode != null )
             {
-                currentOffset = 0;
+                existingUser = true;
+                passwordChangeRequired = (boolean) userNode.getProperty( "passwordChangeRequired" );
+                suspended = (boolean) userNode.getProperty( "suspended" );
+
+                final Iterable<Relationship> rels = userNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "HAS_ROLE" ) );
+                rels.forEach( rel -> roleNames.add( (String) rel.getEndNode().getProperty( "name" ) ) );
             }
+            tx.commit();
+        }
 
-            @Override
-            public void onRecordCompleted()
-            {
-                currentOffset = -1;
-            }
-
-            @Override
-            public void onField( AnyValue value )
-            {
-                try
-                {
-                    switch ( currentOffset )
-                    {
-                    case 0://u.passwordChangeRequired
-                        existingUser.setTrue();
-                        passwordChangeRequired.setValue( ((BooleanValue) value).booleanValue() );
-                        break;
-                    case 1://u.suspended
-                        suspended.setValue( ((BooleanValue) value).booleanValue() );
-                        break;
-                    case 2://r.name
-                        if ( value != NO_VALUE )
-                        {
-                            roleNames.add( ((TextValue) value).stringValue() );
-                        }
-                        break;
-                    default://nothing to do
-                    }
-                }
-                finally
-                {
-                    currentOffset++;
-                }
-            }
-        };
-
-        queryExecutor.executeQuery( query, params, subscriber );
-
-        if ( existingUser.isFalse() )
+        if ( !existingUser )
         {
             return null;
         }
 
-        if ( passwordChangeRequired.isTrue() || suspended.isTrue() )
+        if ( passwordChangeRequired || suspended )
         {
             return new SimpleAuthorizationInfo();
         }
@@ -143,85 +104,63 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
         if ( lookupPrivileges )
         {
-            String query =
-                    "MATCH (r:Role)-[rel]->(p:Privilege)-[:SCOPE]->(segment:Segment), " +
-                            "(p)-[:APPLIES_TO]->(res) " +
-                            "WHERE r.name IN $roles " +
-                            "MATCH (segment)-[:FOR]->(db) " +
-                            "MATCH (segment)-[:QUALIFIED]->(q) " +
-                            "RETURN r.name, db.name, db, p.action, res, q, type(rel) as grant";
 
-            final ErrorPreservingQuerySubscriber subscriber = new ErrorPreservingQuerySubscriber()
+            try ( Transaction tx = getSystemDb().beginTx() )
             {
-                private AnyValue[] fields;
-                private int currentOffset = -1;
-
-                @Override
-                public void onResult( int numberOfFields )
+                final Stream<Node> roleStream =
+                        tx.findNodes( Label.label( "Role" ) ).stream().filter( roleNode -> roles.contains( roleNode.getProperty( "name" ).toString() ) );
+                roleStream.forEach( roleNode ->
                 {
-                    this.fields = new AnyValue[numberOfFields];
-                }
-
-                @Override
-                public void onField( AnyValue value )
-                {
-                    fields[currentOffset++] = value;
-                }
-
-                @Override
-                public void onRecord()
-                {
-                    currentOffset = 0;
-                }
-
-                @Override
-                public void onRecordCompleted()
-                {
-                    currentOffset = -1;
-                    String roleName = ((TextValue) fields[0]).stringValue();
+                    String roleName = (String) roleNode.getProperty( "name" );
                     Set<ResourcePrivilege> rolePrivileges = resultsPerRole.computeIfAbsent( roleName, role -> new HashSet<>() );
 
-                    AnyValue dbNameValue = fields[1];
-                    NodeValue database = (NodeValue) fields[2];
-                    String actionValue = ((TextValue) fields[3]).stringValue();
-                    NodeValue resource = (NodeValue) fields[4];
-                    NodeValue qualifier = (NodeValue) fields[5];
-                    String type = ((TextValue) fields[6]).stringValue();
-
-                    try
+                    roleNode.getRelationships( Direction.OUTGOING ).forEach( relToPriv ->
                     {
-                        ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( type );
-                        PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, actionValue );
-                        privilegeBuilder.withinScope( qualifier ).onResource( resource );
-
-                        assert database.labels().length() == 1;
-                        switch ( database.labels().stringValue( 0 ) )
+                        try
                         {
-                        case "Database":
-                            String dbName = ((TextValue) dbNameValue).stringValue();
-                            privilegeBuilder.forDatabase( dbName );
-                            break;
-                        case "DatabaseAll":
-                            privilegeBuilder.forAllDatabases();
-                            break;
-                        case "DeletedDatabase":
-                            //give up
-                            return;
-                        default:
-                            throw new IllegalStateException(
-                                    "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + database.labels() );
+                            final Node privilege = relToPriv.getEndNode();
+                            String grantOrDeny = relToPriv.getType().name();
+                            String action = (String) privilege.getProperty( "action" );
+
+                            Node resourceNode =
+                                    single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "APPLIES_TO" ) ) ).getEndNode();
+                            Node segmentNode = single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "SCOPE" ) ) ).getEndNode();
+                            Node dbNode = single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "FOR" ) ) ).getEndNode();
+                            String dbName = (String) dbNode.getProperty( "name" );
+                            Node qualifierNode =
+                                    single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "QUALIFIED" ) ) ).getEndNode();
+
+                            ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( grantOrDeny );
+                            PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, action );
+
+                            privilegeBuilder.withinScope( qualifierNode ).onResource( resourceNode );
+
+                            String dbLabel = single( dbNode.getLabels() ).name();
+                            switch ( dbLabel )
+                            {
+                            case "Database":
+                                privilegeBuilder.forDatabase( dbName );
+                                break;
+                            case "DatabaseAll":
+                                privilegeBuilder.forAllDatabases();
+                                break;
+                            case "DeletedDatabase":
+                                //give up
+                                return;
+                            default:
+                                throw new IllegalStateException( "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + dbLabel );
+                            }
+
+                            rolePrivileges.add( privilegeBuilder.build() );
                         }
-
-                        rolePrivileges.add( privilegeBuilder.build() );
-                    }
-                    catch ( InvalidArgumentsException ie )
-                    {
-                        throw new IllegalStateException( "Failed to authorize", ie );
-                    }
-                }
-            };
-
-            queryExecutor.executeQuery( query, Collections.singletonMap( "roles", roles ), subscriber );
+                        catch ( InvalidArgumentsException ie )
+                        {
+                            throw new IllegalStateException( "Failed to authorize", ie );
+                        }
+                    } );
+                } );
+                tx.commit();
+            }
         }
 
         if ( !resultsPerRole.isEmpty() )

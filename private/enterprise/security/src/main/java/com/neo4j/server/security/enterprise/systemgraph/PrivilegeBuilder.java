@@ -12,11 +12,14 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.Segment;
 
+import java.util.NoSuchElementException;
+
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.values.storable.StringValue;
-import org.neo4j.values.storable.TextValue;
-import org.neo4j.values.virtual.NodeValue;
+
+import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 class PrivilegeBuilder
 {
@@ -45,44 +48,45 @@ class PrivilegeBuilder
         return this;
     }
 
-    PrivilegeBuilder withinScope( NodeValue qualifierNode )
+    PrivilegeBuilder withinScope( Node qualifierNode )
     {
-        if ( qualifierNode.labels().length() != 1 )
+        Label qualifierType;
+        try
         {
-            throw new IllegalStateException(
-                    "Privilege segments require qualifier nodes with exactly one label, but this qualifier has: " + qualifierNode.labels().prettyPrint() );
+            qualifierType = single( qualifierNode.getLabels() );
         }
-        qualifierNode.labels().forEach( qualifierType ->
+        catch ( NoSuchElementException e )
         {
-            switch ( ((StringValue) qualifierType).stringValue() )
-            {
-            case "DatabaseQualifier":
-                this.segment = DatabaseSegment.ALL;
-                break;
-            case "LabelQualifier":
-                String label = ((TextValue) qualifierNode.properties().get( "label" )).stringValue();
-                this.segment = new LabelSegment( label );
-                break;
-            case "LabelQualifierAll":
-                this.segment = LabelSegment.ALL;
-                break;
-            case "RelationshipQualifier":
-                String relType = ((TextValue) qualifierNode.properties().get( "label" )).stringValue();
-                this.segment = new RelTypeSegment( relType );
-                break;
-            case "RelationshipQualifierAll":
-                this.segment = RelTypeSegment.ALL;
-                break;
-            default:
-                throw new IllegalArgumentException( "Unknown privilege qualifier type: " + qualifierType.getTypeName() );
-            }
-        } );
+            throw new IllegalStateException( "Privilege segments require qualifier nodes with exactly one label. " + e.getMessage() );
+        }
+        switch ( qualifierType.name() )
+        {
+        case "DatabaseQualifier":
+            this.segment = DatabaseSegment.ALL;
+            break;
+        case "LabelQualifier":
+            String label = qualifierNode.getProperty( "label" ).toString();
+            this.segment = new LabelSegment( label );
+            break;
+        case "LabelQualifierAll":
+            this.segment = LabelSegment.ALL;
+            break;
+        case "RelationshipQualifier":
+            String relType = qualifierNode.getProperty( "label" ).toString();
+            this.segment = new RelTypeSegment( relType );
+            break;
+        case "RelationshipQualifierAll":
+            this.segment = RelTypeSegment.ALL;
+            break;
+        default:
+            throw new IllegalArgumentException( "Unknown privilege qualifier type: " + qualifierType.name() );
+        }
         return this;
     }
 
-    PrivilegeBuilder onResource( NodeValue resource ) throws InvalidArgumentsException
+    PrivilegeBuilder onResource( Node resourceNode ) throws InvalidArgumentsException
     {
-        String type = ((TextValue) resource.properties().get( "type" )).stringValue();
+        String type = resourceNode.getProperty( "type" ).toString();
         Resource.Type resourceType = asResourceType( type );
         switch ( resourceType )
         {
@@ -93,15 +97,15 @@ class PrivilegeBuilder
             this.resource = new Resource.GraphResource();
             break;
         case PROPERTY:
-            String propertyKey = ((TextValue) resource.properties().get( "arg1" )).stringValue();
+            String propertyKey = resourceNode.getProperty( "arg1" ).toString();
             this.resource = new Resource.PropertyResource( propertyKey );
             break;
         case ALL_PROPERTIES:
             this.resource = new Resource.AllPropertiesResource();
             break;
         case PROCEDURE:
-            String namespace = ((TextValue) resource.properties().get( "arg1" )).stringValue();
-            String procedureName = ((TextValue) resource.properties().get( "arg2" )).stringValue();
+            String namespace = resourceNode.getProperty( "arg1" ).toString();
+            String procedureName = resourceNode.getProperty( "arg2" ).toString();
             this.resource = new Resource.ProcedureResource( namespace, procedureName );
             break;
         default:

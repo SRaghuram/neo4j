@@ -66,7 +66,6 @@ import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
-import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 
@@ -268,10 +267,8 @@ public class EnterpriseSecurityModule extends SecurityModule
 
     private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
     {
-        SystemGraphQueryExecutor queryExecutor = new SystemGraphQueryExecutor( databaseManager );
-
         SecureHasher secureHasher = new SecureHasher();
-        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( databaseManager, secureHasher );
 
         SecurityGraphInitializer securityGraphInitializer =
                 isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog,

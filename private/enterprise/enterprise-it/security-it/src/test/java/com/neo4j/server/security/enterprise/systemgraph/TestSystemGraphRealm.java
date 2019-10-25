@@ -18,12 +18,9 @@ import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.QueryExecutor;
-import org.neo4j.server.security.systemgraph.SystemGraphQueryExecutor;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.mockito.Mockito.mock;
@@ -57,15 +54,20 @@ class TestSystemGraphRealm extends TestBasicSystemGraphRealm
     static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, TestDatabaseManager dbManager, Config config )
             throws Throwable
     {
-        var executor = new SystemGraphQueryExecutor( dbManager );
-        return testRealm( importOptions, securityLog, dbManager, executor, config );
+        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( dbManager, secureHasher );
+        return testRealm( importOptions, systemGraphOperations, securityLog, dbManager, config );
     }
 
-    static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager dbManager, QueryExecutor executor,
-            Config config ) throws Throwable
+    static SystemGraphRealm testRealm( SystemGraphOperations systemGraphOperations, SecurityLog securityLog, DatabaseManager dbManager, Config config )
+            throws Throwable
     {
+        SystemGraphImportOptions importOptions = new ImportOptionsBuilder().build();
+        return testRealm( importOptions, systemGraphOperations, securityLog, dbManager, config );
+    }
 
-        SystemGraphOperations systemGraphOperations = new SystemGraphOperations( executor, secureHasher );
+    private static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SystemGraphOperations systemGraphOperations, SecurityLog securityLog,
+            DatabaseManager dbManager, Config config ) throws Throwable
+    {
         EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( dbManager, config );
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( dbManager, systemGraphInitializer, securityLog, importOptions, secureHasher );
