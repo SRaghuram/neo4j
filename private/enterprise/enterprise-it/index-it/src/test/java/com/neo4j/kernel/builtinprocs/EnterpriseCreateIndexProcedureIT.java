@@ -139,7 +139,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, null, "Person", "name" ) );
 
         // then
-        assertThat( e.getMessage(), containsString( "Could not create index with specified index provider being null" ) );
+        assertThat( e.getMessage(), containsString( "Tried to get index provider with name null whereas available providers in this session being" ) );
         commit();
     }
 
@@ -240,7 +240,8 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
                                 stringOrNoValue( name ), // name
                                 VirtualValues.list( stringValue( label ) ), // labels
                                 VirtualValues.list( propertiesAsValues ), // properties
-                                stringOrNoValue( specifiedProvider ) // providerName
+                                stringOrNoValue( specifiedProvider ), // providerName
+                                VirtualValues.map( new String[0], new AnyValue[0] ) // config
                         },
                 ProcedureCallContext.EMPTY );
     }
