@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
@@ -15,10 +16,10 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ConcurrentArgumentStateMap
   */
 class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                                   factory: ArgumentStateFactory[STATE])
-  extends AbstractSingletonArgumentStateMap[STATE, ConcurrentStateController[STATE]] {
+  extends AbstractSingletonArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
 
   @volatile
-  override protected var controller: ConcurrentStateController[STATE] = _
+  override protected var controller: AbstractArgumentStateMap.StateController[STATE] = _
 
   @volatile
   override protected var hasController = true
@@ -28,6 +29,11 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
-                                            argumentRowIdsForReducers: Array[Long]): ConcurrentStateController[STATE] =
-    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), factory.completeOnConstruction)
+                                            argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
+    if (factory.completeOnConstruction) {
+      new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    } else {
+      new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    }
+  }
 }

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.StandardArgumentStateMap.StandardStateController
 
@@ -15,9 +16,9 @@ import org.neo4j.cypher.internal.runtime.morsel.state.StandardArgumentStateMap.S
   */
 class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                                 factory: ArgumentStateFactory[STATE])
-  extends AbstractSingletonArgumentStateMap[STATE, StandardStateController[STATE]] {
+  extends AbstractSingletonArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
 
-  override protected var controller: StandardStateController[STATE] = _
+  override protected var controller: AbstractArgumentStateMap.StateController[STATE] = _
 
   override protected var hasController = true
 
@@ -25,6 +26,11 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
-                                            argumentRowIdsForReducers: Array[Long]): StandardStateController[STATE] =
-    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), factory.completeOnConstruction)
+                                            argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
+    if (factory.completeOnConstruction) {
+      new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    } else {
+      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    }
+  }
 }

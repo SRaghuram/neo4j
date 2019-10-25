@@ -202,4 +202,25 @@ object AbstractArgumentStateMap {
       */
     def tryTake(): Boolean
   }
+
+  /**
+   * A state controller that does not allow any mutating.
+   */
+  class ImmutableStateController[STATE <: ArgumentState](override val state: STATE)
+    extends AbstractArgumentStateMap.StateController[STATE] {
+
+    override def increment(): Long = throw new IllegalStateException(s"Cannot mutate ${this.getClass.getSimpleName}")
+
+    override def decrement(): Long = throw new IllegalStateException(s"Cannot mutate ${this.getClass.getSimpleName}")
+
+    override def tryTake(): Boolean = throw new IllegalStateException(s"Cannot mutate ${this.getClass.getSimpleName}")
+
+    override def take(): Boolean = throw new IllegalStateException(s"Cannot mutate ${this.getClass.getSimpleName}")
+
+    override def isZero: Boolean = true
+
+    override def toString: String = {
+      s"[immutable, state: $state]"
+    }
+  }
 }

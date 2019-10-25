@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.StandardArgumentStateMap.StandardStateController
 
@@ -16,17 +17,21 @@ import org.neo4j.cypher.internal.runtime.morsel.state.StandardArgumentStateMap.S
 class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                        val argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[STATE])
-  extends AbstractArgumentStateMap[STATE, StandardStateController[STATE]] {
+  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
 
-  override protected val controllers = new java.util.HashMap[Long, StandardStateController[STATE]]()
+  override protected val controllers = new java.util.HashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
 
   override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
-                                            argumentRowIdsForReducers: Array[Long]): StandardStateController[STATE] =
-    new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers),
-                                factory.completeOnConstruction)
+                                            argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
+    if (factory.completeOnConstruction) {
+      new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    } else {
+      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    }
+  }
 }
 
 object StandardArgumentStateMap {
@@ -34,10 +39,10 @@ object StandardArgumentStateMap {
  /**
   * Controller which knows when an [[ArgumentState]] is complete.
   */
-  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE, completeOnConstruction: Boolean)
+  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
-    private var _count: Long = if (completeOnConstruction) 0 else 1
+    private var _count: Long = 1
 
     override def isZero: Boolean = _count == 0
 

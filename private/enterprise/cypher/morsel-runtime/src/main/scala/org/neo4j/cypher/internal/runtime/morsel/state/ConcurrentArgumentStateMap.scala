@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.morsel.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.morsel.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.morsel.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.morsel.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
@@ -18,17 +19,22 @@ import org.neo4j.cypher.internal.runtime.morsel.state.ConcurrentArgumentStateMap
 class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
                                                          factory: ArgumentStateFactory[STATE])
-  extends AbstractArgumentStateMap[STATE, ConcurrentStateController[STATE]] {
+  extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
 
-  override protected val controllers = new java.util.concurrent.ConcurrentHashMap[Long, ConcurrentStateController[STATE]]()
+  override protected val controllers = new java.util.concurrent.ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
 
   @volatile
   override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselExecutionContext,
-                                            argumentRowIdsForReducers: Array[Long]): ConcurrentStateController[STATE] =
-    new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), factory.completeOnConstruction)
+                                            argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
+    if (factory.completeOnConstruction) {
+      new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    } else {
+      new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    }
+  }
 }
 
 object ConcurrentArgumentStateMap {
@@ -41,25 +47,17 @@ object ConcurrentArgumentStateMap {
     * Controller which knows when an [[ArgumentState]] is complete,
     * and protects it from concurrent access.
     */
-  private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE, completeOnConstruction: Boolean)
+  private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
-    private val count = new AtomicLong(if (completeOnConstruction) 0 else 1)
+    private val count = new AtomicLong(1)
 
     override def increment(): Long = count.incrementAndGet()
 
     override def decrement(): Long = count.decrementAndGet()
 
-    /**
-      * Tries to take a controller, if the count has reached zero.
-      * @return `true` if this call took the controller, `false` if it was already taken or the count was not zero.
-      */
     override def tryTake(): Boolean = count.compareAndSet(0, TAKEN)
 
-    /**
-      * Tries to take a controller.
-      * @return `true` if this call took the controller, `false` if it was already taken.
-      */
     override def take(): Boolean = count.getAndSet(TAKEN) >= 0
 
     override def isZero: Boolean = count.get() == 0
