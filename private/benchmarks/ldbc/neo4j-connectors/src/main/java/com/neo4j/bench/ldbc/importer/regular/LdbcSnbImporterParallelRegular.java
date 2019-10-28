@@ -741,7 +741,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 null,
                 batchImporterConfiguration,
                 logService,
-                ExecutionMonitors.defaultVisible( jobScheduler ),
+                ExecutionMonitors.humanUnderstandable(),
                 AdditionalInitialIds.EMPTY,
                 (null == importerProperties)
                 ? Config.defaults()
