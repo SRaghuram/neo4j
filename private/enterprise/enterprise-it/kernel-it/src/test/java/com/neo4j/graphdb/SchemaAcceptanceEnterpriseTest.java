@@ -22,6 +22,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
+import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
@@ -37,6 +38,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.graphdb.schema.IndexType.BTREE;
+import static org.neo4j.graphdb.schema.IndexType.FULLTEXT;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
@@ -403,6 +406,80 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             tx.commit();
         }
     }
+
+    @Test
+    void nodeKeyConstraintIndexesMustHaveBtreeIndexTypeByDefault()
+    {
+        String name;
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintDefinition constraint = tx.schema().constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).create();
+            name = constraint.getName();
+            IndexDefinition index = tx.schema().getIndexByName( name );
+            assertThat( index.getIndexType(), is( BTREE ) );
+            tx.commit();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            IndexDefinition index = tx.schema().getIndexByName( name );
+            assertThat( index.getIndexType(), is( BTREE ) );
+        }
+    }
+
+    @Test
+    void mustBeAbleToCreateNodeKeyConstraintWithBtreeIndexType()
+    {
+        String name;
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintDefinition constraint = tx.schema().constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).withIndexType( BTREE ).create();
+            name = constraint.getName();
+            IndexDefinition index = tx.schema().getIndexByName( name );
+            assertThat( index.getIndexType(), is( BTREE ) );
+            tx.commit();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            IndexDefinition index = tx.schema().getIndexByName( name );
+            assertThat( index.getIndexType(), is( BTREE ) );
+        }
+    }
+
+    @Test
+    void creatingNodeKeyConstraintWithFullTextIndexTypeMustThrow()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintCreator creator = tx.schema().constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).withIndexType( FULLTEXT );
+            assertThrows( IllegalArgumentException.class, creator::create );
+            tx.commit();
+        }
+    }
+
+    @Test
+    void creatingNodePropertyExistenceConstraintMustThrowWhenGivenIndexType()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintCreator creator = tx.schema().constraintFor( label ).assertPropertyExists( propertyKey ).withIndexType( BTREE );
+            assertThrows( IllegalArgumentException.class, creator::create );
+            tx.commit();
+        }
+    }
+
+    @Test
+    void creatingRelationshipPropertyExistenceConstraintMustThrowWhenGivenIndexType()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            ConstraintCreator creator = tx.schema().constraintFor( relType ).assertPropertyExists( propertyKey ).withIndexType( BTREE );
+            assertThrows( IllegalArgumentException.class, creator::create );
+            tx.commit();
+        }
+    }
+    // todo must be able to create node key constraint with index configuration
+    // todo creating node property existence constraints must throw when given index configuration
+    // todo creating relationship property existence constraints must throw when given index configuration
 
     private ConstraintDefinition createUniquenessConstraint( Label label, String prop )
     {
