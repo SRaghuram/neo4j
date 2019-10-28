@@ -45,6 +45,7 @@ import org.neo4j.values.virtual.MapValue;
 import static org.neo4j.graphdb.traversal.Evaluation.EXCLUDE_AND_CONTINUE;
 import static org.neo4j.graphdb.traversal.Evaluation.EXCLUDE_AND_PRUNE;
 import static org.neo4j.graphdb.traversal.Evaluation.INCLUDE_AND_CONTINUE;
+import static org.neo4j.internal.helpers.collection.Iterators.stream;
 import static org.neo4j.procedure.Mode.WRITE;
 
 @SuppressWarnings( {"unused", "WeakerAccess"} )
@@ -195,7 +196,7 @@ public class TestProcedure
                         .evaluator( new LabelEvaluator( "Western", 1, 3 ) )
                         .uniqueness( Uniqueness.NODE_GLOBAL );
 
-        return td.traverse( start ).stream().map( PathResult::new );
+        return stream( td.traverse( start ).iterator() ).map( PathResult::new );
     }
 
     @Procedure( "org.neo4j.internalTypes" )
