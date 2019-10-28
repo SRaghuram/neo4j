@@ -12,9 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.exceptions.KernelException;
@@ -22,6 +20,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
@@ -30,7 +29,7 @@ import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -100,13 +99,14 @@ class HalfCreatedConstraintIT
     {
         try ( Transaction transaction = database.beginTx() )
         {
-            DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
             KernelTransaction kernelTransaction = ((InternalTransaction) transaction).kernelTransaction();
             LabelSchemaDescriptor schema = SchemaDescriptor.forLabel( 0, 0 );
             UniquenessConstraintDescriptor constraint = ConstraintDescriptorFactory.uniqueForSchema( schema );
             constraint = constraint.withName( SchemaRule.generateName( constraint, new String[]{"Label"}, new String[]{"prop"} ) );
-            Config config = resolver.resolveDependency( Config.class );
-            kernelTransaction.indexUniqueCreate( constraint, config.get( GraphDatabaseSettings.default_schema_provider ) );
+            IndexPrototype prototype = IndexPrototype.uniqueForSchema( schema )
+                    .withName( constraint.getName() )
+                    .withIndexProvider( GenericNativeIndexProvider.DESCRIPTOR );
+            kernelTransaction.indexUniqueCreate( prototype );
             transaction.commit();
         }
     }

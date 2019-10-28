@@ -236,7 +236,7 @@ class GraphDbStructureGuideTest
         KernelTransaction ktx = ((InternalTransaction) tx).kernelTransaction();
 
         return ktx.schemaWrite()
-                .uniquePropertyConstraintCreate( SchemaDescriptor.forLabel( labelId, pkId ), null );
+                .uniquePropertyConstraintCreate( IndexPrototype.uniqueForSchema( SchemaDescriptor.forLabel( labelId, pkId ) ) );
     }
 
     private int createLabeledNodes( String labelName, int amount ) throws Exception

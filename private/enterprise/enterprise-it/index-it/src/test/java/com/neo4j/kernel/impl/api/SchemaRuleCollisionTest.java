@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.schema.IndexPrototype.uniqueForSchema;
 import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
 
 @EphemeralTestDirectoryExtension
@@ -93,10 +94,10 @@ class SchemaRuleCollisionTest
     }
 
     private static final SchemaType<IndexDescriptor> INDEX = createLabelSchemaType( SchemaWrite::indexCreate, "index" );
-    private static final SchemaType<ConstraintDescriptor> UNIQUE_CONSTRAINT =
-            createLabelSchemaType( SchemaWrite::uniquePropertyConstraintCreate, "unique_constraint" );
-    private static final SchemaType<ConstraintDescriptor> NODE_KEY_CONSTRAINT =
-            createLabelSchemaType( SchemaWrite::nodeKeyConstraintCreate, "node_key_constraint" );
+    private static final SchemaType<ConstraintDescriptor> UNIQUE_CONSTRAINT = createLabelSchemaType(
+            ( schemaWrite, schema, name ) -> schemaWrite.uniquePropertyConstraintCreate( uniqueForSchema( schema ).withName( name ) ), "unique_constraint" );
+    private static final SchemaType<ConstraintDescriptor> NODE_KEY_CONSTRAINT = createLabelSchemaType(
+            ( schemaWrite, schema, name ) -> schemaWrite.nodeKeyConstraintCreate( uniqueForSchema( schema ).withName( name ) ), "node_key_constraint" );
     private static final SchemaType<ConstraintDescriptor> EXISTENCE_CONSTRAINT =
             createLabelSchemaType( SchemaWrite::nodePropertyExistenceConstraintCreate, "existence_constraint" );
 

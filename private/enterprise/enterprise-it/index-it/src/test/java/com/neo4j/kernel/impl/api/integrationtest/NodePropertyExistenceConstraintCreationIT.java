@@ -17,6 +17,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.schema.ConstraintDescriptor;
+import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
@@ -98,7 +99,8 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
         ConstraintDescriptor constraint;
         {
             SchemaWrite statement = schemaWriteInNewTransaction();
-            constraint = statement.uniquePropertyConstraintCreate( schema, "constraint name" );
+            IndexPrototype prototype = IndexPrototype.uniqueForSchema( schema ).withName( "constraint name" );
+            constraint = statement.uniquePropertyConstraintCreate( prototype );
             commit();
         }
 

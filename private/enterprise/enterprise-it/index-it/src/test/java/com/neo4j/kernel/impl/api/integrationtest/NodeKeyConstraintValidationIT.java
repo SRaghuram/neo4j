@@ -15,6 +15,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
+import org.neo4j.internal.schema.IndexPrototype;
 
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
@@ -32,7 +33,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
         commit();
 
         SchemaWrite schemaWrite = schemaWriteInNewTransaction();
-        schemaWrite.nodeKeyConstraintCreate( forLabel( label, propertyKey ), "constraint name" );
+        schemaWrite.nodeKeyConstraintCreate( IndexPrototype.uniqueForSchema( forLabel( label, propertyKey ) ) );
         commit();
     }
 

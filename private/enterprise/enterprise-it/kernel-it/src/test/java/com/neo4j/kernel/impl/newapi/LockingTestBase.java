@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -46,7 +47,8 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
 
         try ( KernelTransaction tx = beginTransaction() )
         {
-            tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ), "constraint name" );
+            IndexPrototype prototype = IndexPrototype.uniqueForSchema( labelDescriptor( label, constraintProp ) ).withName( "constraint name" );
+            tx.schemaWrite().uniquePropertyConstraintCreate( prototype );
             tx.commit();
         }
 
@@ -80,7 +82,8 @@ public abstract class LockingTestBase<G extends KernelAPIWriteTestSupport>
             try ( KernelTransaction tx = beginTransaction() )
             {
                 assertTrue( createNodeLatch.await( 5, TimeUnit.MINUTES) );
-                tx.schemaWrite().uniquePropertyConstraintCreate( labelDescriptor( label, constraintProp ), "other constraint name" );
+                IndexPrototype prototype = IndexPrototype.uniqueForSchema( labelDescriptor( label, constraintProp ) ).withName( "other constraint name" );
+                tx.schemaWrite().uniquePropertyConstraintCreate( prototype );
                 tx.commit();
             }
             catch ( KernelException e )

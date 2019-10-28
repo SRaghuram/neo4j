@@ -11,13 +11,15 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.SchemaWrite;
+import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.kernel.impl.index.schema.IndexCreateIT;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 class IndexCreateEnterpriseIT extends IndexCreateIT
 {
-    private static final IndexCreator NODE_KEY_CREATOR = SchemaWrite::nodeKeyConstraintCreate;
+    private static final IndexCreator NODE_KEY_CREATOR =
+            ( schemaWrite, schema, provider, name ) -> schemaWrite.nodeKeyConstraintCreate(
+                    IndexPrototype.uniqueForSchema( schema, schemaWrite.indexProviderByName( provider ) ).withName( name ) );
 
     @Override
     protected TestDatabaseManagementServiceBuilder createGraphDatabaseFactory( File databaseRootDir )
@@ -35,23 +37,5 @@ class IndexCreateEnterpriseIT extends IndexCreateIT
     void shouldFailCreateNodeKeyWithNonExistentProviderName() throws KernelException
     {
         shouldFailWithNonExistentProviderName( NODE_KEY_CREATOR );
-    }
-
-    @Test
-    void shouldFailCreateNodeKeyWithDuplicateLabels() throws KernelException
-    {
-        shouldFailWithDuplicateLabels( NODE_KEY_CREATOR );
-    }
-
-    @Test
-    void shouldFailCreateNodeKeyWithDuplicateRelationshipTypes() throws KernelException
-    {
-        shouldFailWithDuplicateRelationshipTypes( NODE_KEY_CREATOR );
-    }
-
-    @Test
-    void shouldFailCreateNodeKeyWithDuplicateProperties() throws KernelException
-    {
-        shouldFailWithDuplicateProperties( NODE_KEY_CREATOR );
     }
 }
