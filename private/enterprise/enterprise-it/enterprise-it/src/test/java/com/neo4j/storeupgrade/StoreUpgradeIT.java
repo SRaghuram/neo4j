@@ -50,7 +50,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -471,8 +470,7 @@ public class StoreUpgradeIT
     private static void checkIndexCounts( Store store, GraphDatabaseAPI db ) throws KernelException
     {
         Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
-        try ( KernelTransaction tx = kernel.beginTransaction( implicit, AnonymousContext.read() );
-              Statement ignore = tx.acquireStatement() )
+        try ( KernelTransaction tx = kernel.beginTransaction( implicit, AnonymousContext.read() ) )
         {
             SchemaRead schemaRead = tx.schemaRead();
             Iterator<IndexDescriptor> indexes = IndexDescriptor.sortByType( getAllIndexes( schemaRead ) );
@@ -577,13 +575,10 @@ public class StoreUpgradeIT
             TransactionIdStore txIdStore = db.getDependencyResolver().resolveDependency( TransactionIdStore.class );
             long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
-            try ( Statement ignored1 = ((InternalTransaction) tx).kernelTransaction().acquireStatement() )
-            {
-                GBPTreeCountsStore countsStore = db.getDependencyResolver().resolveDependency( GBPTreeCountsStore.class );
-                long countsTxId = countsStore.txId();
-                assertEquals( lastCommittedTxId, countsTxId );
-                assertThat( lastCommittedTxId, is( store.lastTxId ) );
-            }
+            GBPTreeCountsStore countsStore = db.getDependencyResolver().resolveDependency( GBPTreeCountsStore.class );
+            long countsTxId = countsStore.txId();
+            assertEquals( lastCommittedTxId, countsTxId );
+            assertThat( lastCommittedTxId, is( store.lastTxId ) );
         }
     }
 
