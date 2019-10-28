@@ -5,18 +5,25 @@
  */
 package com.neo4j.bench.infra;
 
+import com.neo4j.bench.infra.aws.AWSBatchJobLogs;
+
 import java.util.Objects;
+import java.util.Optional;
+
+import static java.lang.String.format;
 
 public class JobStatus
 {
     private final String jobId;
     private final String status;
+    private final String logStreamName;
 
-    public JobStatus( String jobId, String status )
+    public JobStatus( String jobId, String status, String logStreamName )
     {
         super();
         this.jobId = jobId;
         this.status = status;
+        this.logStreamName = logStreamName;
     }
 
     public String getJobId()
@@ -44,10 +51,20 @@ public class JobStatus
         return "FAILED".equals( status );
     }
 
+    public Optional<String> logStreamURL( String region )
+    {
+        return Optional.ofNullable( logStreamName ).map( streamName -> AWSBatchJobLogs.getLogStreamURL( region, streamName ) );
+    }
+
+    public String toStatusLine( String region )
+    {
+        return format( "job %s is %s, find log stream at <%s>", jobId, status, logStreamURL( region ).orElse( "UNAVAILABLE" ) );
+    }
+
     @Override
     public int hashCode()
     {
-        return Objects.hash( jobId, status );
+        return Objects.hash( jobId, status, logStreamName );
     }
 
     @Override
@@ -66,14 +83,19 @@ public class JobStatus
             return false;
         }
         JobStatus other = (JobStatus) obj;
-        return Objects.equals( jobId, other.jobId ) && Objects.equals( status, other.status );
+        return Objects.equals( jobId, other.jobId )
+               && Objects.equals( status, other.status )
+               && Objects.equals( logStreamName, other.logStreamName );
     }
 
     @Override
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        builder.append( "JobStatus [jobId=" ).append( jobId ).append( ", status=" ).append( status ).append( "]" );
+        builder.append( "JobStatus [jobId=" ).append( jobId )
+               .append( ", status=" ).append( status )
+               .append( ", logStreamName=" ).append( logStreamName )
+               .append( "]" );
         return builder.toString();
     }
 

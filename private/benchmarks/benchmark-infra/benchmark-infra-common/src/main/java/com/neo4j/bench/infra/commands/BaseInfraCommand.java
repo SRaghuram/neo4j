@@ -98,4 +98,9 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
     }
 
     protected abstract void doRunInfra( RunWorkloadParams runWorkloadParams, InfraParams infraParams );
+
+    protected URI artifactBaseUri()
+    {
+        return artifactBaseUri;
+    }
 }

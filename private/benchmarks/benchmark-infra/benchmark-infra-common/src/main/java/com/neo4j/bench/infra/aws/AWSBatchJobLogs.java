@@ -5,20 +5,19 @@
  */
 package com.neo4j.bench.infra.aws;
 
-import com.neo4j.bench.infra.JobId;
-
 import static java.lang.String.format;
 
 public class AWSBatchJobLogs
 {
     /**
      * Constructs log stream name, according to this spec, {@link https://docs.aws.amazon.com/batch/latest/userguide/job_states.html}.
-     * @param jobDefinition
-     * @param jobId
+     *
+     * @param region AWS region name
+     * @param streamName CloudWatch logs stream name
      * @return
      */
-    public static String getLogStreamName( String jobDefinition, JobId jobId )
+    public static String getLogStreamURL( String region, String streamName )
     {
-        return format( "%s/default/%s", jobDefinition, jobId.id() );
+        return format( "https://console.aws.amazon.com/cloudwatch/home?region=%s#logEventViewer:group=/aws/batch/job;stream=%s", region, streamName );
     }
 }
