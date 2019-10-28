@@ -52,4 +52,9 @@ public class VoidInFlightCache implements InFlightCache
     {
         return 0;
     }
+
+    @Override
+    public void reportSkippedCacheAccess()
+    {
+    }
 }

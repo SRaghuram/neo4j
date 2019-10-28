@@ -39,6 +39,11 @@ public class InFlightLogEntryReader implements AutoCloseable
         {
             entry = inFlightCache.get( logIndex );
         }
+        else
+        {
+            // report a cache miss
+            inFlightCache.reportSkippedCacheAccess();
+        }
 
         if ( entry == null )
         {

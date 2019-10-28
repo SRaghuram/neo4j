@@ -56,4 +56,9 @@ public interface InFlightCache
      * @return the number of log entries in the cache.
      */
     int elementCount();
+
+    /**
+     * Signal that an external component decided to not access the cache but fallback to a slower path to retrieve a {@link RaftLogEntry}.
+     */
+    void reportSkippedCacheAccess();
 }

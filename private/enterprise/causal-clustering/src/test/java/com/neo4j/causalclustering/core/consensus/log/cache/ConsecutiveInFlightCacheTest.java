@@ -7,21 +7,23 @@ package com.neo4j.causalclustering.core.consensus.log.cache;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyRequest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-public class ConsecutiveInFlightCacheTest
+class ConsecutiveInFlightCacheTest
 {
     @Test
-    public void shouldTrackUsedMemory()
+    void shouldTrackUsedMemory()
     {
-        int capacity = 4;
-        ConsecutiveInFlightCache cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
+        var capacity = 4;
+        var cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
 
-        for ( int i = 0; i < capacity; i++ )
+        for ( var i = 0; i < capacity; i++ )
         {
             // when
             cache.put( i, content( 100 ) );
@@ -49,22 +51,22 @@ public class ConsecutiveInFlightCacheTest
     }
 
     @Test
-    public void shouldReturnLatestItems()
+    void shouldReturnLatestItems()
     {
         // given
-        int capacity = 4;
-        ConsecutiveInFlightCache cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
+        var capacity = 4;
+        var cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
 
         // when
-        for ( int i = 0; i < 3 * capacity; i++ )
+        for ( var i = 0; i < 3 * capacity; i++ )
         {
             cache.put( i, content( i ) );
         }
 
         // then
-        for ( int i = 0; i < 3 * capacity; i++ )
+        for ( var i = 0; i < 3 * capacity; i++ )
         {
-            RaftLogEntry entry = cache.get( i );
+            var entry = cache.get( i );
             if ( i < 2 * capacity )
             {
                 assertNull( entry );
@@ -78,27 +80,27 @@ public class ConsecutiveInFlightCacheTest
     }
 
     @Test
-    public void shouldRemovePrunedItems()
+    void shouldRemovePrunedItems()
     {
         // given
-        int capacity = 20;
-        ConsecutiveInFlightCache cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
+        var capacity = 20;
+        var cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
 
-        for ( int i = 0; i < capacity; i++ )
+        for ( var i = 0; i < capacity; i++ )
         {
             cache.put( i, content( i ) );
         }
 
         // when
-        int upToIndex = capacity / 2 - 1;
+        var upToIndex = capacity / 2 - 1;
         cache.prune( upToIndex );
 
         // then
         assertEquals( capacity / 2, cache.elementCount() );
 
-        for ( int i = 0; i < capacity; i++ )
+        for ( var i = 0; i < capacity; i++ )
         {
-            RaftLogEntry entry = cache.get( i );
+            var entry = cache.get( i );
             if ( i <= upToIndex )
             {
                 assertNull( entry );
@@ -112,32 +114,54 @@ public class ConsecutiveInFlightCacheTest
     }
 
     @Test
-    public void shouldRemoveTruncatedItems()
+    void shouldRemoveTruncatedItems()
     {
         // given
-        int capacity = 20;
-        ConsecutiveInFlightCache cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
+        var capacity = 20;
+        var cache = new ConsecutiveInFlightCache( capacity, 1000, InFlightCacheMonitor.VOID, true );
 
-        for ( int i = 0; i < capacity; i++ )
+        for ( var i = 0; i < capacity; i++ )
         {
             cache.put( i, content( i ) );
         }
 
         // when
-        int fromIndex = capacity / 2;
+        var fromIndex = capacity / 2;
         cache.truncate( fromIndex );
 
         // then
         assertEquals( fromIndex, cache.elementCount() );
         assertEquals( (fromIndex * (fromIndex - 1)) / 2, cache.totalBytes() );
 
-        for ( int i = fromIndex; i < capacity; i++ )
+        for ( var i = fromIndex; i < capacity; i++ )
         {
             assertNull( cache.get( i ) );
         }
     }
 
-    private RaftLogEntry content( int size )
+    @Test
+    void shouldReportCacheMissWhenCacheAccessSkipped()
+    {
+        var cacheMonitor = mock( InFlightCacheMonitor.class );
+        var cache = new ConsecutiveInFlightCache( 1, 1, cacheMonitor, true );
+
+        cache.reportSkippedCacheAccess();
+
+        verify( cacheMonitor ).miss();
+    }
+
+    @Test
+    void shouldReportCacheMissWhenDisabled()
+    {
+        var cacheMonitor = mock( InFlightCacheMonitor.class );
+        var cache = new ConsecutiveInFlightCache( 1, 1, cacheMonitor, false );
+
+        assertNull( cache.get( 1 ) );
+
+        verify( cacheMonitor ).miss();
+    }
+
+    private static RaftLogEntry content( int size )
     {
         return new RaftLogEntry( 0, new DummyRequest( new byte[size] ) );
     }

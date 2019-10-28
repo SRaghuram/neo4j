@@ -82,4 +82,9 @@ public class UnboundedInFlightCache implements InFlightCache
         // not updated correctly
         return 0;
     }
+
+    @Override
+    public void reportSkippedCacheAccess()
+    {
+    }
 }

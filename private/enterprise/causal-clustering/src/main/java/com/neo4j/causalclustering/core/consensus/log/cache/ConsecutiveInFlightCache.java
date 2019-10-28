@@ -77,6 +77,7 @@ public class ConsecutiveInFlightCache implements InFlightCache
     {
         if ( !enabled )
         {
+            monitor.miss();
             return null;
         }
 
@@ -128,6 +129,12 @@ public class ConsecutiveInFlightCache implements InFlightCache
     public synchronized int elementCount()
     {
         return cache.size();
+    }
+
+    @Override
+    public void reportSkippedCacheAccess()
+    {
+        monitor.miss();
     }
 
     private long sizeOf( RaftLogEntry entry )
