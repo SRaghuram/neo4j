@@ -20,7 +20,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -28,7 +27,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.helpers.collection.Iterables.stream;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 @TestDirectoryExtension
@@ -41,14 +40,12 @@ class MultiDatabaseProcedureIT
     @Inject
     private TestDirectory testDirectory;
 
-    private GraphDatabaseAPI database;
     private DatabaseManagementService managementService;
 
     @BeforeEach
     void setUp()
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).build();
-        database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
     }
 
     @AfterEach
@@ -83,7 +80,7 @@ class MultiDatabaseProcedureIT
     {
         try ( Transaction transaction = facade.beginTx() )
         {
-            return transaction.getAllLabels().stream().map( Label::name ).collect( toSet() );
+            return stream( transaction.getAllLabels() ).map( Label::name ).collect( toSet() );
         }
     }
 
