@@ -16,8 +16,8 @@ import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.profile.ExternalProfiler;
@@ -128,7 +128,7 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
                                 benchmarkGroup,
                                 benchmark,
                                 Parameters.NONE,
-                                resources)
+                                resources )
                         .toArgs();
             }
             else

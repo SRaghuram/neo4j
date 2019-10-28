@@ -138,7 +138,7 @@ public class JvmArgs
      * If yes replaces old value and sets new value in the same position. If not, appends
      * new JVM argument at the end of list.
      * @param jvmArg
-     * @return
+     * @return new instance of JvmArgs
      */
     public JvmArgs set( String jvmArg )
     {
