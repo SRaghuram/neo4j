@@ -58,13 +58,12 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final Duration timeout;
     private final int minCoreHosts;
     private final DatabaseLog log;
-    private final DatabaseStartAborter databaseStartAborter;
 
     private RaftId raftId;
 
     public RaftBinder( DatabaseId databaseId, MemberId myIdentity, SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService,
             ClusterSystemGraphDbmsModel systemGraph, Clock clock, ThrowingAction<InterruptedException> retryWaiter, Duration timeout,
-            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors, DatabaseLogProvider logProvider, DatabaseStartAborter databaseStartAborter )
+            RaftBootstrapper raftBootstrapper, int minCoreHosts, Monitors monitors, DatabaseLogProvider logProvider )
     {
         this.databaseId = databaseId;
         this.myIdentity = myIdentity;
@@ -78,7 +77,6 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         this.timeout = timeout;
         this.minCoreHosts = minCoreHosts;
         this.log = logProvider.getLog( getClass() );
-        this.databaseStartAborter = databaseStartAborter;
     }
 
     /**
@@ -117,8 +115,9 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
      * @throws IOException If there is an issue with I/O.
      * @throws InterruptedException If the process gets interrupted.
      * @throws TimeoutException If the process times out.
+     * @param databaseStartAborter the component used to check if a database was stopped/dropped while we were still trying to bind it
      */
-    public BoundState bindToRaft() throws Exception
+    public BoundState bindToRaft( DatabaseStartAborter databaseStartAborter ) throws Exception
     {
         if ( raftIdStorage.exists() )
         {
@@ -194,7 +193,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
         if ( shouldAbort )
         {
-            throw new DatabaseStartAbortedException( format( "Database %s was stopped before it finished starting!", databaseId.name() ) );
+            throw new DatabaseStartAbortedException( databaseId );
         }
         else if ( raftId == null )
         {

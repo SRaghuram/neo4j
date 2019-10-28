@@ -130,11 +130,11 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
             {
                 try
                 {
-                    debugLog.info( "Syncing db: %s", databaseContext.database().getDatabaseId() );
+                    debugLog.info( "Syncing db: %s", databaseContext.databaseId() );
                     synced = doSyncStoreCopyWithUpstream( databaseContext );
                     if ( synced )
                     {
-                        debugLog.info( "Successfully synced db: %s", databaseContext.database().getDatabaseId() );
+                        debugLog.info( "Successfully synced db: %s", databaseContext.databaseId() );
                     }
                     else
                     {
@@ -158,12 +158,13 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
         }
         finally
         {
+            databaseStartAborter.started( databaseContext.databaseId() );
             signal.bootstrapped();
         }
 
         if ( shouldAbort )
         {
-            throw new DatabaseStartAbortedException( format( "Database %s was stopped before it finished starting!", databaseContext.databaseId().name() ) );
+            throw new DatabaseStartAbortedException( databaseContext.databaseId() );
         }
     }
 

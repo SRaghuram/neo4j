@@ -5,11 +5,14 @@
  */
 package com.neo4j.dbms;
 
+import org.neo4j.kernel.database.DatabaseId;
+
+import static java.lang.String.format;
 
 public class DatabaseStartAbortedException extends Exception
 {
-    public DatabaseStartAbortedException( String message )
+    public DatabaseStartAbortedException( DatabaseId databaseId )
     {
-        super( message );
+        super( format( "Database %s was stopped before it finished starting!", databaseId.name() ) );
     }
 }

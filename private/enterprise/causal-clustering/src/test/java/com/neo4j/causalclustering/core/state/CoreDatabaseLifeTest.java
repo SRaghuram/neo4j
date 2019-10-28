@@ -26,6 +26,7 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -67,15 +68,65 @@ class CoreDatabaseLifeTest
         inOrder.verify( topologyService ).onDatabaseStop( databaseId );
     }
 
-    private static CoreDatabaseLife createCoreDatabaseLife( DatabaseId databaseId, CoreTopologyService topologyService, LifeSupport life ) throws Exception
+    @Test
+    void shouldClearAborterCacheOnStart() throws Exception
     {
-        var raftMachine = mock( RaftMachine.class );
+        // given
+        var databaseStartAborter = mock( DatabaseStartAborter.class );
+        when( databaseStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
 
-        var database = mock( Database.class );
-        when( database.getDatabaseId() ).thenReturn( databaseId );
+        var databaseId = databaseIdRepository.getRaw( "products" );
+        var topologyService = mock( CoreTopologyService.class );
 
         var raftBinder = mock( RaftBinder.class );
-        when( raftBinder.bindToRaft() ).thenReturn( new BoundState( RaftIdFactory.random() ) );
+        when( raftBinder.bindToRaft( databaseStartAborter ) ).thenReturn( new BoundState( RaftIdFactory.random() ) );
+
+        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life, databaseStartAborter, raftBinder );
+
+        // when
+        coreDatabaseLife.start();
+
+        // then
+        var inOrder = inOrder( databaseStartAborter );
+        inOrder.verify( databaseStartAborter ).started( databaseId );
+    }
+
+    @Test
+    void shouldClearAborterCacheOnFailedStart() throws Exception
+    {
+        // given
+        var databaseStartAborter = mock( DatabaseStartAborter.class );
+        when( databaseStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+
+        var databaseId = databaseIdRepository.getRaw( "products" );
+        var topologyService = mock( CoreTopologyService.class );
+        var raftBinder = mock( RaftBinder.class );
+        when( raftBinder.bindToRaft( databaseStartAborter ) ).thenThrow( new RuntimeException() );
+
+        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life, databaseStartAborter, raftBinder );
+
+        // when / then
+        assertThrows( RuntimeException.class, coreDatabaseLife::start );
+        verify( databaseStartAborter ).started( databaseId );
+    }
+
+    private static CoreDatabaseLife createCoreDatabaseLife( DatabaseId databaseId, CoreTopologyService topologyService, LifeSupport life ) throws Exception
+    {
+        var databaseStartAborter = mock( DatabaseStartAborter.class );
+        when( databaseStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
+
+        var raftBinder = mock( RaftBinder.class );
+        when( raftBinder.bindToRaft( databaseStartAborter ) ).thenReturn( new BoundState( RaftIdFactory.random() ) );
+
+        return createCoreDatabaseLife( databaseId, topologyService, life, databaseStartAborter, raftBinder );
+    }
+
+    private static CoreDatabaseLife createCoreDatabaseLife( DatabaseId databaseId, CoreTopologyService topologyService, LifeSupport life,
+            DatabaseStartAborter databaseStartAborter, RaftBinder raftBinder )
+    {
+        var raftMachine = mock( RaftMachine.class );
+        var database = mock( Database.class );
+        when( database.getDatabaseId() ).thenReturn( databaseId );
 
         var applicationProcess = mock( CommandApplicationProcess.class );
         var messageHandler = mock( LifecycleMessageHandler.class );
@@ -84,10 +135,8 @@ class CoreDatabaseLifeTest
         var recoveryFacade = mock( RecoveryFacade.class );
         var internalOperator = new ClusterInternalDbmsOperator();
         var panicService = mock( PanicService.class );
-        var dbStartAborter = mock( DatabaseStartAborter.class );
-        when( dbStartAborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false );
 
         return new CoreDatabaseLife( raftMachine, database, raftBinder, applicationProcess, messageHandler, snapshotService,
-                downloaderService, recoveryFacade, life, internalOperator, topologyService, panicService );
+                downloaderService, recoveryFacade, life, internalOperator, topologyService, panicService, databaseStartAborter );
     }
 }

@@ -92,12 +92,23 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         try ( var tx = systemDatabase.get().beginTx() )
         {
             var uuid = databaseId.uuid().toString();
-            var nonDroppedDb = Optional.ofNullable( tx.findNode( DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid ) )
-                    .map( this::getOnlineStatus );
-            Supplier<Optional<OperatorState>> droppbedDb = () -> Optional.ofNullable( tx.findNode( DELETED_DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid ) )
-                    .map( ignored -> DROPPED );
 
-            result = nonDroppedDb.or( droppbedDb );
+            var databaseNode = tx.findNode( DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid );
+            var deletedDatabaseNode = tx.findNode( DELETED_DATABASE_LABEL, DATABASE_UUID_PROPERTY, uuid );
+
+            if ( databaseNode != null )
+            {
+                 result = Optional.of( getOnlineStatus( databaseNode ) );
+            }
+            else if ( deletedDatabaseNode != null )
+            {
+                result =  Optional.of( DROPPED );
+            }
+            else
+            {
+                result = Optional.empty();
+            }
+
             tx.commit();
         }
         return result;

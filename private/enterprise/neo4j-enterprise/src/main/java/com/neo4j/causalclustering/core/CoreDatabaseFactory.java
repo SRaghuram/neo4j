@@ -201,13 +201,13 @@ class CoreDatabaseFactory
     }
 
     CoreRaftContext createRaftContext( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies, BootstrapContext bootstrapContext,
-            DatabaseLogService logService, ClusterSystemGraphDbmsModel systemGraph, DatabaseStartAborter databaseStartAborter )
+            DatabaseLogService logService, ClusterSystemGraphDbmsModel systemGraph )
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
         DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( databaseId, NO_INITIALIZATION );
         RaftBinder raftBinder = createRaftBinder( databaseId, config, monitors, storageFactory, bootstrapContext,
-                temporaryDatabaseFactory, databaseInitializer, debugLog, systemGraph, databaseStartAborter );
+                temporaryDatabaseFactory, databaseInitializer, debugLog, systemGraph );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life, debugLog );
@@ -300,7 +300,7 @@ class CoreDatabaseFactory
                 monitors, raftContext.progressTracker(), sessionTracker, coreState, debugLog );
 
         CoreSnapshotService snapshotService = new CoreSnapshotService( commandApplicationProcess, raftGroup.raftLog(), coreState,
-                raftGroup.raftMachine(), databaseStartAborter, databaseId );
+                raftGroup.raftMachine(), databaseId );
         dependencies.satisfyDependencies( snapshotService );
 
         CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, commandApplicationProcess,
@@ -326,12 +326,12 @@ class CoreDatabaseFactory
                 raftGroup, downloadService, commandApplicationProcess );
 
         return new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess, messageHandler,
-                snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService, panicService );
+                snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService, panicService, databaseStartAborter );
     }
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, ClusterStateStorageFactory storageFactory,
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
-            DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, DatabaseStartAborter databaseStartAborter )
+            DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph )
     {
         DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
@@ -341,7 +341,7 @@ class CoreDatabaseFactory
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors, debugLog, databaseStartAborter );
+                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors, debugLog );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

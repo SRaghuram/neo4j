@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseId;

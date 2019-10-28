@@ -23,6 +23,7 @@ import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -53,6 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
@@ -100,17 +102,18 @@ class ReadReplicaDatabaseLifeTest
     }
 
     private ReadReplicaDatabaseLife createReadReplicaDatabaseLife( TopologyService topologyService, CatchupComponents catchupComponents,
-            ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess )
+            ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess, DatabaseStartAborter databaseStartAborter )
     {
-        return createReadReplicaDatabaseLife( topologyService, catchupComponents, localContext, catchupProcess, new InMemorySimpleStorage<>() );
+        return createReadReplicaDatabaseLife( topologyService, catchupComponents, localContext, catchupProcess,
+                new InMemorySimpleStorage<>(), databaseStartAborter );
     }
 
     private ReadReplicaDatabaseLife createReadReplicaDatabaseLife( TopologyService topologyService, CatchupComponents catchupComponents,
-            ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess, SimpleStorage<RaftId> raftIdStorage )
+            ReadReplicaDatabaseContext localContext, Lifecycle catchupProcess, SimpleStorage<RaftId> raftIdStorage, DatabaseStartAborter databaseStartAborter )
     {
         return new ReadReplicaDatabaseLife( localContext, catchupProcess, chooseFirstMember( topologyService ), nullLogProvider(),
                 nullLogProvider(), topologyService, () -> catchupComponents, mock( LifeSupport.class ),
-                new ClusterInternalDbmsOperator(), raftIdStorage, mock( PanicService.class ), neverAbort() );
+                new ClusterInternalDbmsOperator(), raftIdStorage, mock( PanicService.class ), databaseStartAborter );
     }
 
     private ReadReplicaDatabaseContext normalDatabase( DatabaseId databaseId, StoreId storeId, Boolean isEmpty ) throws IOException
@@ -141,6 +144,68 @@ class ReadReplicaDatabaseLifeTest
     }
 
     @Test
+    void shouldFailToStartWhenStartAborted() throws Throwable
+    {
+        // given
+        var topologyService = topologyService( databaseA, memberA, addressA );
+
+        // Catchup components should throw an expected exception to cause a retry
+        var catchupComponents = catchupComponents( addressA, storeA );
+        when( catchupComponents.remoteStore().getStoreId( addressA ) )
+                .thenThrow( StoreIdDownloadFailedException.class )
+                .thenReturn( storeA );
+
+        var catchupProcess = mock( Lifecycle.class );
+        var databaseContext = normalDatabase( databaseA, storeA, false );
+
+        var aborter = mock( DatabaseStartAborter.class );
+        when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false, true );
+
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, aborter );
+        var exception = DatabaseStartAbortedException.class;
+
+        // when / then
+        assertThrows( exception, readReplicaDatabaseLife::start );
+        verify( aborter, times( 2 ) ).shouldAbort( databaseA );
+    }
+
+    @Test
+    void shouldClearAborterCacheOnStart() throws Throwable
+    {
+        // given
+        var topologyService = topologyService( databaseA, memberA, addressA );
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var catchupProcess = mock( Lifecycle.class );
+        var databaseContext = normalDatabase( databaseA, storeA, false );
+        var aborter = neverAbort();
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, aborter );
+
+        // when
+        readReplicaDatabaseLife.start();
+
+        // then
+        verify( aborter ).started( databaseA );
+    }
+
+    @Test
+    void shouldClearAborterCacheOnFailedStart() throws Throwable
+    {
+        // given
+        var topologyService = topologyService( databaseA, memberA, addressA );
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var catchupProcess = mock( Lifecycle.class );
+
+        var exception = RuntimeException.class;
+        var databaseContext = failToReadLocalStoreId( databaseA, exception );
+        var aborter = neverAbort();
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, aborter );
+
+        // when / then
+        assertThrows( exception, readReplicaDatabaseLife::start );
+        verify( aborter ).started( databaseA );
+    }
+
+    @Test
     void shouldFailToStartOnRaftIdDatabaseIdMismatch() throws Throwable
     {
         // given
@@ -153,7 +218,8 @@ class ReadReplicaDatabaseLifeTest
         var raftIdStorage = new InMemorySimpleStorage<RaftId>();
         raftIdStorage.writeState( raftIdB );
 
-        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, raftIdStorage );
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, raftIdStorage,
+                neverAbort() );
         var exception = IllegalStateException.class;
 
         // when / then
@@ -172,7 +238,8 @@ class ReadReplicaDatabaseLifeTest
         Class<RuntimeException> exception = RuntimeException.class;
         ReadReplicaDatabaseContext databaseContext = failToReadLocalStoreId( databaseA, exception );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
 
         // when / then
         assertThrows( exception, readReplicaDatabaseLife::start );
@@ -194,7 +261,8 @@ class ReadReplicaDatabaseLifeTest
         Lifecycle catchupProcess = mock( Lifecycle.class );
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
 
         // when
         readReplicaDatabaseLife.start();
@@ -213,7 +281,8 @@ class ReadReplicaDatabaseLifeTest
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, true );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
 
         // when
         readReplicaDatabaseLife.start();
@@ -233,7 +302,8 @@ class ReadReplicaDatabaseLifeTest
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, true );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
 
         // when
         readReplicaDatabaseLife.start();
@@ -253,7 +323,8 @@ class ReadReplicaDatabaseLifeTest
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
 
         // when / then
         RuntimeException ex = assertThrows( RuntimeException.class, readReplicaDatabaseLife::start );
@@ -273,7 +344,8 @@ class ReadReplicaDatabaseLifeTest
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
 
         // when
         readReplicaDatabaseLife.start();
@@ -292,7 +364,8 @@ class ReadReplicaDatabaseLifeTest
 
         ReadReplicaDatabaseContext databaseContext = normalDatabase( databaseA, storeA, false );
 
-        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        ReadReplicaDatabaseLife readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess,
+                neverAbort() );
         readReplicaDatabaseLife.start();
 
         // when
@@ -310,7 +383,7 @@ class ReadReplicaDatabaseLifeTest
         var catchupProcess = mock( Lifecycle.class );
 
         var databaseContext = normalDatabase( databaseA, storeA, false );
-        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, neverAbort() );
 
         readReplicaDatabaseLife.start();
 
@@ -325,7 +398,7 @@ class ReadReplicaDatabaseLifeTest
         var catchupProcess = mock( Lifecycle.class );
 
         var databaseContext = normalDatabase( databaseA, storeA, false );
-        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess );
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, neverAbort() );
         readReplicaDatabaseLife.start();
 
         readReplicaDatabaseLife.stop();

@@ -19,7 +19,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
- * Component which polls the system database to see if a given database should be still be started.
+ * Component which polls the system database to see if a given database should still be started.
  * This utility is not used to STOP a database under normal circumstances. That is still handled by
  * the {@link DbmsReconciler}. Instead it is used for bailing out of blocking logic taking place
  * during e.g. {@link Database#start()}.
@@ -42,11 +42,12 @@ public class DatabaseStartAborter
     }
 
     /**
-     * Checks the desired state of the given database against the system database, to see if the start currently being executed should be aborted.
-     * The results of these checks are cached for the duration of the ttl, to avoid spamming the system database with read queries when starting many databases.
+     * Checks the desired state of the given database against the system database and the global availability guard, to see if the start currently being
+     * executed should be aborted. The results of these checks are cached for the duration of the ttl, to avoid spamming the system database with read
+     * queries when starting many databases.
      *
-     * Note that if the caller is checking whether or not the system database itself should abort starting, we simply check the global availability guard.
-     * It is assumed that if you wish to fully stop the system database you must also stop the neo4j process.
+     * Note that for the system database only the global availability guard is checked. It is assumed that if you wish to fully stop the system database
+     * you must also stop the neo4j process.
      *
      * @param databaseId the database whose desired state we should check in the system db.
      * @return whether the database start should be aborted.
@@ -85,24 +86,20 @@ public class DatabaseStartAborter
 
     private CachedDatabaseState getFreshState( DatabaseId databaseId )
     {
-        var state = dbmsModel.getStatus( databaseId )
-                .orElseThrow( () -> new IllegalStateException( "Failed to check if starting %s should abort as it doesn't exist in the system db!" ) );
-        return new CachedDatabaseState( clock.instant(), state, ttl, clock );
+        var message = String.format( "Failed to check if starting %s should abort as it doesn't exist in the system db!", databaseId );
+        var state = dbmsModel.getStatus( databaseId ).orElseThrow( () -> new IllegalStateException( message ) );
+        return new CachedDatabaseState( clock.instant(), state );
     }
 
-    private static class CachedDatabaseState
+    private class CachedDatabaseState
     {
         private final OperatorState state;
-        private final Instant instant;
-        private final Duration ttl;
-        private final Clock clock;
+        private final Instant createdAt;
 
-        private CachedDatabaseState( Instant instant, OperatorState state, Duration ttl, Clock clock )
+        private CachedDatabaseState( Instant createdAt, OperatorState state )
         {
             this.state = state;
-            this.instant = instant;
-            this.ttl = ttl;
-            this.clock = clock;
+            this.createdAt = createdAt;
         }
 
         OperatorState state()
@@ -112,7 +109,7 @@ public class DatabaseStartAborter
 
         boolean isTimeToDie()
         {
-            var elapsed = Duration.between( this.instant, clock.instant() );
+            var elapsed = Duration.between( this.createdAt, clock.instant() );
             return elapsed.compareTo( ttl ) >= 0;
         }
     }

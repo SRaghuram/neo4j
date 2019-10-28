@@ -73,7 +73,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, clusteredComponentsLife,
-                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel, databaseStartAborter );
+                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel );
 
         var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );

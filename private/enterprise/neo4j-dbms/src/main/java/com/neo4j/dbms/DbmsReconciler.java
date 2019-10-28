@@ -312,7 +312,7 @@ public class DbmsReconciler implements DatabaseStateService
     private CompletableFuture<ReconcilerStepResult> retry( DatabaseId databaseId, DatabaseState desiredState, ReconcilerStepResult result, Executor executor,
             TimeoutStrategy.Timeout backoff, int retries )
     {
-        boolean isFatalError = result.error() != null && !isTransientError( result.error() );
+        boolean isFatalError = result.error() != null && isFatalError( result.error() );
         if ( result.error() == null || isFatalError )
         {
             return CompletableFuture.completedFuture( result );
@@ -438,9 +438,13 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private boolean isTransientError( Throwable t )
+    private boolean isFatalError( Throwable t )
     {
-        return canRetry && !( t instanceof Error || t instanceof DatabaseStartAbortedException );
+        // A reconciliation error is considered to be fatal/non-retryable if
+        // 1) retries are disabled
+        // OR 2) the error is e.g. an OOM
+        // OR 3) the error is due to a database start which was aborted
+        return !canRetry || t instanceof Error || t instanceof DatabaseStartAbortedException;
     }
 
     /**
@@ -493,7 +497,7 @@ public class DbmsReconciler implements DatabaseStateService
         return new DatabaseState( databaseId, DROPPED );
     }
 
-    protected DatabaseState start( DatabaseId databaseId )
+    protected final DatabaseState start( DatabaseId databaseId )
     {
         databaseManager.startDatabase( databaseId );
         return new DatabaseState( databaseId, STARTED );

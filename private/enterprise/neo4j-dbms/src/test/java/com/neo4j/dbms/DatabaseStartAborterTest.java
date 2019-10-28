@@ -32,16 +32,16 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
-class DatabaseStateAborterTest
+class DatabaseStartAborterTest
 {
 
     @Test
     void shouldAbortIfGlobalAvailabilityShutDown()
     {
         // given
-        var globaGuard = mock( AvailabilityGuard.class );
-        when( globaGuard.isShutdown() ).thenReturn( true );
-        var aborter = new DatabaseStartAborter( globaGuard, mock( EnterpriseSystemGraphDbmsModel.class ), new FakeClock(), Duration.ofSeconds( 5 ) );
+        var globalGuard = mock( AvailabilityGuard.class );
+        when( globalGuard.isShutdown() ).thenReturn( true );
+        var aborter = new DatabaseStartAborter( globalGuard, mock( EnterpriseSystemGraphDbmsModel.class ), new FakeClock(), Duration.ofSeconds( 5 ) );
 
         // when/then
         assertTrue( aborter.shouldAbort( TestDatabaseIdRepository.randomDatabaseId() ), "Any database should abort in the event of global shutdown" );

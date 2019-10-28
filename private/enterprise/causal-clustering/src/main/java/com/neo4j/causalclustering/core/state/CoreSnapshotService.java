@@ -16,8 +16,6 @@ import java.io.IOException;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-import static java.lang.String.format;
-
 public class CoreSnapshotService
 {
     private static final String OPERATION_NAME = "snapshot request";
@@ -26,17 +24,15 @@ public class CoreSnapshotService
     private final CoreState coreState;
     private final RaftLog raftLog;
     private final RaftMachine raftMachine;
-    private final DatabaseStartAborter databaseStartAborter;
     private final DatabaseId databaseId;
 
-    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState, RaftMachine raftMachine,
-            DatabaseStartAborter databaseStartAborter, DatabaseId databaseId )
+    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState,
+            RaftMachine raftMachine, DatabaseId databaseId )
     {
         this.applicationProcess = applicationProcess;
         this.coreState = coreState;
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
-        this.databaseStartAborter = databaseStartAborter;
         this.databaseId = databaseId;
     }
 
@@ -74,13 +70,13 @@ public class CoreSnapshotService
         notifyAll();
     }
 
-    synchronized void awaitState() throws InterruptedException, DatabaseStartAbortedException
+    synchronized void awaitState( DatabaseStartAborter startAborter ) throws InterruptedException, DatabaseStartAbortedException
     {
         while ( raftMachine.state().appendIndex() < 0 )
         {
-            if ( databaseStartAborter.shouldAbort( databaseId ) )
+            if ( startAborter.shouldAbort( databaseId ) )
             {
-                throw new DatabaseStartAbortedException( format( "Database %s was stopped before it finished starting!", databaseId.name() ) );
+                throw new DatabaseStartAbortedException( databaseId );
             }
             wait();
         }

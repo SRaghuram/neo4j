@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.common;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.LifeSupport;

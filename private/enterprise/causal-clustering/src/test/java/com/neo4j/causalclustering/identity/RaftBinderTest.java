@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
+import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -100,14 +101,31 @@ class RaftBinderTest
     {
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_DATABASE_ID, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider(), neverAbort() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, DatabaseId databaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider(), neverAbort() );
+                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+    }
+
+    @Test
+    void shouldThrowOnAbort()
+    {
+        // given
+        var unboundTopology = new DatabaseCoreTopology( SOME_DATABASE_ID, null, emptyMap() );
+        var topologyService = mock( CoreTopologyService.class );
+        when( topologyService.coreTopologyForDatabase( SOME_DATABASE_ID ) ).thenReturn( unboundTopology );
+
+        var binder = raftBinder( new InMemorySimpleStorage<>(), topologyService );
+        var aborter = mock( DatabaseStartAborter.class );
+        when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( true );
+        var exception = DatabaseStartAbortedException.class;
+
+        // when / then
+        assertThrows( exception, () -> binder.bindToRaft( aborter ) );
     }
 
     @Test
@@ -123,7 +141,7 @@ class RaftBinderTest
         var exception = IllegalStateException.class;
 
         // when / then
-        assertThrows( exception, binder::bindToRaft );
+        assertThrows( exception, () -> binder.bindToRaft( neverAbort() ) );
     }
 
     @Test
@@ -137,7 +155,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService );
 
         // when / then
-        assertThrows( TimeoutException.class, binder::bindToRaft );
+        assertThrows( TimeoutException.class, () -> binder.bindToRaft( neverAbort() ) );
         verify( topologyService, atLeast( 2 ) ).coreTopologyForDatabase( SOME_DATABASE_ID );
     }
 
@@ -156,7 +174,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_DATABASE_ID, systemGraph );
 
         // when
-        binder.bindToRaft();
+        binder.bindToRaft( neverAbort() );
 
         // then
         Optional<RaftId> raftId = binder.get();
@@ -180,7 +198,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
         // when
-        binder.bindToRaft();
+        binder.bindToRaft( neverAbort() );
 
         // then
         verify( topologyService ).setRaftId( previouslyBoundRaftId, SOME_DATABASE_ID );
@@ -204,7 +222,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
         // when / then
-        assertThrows( BindingException.class, binder::bindToRaft );
+        assertThrows( BindingException.class, () -> binder.bindToRaft( neverAbort() ) );
     }
 
     static Stream<Arguments> initialDatabases()
@@ -239,7 +257,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, databaseId, systemGraph );
 
         // when
-        BoundState boundState = binder.bindToRaft();
+        BoundState boundState = binder.bindToRaft( neverAbort() );
 
         // then
         verify( raftBootstrapper ).bootstrap( topologyMembers.keySet() );
@@ -275,7 +293,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_DATABASE_ID, systemGraph );
 
         // when
-        BoundState boundState = binder.bindToRaft();
+        BoundState boundState = binder.bindToRaft( neverAbort() );
 
         // then
         verify( raftBootstrapper ).bootstrap( topologyMembers.keySet(), SOME_STORE_ID );
@@ -301,7 +319,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_DATABASE_ID, systemGraph );
 
         // when
-        binder.bindToRaft();
+        binder.bindToRaft( neverAbort() );
 
         // then
         verify( topologyService ).coreTopologyForDatabase( SOME_DATABASE_ID );
@@ -325,7 +343,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SYSTEM_DATABASE_ID, systemGraph );
 
         // when
-        binder.bindToRaft();
+        binder.bindToRaft( neverAbort() );
 
         // then
         verify( topologyService ).coreTopologyForDatabase( SYSTEM_DATABASE_ID );

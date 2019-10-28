@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,11 +43,12 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
     private final LifeSupport clusterComponentsLife;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final PanicService panicService;
+    private final DatabaseStartAborter databaseStartAborter;
 
     public CoreDatabaseLife( RaftMachine raftMachine, Database kernelDatabase, RaftBinder raftBinder, CommandApplicationProcess commandApplicationProcess,
             LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService, CoreDownloaderService downloadService,
             RecoveryFacade recoveryFacade, LifeSupport clusterComponentsLife, ClusterInternalDbmsOperator clusterInternalOperator,
-            CoreTopologyService topologyService, PanicService panicService )
+            CoreTopologyService topologyService, PanicService panicService, DatabaseStartAborter databaseStartAborter )
     {
         this.raftMachine = raftMachine;
         this.kernelDatabase = kernelDatabase;
@@ -60,6 +62,7 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
         this.clusterInternalOperator = clusterInternalOperator;
         this.topologyService = topologyService;
         this.panicService = panicService;
+        this.databaseStartAborter = databaseStartAborter;
     }
 
     @Override
@@ -84,7 +87,7 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
             ensureRecovered();
 
             topologyService.onDatabaseStart( kernelDatabase.getDatabaseId() );
-            BoundState boundState = raftBinder.bindToRaft();
+            BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
             raftMessageHandler.start( boundState.raftId() );
 
             if ( boundState.snapshot().isPresent() )
@@ -94,7 +97,7 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
             }
             else
             {
-                snapshotService.awaitState();
+                snapshotService.awaitState( databaseStartAborter );
                 Optional<JobHandle> downloadJob = downloadService.downloadJob();
                 if ( downloadJob.isPresent() )
                 {
@@ -104,6 +107,7 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
         }
         finally
         {
+            databaseStartAborter.started( kernelDatabase.getDatabaseId() );
             signal.bootstrapped();
         }
     }
@@ -145,5 +149,4 @@ public class CoreDatabaseLife extends ClusteredDatabaseLife
     {
         panicService.removePanicEventHandlers( kernelDatabase.getDatabaseId() );
     }
-
 }
