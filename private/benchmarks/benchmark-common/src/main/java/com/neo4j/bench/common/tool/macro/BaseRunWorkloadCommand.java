@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 
@@ -21,7 +22,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 
-import static com.neo4j.bench.common.process.JvmArgs.jvmArgsFromString;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EDITION;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EXECUTION_MODE;
@@ -257,7 +257,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
-        List<String> jvmArgsList = jvmArgsFromString( this.jvmArgs );
+        JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );
         RunWorkloadParams commandParams = new RunWorkloadParams( workloadName,
                                                                  neo4jEdition,
                                                                  jvmFile.toPath(),
@@ -272,7 +272,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                                                                  planner,
                                                                  executionMode,
                                                                  errorPolicy,
-                                                                 jvmArgsList,
+                                                                 jvmArgs,
                                                                  recreateSchema,
                                                                  skipFlameGraphs,
                                                                  deployment,

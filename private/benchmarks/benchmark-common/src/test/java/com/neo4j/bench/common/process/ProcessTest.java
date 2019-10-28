@@ -17,7 +17,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -42,7 +41,7 @@ public class ProcessTest
     public void shouldSelectRightJava() throws Exception
     {
         Jvm jvm = Jvm.defaultJvm();
-        List<String> jvmArgs = Lists.newArrayList( "-Xmx4g" );
+        JvmArgs jvmArgs = JvmArgs.from( "-Xmx4g" );
         ArrayList<String> toolCommandArgs = Lists.newArrayList( "help" );
         JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
                                                                           jvm,

@@ -108,7 +108,24 @@
                  this change is only required for ldbc module -->
             <scope>runtime</scope>
         </dependency>
-
+        
+        <!-- overwrite ldbc driver jackson versions -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>${jackson2.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>${jackson2.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>${jackson2.version}</version>
+		</dependency>
+		
         <!--git sub-module libraries -->
         <dependency>
             <groupId>com.ldbc.driver</groupId>

@@ -8,6 +8,7 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.profiling.nmt.NativeMemoryTrackingSnapshot;
@@ -16,6 +17,7 @@ import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,14 +43,14 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     }
 
     @Override
-    public List<String> jvmArgs(
+    public JvmArgs jvmArgs(
             JvmVersion jvmVersion,
             ForkDirectory forkDirectory,
             BenchmarkGroup benchmarkGroup,
             Benchmark benchmark,
-            Parameters additionalParameters )
+            Parameters additionalParameters, Resources resources )
     {
-        return asList( "-XX:NativeMemoryTracking=summary" );
+        return JvmArgs.from( "-XX:NativeMemoryTracking=summary" );
     }
 
     @Override
@@ -86,6 +88,13 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
     }
 
     @Override
+    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                               Parameters additionalParameters )
+    {
+        // do nothing
+    }
+
+    @Override
     public void onSchedule(
             Tick tick,
             ForkDirectory forkDirectory,
@@ -104,5 +113,4 @@ public class NativeMemoryTrackingProfiler implements ScheduledProfiler
 
         processWrapper.waitFor();
     }
-
 }

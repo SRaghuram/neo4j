@@ -226,7 +226,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
             BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.toolCommit(), params.toolOwner(), params.toolBranch() );
 
             BenchmarkConfig benchmarkConfig = new BenchmarkConfig( new HashMap<>() );
-            Java java = Java.current( JvmArgs.jvmArgsToString( params.jvmArgs() ) );
+            Java java = Java.current( params.jvmArgs().toArgsString() );
             TestRunReport testRunReport = new TestRunReport(
                     testRun,
                     benchmarkConfig,

@@ -7,8 +7,6 @@ package com.neo4j.bench.common.process;
 
 import org.junit.Test;
 
-import java.util.List;
-
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -106,43 +104,43 @@ public class JvmArgsTest
     @Test
     public void handleQuotedArgsFromString()
     {
-        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "-XX:OnOutMemoryError=\"kill -9 %p\" -Xms4g -Xmx4g" );
+        JvmArgs jvmArgs = JvmArgs.parse( "-XX:OnOutMemoryError=\"kill -9 %p\" -Xms4g -Xmx4g" );
         assertArrayEquals(
                 new String[] {"-XX:OnOutMemoryError=kill -9 %p","-Xms4g","-Xmx4g"},
-                jvmArgs.toArray( new String[] {} ) );
+                jvmArgs.toArgs().toArray( new String[] {} ) );
     }
 
     @Test
     public void handleUnquotedArgsFromStringAndTrimsWhiteSpaces()
     {
-        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "-Xms4g -Xmx4g" );
+        JvmArgs jvmArgs = JvmArgs.parse( "-Xms4g -Xmx4g" );
         assertArrayEquals(
                 new String[] {"-Xms4g","-Xmx4g"},
-                jvmArgs.toArray( new String[] {} ) );
+                jvmArgs.toArgs().toArray( new String[] {} ) );
     }
 
     @Test
     public void handleLeadingAndTralingSpaceArgsFromString()
     {
-        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "  -Xms4g   -Xmx4g  " );
+        JvmArgs jvmArgs = JvmArgs.parse( "  -Xms4g   -Xmx4g  " );
         assertArrayEquals(
                 new String[] {"-Xms4g","-Xmx4g"},
-                jvmArgs.toArray( new String[] {} ) );
+                jvmArgs.toArgs().toArray( new String[] {} ) );
     }
 
     @Test
     public void handleLeadingAndTralingSpaceArgsFromQuotedString()
     {
-        List<String> jvmArgs = JvmArgs.jvmArgsFromString( "  -XX:OnOutMemoryError=\" kill -9 %p \"  " );
+        JvmArgs jvmArgs = JvmArgs.parse( "  -XX:OnOutMemoryError=\" kill -9 %p \"  " );
         assertArrayEquals(
                 new String[] {"-XX:OnOutMemoryError= kill -9 %p "},
-                jvmArgs.toArray( new String[] {} ) );
+                jvmArgs.toArgs().toArray( new String[] {} ) );
     }
 
     @Test
     public void addAllArguments()
     {
-        JvmArgs jvmArgs0 = JvmArgs.from( asList( "-Xmx4g" ) );
+        JvmArgs jvmArgs0 = JvmArgs.from( "-Xmx4g" );
         JvmArgs jvmargs1 = jvmArgs0.addAll( asList( "-Xms4g", "-XX:-PrintFlagsFinal" ) );
         assertEquals( asList( "-Xmx4g", "-Xms4g", "-XX:-PrintFlagsFinal" ), jvmargs1.toArgs() );
     }

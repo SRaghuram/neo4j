@@ -72,7 +72,7 @@ public class RunWorkloadParams
     private final ErrorReporter.ErrorPolicy errorPolicy;
 
     public static final String CMD_JVM_ARGS = "--jvm-args";
-    private final List<String> jvmArgs;
+    private final JvmArgs jvmArgs;
 
     public static final String CMD_NEO4J_DEPLOYMENT = "--neo4j-deployment";
     private final Deployment deployment;
@@ -141,7 +141,7 @@ public class RunWorkloadParams
                               Planner planner,
                               ExecutionMode executionMode,
                               ErrorReporter.ErrorPolicy errorPolicy,
-                              List<String> jvmArgs,
+                              JvmArgs jvmArgs,
                               boolean recreateSchema,
                               boolean skipFlameGraphs,
                               Deployment deployment,
@@ -262,7 +262,7 @@ public class RunWorkloadParams
         return errorPolicy;
     }
 
-    public List<String> jvmArgs()
+    public JvmArgs jvmArgs()
     {
         return jvmArgs;
     }
@@ -378,7 +378,7 @@ public class RunWorkloadParams
         map.put( CMD_PLANNER, planner.name() );
         map.put( CMD_EXECUTION_MODE, executionMode.name() );
         map.put( CMD_ERROR_POLICY, errorPolicy.name() );
-        map.put( CMD_JVM_ARGS, JvmArgs.jvmArgsToString( jvmArgs ) );
+        map.put( CMD_JVM_ARGS, jvmArgs.toArgsString() );
         map.put( CMD_NEO4J_DEPLOYMENT, deployment.parsableValue() );
         map.put( CMD_RECREATE_SCHEMA, Boolean.toString( recreateSchema ) );
         map.put( CMD_SKIP_FLAMEGRAPHS, Boolean.toString( skipFlameGraphs ) );

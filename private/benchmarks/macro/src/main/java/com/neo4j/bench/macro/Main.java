@@ -11,6 +11,7 @@ import com.github.rvesse.airline.help.Help;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
@@ -72,7 +73,7 @@ public class Main
                     options.forks(),
                     options.unit(),
                     verboseMetricsPrinter,
-                    options.jvmArgs(),
+                    JvmArgs.from( options.jvmArgs() ),
                     resources );
 
             BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();

@@ -145,7 +145,7 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    Long.toString( runWorkloadParams.teamcityBuild() ),
                                    Long.toString( runWorkloadParams.parentBuild() ),
                                    runWorkloadParams.executionMode().name(),
-                                   String.join( " ", runWorkloadParams.jvmArgs() ),
+                                   runWorkloadParams.jvmArgs().toArgsString(),
                                    Boolean.toString( runWorkloadParams.isRecreateSchema() ),
                                    runWorkloadParams.planner().name(),
                                    runWorkloadParams.runtime().name(),

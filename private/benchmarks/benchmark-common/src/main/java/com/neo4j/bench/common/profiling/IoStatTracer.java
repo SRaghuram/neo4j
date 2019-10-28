@@ -8,9 +8,11 @@ package com.neo4j.bench.common.profiling;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Path;
@@ -33,13 +35,14 @@ public class IoStatTracer implements ExternalProfiler
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion,
-                                 ForkDirectory forkDirectory,
-                                 BenchmarkGroup benchmarkGroup,
-                                 Benchmark benchmark,
-                                 Parameters additionalParameters )
+    public JvmArgs jvmArgs( JvmVersion jvmVersion,
+                            ForkDirectory forkDirectory,
+                            BenchmarkGroup benchmarkGroup,
+                            Benchmark benchmark,
+                            Parameters additionalParameters,
+                            Resources resources )
     {
-        return Collections.emptyList();
+        return JvmArgs.empty();
     }
 
     @Override
@@ -68,5 +71,12 @@ public class IoStatTracer implements ExternalProfiler
                               Parameters additionalParameters )
     {
         iostat.stop();
+    }
+
+    @Override
+    public void processFailed( ForkDirectory forkDirectory, BenchmarkGroup benchmarkGroup, Benchmark benchmark,
+                               Parameters additionalParameters )
+    {
+        // do nothing
     }
 }

@@ -5,15 +5,16 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.JvmVersion;
+import com.neo4j.bench.common.util.Resources;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,13 +59,14 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
     }
 
     @Override
-    public List<String> jvmArgs( JvmVersion jvmVersion,
-                                 ForkDirectory forkDirectory,
-                                 BenchmarkGroup benchmarkGroup,
-                                 Benchmark benchmark,
-                                 Parameters additionalParameters )
+    public JvmArgs jvmArgs( JvmVersion jvmVersion,
+                            ForkDirectory forkDirectory,
+                            BenchmarkGroup benchmarkGroup,
+                            Benchmark benchmark,
+                            Parameters additionalParameters,
+                            Resources resources )
     {
-        return Lists.newArrayList(
+        return JvmArgs.from(
                 "-XX:+UnlockDiagnosticVMOptions",
                 "-XX:+DebugNonSafepoints" );
     }
@@ -133,6 +135,15 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
                               BenchmarkGroup benchmarkGroup,
                               Benchmark benchmark,
                               Parameters additionalParameters )
+    {
+        // do nothing
+    }
+
+    @Override
+    public void processFailed( ForkDirectory forkDirectory,
+                               BenchmarkGroup benchmarkGroup,
+                               Benchmark benchmark,
+                               Parameters additionalParameters )
     {
         // do nothing
     }
