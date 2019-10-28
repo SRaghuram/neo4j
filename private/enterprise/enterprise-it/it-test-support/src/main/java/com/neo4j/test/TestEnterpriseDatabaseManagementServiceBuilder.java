@@ -7,7 +7,6 @@ package com.neo4j.test;
 
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.kernel.impl.enterprise.lock.forseti.ForsetiLocksFactory;
 
 import java.io.File;
 import java.util.Map;
@@ -16,7 +15,6 @@ import java.util.function.Function;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -59,7 +57,6 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
         config = super.augmentConfig( config );
         config.setIfNotSet( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "127.0.0.1",0 ) );
         config.setIfNotSet( OnlineBackupSettings.online_backup_enabled, false );
-        config.setIfNotSet( GraphDatabaseSettings.lock_manager, ForsetiLocksFactory.KEY );
         return config;
     }
 

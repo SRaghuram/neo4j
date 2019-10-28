@@ -9,13 +9,13 @@ import java.time.Clock;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.impl.locking.DynamicLocksFactory;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.kernel.impl.locking.LocksFactory;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
 
 @ServiceProvider
-public class ForsetiLocksFactory implements DynamicLocksFactory
+public class ForsetiLocksFactory implements LocksFactory
 {
     public static final String KEY = "forseti";
 
@@ -23,6 +23,12 @@ public class ForsetiLocksFactory implements DynamicLocksFactory
     public String getName()
     {
         return KEY;
+    }
+
+    @Override
+    public int getPriority()
+    {
+        return 10;
     }
 
     @Override

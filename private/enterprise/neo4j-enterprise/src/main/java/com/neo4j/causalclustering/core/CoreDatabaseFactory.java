@@ -115,6 +115,7 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -263,7 +264,7 @@ class CoreDatabaseFactory
         ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedBarrierTokenStateMachine,
                 config.get( state_machine_apply_max_batch_size ), debugLog );
 
-        Locks lockManager = createLockManager( config, clock );
+        Locks lockManager = createLockManager( config, clock, logService );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( kernelResolvers.txIdStore(), kernelResolvers.txStore(), debugLog );
 
@@ -430,9 +431,9 @@ class CoreDatabaseFactory
         return new ReplicatedBarrierTokenStateMachine( barrierTokenStorage, () -> resolvers.idGeneratorFactory().get().clearCache() );
     }
 
-    private Locks createLockManager( final Config config, Clock clock )
+    private Locks createLockManager( final Config config, Clock clock, LogService logService )
     {
-        LocksFactory lockFactory = createLockFactory( config );
+        LocksFactory lockFactory = createLockFactory( config, logService );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
         return new LeaderOnlyLockManager( localLocks );
     }
