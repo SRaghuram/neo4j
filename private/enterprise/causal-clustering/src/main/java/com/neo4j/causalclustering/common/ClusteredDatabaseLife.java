@@ -10,6 +10,8 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
+import static org.neo4j.internal.helpers.Exceptions.chain;
+
 /**
  * Instances of this type encapsulate the lifecycle control for all components required by a
  * clustered database instance, including the Raft/Catchup servers and the kernel {@link Database}.
@@ -32,9 +34,25 @@ public abstract class ClusteredDatabaseLife
     {
         if ( !started )
         {
-            start0();
-            started = true;
             initialized = true;
+
+            try
+            {
+                start0();
+                started = true;
+            }
+            catch ( Throwable startError )
+            {
+                try
+                {
+                    stop0();
+                }
+                catch ( Throwable stopError )
+                {
+                    chain( startError, stopError );
+                }
+                throw startError;
+            }
         }
     }
 

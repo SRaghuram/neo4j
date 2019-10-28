@@ -49,8 +49,11 @@ import org.neo4j.storageengine.api.StoreId;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -406,6 +409,33 @@ class ReadReplicaDatabaseLifeTest
         var inOrder = inOrder( topologyService );
         inOrder.verify( topologyService ).onDatabaseStart( databaseA );
         inOrder.verify( topologyService ).onDatabaseStop( databaseA );
+    }
+
+    @Test
+    void shouldStopWhenStartFails() throws Exception
+    {
+        var topologyService = topologyService( databaseA, memberA, addressA );
+        var startError = new RuntimeException();
+        doThrow( startError ).when( topologyService ).onDatabaseStart( databaseA );
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var catchupProcess = mock( Lifecycle.class );
+        var databaseContext = normalDatabase( databaseA, storeA, false );
+        var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, neverAbort() );
+
+        var thrownStartError = assertThrows( RuntimeException.class, readReplicaDatabaseLife::start );
+        assertEquals( startError, thrownStartError );
+
+        // start failed and invoked stop to cleanup after itself
+        var inOrder = inOrder( topologyService );
+        inOrder.verify( topologyService ).onDatabaseStart( databaseA );
+        inOrder.verify( topologyService ).onDatabaseStop( databaseA );
+
+        assertTrue( readReplicaDatabaseLife.initialized() );
+
+        // the following explicit invocations of stop do nothing because start did not complete
+        readReplicaDatabaseLife.stop();
+        readReplicaDatabaseLife.stop();
+        inOrder.verifyNoMoreInteractions();
     }
 
     private void assertNeverStarted( Database database, Lifecycle catchupProcess ) throws Exception

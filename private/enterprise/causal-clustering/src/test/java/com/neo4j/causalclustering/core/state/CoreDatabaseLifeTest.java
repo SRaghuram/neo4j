@@ -9,12 +9,12 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -26,8 +26,11 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -108,6 +111,31 @@ class CoreDatabaseLifeTest
         // when / then
         assertThrows( RuntimeException.class, coreDatabaseLife::start );
         verify( databaseStartAborter ).started( databaseId );
+    }
+
+    @Test
+    void shouldStopWhenStartFails() throws Exception
+    {
+        var databaseId = databaseIdRepository.getRaw( "employees" );
+        var topologyService = mock( CoreTopologyService.class );
+        var startError = new RuntimeException();
+        doThrow( startError ).when( topologyService ).onDatabaseStart( databaseId );
+        var coreDatabaseLife = createCoreDatabaseLife( databaseId, topologyService, life );
+
+        var thrownStartError = assertThrows( RuntimeException.class, coreDatabaseLife::start );
+        assertEquals( startError, thrownStartError );
+
+        // start failed and invoked stop to cleanup after itself
+        var inOrder = inOrder( topologyService );
+        inOrder.verify( topologyService ).onDatabaseStart( databaseId );
+        inOrder.verify( topologyService ).onDatabaseStop( databaseId );
+
+        assertTrue( coreDatabaseLife.initialized() );
+
+        // the following explicit invocations of stop do nothing because start did not complete
+        coreDatabaseLife.stop();
+        coreDatabaseLife.stop();
+        inOrder.verifyNoMoreInteractions();
     }
 
     private static CoreDatabaseLife createCoreDatabaseLife( DatabaseId databaseId, CoreTopologyService topologyService, LifeSupport life ) throws Exception
