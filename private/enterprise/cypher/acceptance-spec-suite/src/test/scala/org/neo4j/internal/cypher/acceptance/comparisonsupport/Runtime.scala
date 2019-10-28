@@ -10,7 +10,7 @@ case class Runtimes(runtimes: Runtime*)
 object Runtimes {
   implicit def runtimeToRuntimes(runtime: Runtime): Runtimes = Runtimes(runtime)
 
-  val all = Runtimes(CompiledBytecode, CompiledSource, Slotted, SlottedWithCompiledExpressions, Interpreted, Parallel, Morsel)
+  val all = Runtimes(CompiledBytecode, CompiledSource, SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions, Interpreted, Parallel, MorselFused, MorselNonFused)
 
   def definedBy(preParserArgs: Array[String]): Runtimes = {
     val runtimes = all.runtimes.filter(_.isDefinedBy(preParserArgs))
@@ -21,19 +21,22 @@ object Runtimes {
 
   object CompiledBytecode extends Runtime(Set("LEGACY_COMPILED", "SCHEMA"), "runtime=legacy_compiled")
 
-  object Slotted extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted")
+  object SlottedWithInterpretedExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=interpreted")
 
-  object SlottedWithCompiledExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=COMPILED")
+  object SlottedWithCompiledExpressions extends Runtime(Set("SLOTTED", "SCHEMA"), "runtime=slotted expressionEngine=compiled")
 
   object Interpreted extends Runtime(Set("INTERPRETED", "SCHEMA"), "runtime=interpreted")
 
   object Parallel extends Runtime(Set("PARALLEL"), "runtime=parallel")
 
-  object Morsel extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel")
+  object MorselFused extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel operatorEngine=compiled")
 
-  object MorselFull extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel interpretedPipesFallback=all")
+  object MorselNonFused extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel operatorEngine=interpreted")
+
+  object MorselFull extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel interpretedPipesFallback=all")
 }
 
 case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {
-  def isDefinedBy(preParserArgs: Array[String]): Boolean = preparserOption.split(" ").forall(preParserArgs.contains(_))
+  def isDefinedBy(preParserArgs: Array[String]): Boolean =
+    preparserOption.split(" ").forall(preParserArgs.contains(_))
 }

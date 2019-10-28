@@ -23,8 +23,8 @@ class TestConfigurationTest extends CypherFunSuite {
 
   test("should parse just runtime") {
     TestConfiguration("runtime=interpreted") should be(TestConfiguration(Planners.all, Runtimes.Interpreted))
-    TestConfiguration("runtime=slotted") should be(TestConfiguration(Planners.all, Runtimes.Slotted))
-    TestConfiguration("runtime=slotted expressionEngine=COMPILED") should be(TestConfiguration(Planners.all, Runtimes(Runtimes.Slotted, Runtimes.SlottedWithCompiledExpressions)))
+    TestConfiguration("runtime=slotted expressionEngine=interpreted") should be(TestConfiguration(Planners.all, Runtimes.SlottedWithInterpretedExpressions))
+    TestConfiguration("runtime=slotted expressionEngine=compiled") should be(TestConfiguration(Planners.all, Runtimes.SlottedWithCompiledExpressions))
   }
 
   test("should parse planner and runtime") {

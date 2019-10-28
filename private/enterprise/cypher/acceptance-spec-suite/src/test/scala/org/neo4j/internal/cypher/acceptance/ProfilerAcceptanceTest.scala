@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.cypher.{ExecutionEngineFunSuite, TxCounts}
 import org.neo4j.exceptions.ProfilerStatisticsNotReadyException
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, Planners, Runtimes, TestConfiguration}
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
@@ -112,7 +112,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
                   includeSomewhere.aPlan("AllNodesScan").withTime()
                 )
             ),
-        expectPlansToFail = Configs.InterpretedAndSlottedAndMorsel)
+        expectPlansToFail = Configs.InterpretedAndSlotted + TestConfiguration(Planners.all, Runtimes.MorselFused))
     )
   }
 

@@ -5,22 +5,22 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, Slotted, SlottedWithCompiledExpressions}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions}
 
 object Configs {
 
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
-  def MorselSingleThreaded: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel))
+  def MorselSingleThreaded: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.MorselFused, Runtimes.MorselNonFused))
 
-  def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.Morsel))
+  def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.MorselFused, Runtimes.MorselNonFused))
 
   def Parallel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel))
 
   def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
 
-  def SlottedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions))
+  def SlottedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions))
 
   def InterpretedAndSlotted: TestConfiguration = InterpretedRuntime + SlottedRuntime
 
