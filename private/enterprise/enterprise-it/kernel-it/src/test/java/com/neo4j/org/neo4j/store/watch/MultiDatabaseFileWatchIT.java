@@ -14,6 +14,7 @@ import org.junit.jupiter.api.condition.OS;
 
 import java.io.File;
 import java.nio.file.WatchKey;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
@@ -28,8 +29,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.time.Duration.ofSeconds;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteFile;
 
@@ -69,50 +68,44 @@ class MultiDatabaseFileWatchIT
 
     @Test
     @DisabledOnOs( OS.WINDOWS )
-    void deleteFileInOneDatabaseWarnAboutThatParticularDatabase()
+    void deleteFileInOneDatabaseWarnAboutThatParticularDatabase() throws InterruptedException
     {
-        assertTimeoutPreemptively( ofSeconds( 60 ), () ->
-        {
-            File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
-            FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
-            DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( firstDbMetadataStore.getName() );
-            fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
-            deleteFile( firstDbMetadataStore );
+        File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
+        FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
+        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( firstDbMetadataStore.getName() );
+        fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
+        deleteFile( firstDbMetadataStore );
 
-            deletionListener.awaitDeletionNotification();
+        deletionListener.awaitDeletionNotification();
 
-            logProvider.formattedMessageMatcher().assertContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
-            logProvider.formattedMessageMatcher().assertNotContains( "'neostore' which belongs to the 'second' database was deleted while it was running." );
-            logProvider.formattedMessageMatcher().assertNotContains( "'neostore' which belongs to the 'third' database was deleted while it was running." );
-        } );
+        logProvider.formattedMessageMatcher().assertContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
+        logProvider.formattedMessageMatcher().assertNotContains( "'neostore' which belongs to the 'second' database was deleted while it was running." );
+        logProvider.formattedMessageMatcher().assertNotContains( "'neostore' which belongs to the 'third' database was deleted while it was running." );
     }
 
     @Test
     @DisabledOnOs( OS.WINDOWS )
-    void differentEventsGoToDifferentDatabaseListeners()
+    void differentEventsGoToDifferentDatabaseListeners() throws InterruptedException
     {
-        assertTimeoutPreemptively( ofSeconds( 60 ), () ->
-        {
-            File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
-            File secondDbNodeStore = secondContext.databaseLayout().nodeStore();
-            File thirdDbRelStore = thirdContext.databaseLayout().relationshipStore();
+        File firstDbMetadataStore = firstContext.databaseLayout().metadataStore();
+        File secondDbNodeStore = secondContext.databaseLayout().nodeStore();
+        File thirdDbRelStore = thirdContext.databaseLayout().relationshipStore();
 
-            FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
-            DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName() );
-            fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
+        FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
+        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName() );
+        fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
 
-            deleteFile( firstDbMetadataStore );
-            deleteFile( secondDbNodeStore );
-            deleteFile( thirdDbRelStore );
+        deleteFile( firstDbMetadataStore );
+        deleteFile( secondDbNodeStore );
+        deleteFile( thirdDbRelStore );
 
-            deletionListener.awaitDeletionNotification();
+        deletionListener.awaitDeletionNotification();
 
-            logProvider.formattedMessageMatcher().assertContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
-            logProvider.formattedMessageMatcher().assertContains(
-                    "'neostore.nodestore.db' which belongs to the 'second' database was deleted while it was running." );
-            logProvider.formattedMessageMatcher().assertContains(
-                    "'neostore.relationshipstore.db' which belongs to the 'third' database was deleted while it was running." );
-        } );
+        logProvider.formattedMessageMatcher().assertContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
+        logProvider.formattedMessageMatcher().assertContains(
+                "'neostore.nodestore.db' which belongs to the 'second' database was deleted while it was running." );
+        logProvider.formattedMessageMatcher().assertContains(
+                "'neostore.relationshipstore.db' which belongs to the 'third' database was deleted while it was running." );
     }
 
     private FileSystemWatcherService getFileSystemWatcher()
@@ -122,18 +115,19 @@ class MultiDatabaseFileWatchIT
 
     private static class DeletionLatchEventListener implements FileWatchEventListener
     {
-        private final String expectedFileName;
-        private final CountDownLatch deletionLatch = new CountDownLatch( 1 );
+        private final Set<String> expectedFileNames;
+        private final CountDownLatch deletionLatch;
 
-        DeletionLatchEventListener( String expectedFileName )
+        DeletionLatchEventListener( String... expectedFileNames )
         {
-            this.expectedFileName = expectedFileName;
+            this.expectedFileNames = Set.of( expectedFileNames );
+            this.deletionLatch = new CountDownLatch( expectedFileNames.length );
         }
 
         @Override
         public void fileDeleted( WatchKey key, String fileName )
         {
-            if ( fileName.endsWith( expectedFileName ) )
+            if ( expectedFileNames.contains( fileName ) )
             {
                 deletionLatch.countDown();
             }
