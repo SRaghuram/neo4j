@@ -130,7 +130,7 @@ class MorselRuntime private(parallelExecution: Boolean,
         CommunityExpressionConverter(context.tokenContext))
     }
 
-    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution)
+    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution, query.providedOrders)
 
     //=======================================================
     val slottedPipeBuilder =

@@ -62,6 +62,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
   private val solveds = new Solveds
   private val cardinalities = new Cardinalities
+  private val providedOrders = new ProvidedOrders
   val users: mutable.Map[String, LoginContext] = mutable.Map[String, LoginContext]()
 
   class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
@@ -239,6 +240,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       resultColumns.toArray,
       semanticTable,
       cardinalities,
+      providedOrders,
       hasLoadCSV = false,
       Option.empty)
   }
