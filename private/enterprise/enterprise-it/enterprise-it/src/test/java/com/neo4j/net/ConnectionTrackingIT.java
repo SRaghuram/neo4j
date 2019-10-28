@@ -15,6 +15,11 @@ import org.junit.jupiter.api.TestInstance;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
-import javax.ws.rs.core.HttpHeaders;
 
 import org.neo4j.bolt.testing.TransportTestUtil;
 import org.neo4j.bolt.testing.client.SocketConnection;
@@ -56,9 +60,12 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.BOLT;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.HTTP;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.HTTPS;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.HttpHeaders.AUTHORIZATION;
+import static javax.ws.rs.core.HttpHeaders.USER_AGENT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.any;
 import static org.hamcrest.Matchers.equalTo;
@@ -78,9 +85,10 @@ import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 import static org.neo4j.server.configuration.ServerSettings.webserver_max_threads;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.server.HTTP.RawPayload;
-import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
 import static org.neo4j.test.server.HTTP.RawPayload.rawPayload;
 import static org.neo4j.test.server.HTTP.Response;
+import static org.neo4j.test.server.HTTP.basicAuthHeader;
+import static org.neo4j.test.server.HTTP.newClient;
 import static org.neo4j.test.server.HTTP.withBasicAuth;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -98,6 +106,7 @@ class ConnectionTrackingIT
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Set<TransportConnection> connections = ConcurrentHashMap.newKeySet();
+    private final Set<HttpClient> httpClients = ConcurrentHashMap.newKeySet();
     private final TransportTestUtil util = new TransportTestUtil();
 
     @Inject
@@ -147,6 +156,7 @@ class ConnectionTrackingIT
             {
             }
         }
+        httpClients.clear();
         IOUtils.closeAllSilently( acceptedConnectionsFromConnectionTracker() );
         terminateAllTransactions();
         awaitNumberOfAcceptedConnectionsToBe( 0 );
@@ -473,25 +483,34 @@ class ConnectionTrackingIT
         }
     }
 
-    private Future<Response> updateNodeViaHttp( long id, String username, String password )
+    private Future<HttpResponse<String>> updateNodeViaHttp( long id, String username, String password )
     {
         return updateNodeViaHttp( id, false, username, password );
     }
 
-    private Future<Response> updateNodeViaHttps( long id, String username, String password )
+    private Future<HttpResponse<String>> updateNodeViaHttps( long id, String username, String password )
     {
         return updateNodeViaHttp( id, true, username, password );
     }
 
-    private Future<Response> updateNodeViaHttp( long id, boolean encrypted, String username, String password )
+    private Future<HttpResponse<String>> updateNodeViaHttp( long id, boolean encrypted, String username, String password )
     {
-        String uri = txCommitUri( encrypted );
+        URI uri = txCommitUri( encrypted );
         String userAgent = encrypted ? HTTPS.userAgent : HTTP.userAgent;
 
         return executor.submit( () ->
-                withBasicAuth( username, password )
-                        .withHeaders( HttpHeaders.USER_AGENT, userAgent )
-                        .POST( uri, query( "MATCH (n) WHERE id(n) = " + id + " SET n.prop = 42" ) )
+                {
+                    var httpClient = newClient();
+                    httpClients.add( httpClient );
+
+                    var httpRequest = HttpRequest.newBuilder( uri )
+                            .header( USER_AGENT, userAgent )
+                            .header( AUTHORIZATION, basicAuthHeader( username, password ) )
+                            .POST( BodyPublishers.ofString( query( "MATCH (n) WHERE id(n) = " + id + " SET n.prop = 42" ).get(), UTF_8 ) )
+                            .build();
+
+                    return httpClient.send( httpRequest, BodyHandlers.ofString() );
+                }
         );
     }
 
@@ -575,10 +594,10 @@ class ConnectionTrackingIT
         kernelTransactions.activeTransactions().forEach( h -> h.markForTermination( Terminated ) );
     }
 
-    private String txCommitUri( boolean encrypted )
+    private URI txCommitUri( boolean encrypted )
     {
         URI baseUri = encrypted ? neo4j.httpsURI() : neo4j.httpURI();
-        return baseUri.resolve( "db/neo4j/tx/commit" ).toString();
+        return baseUri.resolve( "db/neo4j/tx/commit" );
     }
 
     private static RawPayload query( String statement )
