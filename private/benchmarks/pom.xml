@@ -17,6 +17,7 @@
     <name>Neo4j - Benchmarks</name>
 
     <properties>
+        <jackson2.version>2.9.7</jackson2.version>
         <airline.version>2.7.1</airline.version>
         <junit.version>5.2.0</junit.version>
         <guava.version>28.0-jre</guava.version>
@@ -56,6 +57,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson2.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>

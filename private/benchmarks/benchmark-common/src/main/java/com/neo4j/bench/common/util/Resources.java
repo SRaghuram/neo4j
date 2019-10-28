@@ -168,7 +168,6 @@ public class Resources implements AutoCloseable
         subscriptions.dec();
         if ( subscriptions.hasSubscribers() )
         {
-            Path dumpDir = workDir.resolve( DUMP_DIR_NAME );
             if ( Files.exists( dumpDir ) )
             {
                 BenchmarkUtil.deleteDir( dumpDir );

@@ -7,6 +7,7 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
@@ -26,7 +27,7 @@ public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, C
                         Store originalStore,
                         Path neo4jConfigFile,
                         Jvm jvm,
-                        List<String> jvmArgs,
+                        JvmArgs jvmArgs,
                         Resources resources )
     {
         super( launcher,
@@ -48,7 +49,7 @@ public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, C
                                List<ProfilerType> profilerTypes,
                                Jvm jvm,
                                Path neo4jConfigFile,
-                               List<String> jvmArgs,
+                               JvmArgs jvmArgs,
                                Parameters clientParameters,
                                Resources resources )
     {

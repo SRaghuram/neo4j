@@ -19,8 +19,6 @@ import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -45,7 +43,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                   Store originalStore,
                   Path neo4jConfigFile,
                   Jvm jvm,
-                  List<String> jvmArgs,
+                  JvmArgs jvmArgs,
                   Resources resources )
     {
         this.query = query;
@@ -56,7 +54,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         this.neo4jConfigFile = neo4jConfigFile;
         this.jvm = jvm;
         this.jvmArgs = JvmArgs.standardArgs( forkDirectory )
-                .addAll( jvmArgs )
+                .merge( jvmArgs )
                 // every fork will have its own temporary directory
                 .set( format( "-Djava.io.tmpdir=%s", BenchmarkUtil.tryMkDir( forkDirectory.pathFor( "tmp" ) ) ) );
         this.launcher = launcher;
@@ -101,7 +99,9 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                                                                   forkDirectory,
                                                                                   query,
                                                                                   serverParameters,
-                                                                                  jvmArgs.toArgs() );
+                                                                                  jvmArgs,
+                                                                                  resources)
+                                                                    .toArgs();
 
             if ( launcher.isDatabaseInDifferentProcess() )
             {
@@ -123,7 +123,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                 ProfilerType.internalProfilers( profilerTypes ),
                                 jvm,
                                 neo4jConfigFile,
-                                jvmArgs.toArgs(),
+                                jvmArgs,
                                 clientParameters,
                                 resources );
             }
@@ -159,7 +159,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
                                         List<ProfilerType> profilerTypes,
                                         Jvm jvm,
                                         Path neo4jConfigFile,
-                                        List<String> jvmArgs,
+                                        JvmArgs jvmArgs,
                                         Parameters clientParameters,
                                         Resources resources );
 
@@ -178,23 +178,23 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         }
     }
 
-    static List<String> addExternalProfilerJvmArgs( List<ExternalProfiler> externalProfilers,
+    static JvmArgs addExternalProfilerJvmArgs( List<ExternalProfiler> externalProfilers,
                                                     Jvm jvm,
                                                     ForkDirectory forkDirectory,
                                                     Query query,
                                                     Parameters parameters,
-                                                    List<String> jvmArgs )
+                                                    JvmArgs jvmArgs,
+                                                    Resources resources )
     {
-        List<String> combinedJvmArgs = new ArrayList<>( jvmArgs );
-        externalProfilers.stream()
+        JvmArgs profilersJvmArgs = externalProfilers.stream()
                          .map( profiler -> profiler.jvmArgs( jvm.version(),
                                                              forkDirectory,
                                                              query.benchmarkGroup(),
                                                              query.benchmark(),
-                                                             parameters ) )
-                         .flatMap( Collection::stream )
-                         .filter( profilerJvmArg -> !jvmArgs.contains( profilerJvmArg ) )
-                         .forEach( combinedJvmArgs::add );
-        return combinedJvmArgs;
+                                                             parameters,
+                                                             resources ) )
+                         .reduce( JvmArgs.empty(), JvmArgs::merge );
+
+        return jvmArgs.merge( profilersJvmArgs );
     }
 }

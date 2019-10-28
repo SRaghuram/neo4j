@@ -9,7 +9,6 @@ import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -60,7 +59,7 @@ public class Neo4jConfig
 
     public Neo4jConfig( Map<String,String> config )
     {
-        this( config, JvmArgs.from( new ArrayList<String>() ) );
+        this( config, JvmArgs.empty() );
     }
 
     private Neo4jConfig( Map<String,String> config, JvmArgs jvmArgs )

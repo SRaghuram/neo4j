@@ -13,6 +13,7 @@ import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -269,7 +270,7 @@ public class RunWorkloadCommandIT
                             Planner.DEFAULT,
                             ExecutionMode.EXECUTE,
                             ErrorPolicy.FAIL,
-                            Lists.newArrayList( "-Xms4g", "-Xmx4g" ),
+                            JvmArgs.from( "-Xms4g", "-Xmx4g" ),
                             recreateSchema,
                             skipFlameGraphs,
                             deployment,
