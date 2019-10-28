@@ -31,6 +31,8 @@ public interface FabricTransaction
 
     FabricTransactionInfo getTransactionInfo();
 
+    TransactionBookmarkManager getBookmarkManager();
+
     interface FabricExecutionContext
     {
         FabricRemoteExecutor.FabricRemoteTransaction getRemote();

@@ -7,6 +7,7 @@ package com.neo4j.fabric.bolt;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
+import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
@@ -23,6 +24,7 @@ import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.Bookmark;
+import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -42,16 +44,22 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     private final DatabaseId databaseId;
     private final FabricConfig config;
     private final TransactionManager transactionManager;
+    private final Duration bookmarkTimeout;
+    private final TransactionIdTracker transactionIdTracker;
 
     public BoltFabricDatabaseService( DatabaseId databaseId,
             FabricExecutor fabricExecutor,
             FabricConfig config,
-            TransactionManager transactionManager )
+            TransactionManager transactionManager,
+            Duration bookmarkTimeout,
+            TransactionIdTracker transactionIdTracker )
     {
         this.databaseId = databaseId;
         this.config = config;
         this.transactionManager = transactionManager;
         this.fabricExecutor = fabricExecutor;
+        this.bookmarkTimeout = bookmarkTimeout;
+        this.transactionIdTracker = transactionIdTracker;
     }
 
     @Override
@@ -72,7 +80,11 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
                 txTimeout,
                 txMetadata
         );
-        FabricTransaction fabricTransaction = transactionManager.begin( transactionInfo );
+
+        var transactionBookmarkManager = new TransactionBookmarkManager( config, transactionIdTracker, bookmarkTimeout );
+        transactionBookmarkManager.processSubmittedByClient( bookmarks );
+
+        FabricTransaction fabricTransaction = transactionManager.begin( transactionInfo, transactionBookmarkManager );
         return new BoltTransactionImpl( transactionInfo, fabricTransaction );
     }
 
@@ -136,7 +148,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         @Override
         public BookmarkMetadata getBookmarkMetadata()
         {
-            return new FabricBookmark( databaseId, List.of() );
+            return fabricTransaction.getBookmarkManager().constructFinalBookmark();
         }
 
         @Override

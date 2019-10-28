@@ -31,6 +31,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
     private static final AtomicLong ID_GENERATOR = new AtomicLong();
 
     private final FabricTransactionInfo transactionInfo;
+    private final TransactionBookmarkManager bookmarkManager;
     private final FabricRemoteExecutor remoteExecutor;
     private final FabricLocalExecutor localExecutor;
     private final Log userLog;
@@ -45,8 +46,8 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
     private boolean terminated;
     private Status terminationStatus;
 
-    FabricTransactionImpl( FabricTransactionInfo transactionInfo, FabricRemoteExecutor remoteExecutor, FabricLocalExecutor localExecutor, LogService logService,
-            TransactionManager transactionManager, JobScheduler jobScheduler,
+    FabricTransactionImpl( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager, FabricRemoteExecutor remoteExecutor,
+            FabricLocalExecutor localExecutor, LogService logService, TransactionManager transactionManager, JobScheduler jobScheduler,
             FabricConfig fabricConfig )
     {
         this.transactionInfo = transactionInfo;
@@ -57,6 +58,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         this.transactionManager = transactionManager;
         this.jobScheduler = jobScheduler;
         this.fabricConfig = fabricConfig;
+        this.bookmarkManager = bookmarkManager;
         this.id = ID_GENERATOR.incrementAndGet();
     }
 
@@ -84,7 +86,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
 
         try
         {
-            remoteTransaction = remoteExecutor.begin( transactionInfo );
+            remoteTransaction = remoteExecutor.begin( transactionInfo, bookmarkManager );
             localTransaction = localExecutor.begin( transactionInfo );
             scheduleTimeout( transactionInfo );
             internalLog.debug( "Transaction %d started", id );
@@ -210,6 +212,12 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
     public Optional<Status> getReasonIfTerminated()
     {
         return Optional.empty();
+    }
+
+    @Override
+    public TransactionBookmarkManager getBookmarkManager()
+    {
+        return bookmarkManager;
     }
 
     void doRollback()

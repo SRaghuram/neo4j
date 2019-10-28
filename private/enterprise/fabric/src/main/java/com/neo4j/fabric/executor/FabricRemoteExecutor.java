@@ -12,12 +12,12 @@ import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.planning.QueryType;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
+import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import org.neo4j.bolt.runtime.AccessMode;
 
@@ -33,21 +33,23 @@ public class FabricRemoteExecutor
         this.driverPool = driverPool;
     }
 
-    public FabricRemoteTransaction begin( FabricTransactionInfo transactionInfo )
+    public FabricRemoteTransaction begin( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager )
     {
-        return new FabricRemoteTransaction( transactionInfo );
+        return new FabricRemoteTransaction( transactionInfo, bookmarkManager );
     }
 
     public class FabricRemoteTransaction
     {
         private final FabricTransactionInfo transactionInfo;
+        private final TransactionBookmarkManager bookmarkManager;
         private final Map<FabricConfig.Graph,PooledDriver> usedDrivers = new HashMap<>();
         private FabricConfig.Graph writingTo;
         private Mono<FabricDriverTransaction> writeTransaction;
 
-        private FabricRemoteTransaction( FabricTransactionInfo transactionInfo )
+        private FabricRemoteTransaction( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager )
         {
             this.transactionInfo = transactionInfo;
+            this.bookmarkManager = bookmarkManager;
         }
 
         public Mono<StatementResult> run( FabricConfig.Graph location, String query, QueryType queryType, MapValue params )
@@ -81,22 +83,25 @@ public class FabricRemoteExecutor
 
         public Mono<Void> commit()
         {
-            return endTransaction( FabricDriverTransaction::commit );
+            if ( writeTransaction == null )
+            {
+                releaseTransactionResources();
+                return Mono.empty();
+            }
+            return writeTransaction.flatMap( FabricDriverTransaction::commit )
+                    .doOnSuccess( bookmark -> bookmarkManager.recordBookmarkReceivedFromGraph( writingTo, bookmark ) )
+                    .then()
+                    .doFinally( signal -> releaseTransactionResources() );
         }
 
         public Mono<Void> rollback()
-        {
-            return endTransaction( FabricDriverTransaction::rollback );
-        }
-
-        private Mono<Void> endTransaction( Function<FabricDriverTransaction,Mono<Void>> operation )
         {
             if ( writeTransaction == null )
             {
                 releaseTransactionResources();
                 return Mono.empty();
             }
-            return writeTransaction.flatMap( operation ).doFinally( signal -> releaseTransactionResources() );
+            return writeTransaction.flatMap( FabricDriverTransaction::rollback ).doFinally( signal -> releaseTransactionResources() );
         }
 
         private void beginWriteTransaction( FabricConfig.Graph location )
@@ -109,7 +114,9 @@ public class FabricRemoteExecutor
         private Mono<StatementResult> runInAutoCommitReadTransaction( FabricConfig.Graph location, String query, MapValue params )
         {
             var driver = getDriver( location );
-            var autoCommitStatementResult = driver.run( query, params, location, AccessMode.READ, transactionInfo, List.of() );
+            var bookmarks = bookmarkManager.getBookmarksForGraph( location );
+            var autoCommitStatementResult = driver.run( query, params, location, AccessMode.READ, transactionInfo, bookmarks );
+            autoCommitStatementResult.getBookmark().subscribe( bookmark -> bookmarkManager.recordBookmarkReceivedFromGraph( location, bookmark ) );
             return Mono.just( autoCommitStatementResult );
         }
 

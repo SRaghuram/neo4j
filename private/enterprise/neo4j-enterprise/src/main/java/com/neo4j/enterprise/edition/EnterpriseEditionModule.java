@@ -48,6 +48,8 @@ import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.CustomBookmarkFormatParser;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
+import org.neo4j.bolt.txtracking.SimpleReconciledTransactionTracker;
+import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
@@ -292,7 +294,14 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         TransactionManager transactionManager = dependencies.resolveDependency( TransactionManager.class );
         FabricDatabaseManager fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
 
-        var fabricDatabaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, config, transactionManager, fabricDatabaseManager );
+        var serverConfig = dependencies.resolveDependency( Config.class );
+        var bookmarkTimeout =  serverConfig.get( GraphDatabaseSettings.bookmark_ready_timeout );
+        var reconciledTxTracker = new SimpleReconciledTransactionTracker( managementService, logService );
+
+        var transactionIdTracker = new TransactionIdTracker( managementService, reconciledTxTracker, monitors, clock );
+
+        var fabricDatabaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, config, transactionManager, fabricDatabaseManager,
+                bookmarkTimeout, transactionIdTracker );
 
         return new BoltGraphDatabaseManagementServiceSPI()
         {

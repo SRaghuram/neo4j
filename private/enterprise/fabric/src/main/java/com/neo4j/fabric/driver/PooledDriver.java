@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
@@ -40,7 +41,7 @@ public abstract class PooledDriver
     }
 
     public abstract AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
-            FabricTransactionInfo transactionInfo, List<String> bookmarks );
+            FabricTransactionInfo transactionInfo, List<String> bookmarks  );
 
     public abstract Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
             List<String> bookmarks );
@@ -65,9 +66,12 @@ public abstract class PooledDriver
         driver.close();
     }
 
-    protected SessionConfig createSessionConfig( FabricConfig.Graph location, AccessMode accessMode )
+    protected SessionConfig createSessionConfig( FabricConfig.Graph location, AccessMode accessMode, List<String> bookmarks )
     {
         var builder = SessionConfig.builder().withDefaultAccessMode( translateAccessMode( accessMode ) );
+
+        var convertedBookmarks = bookmarks.stream().map( DriverBookmarkFormat::parse ).collect( Collectors.toList() );
+        builder.withBookmarks( convertedBookmarks );
 
         if ( location.getDatabase() != null )
         {

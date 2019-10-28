@@ -6,8 +6,9 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.stream.StatementResult;
+import reactor.core.publisher.Mono;
 
 public interface AutoCommitStatementResult extends StatementResult
 {
-    String getBookmark();
+    Mono<String> getBookmark();
 }

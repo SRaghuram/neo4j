@@ -12,7 +12,7 @@ import org.neo4j.values.virtual.MapValue;
 
 public interface FabricDriverTransaction
 {
-    Mono<Void> commit();
+    Mono<String> commit();
 
     Mono<Void> rollback();
 

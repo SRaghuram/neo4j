@@ -12,7 +12,6 @@ import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -33,6 +32,7 @@ import org.neo4j.driver.async.AsyncTransaction;
 import org.neo4j.driver.async.StatementResultCursor;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
@@ -65,6 +65,7 @@ class AsyncPooledDriverTest
     {
         when( driver.asyncSession( any() ) ).thenReturn( session );
         when( session.beginTransactionAsync( any() ) ).thenReturn( CompletableFuture.completedFuture( asyncTransaction ) );
+        when( session.lastBookmark() ).thenReturn( InternalBookmark.parse(  "BB" ) );
 
         when( asyncTransaction.commitAsync() ).thenReturn( CompletableFuture.completedFuture( null ) );
         when( asyncTransaction.rollbackAsync() ).thenReturn( CompletableFuture.completedFuture( null ) );
@@ -86,7 +87,8 @@ class AsyncPooledDriverTest
         var records = statementResult.records().collectList().block();
         assertEquals( List.of( createFabricRecord( "a1", "b1" ) ), records );
 
-        fabricTransaction.commit().block();
+        var bookmark = fabricTransaction.commit().block();
+        assertEquals( "BB", bookmark );
 
         verify( asyncTransaction ).commitAsync();
         verify( session ).closeAsync();

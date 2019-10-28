@@ -5,8 +5,12 @@
  */
 package com.neo4j.fabric.bolt;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
@@ -17,13 +21,15 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 public class FabricBookmark extends BookmarkMetadata implements Bookmark
 {
-    private final List<RemoteState> remoteStates;
+    public static final String PREFIX = "FB:";
 
-    public FabricBookmark( DatabaseId databaseId, List<RemoteState> remoteStates )
+    private final List<GraphState> graphStates;
+
+    public FabricBookmark( List<GraphState> graphStates )
     {
-        super( -1, databaseId );
+        super( -1, null );
 
-        this.remoteStates = remoteStates;
+        this.graphStates = graphStates;
     }
 
     @Override
@@ -41,12 +47,12 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
     @Override
     public void attachTo( BoltResponseHandler state )
     {
-        state.onMetadata( BOOKMARK_KEY, stringValue( "f:" ) );
+        state.onMetadata( BOOKMARK_KEY, stringValue( serialize() ) );
     }
 
-    public List<RemoteState> getRemoteStates()
+    public List<GraphState> getGraphStates()
     {
-        return remoteStates;
+        return graphStates;
     }
 
     public Bookmark toBookmark( BiFunction<Long, DatabaseId, Bookmark> defaultBookmarkFormat )
@@ -54,25 +60,91 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
         return this;
     }
 
-    public class RemoteState
+    @Override
+    public String toString()
     {
-        private final int remoteGraphId;
-        private final String bookmark;
+        return "FabricBookmark{" + "graphStates=" + graphStates + '}';
+    }
 
-        public RemoteState( int remoteGraphId, String bookmark )
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        FabricBookmark that = (FabricBookmark) o;
+        return graphStates.equals( that.graphStates );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( graphStates );
+    }
+
+    public String serialize()
+    {
+        return graphStates.stream().map( GraphState::serialize ).collect( Collectors.joining( "-", PREFIX, "" ) );
+    }
+
+    public static class GraphState
+    {
+        private final long remoteGraphId;
+        private final List<String> bookmarks;
+
+        public GraphState( long remoteGraphId, List<String> bookmarks )
         {
             this.remoteGraphId = remoteGraphId;
-            this.bookmark = bookmark;
+            this.bookmarks = bookmarks;
         }
 
-        public int getRemoteGraphId()
+        public long getRemoteGraphId()
         {
             return remoteGraphId;
         }
 
-        public String getBookmark()
+        public List<String> getBookmarks()
         {
-            return bookmark;
+            return bookmarks;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "GraphState{" + "remoteGraphId=" + remoteGraphId + ", bookmarks=" + bookmarks + '}';
+        }
+
+        private String serialize()
+        {
+            return bookmarks.stream()
+                    .map( bookmark -> Base64.getEncoder().encodeToString( bookmark.getBytes( StandardCharsets.UTF_8 ) ) )
+                    .collect( Collectors.joining( ",", remoteGraphId + ":", "" ) );
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            GraphState that = (GraphState) o;
+            return remoteGraphId == that.remoteGraphId && bookmarks.equals( that.bookmarks );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( remoteGraphId, bookmarks );
         }
     }
 }

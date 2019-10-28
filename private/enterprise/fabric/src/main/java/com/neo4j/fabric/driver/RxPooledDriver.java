@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
@@ -37,7 +38,7 @@ class RxPooledDriver extends PooledDriver
     public AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
             FabricTransactionInfo transactionInfo, List<String> bookmarks )
     {
-        var sessionConfig = createSessionConfig( location, accessMode );
+        var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.rxSession( sessionConfig );
 
         var parameterConverter = new ParameterConverter();
@@ -53,7 +54,7 @@ class RxPooledDriver extends PooledDriver
     public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
             List<String> bookmarks )
     {
-        var sessionConfig = createSessionConfig( location, accessMode );
+        var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.rxSession( sessionConfig );
 
         var driverTransaction = getDriverTransaction( session, transactionInfo );
@@ -72,6 +73,7 @@ class RxPooledDriver extends PooledDriver
 
         private final RxSession session;
         private final RxStatementResult rxStatementResult;
+        private final CompletableFuture<String> bookmarkFuture = new CompletableFuture<>();
 
         StatementResultImpl( RxSession session, RxStatementResult rxStatementResult, long sourceTag )
         {
@@ -84,15 +86,16 @@ class RxPooledDriver extends PooledDriver
         }
 
         @Override
-        public String getBookmark()
+        public  Mono<String> getBookmark()
         {
-            return DriverBookmarkFormat.serialize( session.lastBookmark() );
+            return Mono.fromFuture( bookmarkFuture );
         }
 
         @Override
         protected Flux<Record> doGetRecords()
         {
-            return convertRxRecords( Flux.from( rxStatementResult.records() ) );
+            return convertRxRecords( Flux.from( rxStatementResult.records() ) )
+                    .doOnComplete( () -> bookmarkFuture.complete( DriverBookmarkFormat.serialize( session.lastBookmark() ) ) );
         }
     }
 }

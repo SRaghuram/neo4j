@@ -34,9 +34,11 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
     }
 
     @Override
-    public Mono<Void> commit()
+    public Mono<String> commit()
     {
-        return Mono.fromFuture( asyncTransaction.commitAsync().toCompletableFuture()).then().doFinally( s -> asyncSession.closeAsync() );
+        return Mono.fromFuture( asyncTransaction.commitAsync().toCompletableFuture())
+                .then( Mono.fromSupplier( () -> DriverBookmarkFormat.serialize( asyncSession.lastBookmark() ) ) )
+                .doFinally( s -> asyncSession.closeAsync() );
     }
 
     @Override

@@ -199,6 +199,7 @@ class RemoteTransactionTest
         when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( result.records() ).thenReturn( Flux.empty() );
         when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
+        when( result.getBookmark() ).thenReturn( Mono.just( "BB" ) );
 
         when( shardDriver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
 
@@ -342,6 +343,7 @@ class RemoteTransactionTest
         var result = mock( AutoCommitStatementResult.class );
         when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( result.records() ).thenReturn( Flux.error( new IllegalStateException( "Result stream from shard 3 failed" ) ) );
+        when( result.getBookmark() ).thenReturn( Mono.empty() );
 
         when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
 

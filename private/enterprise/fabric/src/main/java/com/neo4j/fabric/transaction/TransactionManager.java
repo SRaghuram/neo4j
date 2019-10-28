@@ -41,12 +41,18 @@ public class TransactionManager extends LifecycleAdapter
         fabricConfig = dependencyResolver.resolveDependency( FabricConfig.class );
     }
 
-    public FabricTransaction begin( FabricTransactionInfo transactionInfo )
+    public FabricTransaction begin( FabricTransactionInfo transactionInfo, TransactionBookmarkManager transactionBookmarkManager )
     {
         authorize( transactionInfo.getLoginContext(), transactionInfo.getDatabaseName() );
 
-        FabricTransactionImpl fabricTransaction =
-                new FabricTransactionImpl( transactionInfo, remoteExecutor, localExecutor, logService, this, jobScheduler, fabricConfig );
+        FabricTransactionImpl fabricTransaction = new FabricTransactionImpl( transactionInfo,
+                transactionBookmarkManager,
+                remoteExecutor,
+                localExecutor,
+                logService,
+                this,
+                jobScheduler,
+                fabricConfig );
         fabricTransaction.begin();
         openTransactions.add( fabricTransaction );
         return fabricTransaction;

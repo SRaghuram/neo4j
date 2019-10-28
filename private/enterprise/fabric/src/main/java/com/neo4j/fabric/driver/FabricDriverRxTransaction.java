@@ -33,9 +33,11 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
         this.location = location;
     }
 
-    public Mono<Void> commit()
+    public Mono<String> commit()
     {
-        return Mono.from( rxTransaction.commit() ).then().doFinally( s -> rxSession.close() );
+        return Mono.from( rxTransaction.commit() )
+                .then( Mono.fromSupplier( () -> DriverBookmarkFormat.serialize( rxSession.lastBookmark() ) ) )
+                .doFinally( s -> rxSession.close() );
     }
 
     public Mono<Void> rollback()

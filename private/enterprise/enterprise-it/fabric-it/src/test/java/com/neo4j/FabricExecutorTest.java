@@ -12,7 +12,6 @@ import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.PartialSummary;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
@@ -146,12 +145,13 @@ class FabricExecutorTest
         mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
     }
 
-    private static void mockResult( StatementResult statementResult )
+    private static void mockResult( AutoCommitStatementResult statementResult )
     {
         reset( statementResult );
         when( statementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( statementResult.records() ).thenReturn( Flux.empty() );
         when( statementResult.summary() ).thenReturn( Mono.empty() );
+        when( statementResult.getBookmark() ).thenReturn( Mono.just( "BB" ) );
     }
 
     private void mockDriverPool( PooledDriver graph0, PooledDriver graph1 )

@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
@@ -38,7 +39,7 @@ public class AsyncPooledDriver extends PooledDriver
     public AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
             FabricTransactionInfo transactionInfo, List<String> bookmarks )
     {
-        var sessionConfig = createSessionConfig( location, accessMode );
+        var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.asyncSession( sessionConfig );
 
         var parameterConverter = new ParameterConverter();
@@ -54,7 +55,7 @@ public class AsyncPooledDriver extends PooledDriver
     public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
             List<String> bookmarks )
     {
-        var sessionConfig = createSessionConfig( location, accessMode );
+        var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.asyncSession( sessionConfig );
 
         var driverTransaction = getDriverTransaction( session, transactionInfo );
@@ -74,6 +75,7 @@ public class AsyncPooledDriver extends PooledDriver
         private final AsyncSession session;
         private final Mono<StatementResultCursor> statementResultCursor;
         private final RecordConverter recordConverter;
+        private final CompletableFuture<String> bookmarkFuture = new CompletableFuture<>();
 
         StatementResultImpl( AsyncSession session, Mono<StatementResultCursor> statementResultCursor, long sourceTag )
         {
@@ -88,13 +90,14 @@ public class AsyncPooledDriver extends PooledDriver
         @Override
         protected Flux<Record> doGetRecords()
         {
-            return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) );
+            return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) )
+                    .doOnComplete( () -> bookmarkFuture.complete( DriverBookmarkFormat.serialize( session.lastBookmark() ) ) );
         }
 
         @Override
-        public String getBookmark()
+        public Mono<String> getBookmark()
         {
-            return DriverBookmarkFormat.serialize( session.lastBookmark() );
+            return Mono.fromFuture( bookmarkFuture );
         }
     }
 }
