@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
@@ -18,9 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
@@ -35,7 +32,9 @@ import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
 import static java.util.Collections.emptyList;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * The server policies plugin defines policies on the server-side which
@@ -87,10 +86,10 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     @Override
     public RoutingResult run( DatabaseId databaseId, MapValue context ) throws ProcedureException
     {
-        Policy policy = policies.selectFor( context );
+        var policy = policies.selectFor( context );
 
-        DatabaseCoreTopology coreTopology = coreTopologyFor( databaseId );
-        DatabaseReadReplicaTopology rrTopology = readReplicaTopology( databaseId );
+        var coreTopology = coreTopologyFor( databaseId );
+        var rrTopology = readReplicaTopology( databaseId );
 
         return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( databaseId ),
                 readEndpoints( coreTopology, rrTopology, policy, databaseId ), timeToLive );
@@ -98,26 +97,21 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
     private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )
     {
-        Set<ServerInfo> routers = coreTopology.members().entrySet().stream()
-                .map( e ->
-                {
-                    MemberId m = e.getKey();
-                    CoreServerInfo c = e.getValue();
-                    return new ServerInfo( c.connectors().boltAddress(), m, c.groups() );
-                } ).collect( Collectors.toSet() );
+        var routers = coreTopology.members().entrySet().stream()
+                .map( ServerPoliciesPlugin::newServerInfo ).collect( toSet() );
 
-        Set<ServerInfo> preferredRouters = policy.apply( routers );
-        List<ServerInfo> otherRouters = routers.stream().filter( r -> !preferredRouters.contains( r ) ).collect( Collectors.toList() );
-        List<ServerInfo> preferredRoutersList = new ArrayList<>( preferredRouters );
+        var preferredRouters = policy.apply( routers );
+        var otherRoutersList = routers.stream().filter( not( preferredRouters::contains ) ).collect( toList() );
+        var preferredRoutersList = new ArrayList<>( preferredRouters );
 
         if ( shouldShuffle )
         {
             Collections.shuffle( preferredRoutersList );
-            Collections.shuffle( otherRouters );
+            Collections.shuffle( otherRoutersList );
         }
 
-        return Stream.concat( preferredRoutersList.stream(), otherRouters.stream() )
-                .map( ServerInfo::boltAddress ).collect( Collectors.toList() );
+        return Stream.concat( preferredRoutersList.stream(), otherRoutersList.stream() )
+                .map( ServerInfo::boltAddress ).collect( toList() );
     }
 
     private List<SocketAddress> writeEndpoints( DatabaseId databaseId )
@@ -128,36 +122,34 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology, Policy policy,
             DatabaseId databaseId )
     {
-
-        Set<ServerInfo> possibleReaders = rrTopology.members().entrySet().stream()
-                .map( entry -> new ServerInfo( entry.getValue().connectors().boltAddress(), entry.getKey(),
-                        entry.getValue().groups() ) )
-                .collect( Collectors.toSet() );
+        var possibleReaders = rrTopology.members().entrySet().stream()
+                .map( ServerPoliciesPlugin::newServerInfo )
+                .collect( toSet() );
 
         if ( allowReadsOnFollowers || possibleReaders.isEmpty() )
         {
-            Map<MemberId,CoreServerInfo> coreMembers = coreTopology.members();
-            Set<MemberId> validCores = coreMembers.keySet();
+            var coreMembers = coreTopology.members();
+            var validCores = coreMembers.keySet();
 
-            Optional<MemberId> optionalLeaderId = leaderService.getLeaderId( databaseId );
+            var optionalLeaderId = leaderService.getLeaderId( databaseId );
             if ( optionalLeaderId.isPresent() )
             {
-                MemberId leaderId = optionalLeaderId.get();
-                validCores = validCores.stream().filter( memberId -> !memberId.equals( leaderId ) ).collect( Collectors.toSet() );
+                var leaderId = optionalLeaderId.get();
+                validCores = validCores.stream().filter( memberId -> !memberId.equals( leaderId ) ).collect( toSet() );
             }
             // leader might become available a bit later and we might end up using it for reading during this ttl, should be fine in general
 
-            for ( MemberId validCore : validCores )
+            for ( var validCore : validCores )
             {
-                CoreServerInfo coreServerInfo = coreMembers.get( validCore );
+                var coreServerInfo = coreMembers.get( validCore );
                 if ( coreServerInfo != null )
                 {
-                    possibleReaders.add( new ServerInfo( coreServerInfo.connectors().boltAddress(), validCore, coreServerInfo.groups() ) );
+                    possibleReaders.add( newServerInfo( validCore, coreServerInfo ) );
                 }
             }
         }
 
-        List<ServerInfo> readers = new ArrayList<>( policy.apply( possibleReaders ) );
+        var readers = new ArrayList<>( policy.apply( possibleReaders ) );
 
         if ( shouldShuffle )
         {
@@ -174,5 +166,15 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private DatabaseReadReplicaTopology readReplicaTopology( DatabaseId databaseId )
     {
         return topologyService.readReplicaTopologyForDatabase( databaseId );
+    }
+
+    private static ServerInfo newServerInfo( Map.Entry<MemberId,? extends DiscoveryServerInfo> entry )
+    {
+        return newServerInfo( entry.getKey(), entry.getValue() );
+    }
+
+    private static ServerInfo newServerInfo( MemberId memberId, DiscoveryServerInfo discoveryServerInfo )
+    {
+        return new ServerInfo( discoveryServerInfo.connectors().boltAddress(), memberId, discoveryServerInfo.groups() );
     }
 }
