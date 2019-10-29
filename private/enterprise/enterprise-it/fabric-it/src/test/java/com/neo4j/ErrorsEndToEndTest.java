@@ -24,6 +24,8 @@ import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
@@ -96,14 +98,9 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "Invalid input 'o': expected 'h/H', 't/T' or 'e/E' (line 1, column 2 (offset: 1))",
-                    "\"Some Garbage\"",
-                    "  ^"
-            );
-
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "Invalid input 'o'" ) );
+            assertThat( e.getMessage(), containsString( "\"Some Garbage\"" ) );
         }
         catch ( Exception e )
         {
@@ -123,16 +120,11 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "Variable `b` not defined (line 1, column 26 (offset: 25))",
-                    "\"UNWIND[1, 0] AS a RETURN b\"",
-                    "                          ^"
-            );
-
             // even though this error is reported as Syntax error to the user,
             // it is created during semantic analysis phase of query processing
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "Variable `b` not defined" ) );
+            assertThat( e.getMessage(), containsString( "\"UNWIND[1, 0] AS a RETURN b\"" ) );
         }
         catch ( Exception e )
         {
@@ -170,13 +162,9 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "Invalid input ' ': expected 'r/R' (line 1, column 31 (offset: 30))",
-                    "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"",
-                    "                               ^"
-            );
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "Invalid input ' '" ) );
+            assertThat( e.getMessage(), containsString( "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"" ) );
         }
         catch ( Exception e )
         {
@@ -214,13 +202,9 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "Invalid input 'N': expected 'p/P' (line 1, column 31 (offset: 30))",
-                    "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"",
-                    "                               ^"
-            );
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "Invalid input 'N'" ) );
+            assertThat( e.getMessage(), containsString( "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"" ) );
         }
         catch ( Exception e )
         {
@@ -245,13 +229,9 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "USE can only appear at the beginning of a (sub-)query",
-                    "\"USE mega.graph1\"",
-                    "     ^"
-            );
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "USE can only appear at the beginning of a (sub-)query" ) );
+            assertThat( e.getMessage(), containsString( "\"USE mega.graph1\"" ) );
         }
         catch ( Exception e )
         {
@@ -275,13 +255,9 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "USE can only appear at the beginning of a (sub-)query",
-                    "\"USE mega.graph0\"",
-                    "     ^"
-            );
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "USE can only appear at the beginning of a (sub-)query" ) );
+            assertThat( e.getMessage(), containsString( "\"USE mega.graph0\"" ) );
         }
         catch ( Exception e )
         {
@@ -426,13 +402,9 @@ class ErrorsEndToEndTest
         }
         catch ( ClientException e )
         {
-            var expectedMessage = joinAsLines(
-                    "Unknown function 'somewhere.nonExistentFunction'",
-                    "\"USE mega.graph(somewhere.nonExistentFunction()) RETURN 1\"",
-                    "                ^"
-            );
             assertEquals( SyntaxError.code().serialize(), e.code() );
-            assertEquals( expectedMessage, e.getMessage() );
+            assertThat( e.getMessage(), containsString( "Unknown function 'somewhere.nonExistentFunction'" ) );
+            assertThat( e.getMessage(), containsString( "\"USE mega.graph(somewhere.nonExistentFunction()) RETURN 1\"" ) );
         }
         catch ( Exception e )
         {
