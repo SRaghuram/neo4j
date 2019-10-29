@@ -124,3 +124,11 @@ The best way to develop and debug worker is to do it through docker container
     [result store password] \
     --results_store_uri \
     bolt+routing://e605d648.databases.neo4j.io:7687
+
+# Costs
+
+Are you curios on how much we are spending on the Batch Infrastructure?
+
+All the instances are tagged with `owner:benchmarking`. So you can easily find this info in the AWS user inteface. 
+Go to the cost explorer and filter by tag, `benchmarking`. 
+[Or click on this](https://console.aws.amazon.com/cost-reports/home?region=eu-north-1#/custom?groupBy=None&hasBlended=false&hasAmortized=false&excludeDiscounts=true&excludeTaggedResources=false&timeRangeOption=Last7Days&granularity=Daily&reportName=&reportType=CostUsage&isTemplate=true&filter=%5B%7B%22dimension%22:%22TagKeyValue%22,%22values%22:null,%22include%22:true,%22children%22:%5B%7B%22dimension%22:%22owner%22,%22values%22:%5B%22benchmarking%22%5D,%22include%22:true,%22children%22:null%7D%5D%7D%5D&chartStyle=Group&forecastTimeRangeOption=None&usageAs=usageQuantity&startDate=2019-10-08&endDate=2019-10-14)
