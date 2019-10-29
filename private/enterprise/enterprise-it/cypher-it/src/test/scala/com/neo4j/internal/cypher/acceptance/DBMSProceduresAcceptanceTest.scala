@@ -59,14 +59,14 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
         "CALL dbms.security.createUser('Alice', 'foo') " +
         "RETURN anything")
     }
-    exception.getMessage should include("Not a recognised system command or procedure")
+    exception.getMessage should include("Not a recognised system command or procedure. This Cypher command can only be executed in a user database:")
 
     val exception2 = the[RuntimeException] thrownBy {
       executeOnSystem("neo4j", "neo", "MERGE (anything) WITH anything " +
         "CALL dbms.security.createUser('Alice', 'foo') " +
         "RETURN anything")
     }
-    exception2.getMessage should include("Not a recognised system command or procedure")
+    exception2.getMessage should include("Not a recognised system command or procedure. This Cypher command can only be executed in a user database:")
 
 
     //THEN
@@ -108,7 +108,7 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     val exception = the[RuntimeException] thrownBy {
       executeOnSystem("neo4j", "neo", "CALL db.createLabel('Foo')") // any procedure that we will never allow on system should be here
     }
-    exception.getMessage should include("Not a recognised system command or procedure")
+    exception.getMessage should include("Not a recognised system command or procedure. This Cypher command can only be executed in a user database:")
   }
 
   test("should fail using non-existing procedure on system") {
