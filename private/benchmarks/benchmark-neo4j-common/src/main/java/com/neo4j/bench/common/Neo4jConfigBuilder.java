@@ -16,12 +16,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.HttpConnector;
+import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.neo4j.server.configuration.ServerSettings;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.tx_state_memory_allocation;
@@ -37,7 +38,9 @@ public class Neo4jConfigBuilder
                 .withSetting( UdcSettings.udc_enabled, "false" )
                 .withSetting( new HttpConnector( "http" ).enabled, "false" )
                 .withSetting( new HttpConnector( "https" ).enabled, "false" )
-                .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+                .withSetting( OnlineBackupSettings.online_backup_enabled, "false" )
+                .withSetting( GraphDatabaseSettings.log_queries, "false" )
+                .withSetting( ServerSettings.http_logging_enabled, "false" );
     }
 
     public static Neo4jConfigBuilder empty()
