@@ -33,11 +33,6 @@ public class TestRunError
 
     private static String assertValidName( String name )
     {
-        boolean isTooLong = name.length() > 200;
-        if ( isTooLong )
-        {
-            throw new RuntimeException( "Name must not exceed 200 characters, was " + name.length() );
-        }
         boolean isNotOneLine = name.contains( "\n" ) || name.contains( "\r" );
         if ( isNotOneLine )
         {
