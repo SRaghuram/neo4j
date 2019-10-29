@@ -92,7 +92,8 @@ class MultiDatabaseFileWatchIT
         File thirdDbRelStore = thirdContext.databaseLayout().relationshipStore();
 
         FileSystemWatcherService fileSystemWatcher = getFileSystemWatcher();
-        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName() );
+        DeletionLatchEventListener deletionListener = new DeletionLatchEventListener( thirdDbRelStore.getName(), secondDbNodeStore.getName(),
+                firstDbMetadataStore.getName() );
         fileSystemWatcher.getFileWatcher().addFileWatchEventListener( deletionListener );
 
         deleteFile( firstDbMetadataStore );
