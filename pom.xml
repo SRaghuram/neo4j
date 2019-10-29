@@ -112,7 +112,7 @@
                         </subpackages>
                         <!-- ...unless the package contains -->
                         <excludePackageNames>
-                            *.impl.*:*.internal.*:org.neo4j.helpers.progress:org.neo4j.logging.async:org.neo4j.server.rest.repr.formats:org.neo4j.server.rest.repr.util
+                            *.impl.*:*.internal.*:org.neo4j.helpers.progress:org.neo4j.logging.async:org.neo4j.server.rest.repr.formats:org.neo4j.server.rest.repr.util:com.neo4j.bench
                         </excludePackageNames>
                     </configuration>
                 </plugin>
@@ -152,5 +152,5 @@
             <url>https://dl.bintray.com/ldbc/snb/</url>
         </repository>
     </repositories>
-    
+
 </project>
