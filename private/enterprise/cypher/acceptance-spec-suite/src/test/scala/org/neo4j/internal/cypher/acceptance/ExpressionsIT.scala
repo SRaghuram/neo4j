@@ -1061,6 +1061,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(equals(literalInt(42), nullLiteral))) should equal(Values.NO_VALUE)
     evaluate(compile(equals(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
     evaluate(compile(equals(trueLiteral, equals(trueLiteral, equals(trueLiteral, nullLiteral))))) should equal(Values.NO_VALUE)
+    evaluate(compile(equals(literal(Double.NaN), literalInt(42)))) should equal(Values.FALSE)
+    evaluate(compile(equals(literalInt(42), literal(Double.NaN)))) should equal(Values.FALSE)
+    evaluate(compile(equals(literal(Double.NaN), literal(Double.NaN)))) should equal(Values.FALSE)
   }
 
   test("NOT EQUALS") {
@@ -1070,6 +1073,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compile(notEquals(literalInt(42), nullLiteral))) should equal(Values.NO_VALUE)
     evaluate(compile(notEquals(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
     evaluate(compile(notEquals(trueLiteral, notEquals(trueLiteral, notEquals(trueLiteral, nullLiteral))))) should equal(Values.NO_VALUE)
+    evaluate(compile(notEquals(literal(Double.NaN), literalInt(42)))) should equal(Values.TRUE)
+    evaluate(compile(notEquals(literalInt(42), literal(Double.NaN)))) should equal(Values.TRUE)
+    evaluate(compile(notEquals(literal(Double.NaN), literal(Double.NaN)))) should equal(Values.TRUE)
   }
 
   test("regex match on literal pattern") {
@@ -1161,32 +1167,82 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("should compare values using <") {
-    for (left <- allValues)
+    for (left <- allValues) {
       for (right <- allValues) {
-        lessThan(literal(left), literal(right))  should compareUsingLessThan(left, right)
+        lessThan(literal(left), literal(right)) should compareUsingLessThan(left, right)
       }
+      withClue("comparing NaN against: " + left) {
+        val r1 = evaluate(compile(lessThan(literal(left), literal(Double.NaN))))
+        val r2 = evaluate(compile(lessThan(literal(Double.NaN), literal(left))))
+        if (left != null && left.isInstanceOf[Number]) {
+          r1 should be(BooleanValue.FALSE)
+          r2 should be(BooleanValue.FALSE)
+        } else {
+          r1 should be(Values.NO_VALUE)
+          r2 should be(Values.NO_VALUE)
+        }
+      }
+    }
+
   }
 
   test("should compare values using <=") {
-    for (left <- allValues)
+    for (left <- allValues) {
       for (right <- allValues) {
         lessThanOrEqual(literal(left), literal(right)) should compareUsingLessThanOrEqual(left, right)
       }
+      withClue("comparing NaN against: " + left) {
+        val r1 = evaluate(compile(lessThanOrEqual(literal(left), literal(Double.NaN))))
+        val r2 = evaluate(compile(lessThanOrEqual(literal(Double.NaN), literal(left))))
+        if (left != null && left.isInstanceOf[Number]) {
+          r1 should be(BooleanValue.FALSE)
+          r2 should be(BooleanValue.FALSE)
+        } else {
+          r1 should be(Values.NO_VALUE)
+          r2 should be(Values.NO_VALUE)
+        }
+      }
+    }
   }
 
   test("should compare values using >") {
-    for (left <- allValues)
+    for (left <- allValues) {
       for (right <- allValues) {
         greaterThan(literal(left), literal(right))  should compareUsingGreaterThan(left, right)
       }
+      withClue("comparing NaN against: " + left) {
+        val r1 = evaluate(compile(greaterThan(literal(left), literal(Double.NaN))))
+        val r2 = evaluate(compile(greaterThan(literal(Double.NaN), literal(left))))
+        if (left != null && left.isInstanceOf[Number]) {
+          r1 should be(BooleanValue.FALSE)
+          r2 should be(BooleanValue.FALSE)
+        } else {
+          r1 should be(Values.NO_VALUE)
+          r2 should be(Values.NO_VALUE)
+        }
+      }
+    }
   }
 
   test("should compare values using >=") {
-    for (left <- allValues)
+    for (left <- allValues) {
       for (right <- allValues) {
         greaterThanOrEqual(literal(left), literal(right))  should compareUsingGreaterThanOrEqual(left, right)
       }
+      withClue("comparing NaN against: " + left) {
+        val r1 = evaluate(compile(greaterThanOrEqual(literal(left), literal(Double.NaN))))
+        val r2 = evaluate(compile(greaterThanOrEqual(literal(Double.NaN), literal(left))))
+        if (left != null && left.isInstanceOf[Number]) {
+          r1 should be(BooleanValue.FALSE)
+          r2 should be(BooleanValue.FALSE)
+        } else {
+          r1 should be(Values.NO_VALUE)
+          r2 should be(Values.NO_VALUE)
+        }
+      }
+    }
   }
+
 
   test("isNull") {
     val compiled= compile(isNull(parameter(0)))
@@ -3820,11 +3876,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     Long.MaxValue,
     Double.MaxValue,
     Double.PositiveInfinity,
-    Double.NaN,
     null
   ).flatMap {
     case null => Seq(null)
-    case v: Number if v.doubleValue().isNaN => Seq[Number](v.doubleValue(), v.floatValue(), v)
     case v: Number =>
       Seq[Number](v.doubleValue(), v.floatValue(), v.longValue(), v.intValue(), v.shortValue(), v.byteValue(), v)
   }

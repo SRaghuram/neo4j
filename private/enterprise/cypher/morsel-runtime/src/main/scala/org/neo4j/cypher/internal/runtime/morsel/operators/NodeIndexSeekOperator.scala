@@ -31,7 +31,7 @@ import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
+import org.neo4j.values.storable.{FloatingPointValue, Value, Values}
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
 
 class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
@@ -143,7 +143,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
       val impossiblePredicate =
         predicates.exists {
-          case p: ExactPredicate => p.value() eq Values.NO_VALUE
+          case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
           case _: IndexQuery.ExistsPredicate if predicates.length > 1 => false
           case p: IndexQuery =>
             !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
@@ -324,7 +324,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
     assign(seekValueVariable, seekValue.ir)
   }
 
-  override protected def isPredicatePossible: IntermediateRepresentation = notEqual(load(seekValueVariable), noValue)
+  override protected def isPredicatePossible: IntermediateRepresentation = and(notEqual(load(seekValueVariable), noValue), not(isNaN(load(seekValueVariable))))
 
   override protected def predicate: IntermediateRepresentation = exactSeek(property.propertyKeyId, load(seekValueVariable))
 }
@@ -499,7 +499,7 @@ object ManyQueriesExactNodeIndexSeekTaskTemplate {
         var continue = true
         while (continue) {
           val indexQuery = queries.next()
-          if (!(indexQuery.value() eq Values.NO_VALUE)) {
+          if (!((indexQuery.value() eq Values.NO_VALUE) || (indexQuery.value().isInstanceOf[FloatingPointValue] && indexQuery.value().asInstanceOf[FloatingPointValue].isNaN))) {
             read.nodeIndexSeek(index, cursor, IndexOrder.NONE, false, indexQuery)
             continue = false
           } else {

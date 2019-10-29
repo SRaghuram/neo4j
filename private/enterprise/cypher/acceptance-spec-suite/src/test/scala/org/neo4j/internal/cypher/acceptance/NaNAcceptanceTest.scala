@@ -5,19 +5,49 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
-class NaNAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport {
-  // This should probably be moved to the TCK
-  test("should handle NaN comparisons correctly") {
+class NaNAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+
+  test("should handle NaN comparisons with number correctly") {
     // Given
     createNode(Map("x" -> Double.NaN))
 
     // When
-    val result = execute("MATCH (n) RETURN n.x > 0 AS gt, n.x < 0 AS lt, n.x >= 0 AS ge, n.x <= 0 AS le")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n.x > 0 AS gt, n.x < 0 AS lt, n.x >= 0 AS ge, n.x <= 0 AS le, n.x = 0 AS eq, n.x <> 0 AS neq")
 
     // Then
-    result.toList should equal(List(Map("gt" -> null, "lt" -> null, "le" -> null, "ge" -> null)))
+    result.toList should equal(List(Map("gt" -> false, "lt" -> false, "le" -> false, "ge" -> false, "eq" -> false, "neq" -> true)))
+  }
+
+  test("should handle NaN predicates correctly") {
+    // Given
+    createLabeledNode(Map("x" -> Double.NaN), "L")
+
+    // When & Then
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x > 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x >= 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x < 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x <= 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.All, "MATCH (n:L) WHERE n.x = 0.0/0.0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE EXISTS(n.x) RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
+    executeWith(Configs.All, "MATCH (n:L) WHERE n.x <> 0.0/0.0 RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
+  }
+
+  test("should handle NaN index predicates correctly") {
+    // Given
+    createLabeledNode(Map("x" -> Double.NaN), "L")
+    graph.createIndex("L", "x")
+
+    // When & Then
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x > 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x >= 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x < 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x <= 0 RETURN n.x").toList should be(empty)
+    executeWith(Configs.All, "MATCH (n:L) WHERE n.x = 0.0/0.0 RETURN n.x", expectedDifferentResults = Configs.Compiled).toList should be(empty)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE EXISTS(n.x) RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L) WHERE n.x <> 0.0/0.0 RETURN count(n.x)").toList should be(List(Map("count(n.x)" -> 1)))
   }
 
   test("should handle NaN comparisons with string correctly") {
@@ -25,10 +55,10 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode(Map("x" -> Double.NaN))
 
     // When
-    val result = execute("MATCH (n) RETURN n.x > 'a' AS gt, n.x < 'a' AS lt, n.x >= 'a' AS ge, n.x <= 'a' AS le")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n.x > 'a' AS gt, n.x < 'a' AS lt, n.x >= 'a' AS ge, n.x <= 'a' AS le, n.x = 'a' AS eq, n.x <> 'a' AS neq")
 
     // Then
-    result.toList should equal(List(Map("gt" -> null, "lt" -> null, "le" -> null, "ge" -> null)))
+    result.toList should equal(List(Map("gt" -> null, "lt" -> null, "le" -> null, "ge" -> null, "eq" -> false, "neq" -> true)))
   }
 
   test("should handle NaN compared to NaN") {
@@ -36,10 +66,10 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode(Map("x" -> Double.NaN))
 
     // When
-    val result = execute("PROFILE MATCH (n) RETURN n.x > n.x AS gt, n.x < n.x AS lt, n.x <= n.x AS le, n.x >= n.x AS ge")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n) RETURN n.x > n.x AS gt, n.x < n.x AS lt, n.x <= n.x AS le, n.x >= n.x AS ge, n.x = n.x AS eq, n.x <> n.x AS neq")
 
     // Then
-    result.toList should equal(List(Map("gt" -> null, "lt" -> null, "le" -> null, "ge" -> null)))
+    result.toList should equal(List(Map("gt" -> false, "lt" -> false, "le" -> false, "ge" -> false, "eq" -> false, "neq" -> true)))
   }
 
   test("should handle NaN null checks correctly") {
@@ -47,7 +77,7 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode(Map("x" -> Double.NaN))
 
     // When
-    val result = execute("MATCH (n) RETURN n.x IS NULL AS nu")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n.x IS NULL AS nu")
 
     // Then
     result.toList should equal(List(Map("nu" -> false)))
@@ -58,20 +88,9 @@ class NaNAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     createNode(Map("x" -> Double.NaN))
 
     // When
-    val result = execute("MATCH (n) RETURN n.x IS NULL AS nu, n.x IS NOT NULL AS nnu")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n.x IS NULL AS nu, n.x IS NOT NULL AS nnu")
 
     // Then
     result.toList should equal(List(Map("nu" -> false, "nnu" -> true)))
-  }
-
-  test("should handle NaN equality checks correctly") {
-    // Given
-    createNode(Map("x" -> Double.NaN))
-
-    // When
-    val result = execute("MATCH (n) RETURN n.x = n.x AS eq, n.x <> n.x as ne")
-
-    // Then
-    result.toList should equal(List(Map("eq" -> null, "ne" -> null)))
   }
 }
