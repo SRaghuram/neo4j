@@ -25,7 +25,7 @@ public class ThrottlerIT
     @Test
     public void shouldThrottleToConfiguredThroughput() throws IOException, InterruptedException
     {
-        List<Integer> targetOpPerSecValues = Lists.newArrayList( 100, 10_000, 1_000_000 );
+        List<Integer> targetOpPerSecValues = Lists.newArrayList( 100, 100_000 );
         for ( int targetOpPerSec : targetOpPerSecValues )
         {
             TestThread thread = new TestThread( targetOpPerSec );
@@ -43,7 +43,7 @@ public class ThrottlerIT
         }
     }
 
-    boolean areSimilar( double first, double second, double percentageTolerance )
+    private boolean areSimilar( double first, double second, double percentageTolerance )
     {
         if ( first > second )
         {
