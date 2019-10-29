@@ -120,7 +120,7 @@ class DriverConfigFactoryTest
         assertTrue( graph0DriverConfig.idleTimeBeforeConnectionTest() < 0);
         assertEquals( Duration.ofHours( 1 ).toMillis(), graph0DriverConfig.maxConnectionLifetimeMillis() );
         assertEquals( Duration.ofMinutes( 1 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
-        assertTrue( graph0DriverConfig.encrypted() );
+        assertFalse( graph0DriverConfig.encrypted() );
         assertEquals( TRUST_ALL_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
         assertEquals( Duration.ofSeconds( 5 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
     }
