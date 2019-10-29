@@ -21,6 +21,7 @@ import org.neo4j.configuration.ExternalSettings;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.server.configuration.ServerSettings;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
@@ -38,7 +39,9 @@ public class Neo4jConfigBuilder
                 .withSetting( GraphDatabaseSettings.fail_on_missing_files, FALSE )
                 .withSetting( HttpConnector.enabled, FALSE )
                 .withSetting( HttpConnector.enabled, FALSE )
-                .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE );
+                .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE )
+                .withSetting( GraphDatabaseSettings.log_queries, FALSE )
+                .withSetting( ServerSettings.http_logging_enabled, FALSE );
     }
 
     public static Neo4jConfigBuilder empty()
