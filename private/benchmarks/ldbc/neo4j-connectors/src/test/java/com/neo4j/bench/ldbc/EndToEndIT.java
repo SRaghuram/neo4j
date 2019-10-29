@@ -26,6 +26,7 @@ import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.test.BaseEndToEndIT;
+import org.junit.jupiter.api.Disabled;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +47,7 @@ import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 
+@Disabled
 public class EndToEndIT extends BaseEndToEndIT
 {
     @Override
