@@ -44,7 +44,7 @@ class RoutingTableTest
 
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.graph.0.uri", "somewhere:1234",
+                "fabric.graph.0.uri", "neo4j://somewhere:1234",
                 "fabric.routing.ttl", "1234000",
                 "fabric.routing.servers", "localhost:" + ports.bolt + ",host1:1001,host2:1002,host3:1003",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,

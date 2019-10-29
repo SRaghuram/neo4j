@@ -57,7 +57,7 @@ class AsyncPooledDriverTest
     private final AsyncSession session = mock( AsyncSession.class );
     private final AsyncTransaction asyncTransaction = mock( AsyncTransaction.class );
 
-    private final FabricConfig.Graph location = new FabricConfig.Graph( 1, URI.create( "neo4j://somewhere:1234" ), "db1", null, null );
+    private final FabricConfig.Graph location = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( "neo4j://somewhere:1234" ), "db1", null, null );
     private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null );
 
     @BeforeEach

@@ -22,6 +22,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -85,16 +86,16 @@ class RemoteTransactionTest
     @BeforeAll
     static void beforeAll() throws UnavailableException
     {
-        FabricConfig.Graph graph1 = new FabricConfig.Graph( 1, URI.create( "bolt://somewhere:1001" ), null, null, emptyDriverConfig() );
-        FabricConfig.Graph graph2 = new FabricConfig.Graph( 2, URI.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
-        FabricConfig.Graph graph3 = new FabricConfig.Graph( 3, URI.create( "bolt://somewhere:1003" ), null, null, emptyDriverConfig() );
+        FabricConfig.Graph graph1 = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( "bolt://somewhere:1001" ), null, null, emptyDriverConfig() );
+        FabricConfig.Graph graph2 = new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
+        FabricConfig.Graph graph3 = new FabricConfig.Graph( 3, FabricConfig.RemoteUri.create( "bolt://somewhere:1003" ), null, null, emptyDriverConfig() );
 
         var ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.graph.1.uri", graph1.getUri().toString(),
-                "fabric.graph.2.uri", graph2.getUri().toString(),
-                "fabric.graph.3.uri", graph3.getUri().toString(),
+                "fabric.graph.1.uri", getUri( graph1 ),
+                "fabric.graph.2.uri", getUri( graph2 ),
+                "fabric.graph.3.uri", getUri( graph3 ),
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "dbms.transaction.timeout", "1000",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
@@ -135,6 +136,21 @@ class RemoteTransactionTest
         mockShardDriver( shard1Driver, Mono.just( tx1 ) );
         mockShardDriver( shard2Driver, Mono.just( tx2 ) );
         mockShardDriver( shard3Driver, Mono.just( tx3 ) );
+    }
+
+    private static String getUri( FabricConfig.Graph graph )
+    {
+        try
+        {
+            var remoteUri = graph.getUri();
+            var address = remoteUri.getAddresses().get( 0 );
+            var uri = new URI( remoteUri.getScheme(), null, address.getHostname(), address.getPort(), null, remoteUri.getQuery(), null );
+            return uri.toString();
+        }
+        catch ( URISyntaxException e )
+        {
+            throw new IllegalArgumentException( e.getMessage(), e );
+        }
     }
 
     private static void mockDriverPool( FabricConfig.Graph graph, PooledDriver pooledDriver )

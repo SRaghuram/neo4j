@@ -46,8 +46,8 @@ class DriverPoolTest
     private final FabricConfig fabricConfig = mock( FabricConfig.class );
     private final Config config = mock( Config.class );
 
-    private final FabricConfig.Graph s1 = new FabricConfig.Graph( 1, shard0.boltURI(), "db1", "shard-0", null );
-    private final FabricConfig.Graph s2 = new FabricConfig.Graph( 2, shard1.boltURI(), "db1", "shard-1", null );
+    private final FabricConfig.Graph s1 = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create(shard0.boltURI()), "db1", "shard-0", null );
+    private final FabricConfig.Graph s2 = new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create(shard1.boltURI()), "db1", "shard-1", null );
 
     private final CredentialsProvider credentialsProvider = Mockito.mock( CredentialsProvider.class );
     private final AuthSubject as1 = mock( AuthSubject.class );

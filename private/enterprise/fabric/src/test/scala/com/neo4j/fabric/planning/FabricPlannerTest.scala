@@ -5,7 +5,6 @@
  */
 package com.neo4j.fabric.planning
 
-import java.net.URI
 import java.time.Duration
 import java.util
 
@@ -32,9 +31,9 @@ import scala.reflect.ClassTag
 //noinspection ZeroIndexToHead
 class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport {
 
-  private val shardFoo0 = new Graph(0, URI.create("bolt://foo"), "s0", "shard-name-0", null)
-  private val shardFoo1 = new Graph(1, URI.create("bolt://foo"), "s1", "shard-name-1", null)
-  private val shardBar0 = new Graph(2, URI.create("bolt://bar"), "neo4j", "shard-name-2", null)
+  private val shardFoo0 = new Graph(0, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s0", "shard-name-0", null)
+  private val shardFoo1 = new Graph(1, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s1", "shard-name-1", null)
+  private val shardBar0 = new Graph(2, FabricConfig.RemoteUri.create("bolt://bar:1234"), "neo4j", "shard-name-2", null)
   private val config = new FabricConfig(
     true,
     new Database(new NormalizedDatabaseName("mega"), util.Set.of(shardFoo0, shardFoo1, shardBar0)),

@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -180,7 +181,9 @@ public class FabricConfig
                     config.get( graphSetting.driverMaxConnectionLifetime ), config.get( graphSetting.driverConnectionAcquisitionTimeout ),
                     config.get( graphSetting.driverEncrypted ), config.get( graphSetting.driverTrustStrategy ), config.get( graphSetting.driverConnectTimeout ),
                     config.get( graphSetting.driverApi ) );
-            return new Graph( graphId, config.get( graphSetting.uri ), config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
+
+            var remoteUri = new RemoteUri( config.get( graphSetting.uris ) );
+            return new Graph( graphId, remoteUri, config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
         } ).collect( Collectors.toSet() );
 
         validateGraphNames( graphSettings );
@@ -262,12 +265,12 @@ public class FabricConfig
     public static class Graph
     {
         private final long id;
-        private final URI uri;
+        private final RemoteUri uri;
         private final String database;
         private final String name;
         private final DriverConfig driverConfig;
 
-        public Graph( long id, URI uri, String database, String name, DriverConfig driverConfig )
+        public Graph( long id, RemoteUri uri, String database, String name, DriverConfig driverConfig )
         {
             if ( uri == null )
             {
@@ -286,7 +289,7 @@ public class FabricConfig
             return id;
         }
 
-        public URI getUri()
+        public RemoteUri getUri()
         {
             return uri;
         }
@@ -309,7 +312,7 @@ public class FabricConfig
         @Override
         public String toString()
         {
-            return String.format( "graph %s at %s named %s", id, uri, name );
+            return String.format( "graph %s named %s", id,  name );
         }
 
         @Override
@@ -480,6 +483,96 @@ public class FabricConfig
         public int getSyncBatchSize()
         {
             return syncBatchSize;
+        }
+    }
+
+    public static class RemoteUri
+    {
+        private final String scheme;
+        private final List<SocketAddress> addresses;
+        private final String query;
+
+        public RemoteUri( List<URI> uris )
+        {
+            if ( uris == null || uris.isEmpty() )
+            {
+                throw new IllegalArgumentException( "Remote graph URI must be provided" );
+            }
+
+            var mainUri = uris.get( 0 );
+
+            if ( mainUri.getScheme() == null )
+            {
+                throw new IllegalArgumentException( "Scheme must be provided: " + uris );
+            }
+
+            scheme = mainUri.getScheme();
+            query = mainUri.getQuery();
+
+            boolean match = IntStream.range( 1, uris.size() )
+                    .mapToObj( uris::get )
+                    .allMatch( uri -> Objects.equals( scheme, uri.getScheme() ) && Objects.equals( query, uri.getQuery() ) );
+            if ( !match )
+            {
+                throw new IllegalArgumentException( "URI mismatch: " + uris );
+            }
+
+            addresses = uris.stream()
+                    .peek( uri ->
+                    {
+                        if ( uri.getHost() == null || uri.getPort() == -1 )
+                        {
+                            throw new IllegalArgumentException( "Host name and port must be provided: " + uris );
+                        }
+                    } )
+                    .map( uri ->  new SocketAddress( uri.getHost(), uri.getPort() ))
+                    .collect( Collectors.toList());
+        }
+
+        public static RemoteUri create( String uri )
+        {
+            return new RemoteUri( List.of( URI.create( uri ) ) );
+        }
+
+        public static RemoteUri create( URI uri )
+        {
+            return new RemoteUri( List.of( uri ) );
+        }
+
+        public String getScheme()
+        {
+            return scheme;
+        }
+
+        public List<SocketAddress> getAddresses()
+        {
+            return addresses;
+        }
+
+        public String getQuery()
+        {
+            return query;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            RemoteUri remoteUri = (RemoteUri) o;
+            return scheme.equals( remoteUri.scheme ) && addresses.equals( remoteUri.addresses ) && Objects.equals( query, remoteUri.query );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( scheme, addresses, query );
         }
     }
 }

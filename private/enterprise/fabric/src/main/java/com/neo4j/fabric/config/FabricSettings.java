@@ -148,8 +148,12 @@ public class FabricSettings implements SettingsDeclaration
     @ServiceProvider
     public static class GraphSetting extends GroupSetting
     {
-        @Description( "URI of the Neo4j DBMS hosting the database associated to the Fabric graph. Example: neo4j://somewhere:7687" )
-        public final Setting<URI> uri = getBuilder( "uri", SettingValueParsers.URI, null ).build();
+        @Description( "URI of the Neo4j DBMS hosting the database associated to the Fabric graph. Example: neo4j://somewhere:7687 \n" +
+                "A comma separated list of URIs is acceptable. This is useful when the Fabric graph is hosted on a cluster" +
+                "and more that one bootstrap addresses is needed to be provided in order to avoid a singe point of failure." +
+                "The provided addresses will be considered as an initial source of a routing table." +
+                "Example: neo4j://core-1:1111,neo4j://core-2:2222" )
+        public final Setting<List<URI>> uris = getBuilder( "uri", SettingValueParsers.listOf( SettingValueParsers.URI ), null ).build();
 
         @Description( "Name of the database associated to the Fabric graph." )
         @DocumentedDefaultValue( "The default database on the target DBMS. Typically 'Neo4j'" )

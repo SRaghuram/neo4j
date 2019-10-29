@@ -70,7 +70,7 @@ class FabricDatabaseManagementTest
         {
             configProperties = Map.of(
                     "fabric.database.name", fabricDatabaseName,
-                    "fabric.graph.0.uri", "neo4j://foo.com"
+                    "fabric.graph.0.uri", "neo4j://foo.com:1111"
             );
         }
 

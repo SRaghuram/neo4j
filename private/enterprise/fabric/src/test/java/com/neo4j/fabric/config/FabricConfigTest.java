@@ -7,12 +7,14 @@ package com.neo4j.fabric.config;
 
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -43,8 +45,8 @@ class FabricConfigTest
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
         assertEquals( Set.of(
-                new FabricConfig.Graph( 0L, URI.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
-                new FabricConfig.Graph( 1L, URI.create( "bolt://mega:2222" ), "db0", "source-of-all-wisdom", emptyDriverConfig() )
+                new FabricConfig.Graph( 0L, FabricConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
+                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", "source-of-all-wisdom", emptyDriverConfig() )
         ), database.getGraphs() );
     }
 
@@ -188,6 +190,40 @@ class FabricConfigTest
                 .build();
 
         assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ) );
+    }
+
+    @Test
+    void testRemoteUriList()
+    {
+        var fabricConfig = doTestRemoteUri( "bolt://core-1:1111?key=value,bolt://core-2:2222?key=value" );
+        var uri = fabricConfig.getDatabase().getGraphs().stream().findFirst().get().getUri();
+        assertEquals( uri.getScheme(), "bolt" );
+        assertEquals( uri.getQuery(), "key=value" );
+        assertThat( uri.getAddresses(), containsInAnyOrder( new SocketAddress( "core-1", 1111 ), new SocketAddress( "core-2", 2222 ) ) );
+    }
+
+    @Test
+    void testInvalidRemoteUriList()
+    {
+        assertThrows( IllegalArgumentException.class, () -> doTestRemoteUri( "neo4j://core-1:1111,bolt://core-2:2222" ) );
+        assertThrows( IllegalArgumentException.class, () -> doTestRemoteUri( "neo4j://core-1:1111?key=value,bolt://core-2:2222" ) );
+        assertThrows( IllegalArgumentException.class, () -> doTestRemoteUri( "" ) );
+        assertThrows( IllegalArgumentException.class, () -> doTestRemoteUri( "neo4j://core-1" ) );
+        assertThrows( IllegalArgumentException.class, () -> doTestRemoteUri( "neo4j://" ) );
+    }
+
+    private FabricConfig doTestRemoteUri( String uri )
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "fabric.graph.0.uri", uri
+        );
+
+        var config = Config.newBuilder()
+                .setRaw( properties )
+                .build();
+
+        return FabricConfig.from( config );
     }
 
     private FabricConfig.DriverConfig emptyDriverConfig()

@@ -13,7 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.driver.net.ServerAddress;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -121,6 +124,30 @@ class DriverConfigFactoryTest
         assertFalse( graph0DriverConfig.encrypted() );
         assertEquals( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
         assertEquals( Duration.ofSeconds( 5 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
+    }
+
+    @Test
+    void testUriList()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "fabric.graph.0.uri", "bolt://core-1:1111,bolt://core-2:2222,bolt://core-3:3333"
+        );
+        var config = Config.newBuilder()
+                .setRaw( properties )
+                .build();
+
+        var fabricConfig = FabricConfig.from( config );
+        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config );
+
+        var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
+
+        var resolvedAddresses = graph0DriverConfig.resolver().resolve( null );
+        assertThat( resolvedAddresses, containsInAnyOrder(
+                ServerAddress.of( "core-1", 1111 ),
+                ServerAddress.of( "core-2", 2222 ),
+                ServerAddress.of( "core-3", 3333 )
+        ) );
     }
 
     private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )

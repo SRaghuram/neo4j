@@ -42,7 +42,7 @@ class BoltLocalResultStreamTest
         PortUtils.Ports ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.graph.0.uri", "somewhere:6666",
+                "fabric.graph.0.uri", "neo4j://somewhere:6666",
                 "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,

@@ -8,9 +8,11 @@ package com.neo4j.fabric.driver;
 import com.neo4j.fabric.config.FabricConfig;
 
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Logging;
+import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.logging.Level;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -95,7 +97,13 @@ class DriverConfigFactory
             builder.withMaxConnectionPoolSize( maxConnectionPoolSize );
         }
 
-        return builder.withLogging( Logging.javaUtilLogging( getLoggingLevel( graph ) ) ).build();
+        var serverAddresses = graph.getUri().getAddresses().stream()
+                .map( address -> ServerAddress.of( address.getHostname(), address.getPort() ) )
+                .collect( Collectors.toSet());
+
+        return builder
+                .withResolver( mainAddress -> serverAddresses )
+                .withLogging( Logging.javaUtilLogging( getLoggingLevel( graph ) ) ).build();
     }
 
     <T> T getProperty( FabricConfig.Graph graph, Function<FabricConfig.DriverConfig,T> extractor )

@@ -11,6 +11,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -142,11 +143,10 @@ public class DriverPool extends LifecycleAdapter
     {
         var config = driverConfigFactory.createConfig( location );
 
-        // TODO: retry setting are package private
-        // RetrySettings retrySettings = config.retrySettings();
-
         var driverFactory = new DriverFactory();
-        var databaseDriver = driverFactory.newInstance( location.getUri(), token, RoutingSettings.DEFAULT, RetrySettings.DEFAULT, config, eventLoopGroup );
+
+        var driverUri = constructDriverUri( location.getUri() );
+        var databaseDriver = driverFactory.newInstance( driverUri, token, RoutingSettings.DEFAULT, RetrySettings.DEFAULT, config, eventLoopGroup );
 
         var driverApi = driverConfigFactory.getProperty( location, FabricConfig.DriverConfig::getDriverApi );
         switch ( driverApi )
@@ -160,13 +160,26 @@ public class DriverPool extends LifecycleAdapter
         }
     }
 
+    private URI constructDriverUri( FabricConfig.RemoteUri uri )
+    {
+        var address = uri.getAddresses().get( 0 );
+        try
+        {
+            return new URI( uri.getScheme(), null, address.getHostname(), address.getPort(), null, uri.getQuery(), null );
+        }
+        catch ( URISyntaxException e )
+        {
+            throw new IllegalArgumentException( e.getMessage(), e );
+        }
+    }
+
     private class Key
     {
 
-        private final URI uri;
+        private final FabricConfig.RemoteUri uri;
         private final AuthToken auth;
 
-        Key( URI uri, AuthToken auth )
+        Key( FabricConfig.RemoteUri uri, AuthToken auth )
         {
             this.uri = uri;
             this.auth = auth;

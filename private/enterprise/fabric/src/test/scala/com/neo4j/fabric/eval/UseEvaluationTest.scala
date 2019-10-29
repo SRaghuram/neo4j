@@ -5,7 +5,6 @@
  */
 package com.neo4j.fabric.eval
 
-import java.net.URI
 import java.time.Duration
 import java.util
 
@@ -13,7 +12,6 @@ import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
 import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
-import com.neo4j.fabric.util.Errors.EvaluationFailedException
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph
@@ -29,9 +27,9 @@ import scala.collection.mutable
 
 class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport with TestName {
 
-  private val mega0 = new Graph(0L, URI.create("bolt://mega:1111"), "neo4j", "source_of_all_truth", null)
-  private val mega1 = new Graph(1L, URI.create("bolt://mega:2222"), "neo4j", null, null)
-  private val mega2 = new Graph(2L, URI.create("bolt://mega:3333"), "neo4j", "mega", null)
+  private val mega0 = new Graph(0L, FabricConfig.RemoteUri.create("bolt://mega:1111"), "neo4j", "source_of_all_truth", null)
+  private val mega1 = new Graph(1L, FabricConfig.RemoteUri.create("bolt://mega:2222"), "neo4j", null, null)
+  private val mega2 = new Graph(2L, FabricConfig.RemoteUri.create("bolt://mega:3333"), "neo4j", "mega", null)
 
   private val config = new FabricConfig(
     true,
