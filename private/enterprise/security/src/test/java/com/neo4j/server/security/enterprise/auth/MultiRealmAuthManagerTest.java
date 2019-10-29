@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.server.security.enterprise.systemgraph.InMemoryUserManager;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,27 +15,29 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Map;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
+import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.auth.BasicSystemGraphRealmTest.clearedPasswordWithSameLengthAs;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
+import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.test.assertion.Assert.assertException;
 
@@ -44,7 +46,7 @@ class MultiRealmAuthManagerTest
     private AuthenticationStrategy authStrategy;
     private MultiRealmAuthManager manager;
     private AssertableLogProvider logProvider;
-    private InMemoryUserManager realm;
+    private SystemGraphRealm realm;
 
     @BeforeEach
     void setUp() throws Throwable
@@ -57,10 +59,10 @@ class MultiRealmAuthManagerTest
 
     private MultiRealmAuthManager createAuthManager( boolean logSuccessfulAuthentications ) throws Throwable
     {
-        realm = new InMemoryUserManager( Config.defaults(), authStrategy );
+        realm = spy( new SystemGraphRealm( SecurityGraphInitializer.NO_OP, null, new SecureHasher(), authStrategy, true, true ) );
 
-        manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
-                new MemoryConstrainedCacheManager(), new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications );
+        manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
+                new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications );
 
         manager.init();
         return manager;
@@ -77,13 +79,12 @@ class MultiRealmAuthManagerTest
     void shouldFindAndAuthenticateUserSuccessfully() throws Throwable
     {
         // Given
-        realm.newUser( "jake", password( "abc123" ), false );
-        manager.start();
-        setMockAuthenticationStrategyResult( "jake", "abc123", AuthenticationResult.SUCCESS );
+        User user = new User.Builder( "jake", credentialFor( "abc123" ) ).build();
+        doReturn( user ).when( realm ).getUser( "jake" );
+        setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
 
         // When
-        AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject()
-                .getAuthenticationResult();
+        AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.SUCCESS ) );
@@ -97,9 +98,11 @@ class MultiRealmAuthManagerTest
         manager.shutdown();
         manager = createAuthManager( false );
 
-        realm.newUser( "jake", password( "abc123" ), false );
+        User user = new User.Builder( "jake", credentialFor( "abc123" ) ).build();
+        doReturn( user ).when( realm ).getUser( "jake" );
+
         manager.start();
-        setMockAuthenticationStrategyResult( "jake", "abc123", AuthenticationResult.SUCCESS );
+        setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
 
         // When
         AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
@@ -113,9 +116,10 @@ class MultiRealmAuthManagerTest
     void shouldReturnTooManyAttemptsWhenThatIsAppropriate() throws Throwable
     {
         // Given
-        realm.newUser( "jake", password( "abc123" ), true );
+        User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
+        doReturn( user ).when( realm ).getUser( "jake" );
         manager.start();
-        setMockAuthenticationStrategyResult( "jake", "wrong password", AuthenticationResult.TOO_MANY_ATTEMPTS );
+        setMockAuthenticationStrategyResult( user, "wrong password", AuthenticationResult.TOO_MANY_ATTEMPTS );
 
         // When
         AuthSubject authSubject = manager.login( authToken( "jake", "wrong password" ) ).subject();
@@ -123,17 +127,17 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.TOO_MANY_ATTEMPTS ) );
-        logProvider.assertExactly(
-                error( "[%s]: failed to log in: too many failed attempts", "jake" ) );
+        logProvider.assertExactly( error( "[%s]: failed to log in: too many failed attempts", "jake" ) );
     }
 
     @Test
     void shouldFindAndAuthenticateUserAndReturnPasswordChangeIfRequired() throws Throwable
     {
         // Given
-        realm.newUser( "jake", password( "abc123" ), true );
+        User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
+        doReturn( user ).when( realm ).getUser( "jake" );
         manager.start();
-        setMockAuthenticationStrategyResult( "jake", "abc123", AuthenticationResult.SUCCESS );
+        setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
 
         // When
         AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
@@ -201,18 +205,18 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
-        logProvider.assertExactly( error( "[%s]: failed to log in: %s",
-                escape( "unknown\n\t\r\"haxx0r\"" ), "invalid principal or credentials" ) );
+        logProvider.assertExactly( error( "[%s]: failed to log in: %s", escape( "unknown\n\t\r\"haxx0r\"" ), "invalid principal or credentials" ) );
     }
 
     @Test
     void shouldNotRequestPasswordChangeWithInvalidCredentials() throws Throwable
     {
         // Given
-        realm.newUser( "neo", password( "abc123" ), true );
+        User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
+        doReturn( user ).when( realm ).getUser( "jake" );
         manager.start();
-        setMockAuthenticationStrategyResult( "neo", "abc123", AuthenticationResult.SUCCESS );
-        setMockAuthenticationStrategyResult( "neo", "wrong", AuthenticationResult.FAILURE );
+        setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
+        setMockAuthenticationStrategyResult( user, "wrong", AuthenticationResult.FAILURE );
 
         // When
         AuthenticationResult result = manager.login( authToken( "neo", "wrong" ) ).subject().getAuthenticationResult();
@@ -229,7 +233,8 @@ class MultiRealmAuthManagerTest
         when( authStrategy.authenticate( any(), any() ) ).thenReturn( AuthenticationResult.SUCCESS );
 
         manager.start();
-        realm.newUser( "jake", password( "abc123" ), true );
+        User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
+        doReturn( user ).when( realm ).getUser( "jake" );
         byte[] password = password( "abc123" );
         Map<String,Object> authToken = AuthToken.newBasicAuthToken( "jake", password );
 
@@ -268,9 +273,8 @@ class MultiRealmAuthManagerTest
         return inLog( this.getClass() ).error( message, (Object[]) arguments );
     }
 
-    private void setMockAuthenticationStrategyResult( String username, String password, AuthenticationResult result ) throws InvalidArgumentsException
+    private void setMockAuthenticationStrategyResult( User user, String password, AuthenticationResult result )
     {
-        final User user = realm.getUser( username );
         when( authStrategy.authenticate( user, password( password ) ) ).thenReturn( result );
     }
 }

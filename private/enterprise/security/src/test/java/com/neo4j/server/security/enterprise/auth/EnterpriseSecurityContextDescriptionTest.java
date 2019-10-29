@@ -6,39 +6,53 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
-import com.neo4j.server.security.enterprise.systemgraph.InMemoryUserManager;
+import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
+import org.apache.shiro.authz.SimpleAuthorizationInfo;
+import org.apache.shiro.cache.MemoryConstrainedCacheManager;
+import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
+
+import java.util.Collections;
+import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.api.security.OverriddenAccessMode;
 import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
+import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public class EnterpriseSecurityContextDescriptionTest
 {
-    @Rule
-    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
+    private MultiRealmAuthManager authManager;
+    private SystemGraphRealm realm;
+    private PrincipalCollection principals;
 
-    private InMemoryUserManager manager;
     private final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
 
     @Before
     public void setUp() throws Throwable
     {
-        authManagerRule.getManager().start();
-        manager = authManagerRule.getUserManager();
-        manager.newUser( "mats", password( "foo" ), false );
+        realm = mock(SystemGraphRealm.class);
+        when( realm.doGetAuthenticationInfo( any() ) ).thenReturn( new ShiroAuthenticationInfo( "mats", "SystemGraphRealm", AuthenticationResult.SUCCESS ) );
+        when( realm.supports( any() ) ).thenReturn( true );
+        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
+        authManager.start();
+        principals = new SimplePrincipalCollection( "mats", "SystemGraphRealm" );
     }
 
     @Test
@@ -50,18 +64,14 @@ public class EnterpriseSecurityContextDescriptionTest
     @Test
     public void shouldMakeNiceDescriptionWithRoles() throws Exception
     {
-        manager.newRole( "role1", "mats" );
-        manager.addRoleToUser( PUBLISHER, "mats" );
-
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
         assertThat( context().description(), equalTo( "user 'mats' with roles [publisher,role1]" ) );
     }
 
     @Test
     public void shouldMakeNiceDescriptionWithMode() throws Exception
     {
-        manager.newRole( "role1", "mats" );
-        manager.addRoleToUser( PUBLISHER, "mats" );
-
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
         EnterpriseSecurityContext modified = context().withMode( AccessMode.Static.CREDENTIALS_EXPIRED );
         assertThat( modified.description(), equalTo( "user 'mats' with CREDENTIALS_EXPIRED" ) );
     }
@@ -69,9 +79,7 @@ public class EnterpriseSecurityContextDescriptionTest
     @Test
     public void shouldMakeNiceDescriptionRestricted() throws Exception
     {
-        manager.newRole( "role1", "mats" );
-        manager.addRoleToUser( PUBLISHER, "mats" );
-
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext restricted =
                 context.withMode( new RestrictedAccessMode( context.mode(), AccessMode.Static.READ ) );
@@ -81,9 +89,7 @@ public class EnterpriseSecurityContextDescriptionTest
     @Test
     public void shouldMakeNiceDescriptionOverridden() throws Exception
     {
-        manager.newRole( "role1", "mats" );
-        manager.addRoleToUser( PUBLISHER, "mats" );
-
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext overridden =
                 context.withMode( new OverriddenAccessMode( context.mode(), AccessMode.Static.READ ) );
@@ -108,7 +114,7 @@ public class EnterpriseSecurityContextDescriptionTest
 
     private EnterpriseSecurityContext context() throws InvalidAuthTokenException, KernelException
     {
-        return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
+        return authManager.login( authToken( "mats", "foo" ) )
                 .authorize( token, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
     }
 }
