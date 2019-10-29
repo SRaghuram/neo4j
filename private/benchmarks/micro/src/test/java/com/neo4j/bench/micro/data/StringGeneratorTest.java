@@ -39,9 +39,9 @@ import static java.lang.String.format;
 
 public class StringGeneratorTest
 {
-    private static final int REPETITIONS = 1_000_000;
+    private static final int REPETITIONS = 100_000;
     private static final long MAX_RANDOM_GENERATION_DURATION = TimeUnit.SECONDS.toMillis( 10 );
-    private static final long MAX_ASCENDING_GENERATION_DURATION = TimeUnit.SECONDS.toMillis( 20 );
+    private static final long MAX_ASCENDING_GENERATION_DURATION = TimeUnit.SECONDS.toMillis( 10 );
 
     @Test
     public void randomStringGeneratorsShouldDoNothingUnexpected() throws IOException
