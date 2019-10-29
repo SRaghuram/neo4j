@@ -58,32 +58,37 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.app</groupId>
+            <artifactId>neo4j-server</artifactId>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-data-collector</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-tools</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-record-storage-engine</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -92,7 +97,7 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-storage-engine-api</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
 
         <dependency>
@@ -182,7 +187,7 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-kernel</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
             <type>test-jar</type>
         </dependency>
         <dependency>
