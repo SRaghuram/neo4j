@@ -147,11 +147,6 @@ class IndexPersistenceAcceptanceTest extends IndexingTestSupport {
     }
   }
 
-  test("Should not get new index configuration on database settings changes of maxBits") {
-    // halve the value of maxBits
-    testIndexRestartWithSettingsChanges(Map(SpatialIndexSettings.space_filling_curve_max_bits -> Integer.valueOf(30)))
-  }
-
   test("Should not get new index configuration on database settings changes of WGS84 minimum x extent") {
     // remove the entire western hemisphere
     val wgs84_x_min = CrsConfig.group(CoordinateReferenceSystem.WGS84).min

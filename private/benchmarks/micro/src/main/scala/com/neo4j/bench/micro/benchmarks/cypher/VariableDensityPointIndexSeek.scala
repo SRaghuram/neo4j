@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
@@ -19,13 +20,12 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.{space_filling_curve_bottom_threshold, space_filling_curve_extra_levels, space_filling_curve_max_bits, space_filling_curve_top_threshold}
+import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.{space_filling_curve_bottom_threshold, space_filling_curve_extra_levels, space_filling_curve_top_threshold}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.mutable
-import com.neo4j.bench.common.Neo4jConfigBuilder
 
 @BenchmarkEnabled(true)
 class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
@@ -49,7 +49,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
    *   + less false positives --> less post filtering
    */
   @ParamValues(
-    allowed = Array("10", "30", "60"),
+    allowed = Array("60"),
     base = Array("60"))
   @Param(Array[String]())
   var maxBits: Int = _
@@ -162,7 +162,6 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
       .withNeo4jConfig(
         Neo4jConfigBuilder
         .empty()
-        .withSetting(space_filling_curve_max_bits, maxBits.toString)
         .withSetting(space_filling_curve_extra_levels, extraLevels.toString)
         .withSetting(space_filling_curve_top_threshold, thresholdTop.toString)
         .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)

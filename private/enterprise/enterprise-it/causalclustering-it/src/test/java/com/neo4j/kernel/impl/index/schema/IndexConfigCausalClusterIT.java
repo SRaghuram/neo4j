@@ -15,23 +15,26 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.api.index.IndexProxy;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.index.schema.config.CrsConfig;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.Value;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.space_filling_curve_max_bits;
 import static org.neo4j.test.TestLabels.LABEL_ONE;
 
 @ClusterExtension
@@ -43,6 +46,7 @@ class IndexConfigCausalClusterIT
     private static Cluster cluster;
     private final String prop = "prop";
     private IndexDescriptor index;
+    private static final Setting<List<Double>> configuredSetting = CrsConfig.group( CoordinateReferenceSystem.Cartesian ).max;
 
     @BeforeAll
     static void startCluster() throws Exception
@@ -50,7 +54,7 @@ class IndexConfigCausalClusterIT
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withInstanceCoreParam( space_filling_curve_max_bits, i -> Integer.toString( 6 * (i + 1) ) ); // Divisible by both 2 and 3.
+                .withInstanceCoreParam( configuredSetting, i -> i + ", " + i );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
@@ -63,7 +67,8 @@ class IndexConfigCausalClusterIT
         Set<Integer> existingSettingsValues = new HashSet<>();
         for ( CoreClusterMember coreMember : cluster.coreMembers() )
         {
-            assertTrue( existingSettingsValues.add( coreMember.config().get( space_filling_curve_max_bits ) ),
+            final int maxXAsInt = coreMember.config().get( configuredSetting ).get( 0 ).intValue();
+            assertTrue( existingSettingsValues.add( maxXAsInt ),
                     "expected all core members to have different settings values" );
         }
 
