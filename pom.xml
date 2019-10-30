@@ -102,7 +102,7 @@
                         </subpackages>
                         <!-- ...unless the package contains -->
                         <excludePackageNames>
-                            *.impl.*:*.internal.*
+                            *.impl.*:*.internal.*:com.neo4j.bench
                         </excludePackageNames>
                     </configuration>
                 </plugin>
@@ -142,5 +142,4 @@
             <url>https://dl.bintray.com/ldbc/snb/</url>
         </repository>
     </repositories>
-    
 </project>
