@@ -30,7 +30,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 public class GBPTreeConsistencyCheckTool
 {
     private static final String LAYOUT = "layout";
-    private static final String ALLOW_CRASH = "allowCrash";
+    private static final String REPORT_CRASH = "reportCrash";
 
     /**
      * Usage: --layout "layout" --allowCrash gbpTreeFile
@@ -38,22 +38,23 @@ public class GBPTreeConsistencyCheckTool
      * --layout "layout"
      * What layout is the expected layout of the gbpTree?
      *
-     * --allowCrash
+     * --reportCrash <true|false>
      * Set this flag to allow crash pointers in tree.
      */
     public static void main( String[] args ) throws Exception
     {
-        Args arguments = Args.withFlags( ALLOW_CRASH ).parse( args );
+        Args arguments = Args.parse( args );
         if ( !validateArguments( arguments ) )
         {
             return;
         }
         File file = new File( arguments.orphans().get( 0 ) );
         String layoutIdentifier = arguments.get( LAYOUT );
-        new GBPTreeConsistencyCheckTool().run( file, layoutIdentifier, arguments.getBoolean( ALLOW_CRASH, false ) );
+        final Boolean reportCrash = arguments.getBoolean( REPORT_CRASH, true );
+        new GBPTreeConsistencyCheckTool().run( file, layoutIdentifier, reportCrash );
     }
 
-    private void run( File file, String layoutIdentifier, boolean allowCrashPointers ) throws Exception
+    private void run( File file, String layoutIdentifier, boolean reportCrashPointers ) throws Exception
     {
         System.out.println( "Check consistency on " + file.getAbsolutePath() );
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
@@ -66,7 +67,7 @@ public class GBPTreeConsistencyCheckTool
             {
                 final GBPTreeConsistencyCheckVisitor visitor = loggingInconsistencyVisitor();
                 System.out.println( "Starting consistency check" );
-                boolean consistent = tree.consistencyCheck( visitor, allowCrashPointers );
+                boolean consistent = tree.consistencyCheck( visitor, reportCrashPointers );
                 if ( consistent )
                 {
                     System.out.println( "Consistency check finished successful." );
