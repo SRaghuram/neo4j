@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -36,6 +37,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
@@ -355,11 +357,15 @@ public final class CausalClusteringTestHelpers
     private static Set<String> getMemberUsers( ClusterMember member )
     {
         GraphDatabaseFacade system = member.systemDatabase();
-        Set<String> users;
+        Set<String> users = new HashSet<>();
         try ( var tx = system.beginTx() )
         {
             Result result = tx.execute( "SHOW USERS" );
-            users = result.columnAs( "user" ).stream().map( Object::toString ).collect( Collectors.toSet() );
+            ResourceIterator<Object> user = result.columnAs( "user" );
+            while ( user.hasNext() )
+            {
+                users.add( user.next().toString() );
+            }
             tx.commit();
         }
         return users;
@@ -379,11 +385,15 @@ public final class CausalClusteringTestHelpers
     private static Set<String> getMemberRoles( ClusterMember member )
     {
         GraphDatabaseFacade system = member.systemDatabase();
-        Set<String> roles;
+        Set<String> roles = new HashSet<>();
         try ( var tx = system.beginTx() )
         {
             Result result = tx.execute( "SHOW ROLES" );
-            roles = result.columnAs( "role" ).stream().map( Object::toString ).collect( Collectors.toSet() );
+            ResourceIterator<Object> role = result.columnAs( "role" );
+            while ( role.hasNext() )
+            {
+                roles.add( role.next().toString() );
+            }
             tx.commit();
         }
         return roles;
