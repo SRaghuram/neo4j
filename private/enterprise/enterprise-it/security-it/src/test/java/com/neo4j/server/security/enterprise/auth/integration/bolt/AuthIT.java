@@ -21,7 +21,6 @@ import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.AfterClass;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -281,7 +280,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     private final boolean ldapWithAD;
     private final boolean createUsers;
 
-    @SuppressWarnings( "unused" )
+    @SuppressWarnings( {"unused", "unchecked"} )
     public AuthIT( String suiteName, String password, boolean confidentialityRequired, boolean secureLdap, String host, List<Object> settings )
     {
         this.password = password;
@@ -519,19 +518,24 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
         assumeTrue( createUsers );
         setup();
 
-        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password ) )
+        // GIVEN
+        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password );
+              Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
-            try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
-            {
-                session.run( "CREATE USER fooUser SET PASSWORD 'foo'" ).list();
-                session.run( "ALTER USER fooUser SET PASSWORD 'foo' CHANGE NOT REQUIRED" ).list();
-                fail( "should have gotten exception" );
-            }
-            catch ( ClientException ce )
-            {
-                assertThat( ce.getMessage(),
-                        equalTo( "Failed to alter the specified user 'fooUser': Old password and new password cannot be the same." ) );
-            }
+            session.run( "CREATE USER fooUser SET PASSWORD 'foo'" ).consume();
+        }
+
+        try ( Driver driver = connectDriver( boltUri, ADMIN_USER, password );
+              Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            // WHEN
+            session.run( "ALTER USER fooUser SET PASSWORD 'foo' CHANGE NOT REQUIRED" ).consume();
+            fail( "should have gotten exception" );
+        }
+        catch ( ClientException ce )
+        {
+            // THEN
+            assertThat( ce.getMessage(), equalTo( "Failed to alter the specified user 'fooUser': Old password and new password cannot be the same." ) );
         }
     }
 
