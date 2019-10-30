@@ -315,8 +315,6 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         assertEquals( emptySet(), asSet( transaction.schemaRead().indexesGetAll() ) );
         commit();
     }
-    // todo creating constraint indexes with custom types
-    // todo creating constraint indexes with custom index config
 
     private String userMessage( ConstraintValidationException cause )
             throws TransactionFailureException
