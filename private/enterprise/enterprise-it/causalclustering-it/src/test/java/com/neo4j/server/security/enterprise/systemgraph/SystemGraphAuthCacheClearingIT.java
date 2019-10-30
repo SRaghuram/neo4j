@@ -69,7 +69,6 @@ class SystemGraphAuthCacheClearingIT
         {
             dbms.shutdown();
             dbms = null;
-            directory.cleanDirectory( directory.homeDir().getAbsolutePath() );
         }
         if ( cluster != null )
         {
