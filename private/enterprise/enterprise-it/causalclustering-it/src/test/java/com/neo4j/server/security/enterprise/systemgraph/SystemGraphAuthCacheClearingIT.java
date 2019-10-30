@@ -18,7 +18,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.JUnitException;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -63,7 +62,7 @@ class SystemGraphAuthCacheClearingIT
     private Cluster cluster;
 
     @AfterEach
-    void teardown() throws IOException
+    void teardown()
     {
         if ( dbms != null )
         {
@@ -302,6 +301,7 @@ class SystemGraphAuthCacheClearingIT
         var config = new HashMap<String,String>();
         config.put( GraphDatabaseSettings.auth_enabled.name(), "true" );
         config.put( SecuritySettings.auth_cache_use_ttl.name(), "false" ); // disable cache timeout
+        config.put( GraphDatabaseSettings.auth_max_failed_attempts.name(), "0" ); // disable rate limit
         return config;
     }
 }
