@@ -94,6 +94,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     try {
       // Role with explicit privileges to read everything in the graph
       systemDb().executeTransactionally("CREATE ROLE WhiteRole")
+      systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO WhiteRole")
       labels.foreach { label =>
         systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO WhiteRole")
         nodeProperties.foreach(p => systemDb().executeTransactionally(s"GRANT READ {${p.key()}} ON GRAPH * NODES ${label.name()} TO WhiteRole"))
@@ -113,6 +114,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
       // Role that denies unused graph elements
       systemDb().executeTransactionally("CREATE ROLE BlackRole")
+      systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO BlackRole")
       systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS BLACK TO BlackRole")
       systemDb().executeTransactionally("DENY READ {blackProp} ON GRAPH * ELEMENTS BLACK TO BlackRole")
 
