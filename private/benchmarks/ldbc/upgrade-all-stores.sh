@@ -37,7 +37,6 @@ for i in "${dbs[@]}"; do
     old_db_path="$(pwd)/${old_db_name}"
     old_tar="${old_db_name}".tar.gz
     new_db_path="$(pwd)/${new_db_name}"
-    new_db_path="$(pwd)/${new_db_name}"
     new_tar="${new_db_name}".tar.gz
     echo "---------------"
     echo "Upgrading database"
@@ -71,8 +70,10 @@ for i in "${dbs[@]}"; do
         --upgraded-db "${new_db_path}" \
         --recreate-indexes  \
         --config "${neo4j_config}"
+    #Rename old_db to new_db
+    mv "${temp_new_db_path}"/"${old_db_name}" "${temp_new_db_path}"/"${new_db_name}"
 
-    tar -cvzf "${new_tar}" "${temp_new_db_path}"/"${old_db_name}"
+    tar -cvzf "${new_tar}" -C "${temp_new_db_path}" "${new_db_name}"
 
     aws s3 cp "${new_tar}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_tar}" --no-progress
     rm -rf "${old_db_path}"
