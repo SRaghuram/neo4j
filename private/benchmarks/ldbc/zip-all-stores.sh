@@ -8,6 +8,7 @@
 
 set -e
 set -u
+set -x
 
 neo4j_version="34"
 
@@ -29,10 +30,10 @@ for i in "${dbs[@]}"; do
     echo "Zipping database"
     echo "DB Name : ${db_name}"
     echo "targz name : ${tar_name}"
-    aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/"${db_name}" "${db_name}" --no-progress
+    aws s3 cp s3://benchmarking.neo4j.com/datasets/ldbc/db/"${db_name}" "${db_name}" --no-progress --recursive
     tar -cvzf "${tar_name}" "${db_name}"
 
-    aws s3 sync "${tar_name}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${tar_name}" --no-progress --delete
+    aws s3 cp "${tar_name}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${tar_name}" --no-progress
     rm -rf "${db_name}"
     rm -rf "${tar_name}"
 done
