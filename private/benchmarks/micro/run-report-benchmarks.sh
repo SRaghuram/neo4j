@@ -48,6 +48,7 @@ fi
 
 if [[ -z "$JAVA_HOME" ]]; then
  echo "JAVA_HOME not set, bye, bye"
+ exit 1
 fi
 
 uuid=$(uuidgen)

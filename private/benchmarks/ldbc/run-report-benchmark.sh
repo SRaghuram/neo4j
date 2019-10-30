@@ -55,8 +55,10 @@ AWS_EXTRAS=
 if [[ $# -eq 33 ]]; then
 	AWS_EXTRAS="--endpoint-url=${33}"
 fi
+
 if [[ -z "$JAVA_HOME" ]]; then
-    echo "JAVA_HOME not set, bye, bye"
+ echo "JAVA_HOME not set, bye, bye"
+ exit 1
 fi
 
 ldbc_benchmarks_dir=$(pwd)

@@ -112,7 +112,7 @@
                         </subpackages>
                         <!-- ...unless the package contains -->
                         <excludePackageNames>
-                            *.impl.*:*.internal.*:org.neo4j.helpers.progress:org.neo4j.logging.async:org.neo4j.server.rest.repr.formats:org.neo4j.server.rest.repr.util
+                            *.impl.*:*.internal.*:org.neo4j.helpers.progress:org.neo4j.logging.async:org.neo4j.server.rest.repr.formats:org.neo4j.server.rest.repr.util:com.neo4j.bench
                         </excludePackageNames>
                     </configuration>
                 </plugin>
@@ -136,5 +136,21 @@
             </plugin>
         </plugins>
     </build>
-    
+
+    <repositories>
+        <repository>
+            <id>docs-maven-local</id>
+            <name>Docs Maven Local</name>
+            <url>https://neo.jfrog.io/neo/docs-maven-local/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>ldbc</id>
+            <name>LDBC SNB</name>
+            <url>https://dl.bintray.com/ldbc/snb/</url>
+        </repository>
+    </repositories>
+
 </project>
