@@ -348,7 +348,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |WITH DISTINCT a as n, n as m
         |RETURN n.prop1, m.prop1
       """.stripMargin
-    val result = executeWith(Configs.All, query, executeBefore = createSomeNodes,
+    val result = executeWith(Configs.All - Configs.Morsel, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection")
           .withDBHits(0)
