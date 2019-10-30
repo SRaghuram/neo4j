@@ -19,6 +19,7 @@ abstract class MorselDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Edition[
                                 costOfGetPropertyChain = 1,
                                 costOfPropertyJumpedOverInChain = 1,
                                 costOfProperty = 1,
-                                costOfExpand = 2,
+                                costOfExpandGetRelCursor = 1,
+                                costOfExpandOneRel = 1,
                                 costOfRelationshipTypeLookup = 0,
                                 cartesianProductChunkSize = ENTERPRISE.MORSEL_SIZE)
