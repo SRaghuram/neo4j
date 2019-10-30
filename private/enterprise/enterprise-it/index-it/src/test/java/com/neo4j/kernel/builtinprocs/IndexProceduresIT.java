@@ -26,17 +26,20 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.IndexSetting;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.impl.api.index.IndexProviderNotFoundException;
+import org.neo4j.kernel.impl.index.schema.FulltextIndexProviderFactory;
 import org.neo4j.test.extension.Inject;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 @ImpermanentEnterpriseDbmsExtension
@@ -51,6 +54,7 @@ class IndexProceduresIT
     private static final String prop = "prop";
     private static final String labels = "['" + label + "']";
     private static final String properties = "['" + prop + "']";
+    private static final String NO_CONFIG = "{}";
     private static final String providerName = "native-btree-1.0";
 
     @ParameterizedTest
@@ -65,6 +69,53 @@ class IndexProceduresIT
     void shouldCreateIndexWithNullName( String procedure )
     {
         shouldCreateIndexWithName( procedure, null );
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {CREATE_INDEX_FORMAT, CREATE_UNIQUE_PROPERTY_CONSTRAINT_FORMAT, CREATE_NODE_KEY_CONSTRAINT_FORMAT} )
+    void shouldNotCreateIndexWithFulltextProvider( String procedure )
+    {
+        // Given no indexes initially
+        assertNoIndexes();
+
+        // When trying to create index with fulltext provider
+        try ( Transaction tx = db.beginTx() )
+        {
+            final String fulltextProviderName = FulltextIndexProviderFactory.DESCRIPTOR.name();
+            final QueryExecutionException e = assertThrows( QueryExecutionException.class,
+                    () -> tx.execute( asProcedureCall( procedure, "some name", fulltextProviderName, NO_CONFIG ) ) );
+            final Throwable rootCause = getRootCause( e );
+            assertThat( rootCause, instanceOf( ProcedureException.class ) );
+            assertThat( rootCause.getMessage(), containsString(
+                    "Could not create index with specified index provider 'fulltext-1.0'. To create fulltext index, please use " +
+                            "'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'." ) );
+        }
+
+        // Then we should not have any new index
+        assertNoIndexes();
+    }
+
+    @ParameterizedTest
+    @ValueSource( strings = {CREATE_INDEX_FORMAT, CREATE_UNIQUE_PROPERTY_CONSTRAINT_FORMAT, CREATE_NODE_KEY_CONSTRAINT_FORMAT} )
+    void shouldNotCreateIndexWithNonExistingProvider( String procedure )
+    {
+        // Given no indexes initially
+        assertNoIndexes();
+
+        // When trying to create index with fulltext provider
+        try ( Transaction tx = db.beginTx() )
+        {
+            final String nonExistingProvider = "non-existing-provider";
+            final QueryExecutionException e = assertThrows( QueryExecutionException.class,
+                    () -> tx.execute( asProcedureCall( procedure, "some name", nonExistingProvider, NO_CONFIG ) ) );
+            final Throwable rootCause = getRootCause( e );
+            assertThat( rootCause, instanceOf( IndexProviderNotFoundException.class ) );
+            assertThat( rootCause.getMessage(),
+                    containsString( "Tried to get index provider with name non-existing-provider whereas available providers in this session being " ) );
+        }
+
+        // Then we should not have any new index
+        assertNoIndexes();
     }
 
     @Test
@@ -116,7 +167,7 @@ class IndexProceduresIT
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
             final Throwable rootCause = getRootCause( e );
-            assertTrue( rootCause instanceof IllegalArgumentException );
+            assertThat( rootCause, instanceOf( IllegalArgumentException.class ) );
             assertThat( rootCause.getMessage(),
                     containsString( "Invalid index config key 'non_existing_setting', it was not recognized as an index setting." ) );
         }
@@ -153,7 +204,7 @@ class IndexProceduresIT
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
             final Throwable rootCause = getRootCause( e );
-            assertTrue( rootCause instanceof NullPointerException );
+            assertThat( rootCause, instanceOf( NullPointerException.class ) );
             assertThat( rootCause.getMessage(), containsString( "Index setting value can not be null." ) );
         }
         assertNoIndexes();
@@ -173,7 +224,7 @@ class IndexProceduresIT
                 }
         );
         final Throwable rootCause = getRootCause( exception );
-        assertTrue( rootCause instanceof IllegalArgumentException );
+        assertThat( rootCause, instanceOf( IllegalArgumentException.class ) );
         assertEquals( "Schema rule name cannot be the empty string or only contain whitespace.", rootCause.getMessage() );
     }
 
@@ -217,18 +268,23 @@ class IndexProceduresIT
 
     private static String asProcedureCall( String procedureName, String indexName )
     {
-        return asProcedureCall( procedureName, indexName, "{}" );
+        return asProcedureCall( procedureName, indexName, NO_CONFIG );
     }
 
     private static String asProcedureCall( String procedureName, String indexName, String config )
     {
+        return asProcedureCall( procedureName, indexName, providerName, config );
+    }
+
+    private static String asProcedureCall( String procedureName, String indexName, String indexProviderName, String config )
+    {
         if ( indexName == null )
         {
-            return format( "CALL " + procedureName + "( NULL, %s, %s, \"%s\", %s )", labels, properties, providerName, config );
+            return format( "CALL " + procedureName + "( NULL, %s, %s, \"%s\", %s )", labels, properties, indexProviderName, config );
         }
         else
         {
-            return format( "CALL " + procedureName + "( \"%s\", %s, %s, \"%s\", %s )", indexName, labels, properties, providerName, config );
+            return format( "CALL " + procedureName + "( \"%s\", %s, %s, \"%s\", %s )", indexName, labels, properties, indexProviderName, config );
         }
     }
 
