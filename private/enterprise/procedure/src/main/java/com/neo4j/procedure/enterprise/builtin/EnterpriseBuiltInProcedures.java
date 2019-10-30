@@ -41,8 +41,10 @@ public class EnterpriseBuiltInProcedures
             @Name( "providerName" ) String providerName )
             throws ProcedureException
     {
-        IndexProcedures indexProcedures = indexProcedures();
-        return indexProcedures.createNodeKey( constraintName, labels, properties, providerName );
+        try ( IndexProcedures indexProcedures = indexProcedures() )
+        {
+            return indexProcedures.createNodeKey( constraintName, labels, properties, providerName );
+        }
     }
 
     private IndexProcedures indexProcedures()
