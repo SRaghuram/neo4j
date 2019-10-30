@@ -6,13 +6,12 @@
 package com.neo4j.bench.ldbc;
 
 import com.ldbc.driver.DbException;
-import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 
@@ -22,13 +21,10 @@ public class DriverConfigUtils
     {
         try
         {
-            Map<String,String> config = MapUtils.loadPropertiesToMap( getResource( "/neo4j/neo4j_sf001.conf" ) );
-            // nothing to change for 2.3+
             File tempConfigFile = File.createTempFile( "temp_neo4j_sf001", "conf" );
-            try ( FileOutputStream stream = new FileOutputStream( tempConfigFile ) )
-            {
-                MapUtils.mapToProperties( config ).store( stream, "Test Config" );
-            }
+            Neo4jConfigBuilder.withDefaults()
+                              .mergeWith( Neo4jConfigBuilder.fromFile( getResource( "/neo4j/neo4j_sf001.conf" ) ).build() )
+                              .writeToFile( tempConfigFile.toPath() );
             return tempConfigFile;
         }
         catch ( Exception e )
