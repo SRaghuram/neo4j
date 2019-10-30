@@ -29,26 +29,27 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class GBPTreeConsistencyCheckTool
 {
-    private static final String ALLOW_CRASH = "allowCrash";
+    private static final String REPORT_CRASH = "reportCrash";
 
     /**
      * Usage: --allowCrash gbpTreeFile
      *
-     * --allowCrash
+     * --reportCrash <true|false>
      * Set this flag to allow crash pointers in tree.
      */
     public static void main( String[] args ) throws Exception
     {
-        Args arguments = Args.withFlags( ALLOW_CRASH ).parse( args );
+        Args arguments = Args.parse( args );
         if ( !validateArguments( arguments ) )
         {
             return;
         }
         File file = new File( arguments.orphans().get( 0 ) );
-        new GBPTreeConsistencyCheckTool().run( file, arguments.getBoolean( ALLOW_CRASH, false ) );
+        final Boolean reportCrash = arguments.getBoolean( REPORT_CRASH, true );
+        new GBPTreeConsistencyCheckTool().run( file, reportCrash );
     }
 
-    private void run( File file, boolean allowCrashPointers ) throws Exception
+    private void run( File file, boolean reportCrashPointers ) throws Exception
     {
         System.out.println( "Check consistency on " + file.getAbsolutePath() );
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
@@ -61,7 +62,7 @@ public class GBPTreeConsistencyCheckTool
             {
                 final GBPTreeConsistencyCheckVisitor visitor = loggingInconsistencyVisitor();
                 System.out.println( "Starting consistency check" );
-                boolean consistent = tree.consistencyCheck( visitor, allowCrashPointers );
+                boolean consistent = tree.consistencyCheck( visitor, reportCrashPointers );
                 if ( consistent )
                 {
                     System.out.println( "Consistency check finished successful." );
