@@ -29,12 +29,12 @@ public final class ReconcilerResult
     public static final ReconcilerResult EMPTY = new ReconcilerResult( Collections.emptyMap() );
 
     private final Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures;
-    private final CompletableFuture<Void> completedFuture;
+    private final CompletableFuture<Void> combinedFuture;
 
     ReconcilerResult( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
     {
         this.reconciliationFutures = reconciliationFutures;
-        this.completedFuture = buildCompletedFuture( reconciliationFutures );
+        this.combinedFuture = combineFutures( reconciliationFutures );
     }
 
     public void await( DatabaseId databaseId )
@@ -58,15 +58,15 @@ public final class ReconcilerResult
 
     void awaitAll()
     {
-        completedFuture.join();
+        combinedFuture.join();
     }
 
     void whenComplete( Runnable action )
     {
-        completedFuture.whenComplete( ( ignore, error ) -> action.run() );
+        combinedFuture.whenComplete( ( ignore, error ) -> action.run() );
     }
 
-    private static CompletableFuture<Void> buildCompletedFuture( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
+    private static CompletableFuture<Void> combineFutures( Map<String,CompletableFuture<ReconcilerStepResult>> reconciliationFutures )
     {
         var allFutures = reconciliationFutures.values().toArray( CompletableFuture<?>[]::new );
         return CompletableFuture.allOf( allFutures );

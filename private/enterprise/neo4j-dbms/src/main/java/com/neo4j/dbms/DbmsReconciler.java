@@ -163,7 +163,7 @@ public class DbmsReconciler implements DatabaseStateService
                 .distinct();
 
         var reconciliation = namesOfDbsToReconcile
-                .map( dbName -> Pair.of( dbName, reconcile( dbName, request, operators ) ) )
+                .map( dbName -> Pair.of( dbName, scheduleReconciliationJob( dbName, request, operators ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return new ReconcilerResult( reconciliation );
@@ -217,7 +217,8 @@ public class DbmsReconciler implements DatabaseStateService
      * to the waiting job. Any changes to the database's desired state which caused that additional call to
      * {@link DbmsReconciler#reconcile(List, ReconcilerRequest)} will be picked up by the earlier waiting job when it finally starts reconciling.
      */
-    private synchronized CompletableFuture<ReconcilerStepResult> reconcile( String databaseName, ReconcilerRequest request, List<DbmsOperator> operators )
+    private synchronized CompletableFuture<ReconcilerStepResult> scheduleReconciliationJob( String databaseName, ReconcilerRequest request,
+            List<DbmsOperator> operators )
     {
         var cachedJob = reconcilerJobCache.get( databaseName );
         if ( cachedJob != null && request.isSimple() )
@@ -229,7 +230,7 @@ public class DbmsReconciler implements DatabaseStateService
 
         var job = reconcilerJobHandle
                 .thenCompose( ignored -> preReconcile( databaseName, operators, request ) )
-                .thenCompose( desiredState -> reconcileRetry( databaseName, desiredState, request ) )
+                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request ) )
                 .whenComplete( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
 
         if ( request.isSimple() )
@@ -253,6 +254,7 @@ public class DbmsReconciler implements DatabaseStateService
 
                 if ( request.isSimple() )
                 {
+                    // Must happen-before extracting desired states.
                     reconcilerJobCache.remove( databaseName );
                 }
 
@@ -278,10 +280,9 @@ public class DbmsReconciler implements DatabaseStateService
         }, executor );
     }
 
-    private CompletableFuture<ReconcilerStepResult> reconcileRetry( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request )
+    private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request )
     {
         var currentState = getReconcilerEntryFor( desiredState.databaseId() );
-
         var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
 
         if ( currentState.equals( desiredState ) )
@@ -304,17 +305,17 @@ public class DbmsReconciler implements DatabaseStateService
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
 
         DatabaseId databaseId = desiredState.databaseId();
-        return CompletableFuture.supplyAsync( () -> reconcileSteps( initialResult.state(), steps, desiredState ), executor  )
-                .thenCompose( result -> retry( databaseId, desiredState, result, executor, backoff, 0 ) );
+        return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor  )
+                .thenCompose( result -> handleResult( databaseId, desiredState, result, executor, backoff, 0 ) );
     }
 
-    private static ReconcilerStepResult reconcileSteps( EnterpriseDatabaseState currentState, Stream<Transition> steps, EnterpriseDatabaseState desiredState )
+    private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState, Stream<Transition> steps, EnterpriseDatabaseState desiredState )
     {
         String oldThreadName = currentThread().getName();
         try
         {
             currentThread().setName( oldThreadName + "-" + desiredState.databaseId().name() );
-            return reconcileSteps0( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+            return doTransitionStep( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
         }
         finally
         {
@@ -322,7 +323,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private static ReconcilerStepResult reconcileSteps0( Iterator<Transition> steps, ReconcilerStepResult result )
+    private static ReconcilerStepResult doTransitionStep( Iterator<Transition> steps, ReconcilerStepResult result )
     {
         if ( !steps.hasNext() )
         {
@@ -332,7 +333,7 @@ public class DbmsReconciler implements DatabaseStateService
         try
         {
             var nextState = steps.next().doTransition();
-            return reconcileSteps0( steps, result.withState( nextState ) );
+            return doTransitionStep( steps, result.withState( nextState ) );
         }
         catch ( Throwable error )
         {
@@ -340,7 +341,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private CompletableFuture<ReconcilerStepResult> retry( DatabaseId databaseId, EnterpriseDatabaseState desiredState,
+    private CompletableFuture<ReconcilerStepResult> handleResult( DatabaseId databaseId, EnterpriseDatabaseState desiredState,
             ReconcilerStepResult result, Executor executor, TimeoutStrategy.Timeout backoff, int retries )
     {
         boolean isFatalError = result.error() != null && isFatalError( result.error() );
@@ -354,9 +355,9 @@ public class DbmsReconciler implements DatabaseStateService
                 desiredState.operatorState().description(), attempt );
 
         var remainingSteps = getLifecycleTransitionSteps( result.state(), desiredState );
-        return CompletableFuture.supplyAsync( () -> reconcileSteps( result.state(), remainingSteps, desiredState ),
+        return CompletableFuture.supplyAsync( () -> doTransitions( result.state(), remainingSteps, desiredState ),
                 delayedExecutor( backoff.getAndIncrement(), TimeUnit.MILLISECONDS, executor ) )
-                .thenCompose( retryResult -> retry( databaseId, desiredState, retryResult, executor, backoff, attempt ) );
+                .thenCompose( retryResult -> handleResult( databaseId, desiredState, retryResult, executor, backoff, attempt ) );
     }
 
     private void postReconcile( String databaseName, ReconcilerRequest request, ReconcilerStepResult result, Throwable throwable )
@@ -368,6 +369,7 @@ public class DbmsReconciler implements DatabaseStateService
                 var failedState = handleReconciliationErrors( throwable, request, result, databaseName, previousState );
                 // failedState.isEmpty() and result == null cannot both be true, *however* the method reference form result::state cannot be used here
                 // as the left hand side of the :: is evaluated (and NPE thrown) even if the supplier itself is never called.
+                // noinspection Convert2MethodRef
                 var nextState = failedState.orElseGet( () -> result.state() );
                 stateChanged( previousState, nextState );
                 return nextState;
@@ -412,7 +414,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
         else if ( result.error() != null )
         {
-            // An exception occured somewhere in the internal machinery of the database and was caught by the DatabaseManager
+            // An exception occurred somewhere in the internal machinery of the database and was caught by the DatabaseManager
             var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
                     databaseName, result.state(), result.desiredState().operatorState().description() );
             reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );

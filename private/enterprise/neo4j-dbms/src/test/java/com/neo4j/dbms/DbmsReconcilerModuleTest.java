@@ -160,7 +160,7 @@ class DbmsReconcilerModuleTest
         var stopFooA = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
 
         // then
-        // Futher reconciliation attempts should simply return the cached job
+        // Further reconciliation attempts should simply return the cached job
 
         var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
         assertEquals( stopFooA, stopFooB, "The reconciler results should be equal for the cached job!" );
