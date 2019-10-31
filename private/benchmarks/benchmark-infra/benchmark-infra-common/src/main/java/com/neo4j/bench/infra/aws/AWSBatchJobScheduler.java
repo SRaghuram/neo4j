@@ -23,6 +23,7 @@ import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.commands.InfraParams;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +99,7 @@ public class AWSBatchJobScheduler implements JobScheduler
         paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
         paramsMap.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
 
-        String jobName = getJobName( runWorkloadParams.workloadName() );
+        String jobName = getJobName( "macro", runWorkloadParams.workloadName(), runWorkloadParams.neo4jVersion().toString(), runWorkloadParams.triggeredBy() );
         SubmitJobRequest submitJobRequest = new SubmitJobRequest()
                 .withJobDefinition( jobDefinition )
                 .withJobQueue( jobQueue )
@@ -113,22 +114,23 @@ public class AWSBatchJobScheduler implements JobScheduler
     public List<JobStatus> jobsStatuses( List<JobId> jobIds )
     {
         List<String> jobIdsAsStrings = jobIds.stream().map( JobId::id ).collect( toList() );
-        List<JobStatus> jobsStatuses = awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIdsAsStrings ) )
-                                               .getJobs()
-                                               .stream()
-                                               .map( AWSBatchJobScheduler::jobStatus )
-                                               .collect( Collectors.toList() );
-        LOG.info( "current jobs statuses:\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
-        return jobsStatuses;
+        return awsBatch.describeJobs( new DescribeJobsRequest().withJobs( jobIdsAsStrings ) )
+                       .getJobs()
+                       .stream()
+                       .map( AWSBatchJobScheduler::jobStatus )
+                       .collect( Collectors.toList() );
     }
 
-    private static String getJobName( String workload )
+    private static String getJobName( String tool, String benchmark, String version, String triggered )
     {
-        return String.format( "macro-%s", workload );
+        // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
+        // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
+        String jobName = format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
+        return StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]","_" ), 0, 127 );
     }
 
     private static JobStatus jobStatus( JobDetail jobDetail )
     {
-        return new JobStatus( jobDetail.getJobId(), jobDetail.getStatus() );
+        return new JobStatus( jobDetail.getJobId(), jobDetail.getStatus(), jobDetail.getContainer().getLogStreamName() );
     }
 }

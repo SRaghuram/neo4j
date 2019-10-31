@@ -7,16 +7,22 @@ package com.neo4j.bench.infra;
 
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Version;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.io.FileFilter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -45,6 +51,7 @@ public class Workspace
     {
         private final Path baseDir;
         private final List<Path> artifacts = new ArrayList<>();
+        private FileFilter fileFilter;
 
         private Builder( Path baseDir )
         {
@@ -55,6 +62,13 @@ public class Workspace
         {
             Objects.requireNonNull( artifacts, "build artifacts cannot be null" );
             this.artifacts.addAll( Arrays.asList( artifacts ) );
+            return this;
+        }
+
+        public Builder withFilesRecursively( FileFilter fileFilter )
+        {
+            Objects.requireNonNull( fileFilter, "file filter cannot be null" );
+            this.fileFilter = fileFilter;
             return this;
         }
 
@@ -75,11 +89,51 @@ public class Workspace
                 throw new IllegalStateException( format( "missing artifacts: %s\n", missingArtifacts ) );
             }
 
+            if ( fileFilter != null )
+            {
+                try
+                {
+                    FilteringFileVisitor fileVisitor = new FilteringFileVisitor( fileFilter, allArtifacts );
+                    Files.walkFileTree( baseDir, fileVisitor );
+                    allArtifacts.addAll( fileVisitor.paths() );
+                }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( e );
+                }
+            }
+
             return new Workspace( baseDir, allArtifacts );
         }
-    }
 
-    private static final Logger LOG = LoggerFactory.getLogger( Workspace.class );
+        private static class FilteringFileVisitor extends SimpleFileVisitor<Path>
+        {
+            private final FileFilter fileFilter;
+            private final List<Path> allArtifacts;
+            private final Set<Path> filteredPaths = new HashSet<>();
+
+            FilteringFileVisitor( FileFilter fileFilter, List<Path> allArtifacts )
+            {
+                this.fileFilter = fileFilter;
+                this.allArtifacts = allArtifacts;
+            }
+
+            @Override
+            public FileVisitResult visitFile( Path path, BasicFileAttributes attrs )
+            {
+                if ( !allArtifacts.contains( path.toAbsolutePath() ) && fileFilter.accept( path.toFile() ) )
+                {
+                    filteredPaths.add( path );
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            Set<Path> paths()
+            {
+                return filteredPaths;
+            }
+        }
+    }
 
     public static Builder create( Path baseDir )
     {
