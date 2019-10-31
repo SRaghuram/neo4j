@@ -73,7 +73,7 @@ class ClusterShutdownIT
 
     private void shouldShutdownEvenThoughWaitingForLock0( Cluster cluster, int victimId, Collection<Integer> shutdownOrder ) throws Exception
     {
-        final int LONG_TIME = 60_000;
+        final int LONG_TIME = 120_000;
         final int NUMBER_OF_LOCK_ACQUIRERS = 2;
 
         final ExecutorService txExecutor = Executors.newCachedThreadPool(); // Blocking transactions are executed in

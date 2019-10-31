@@ -9,12 +9,8 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.LeaderCanWrite;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
-import com.neo4j.causalclustering.core.state.machines.barrier.BarrierState;
-import com.neo4j.causalclustering.core.state.machines.id.IdGenerationException;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
@@ -47,7 +43,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntFunction;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -59,15 +54,11 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.graphdb.TransientTransactionFailureException;
-import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.lock.AcquireLockTimeoutException;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
@@ -82,7 +73,6 @@ import static org.neo4j.function.Predicates.await;
 import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.function.Predicates.notNull;
 import static org.neo4j.internal.helpers.collection.Iterables.firstOrNull;
-import static org.neo4j.kernel.api.exceptions.Status.Transaction.LockSessionExpired;
 import static org.neo4j.util.concurrent.Futures.combine;
 
 public class Cluster
@@ -562,31 +552,7 @@ public class Cluster
 
     private static boolean isTransientFailure( Throwable e )
     {
-        Predicate<Throwable> throwablePredicate =
-                e1 -> isLockExpired( e1 ) || isLockOnFollower( e1 ) || isWriteNotOnLeader( e1 ) || e1 instanceof TransientTransactionFailureException ||
-                        e1 instanceof IdGenerationException;
-        return Exceptions.contains( e, throwablePredicate );
-    }
-
-    private static boolean isWriteNotOnLeader( Throwable e )
-    {
-        return e instanceof WriteOperationsNotAllowedException &&
-               e.getMessage().startsWith( String.format( LeaderCanWrite.NOT_LEADER_ERROR_MSG, "" ) );
-    }
-
-    private static boolean isLockOnFollower( Throwable e )
-    {
-        return e instanceof AcquireLockTimeoutException &&
-               (e.getMessage().equals( BarrierState.TOKEN_NOT_ON_LEADER_ERROR_MESSAGE ) ||
-                e.getCause() instanceof NoLeaderFoundException);
-    }
-
-    private static boolean isLockExpired( Throwable e )
-    {
-        return e instanceof TransactionFailureException &&
-               e.getCause() instanceof org.neo4j.internal.kernel.api.exceptions.TransactionFailureException &&
-               ((org.neo4j.internal.kernel.api.exceptions.TransactionFailureException) e.getCause()).status() ==
-               LockSessionExpired;
+        return Exceptions.contains( e, new TransientFailurePredicate() );
     }
 
     private List<SocketAddress> extractInitialHosts( Map<Integer,CoreClusterMember> coreMembers )
