@@ -63,6 +63,7 @@ public class Neo4jConfigBuilder
         }
         try
         {
+            BenchmarkUtil.assertFileExists( neo4jConfigFile );
             PropertiesConfiguration config = new PropertiesConfiguration( neo4jConfigFile.toFile() );
             Iterator<String> keys = config.getKeys();
             while ( keys.hasNext() )
