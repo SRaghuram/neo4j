@@ -14,26 +14,35 @@ public class Version
 
     public Version( String versionString )
     {
-        String[] split = versionString.split( "[.-]" );
-        if ( split.length != 3 && split.length != 4 )
+        String[] split = versionString.split( "\\." );
+
+        if ( split.length != 3 )
         {
             throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
         }
-        for ( int i = 0; i < 3; i++ )
+
+        String[] patchAndPreReleaseBranch = split[2].split( "-" );
+        if ( patchAndPreReleaseBranch.length != 1 && patchAndPreReleaseBranch.length != 2 )
         {
-            String current = split[i];
-            if ( !current.matches( "[0-9]+" ) )
-            {
-                throw new IllegalArgumentException( String.format( "Neo4j version should be numbers, but found %s", current ) );
-            }
+            throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
         }
-        mainVersion = split[0];
-        minorVersion = split[1];
-        patchVersion = split[2];
-        if ( split.length > 3 )
+
+        mainVersion = ensureValidVersionNumber( split[0] );
+        minorVersion = ensureValidVersionNumber( split[1] );
+        patchVersion = ensureValidVersionNumber( patchAndPreReleaseBranch[0] );
+        if ( patchAndPreReleaseBranch.length > 1 )
         {
-            preReleaseBranch = split[3];
+            preReleaseBranch = patchAndPreReleaseBranch[1];
         }
+    }
+
+    private String ensureValidVersionNumber( String current )
+    {
+        if ( !current.matches( "[0-9]+" ) )
+        {
+            throw new IllegalArgumentException( String.format( "Neo4j version should be numbers, but found %s", current ) );
+        }
+        return current;
     }
 
     public String mainVersion()
@@ -53,6 +62,10 @@ public class Version
 
     public String fullVersion()
     {
+        if ( preReleaseBranch == null )
+        {
+            return patchVersion();
+        }
         return String.format( "%s.%s.%s-%s", mainVersion, minorVersion, patchVersion, preReleaseBranch );
     }
 

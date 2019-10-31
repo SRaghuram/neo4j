@@ -9,7 +9,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
 public class VersionTest
@@ -53,5 +55,19 @@ public class VersionTest
     {
         Version version = new Version( "4.0.0-beta" );
         assertThat( "4.0.0-beta", equalTo( version.fullVersion() ) );
+    }
+
+    @Test
+    public void shouldNotAllowToVersionsThatWrongSeparators() throws Exception
+    {
+        exception.expect( IllegalArgumentException.class );
+        new Version( "0-0.0" );
+    }
+
+    @Test
+    public void shouldNotReturnNullString() throws Exception
+    {
+        Version version = new Version( "3.4.0" );
+        assertThat( version.fullVersion(), not( containsString( "null" ) ) );
     }
 }
