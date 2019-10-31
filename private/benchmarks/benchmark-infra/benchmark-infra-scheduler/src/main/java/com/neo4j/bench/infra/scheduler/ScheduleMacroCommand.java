@@ -15,7 +15,6 @@ import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.infra.aws.AWSBatchJobLogs;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.commands.BaseInfraCommand;
@@ -74,32 +73,42 @@ public class ScheduleMacroCommand extends BaseInfraCommand
                                                                      jobDefinition,
                                                                      batchStack );
             JobId jobId = jobScheduler.schedule( infraParams.artifactWorkerUri(), infraParams.artifactBaseUri(), infraParams, runWorkloadParams );
-            LOG.info( "job scheduled, with id {} and logs stream at {}", jobId.id(), AWSBatchJobLogs.getLogStreamName( jobDefinition, jobId ) );
+            LOG.info( "job scheduled, with id {}", jobId.id() );
+
             // wait until they are done, or fail
             RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
                     .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
                     .withDelay( Duration.ofMinutes( 5 ) )
                     .withMaxAttempts( -1 );
 
-            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> jobScheduler.jobsStatuses( Collections.singletonList( jobId ) ) );
+            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> jobStatuses( jobScheduler, infraParams, jobId ));
             LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
 
             // if any of the jobs failed, fail whole run
             if ( jobsStatuses.stream()
-                    .filter( JobStatus::isFailed )
-                    .count() != 0 )
+                             .filter( JobStatus::isFailed )
+                             .count() != 0 )
             {
                 throw new RuntimeException( "there are failed jobs:\n" +
                                             jobsStatuses.stream()
-                                                .filter( JobStatus::isFailed )
-                                                .map( Object::toString )
-                                                .collect( joining( "\n" ) ) );
+                                                        .filter( JobStatus::isFailed )
+                                                        .map( Object::toString )
+                                                        .collect( joining( "\n" ) ) );
             }
-
         }
         catch ( SdkClientException | ArtifactStoreException e )
         {
             throw new RuntimeException( "failed to schedule benchmarking job", e );
         }
+    }
+
+    private List<JobStatus> jobStatuses( JobScheduler jobScheduler, InfraParams infraParams, JobId jobId )
+    {
+        List<JobStatus> jobStatuses =
+                jobScheduler.jobsStatuses( Collections.singletonList( jobId ) );
+        LOG.info( "current jobs statuses:\n{}",
+                  jobStatuses.stream()
+                             .map( status -> status.toStatusLine( infraParams.awsRegion() ) ).collect( joining( "\n" ) ) );
+        return jobStatuses;
     }
 }

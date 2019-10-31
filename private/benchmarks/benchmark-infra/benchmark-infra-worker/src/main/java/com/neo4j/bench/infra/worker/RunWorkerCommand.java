@@ -18,6 +18,7 @@ import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.commands.BaseInfraCommand;
 import com.neo4j.bench.infra.commands.InfraParams;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +103,11 @@ public class RunWorkerCommand extends BaseInfraCommand
                     .start();
 
             int waitFor = process.waitFor();
+
+            Workspace workspace = Workspace.create( workDir ).withFilesRecursively( TrueFileFilter.INSTANCE ).build();
+
+            artifactStorage.uploadBuildArtifacts( artifactBaseUri().resolve( "results" ), workspace );
+
             if ( waitFor != 0 )
             {
                 throw new RuntimeException( format( "benchmark exited with code %d", waitFor ) );

@@ -144,7 +144,7 @@ public class AWSBatchJobSchedulerTest
 
         assertEquals( "job-queue", jobRequest.getJobQueue() );
         assertEquals( "job-definition", jobRequest.getJobDefinition() );
-        assertEquals( "macro-musicbrainz", jobRequest.getJobName() );
+        assertEquals( "macro-musicbrainz-3_2_1-teamcity", jobRequest.getJobName() );
 
         MapDifference<String,String> entriesDiffering = Maps.difference(
                 jobRequestParameters,     // left
