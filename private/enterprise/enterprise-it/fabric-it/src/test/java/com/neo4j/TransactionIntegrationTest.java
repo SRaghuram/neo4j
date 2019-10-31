@@ -326,7 +326,7 @@ class TransactionIntegrationTest
 
         var subscriber = new ActionSubscriber( 10, s -> rollback( tx ) );
         Flux.from( tx.run( statement ).records() ).subscribe( subscriber );
-        assertTrue( subscriber.latch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( subscriber.latch.await( 10, TimeUnit.SECONDS ) );
 
         verifyNoOpenTransactions();
     }
@@ -352,7 +352,7 @@ class TransactionIntegrationTest
 
         var subscriber = new ActionSubscriber( 10, s -> commit( tx ) );
         Flux.from( tx.run( statement ).records() ).subscribe( subscriber );
-        assertTrue( subscriber.latch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( subscriber.latch.await( 10, TimeUnit.SECONDS ) );
 
         verifyNoOpenTransactions();
     }
@@ -378,7 +378,7 @@ class TransactionIntegrationTest
 
         var subscriber = new ActionSubscriber( 10, Subscription::cancel );
         Flux.from( tx.run( statement ).records() ).subscribe( subscriber );
-        assertTrue( subscriber.latch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( subscriber.latch.await( 10, TimeUnit.SECONDS ) );
 
         // the result stream is canceled, but the transaction should be still open with all its data
         var records = Flux.from( tx.run( "USE mega.graph(0) MATCH (n) RETURN n.someProperty AS val" ).records() ).collectList().block();
