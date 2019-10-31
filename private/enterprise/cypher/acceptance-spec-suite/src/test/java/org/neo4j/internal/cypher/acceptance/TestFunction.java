@@ -32,6 +32,7 @@ public class TestFunction
     {
         Result result = transaction.execute( "MATCH (n) RETURN n LIMIT 1" );
         Object node = result.next().get( "n" );
+        result.close();
         return Collections.singletonList( node );
     }
 
