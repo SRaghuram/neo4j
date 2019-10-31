@@ -488,12 +488,12 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         {
             ConstraintDefinition constraint = tx.schema().constraintFor( label ).withName( "my constraint" ).assertPropertyIsNodeKey( propertyKey )
                     .withIndexConfiguration( Map.of(
-                            IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS, 5,
+                            IndexSetting.SPATIAL_WGS84_MIN, new double[] {-45, -45},
                             IndexSetting.SPATIAL_CARTESIAN_MAX, new double[] {200.0, 200.0} ) )
                     .create();
             IndexDefinition index = tx.schema().getIndexByName( constraint.getName() );
             Map<IndexSetting,Object> config = index.getIndexConfiguration();
-            assertEquals( 5, config.get( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS ) );
+            assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSetting.SPATIAL_WGS84_MIN ) );
             assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSetting.SPATIAL_CARTESIAN_MAX ) );
             tx.commit();
         }
@@ -501,7 +501,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         {
             IndexDefinition index = tx.schema().getIndexByName( "my constraint" );
             Map<IndexSetting,Object> config = index.getIndexConfiguration();
-            assertEquals( 5, config.get( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS ) );
+            assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSetting.SPATIAL_WGS84_MIN ) );
             assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSetting.SPATIAL_CARTESIAN_MAX ) );
             tx.commit();
         }

@@ -127,7 +127,7 @@ class IndexProceduresIT
 
         // When creating index / constraint with config
         Map<IndexSetting,Object> expectedIndexConfiguration = new HashMap<>();
-        expectedIndexConfiguration.put( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS, 5 );
+        expectedIndexConfiguration.put( IndexSetting.SPATIAL_WGS84_MAX, new double[]{90.0, 90.0} );
         expectedIndexConfiguration.put( IndexSetting.SPATIAL_CARTESIAN_MIN, new double[]{-45.0, -45.0} );
         try ( Transaction tx = db.beginTx() )
         {
@@ -147,9 +147,9 @@ class IndexProceduresIT
             assertEquals( label, single( index.getLabels() ) );
             assertEquals( prop, single( index.getPropertyKeys() ) );
             final Map<IndexSetting,Object> actualIndexConfiguration = index.getIndexConfiguration();
-            assertEquals(
-                    expectedIndexConfiguration.get( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS ),
-                    actualIndexConfiguration.get( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS ) );
+            assertArrayEquals(
+                    (double[]) expectedIndexConfiguration.get( IndexSetting.SPATIAL_WGS84_MAX ),
+                    (double[]) actualIndexConfiguration.get( IndexSetting.SPATIAL_WGS84_MAX ) );
             assertArrayEquals(
                     (double[]) expectedIndexConfiguration.get( IndexSetting.SPATIAL_CARTESIAN_MIN ),
                     (double[]) actualIndexConfiguration.get( IndexSetting.SPATIAL_CARTESIAN_MIN ) );
@@ -181,13 +181,13 @@ class IndexProceduresIT
         try ( Transaction tx = db.beginTx() )
         {
             Map<IndexSetting,Object> config = new HashMap<>();
-            config.put( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS, "'not_applicable_type'" );
+            config.put( IndexSetting.SPATIAL_WGS84_MAX, "'not_applicable_type'" );
             final String configString = asConfigString( config );
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
             final String asString = Exceptions.stringify( e );
             assertThat( asString,
-                    containsString( "Caused by: java.lang.IllegalArgumentException: Could not parse value 'not_applicable_type' of type String as integer." ) );
+                    containsString( "Caused by: java.lang.IllegalArgumentException: Could not parse value 'not_applicable_type' as double[]." ) );
         }
         assertNoIndexes();
     }
@@ -199,7 +199,7 @@ class IndexProceduresIT
         try ( Transaction tx = db.beginTx() )
         {
             Map<IndexSetting,Object> config = new HashMap<>();
-            config.put( IndexSetting.SPATIAL_CARTESIAN_MAX_LEVELS, null );
+            config.put( IndexSetting.SPATIAL_WGS84_MAX, null );
             final String configString = asConfigString( config );
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
