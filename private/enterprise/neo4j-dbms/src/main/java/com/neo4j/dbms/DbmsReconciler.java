@@ -334,9 +334,9 @@ public class DbmsReconciler implements DatabaseStateService
             var nextState = steps.next().doTransition();
             return reconcileSteps0( steps, result.withState( nextState ) );
         }
-        catch ( DatabaseManagementException e )
+        catch ( Throwable error )
         {
-            return result.withError( e );
+            return result.withError( error );
         }
     }
 

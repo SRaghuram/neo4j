@@ -5,16 +5,15 @@
  */
 package com.neo4j.dbms;
 
-import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.internal.helpers.Exceptions;
 
 class ReconcilerStepResult
 {
     private final EnterpriseDatabaseState stepState;
-    private final DatabaseManagementException stepError;
+    private final Throwable stepError;
     private final EnterpriseDatabaseState desiredState;
 
-    ReconcilerStepResult( EnterpriseDatabaseState stepState, DatabaseManagementException stepError, EnterpriseDatabaseState desiredState )
+    ReconcilerStepResult( EnterpriseDatabaseState stepState, Throwable stepError, EnterpriseDatabaseState desiredState )
     {
         this.stepState = stepState;
         this.stepError = stepError;
@@ -26,7 +25,7 @@ class ReconcilerStepResult
         return new ReconcilerStepResult( state, this.stepError, this.desiredState );
     }
 
-    ReconcilerStepResult withError( DatabaseManagementException stepError )
+    ReconcilerStepResult withError( Throwable stepError )
     {
         return new ReconcilerStepResult( this.stepState, Exceptions.chain( this.stepError, stepError ), this.desiredState );
     }
@@ -36,7 +35,7 @@ class ReconcilerStepResult
         return stepState;
     }
 
-    public DatabaseManagementException error()
+    public Throwable error()
     {
         return stepError;
     }

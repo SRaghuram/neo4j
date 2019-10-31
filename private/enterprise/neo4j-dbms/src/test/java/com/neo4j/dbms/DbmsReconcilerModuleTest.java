@@ -10,8 +10,11 @@ import com.neo4j.dbms.database.StubMultiDatabaseManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -42,11 +45,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( LifeExtension.class )
@@ -215,5 +220,34 @@ class DbmsReconcilerModuleTest
         startFoo.awaitAll();
         stopFooA.awaitAll();
         stopFooB.awaitAll();
+    }
+
+    static Stream<Throwable> failures()
+    {
+        return Stream.of( new RuntimeException(), new Error() );
+    }
+
+    @ParameterizedTest
+    @MethodSource( value = "failures" )
+    void shouldCatchAsFailure( Throwable failure )
+    {
+        // given
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        DatabaseId foo = idRepository.getRaw( "foo" );
+        doThrow( failure ).when( databaseManager ).startDatabase( any( DatabaseId.class ) );
+
+        DbmsReconciler reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler );
+
+        // when
+        LocalDbmsOperator operator = new LocalDbmsOperator( idRepository );
+        operator.startDatabase( "foo" );
+
+        reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
+        Optional<Throwable> startFailure = reconciler.causeOfFailure( foo );
+
+        // then
+        assertTrue( startFailure.isPresent() );
+        assertEquals( failure, startFailure.get() );
     }
 }
