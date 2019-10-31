@@ -132,39 +132,16 @@ public final class ClusterOverviewHelper
 
     public static List<MemberInfo> clusterOverview( GraphDatabaseFacade db )
     {
-        for ( var i = 0; i < 10; i++ )
-        {
-            if ( db.isAvailable( SECONDS.toMillis( 10 ) ) )
-            {
-                try
-                {
-                    return callClusterOverviewProcedure( db );
-                }
-                catch ( DatabaseShutdownException ignore )
-                {
-                }
-            }
-            try
-            {
-                SECONDS.sleep( 10 );
-            }
-            catch ( InterruptedException e )
-            {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException( "Interrupted while waiting for database " + db.databaseName() + " to become available" );
-            }
-        }
-        throw new RuntimeException( "Unable to invoke the overview procedure. Database " + db.databaseName() + " is not available" );
-    }
-
-    private static List<MemberInfo> callClusterOverviewProcedure( GraphDatabaseFacade db )
-    {
         try ( var transaction = db.beginTx();
               var result = transaction.execute( "CALL dbms.cluster.overview()" ) )
         {
             return result.stream()
                     .map( ClusterOverviewHelper::createMemberInfo )
                     .collect( toList() );
+        }
+        catch ( DatabaseShutdownException ignore )
+        {
+            return List.of();
         }
     }
 
