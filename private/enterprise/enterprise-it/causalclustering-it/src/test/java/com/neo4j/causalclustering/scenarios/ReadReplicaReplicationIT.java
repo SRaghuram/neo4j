@@ -20,17 +20,20 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -41,7 +44,6 @@ import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTrackerException;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.WriteOperationsNotAllowedException;
@@ -53,7 +55,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -72,6 +73,8 @@ import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -86,7 +89,6 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.function.Predicates.awaitEx;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -239,7 +241,7 @@ class ReadReplicaReplicationIT
         // let's spend some time by adding more data
         createDataInOneTransaction( cluster, 10 );
 
-        awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
         cluster.removeReadReplicaWithMemberId( readReplicaId );
 
         // let's spend some time by adding more data
@@ -247,7 +249,7 @@ class ReadReplicaReplicationIT
 
         cluster.addReadReplicaWithId( readReplicaId ).start();
 
-        awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         var dbs = cluster.allMembers()
                 .stream()
@@ -289,7 +291,7 @@ class ReadReplicaReplicationIT
 
         createDataInOneTransaction( cluster, 10 );
 
-        awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         var readReplica = cluster.getReadReplicaById( 0 );
         var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
@@ -307,7 +309,7 @@ class ReadReplicaReplicationIT
         readReplica.start();
 
         // then
-        awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         assertEventually( "The read replica has the same data as the core members",
                 () -> DbRepresentation.of( readReplica.defaultDatabase() ),
@@ -326,7 +328,7 @@ class ReadReplicaReplicationIT
 
         createDataInOneTransaction( cluster, 10 );
 
-        awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         var readReplica = cluster.getReadReplicaById( 0 );
         var highestReadReplicaLogVersion = physicalLogFiles( readReplica ).getHighestLogVersion();
@@ -342,7 +344,7 @@ class ReadReplicaReplicationIT
 
         readReplica.start();
 
-        awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         // when
         createDataInOneTransaction( cluster, 10 );
@@ -400,37 +402,11 @@ class ReadReplicaReplicationIT
         return clusterMember.defaultDatabase().getDependencyResolver().resolveDependency( LogFiles.class );
     }
 
-    private static boolean readReplicasUpToDateAsTheLeader( CoreClusterMember leader, Collection<ReadReplica> readReplicas )
-    {
-        var leaderTxId = lastClosedTransactionId( true, leader.defaultDatabase() );
-        return readReplicas.stream().map( ReadReplica::defaultDatabase )
-                .map( db -> lastClosedTransactionId( false, db ) )
-                .reduce( true, ( acc, txId ) -> acc && txId == leaderTxId, Boolean::logicalAnd );
-    }
-
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
         var neoStoreFile = replica.databaseLayout().metadataStore();
         var pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis() );
-    }
-
-    private static long lastClosedTransactionId( boolean fail, GraphDatabaseFacade db )
-    {
-        try
-        {
-            return db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
-                    .getLastClosedTransactionId();
-        }
-        catch ( IllegalStateException | UnsatisfiedDependencyException | StoreFileClosedException /* db is shutdown or not available */ ex )
-        {
-            if ( !fail )
-            {
-                // the db is down we'll try again...
-                return -1;
-            }
-            throw ex;
-        }
     }
 
     @Test
@@ -574,5 +550,83 @@ class ReadReplicaReplicationIT
                 .withNumberOfCoreMembers( NR_CORE_MEMBERS )
                 .withNumberOfReadReplicas( NR_READ_REPLICAS )
                 .withSharedCoreParam( cluster_topology_refresh, "5s" );
+    }
+
+    private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster ) throws TimeoutException, InterruptedException
+    {
+        assertEventually( () -> ReadReplicasProgress.of( cluster ), readReplicasUpToDateWithLeader(), 1, MINUTES );
+    }
+
+    private static long lastClosedTransactionId( boolean fail, GraphDatabaseFacade db )
+    {
+        try
+        {
+            return db.getDependencyResolver().resolveDependency( TransactionIdStore.class ).getLastClosedTransactionId();
+        }
+        catch ( Exception e )
+        {
+            if ( !fail )
+            {
+                // the db is down we'll try again...
+                return -1;
+            }
+            throw e;
+        }
+    }
+
+    private static Matcher<ReadReplicasProgress> readReplicasUpToDateWithLeader()
+    {
+        return new TypeSafeMatcher<>()
+        {
+            @Override
+            protected boolean matchesSafely( ReadReplicasProgress progress )
+            {
+                return progress.readReplicasUpToDateWithLeader();
+            }
+
+            @Override
+            public void describeTo( Description description )
+            {
+                description.appendText( "Read replicas up-to-date with the leader" );
+            }
+
+            @Override
+            protected void describeMismatchSafely( ReadReplicasProgress progress, Description description )
+            {
+                description.appendText( "Leader's last committed transaction ID: " ).appendValue( progress.leaderLastClosedTxId ).appendText( "\n" )
+                        .appendText( "Read replicas last committed transaction IDs: " ).appendValue( progress.readReplicaLastClosedTxIds );
+            }
+        };
+    }
+
+    private static class ReadReplicasProgress
+    {
+        final long leaderLastClosedTxId;
+        final Map<ReadReplica,Long> readReplicaLastClosedTxIds;
+
+        ReadReplicasProgress( long leaderLastClosedTxId, Map<ReadReplica,Long> readReplicaLastClosedTxIds )
+        {
+            this.leaderLastClosedTxId = leaderLastClosedTxId;
+            this.readReplicaLastClosedTxIds = readReplicaLastClosedTxIds;
+        }
+
+        static ReadReplicasProgress of( Cluster cluster ) throws TimeoutException
+        {
+            var leader = cluster.awaitLeader();
+            var leaderLastClosedTxId = lastClosedTransactionId( true, leader.defaultDatabase() );
+
+            var readReplicaLastClosedTxIds = cluster.readReplicas()
+                    .stream()
+                    .collect( toMap( identity(), readReplica -> lastClosedTransactionId( false, readReplica.defaultDatabase() ) ) );
+
+            return new ReadReplicasProgress( leaderLastClosedTxId, readReplicaLastClosedTxIds );
+        }
+
+        boolean readReplicasUpToDateWithLeader()
+        {
+            return readReplicaLastClosedTxIds.values()
+                    .stream()
+                    .allMatch( readReplicaLastClosedTxId -> readReplicaLastClosedTxId == leaderLastClosedTxId );
+        }
     }
 }

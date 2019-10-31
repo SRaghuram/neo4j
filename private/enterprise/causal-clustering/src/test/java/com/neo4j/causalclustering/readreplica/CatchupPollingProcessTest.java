@@ -12,14 +12,15 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,8 +49,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -239,7 +243,7 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void shouldNotSignalOperationalUntilPullingV1() throws Throwable
+    void shouldNotSignalOperationalUntilPulling() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
@@ -267,31 +271,46 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void shouldNotSignalOperationalUntilPullingV2() throws Throwable
+    void shouldAllowToRetryOnStoreCopyFailures() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
-
-        // when
         txPuller.start();
-        Future<Boolean> operationalFuture = txPuller.upToDateFuture();
-        assertFalse( operationalFuture.isDone() );
 
-        txPuller.tick().get(); // realises we need a store copy
-        assertFalse( operationalFuture.isDone() );
+        // and store copy fails
+        var storeCopyError = new StoreCopyFailedException( "" );
+        doThrow( storeCopyError ).when( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
-        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 15 ) );
-
-        txPuller.tick().get(); // does the store copy
-        assertFalse( operationalFuture.isDone() );
-
-        txPuller.tick().get(); // does a pulling
-        assertTrue( operationalFuture.isDone() );
-        assertTrue( operationalFuture.get() );
+        // when tx pull
+        txPuller.tick().get();
+        // when store copy #1
+        txPuller.tick().get();
 
         // then
+        verify( databaseContext ).stopForStoreCopy();
+        verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+
+        verify( storeCopyHandle, never() ).release();
+        verify( txApplier, never() ).refreshFromNewStore();
+        verify( databaseEventDispatch, never() ).fireStoreReplaced( BASE_TX_ID + 1 );
+
+        // puller remains in store copying state after a failed store copy
+        assertEquals( STORE_COPYING, txPuller.state() );
+
+        // when store copy #2
+        doNothing().when( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+        txPuller.tick().get();
+
+        // then
+        verify( databaseContext ).stopForStoreCopy(); // only once
+        verify( storeCopy, times( 2 ) ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+
+        verify( storeCopyHandle ).release();
+        verify( txApplier ).refreshFromNewStore();
+        verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
+
+        // puller moves to tx pulling after a successful store copy
         assertEquals( TX_PULLING, txPuller.state() );
     }
 }

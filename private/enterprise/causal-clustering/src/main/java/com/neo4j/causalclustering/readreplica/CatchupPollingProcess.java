@@ -36,6 +36,7 @@ import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static java.lang.String.format;
+import static org.neo4j.util.Preconditions.checkState;
 
 /**
  * This class is responsible for pulling transactions from a core server and queuing
@@ -65,6 +66,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private volatile State state = TX_PULLING;
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
+    private StoreCopyHandle storeCopyHandle;
 
     CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
             ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, DatabasePanicker panicker,
@@ -290,10 +292,10 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            var stoppedDb = databaseContext.stopForStoreCopy();
+            stopDatabaseForStoreCopy();
             storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, databaseContext.storeId() );
             transitionToTxPulling();
-            restartDatabase( stoppedDb );
+            restartDatabaseAfterStoreCopy();
             databaseEventDispatch.fireStoreReplaced( applier.lastQueuedTxId() );
         }
         catch ( IOException | StoreCopyFailedException e )
@@ -306,9 +308,24 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private void restartDatabase( StoreCopyHandle stoppedDb )
+    private void stopDatabaseForStoreCopy()
     {
-        stoppedDb.release();
+        if ( storeCopyHandle == null )
+        {
+            // keep the store copy handle between retries to make sure database doesn't transition to a different state between ticks
+            storeCopyHandle = databaseContext.stopForStoreCopy();
+        }
+        // else database is already stopped for store copy by a previous (failed) store-copy attempt
+    }
+
+    private void restartDatabaseAfterStoreCopy()
+    {
+        checkState( storeCopyHandle != null, "Store copy handle not initialized" );
+
+        var handle = storeCopyHandle;
+        storeCopyHandle = null;
+        handle.release();
+
         latestTxIdOfUpStream = 0; // we will find out on the next pull request response
         applier.refreshFromNewStore();
     }
