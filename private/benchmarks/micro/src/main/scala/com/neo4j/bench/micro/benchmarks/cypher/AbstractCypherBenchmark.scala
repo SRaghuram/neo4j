@@ -93,7 +93,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
     try {
       // Role with explicit privileges to read everything in the graph
-      systemDb().executeTransactionally("CREATE ROLE WhiteRole")
+      systemDb().executeTransactionally("CREATE ROLE WhiteRole IF NOT EXISTS")
       systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO WhiteRole")
       labels.foreach { label =>
         systemDb().executeTransactionally(s"GRANT TRAVERSE ON GRAPH * NODES ${label.name()} TO WhiteRole")
@@ -113,17 +113,17 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       }
 
       // Role that denies unused graph elements
-      systemDb().executeTransactionally("CREATE ROLE BlackRole")
+      systemDb().executeTransactionally("CREATE ROLE BlackRole IF NOT EXISTS")
       systemDb().executeTransactionally("GRANT ACCESS ON DATABASE * TO BlackRole")
       systemDb().executeTransactionally("DENY TRAVERSE ON GRAPH * ELEMENTS BLACK TO BlackRole")
       systemDb().executeTransactionally("DENY READ {blackProp} ON GRAPH * ELEMENTS BLACK TO BlackRole")
 
       // User with grants
-      systemDb().executeTransactionally("CREATE USER white SET PASSWORD 'abc123' CHANGE NOT REQUIRED")
+      systemDb().executeTransactionally("CREATE USER white IF NOT EXISTS SET PASSWORD 'abc123' CHANGE NOT REQUIRED")
       systemDb().executeTransactionally("GRANT ROLE WhiteRole TO white")
 
       // User with grants and denies
-      systemDb().executeTransactionally("CREATE USER black SET PASSWORD 'foo' CHANGE NOT REQUIRED")
+      systemDb().executeTransactionally("CREATE USER black IF NOT EXISTS SET PASSWORD 'foo' CHANGE NOT REQUIRED")
       systemDb().executeTransactionally("GRANT ROLE WhiteRole TO black")
       systemDb().executeTransactionally("GRANT ROLE BlackRole TO black")
 
