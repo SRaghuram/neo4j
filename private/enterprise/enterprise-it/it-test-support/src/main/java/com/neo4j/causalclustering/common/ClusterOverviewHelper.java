@@ -23,8 +23,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -39,15 +38,19 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class ClusterOverviewHelper
+public final class ClusterOverviewHelper
 {
-    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected ) throws InterruptedException, KernelException
+    private ClusterOverviewHelper()
     {
-        assertAllEventualOverviews( cluster, expected, Collections.emptySet(), Collections.emptySet()  );
+    }
+
+    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected ) throws InterruptedException
+    {
+        assertAllEventualOverviews( cluster, expected, Collections.emptySet(), Collections.emptySet() );
     }
 
     public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected, Set<Integer> excludedCores,
-            Set<Integer> excludedRRs ) throws InterruptedException, KernelException
+            Set<Integer> excludedRRs ) throws InterruptedException
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
@@ -129,21 +132,46 @@ public class ClusterOverviewHelper
 
     public static List<MemberInfo> clusterOverview( GraphDatabaseFacade db )
     {
-        try ( Transaction transaction = db.beginTx() )
+        for ( var i = 0; i < 10; i++ )
         {
-            try ( var result = transaction.execute( "CALL dbms.cluster.overview()" ) )
+            if ( db.isAvailable( SECONDS.toMillis( 10 ) ) )
             {
-                return result.stream()
-                        .map( ClusterOverviewHelper::createMemberInfo )
-                        .collect( toList() );
+                try
+                {
+                    return callClusterOverviewProcedure( db );
+                }
+                catch ( DatabaseShutdownException ignore )
+                {
+                }
             }
+            try
+            {
+                SECONDS.sleep( 10 );
+            }
+            catch ( InterruptedException e )
+            {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException( "Interrupted while waiting for database " + db.databaseName() + " to become available" );
+            }
+        }
+        throw new RuntimeException( "Unable to invoke the overview procedure. Database " + db.databaseName() + " is not available" );
+    }
+
+    private static List<MemberInfo> callClusterOverviewProcedure( GraphDatabaseFacade db )
+    {
+        try ( var transaction = db.beginTx();
+              var result = transaction.execute( "CALL dbms.cluster.overview()" ) )
+        {
+            return result.stream()
+                    .map( ClusterOverviewHelper::createMemberInfo )
+                    .collect( toList() );
         }
     }
 
     @SafeVarargs
     public static Matcher<Iterable<? extends MemberInfo>> containsAllMemberAddresses( Collection<? extends ClusterMember>... members )
     {
-        return containsMemberAddresses( Stream.of( members).flatMap( Collection::stream ).collect( toList() ) );
+        return containsMemberAddresses( Stream.of( members ).flatMap( Collection::stream ).collect( toList() ) );
     }
 
     private static MemberInfo createMemberInfo( Map<String,Object> row )
@@ -174,7 +202,7 @@ public class ClusterOverviewHelper
         return ((Map<String,Object>) databasesObject).entrySet()
                 .stream()
                 .collect( toMap(
-                        entry -> entry.getKey(),
+                        Map.Entry::getKey,
                         entry -> RoleInfo.valueOf( entry.getValue().toString() ) ) );
     }
 
