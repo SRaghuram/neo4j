@@ -246,7 +246,14 @@
           ],
           "Privileged": true,
           "Vcpus": 8,
-          "Memory": 31000
+          "Memory": 31000,
+          "Ulimits" : [
+            {
+              "Name" : "nofile",
+              "SoftLimit" : 80000,
+              "HardLimit" : 80000
+            }
+          ]
         }
       }
     },
@@ -358,7 +365,14 @@
           ],
           "Privileged": true,
           "Vcpus": 2,
-          "Memory": 7000
+          "Memory": 7000,
+          "Ulimits" : [
+            {
+              "Name" : "nofile",
+              "SoftLimit" : 80000,
+              "HardLimit" : 80000
+            }
+          ]
         }
       }
     },
@@ -470,7 +484,14 @@
           ],
           "Privileged": true,
           "Vcpus": 8,
-          "Memory": 31000
+          "Memory": 31000,
+          "Ulimits" : [
+            {
+              "Name" : "nofile",
+              "SoftLimit" : 80000,
+              "HardLimit" : 80000
+            }
+          ]
         }
       }
     },
@@ -582,7 +603,14 @@
           ],
           "Privileged": true,
           "Vcpus": 2,
-          "Memory": 7000
+          "Memory": 7000,
+          "Ulimits" : [
+            {
+              "Name" : "nofile",
+              "SoftLimit" : 80000,
+              "HardLimit" : 80000
+            }
+          ]
         }
       }
     }
