@@ -509,12 +509,20 @@ public class FabricConfig
             scheme = mainUri.getScheme();
             query = mainUri.getQuery();
 
-            boolean match = IntStream.range( 1, uris.size() )
-                    .mapToObj( uris::get )
-                    .allMatch( uri -> Objects.equals( scheme, uri.getScheme() ) && Objects.equals( query, uri.getQuery() ) );
-            if ( !match )
+            boolean sameScheme = uris.stream()
+                    .skip( 1 )
+                    .allMatch( uri -> Objects.equals( scheme, uri.getScheme() ) );
+            if ( !sameScheme )
             {
-                throw new IllegalArgumentException( "URI mismatch: " + uris );
+                throw new IllegalArgumentException( "URIs must have the same scheme: " + uris );
+            }
+
+            boolean sameQuery = uris.stream()
+                    .skip( 1 )
+                    .allMatch( uri -> Objects.equals( query, uri.getQuery() ) );
+            if ( !sameQuery )
+            {
+                throw new IllegalArgumentException( "URIs must have the same query: " + uris );
             }
 
             addresses = uris.stream()

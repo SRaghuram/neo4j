@@ -150,7 +150,7 @@ public class FabricSettings implements SettingsDeclaration
     {
         @Description( "URI of the Neo4j DBMS hosting the database associated to the Fabric graph. Example: neo4j://somewhere:7687 \n" +
                 "A comma separated list of URIs is acceptable. This is useful when the Fabric graph is hosted on a cluster" +
-                "and more that one bootstrap addresses is needed to be provided in order to avoid a singe point of failure." +
+                "and more that one bootstrap address needs to be provided in order to avoid a single point of failure." +
                 "The provided addresses will be considered as an initial source of a routing table." +
                 "Example: neo4j://core-1:1111,neo4j://core-2:2222" )
         public final Setting<List<URI>> uris = getBuilder( "uri", SettingValueParsers.listOf( SettingValueParsers.URI ), null ).build();
