@@ -57,23 +57,18 @@ for i in "${dbs[@]}"; do
 
 	mkdir -p "${temp_old_db_path}"/data/databases/neo4j
 	mv "${old_db_path}"/* "${temp_old_db_path}/data/databases/neo4j"
-	
+
 	temp_new_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
 
     echo "Temporary old db path : ${temp_old_db_path}"
-
-    mkdir -p "${temp_old_db_path}"
-    mv "${old_db_path}" "${temp_old_db_path}"
 
     "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
         --upgraded-db "${new_db_path}" \
         --recreate-indexes  \
         --config "${neo4j_config}"
-    #Rename old_db to new_db
-    mv "${temp_new_db_path}"/"${old_db_name}" "${temp_new_db_path}"/"${new_db_name}"
 
-    tar -cvzf "${new_tar}" -C "${temp_new_db_path}" "${new_db_name}"
+    tar -cvzf "${new_tar}" "${new_db_name}"
 
     aws s3 cp "${new_tar}" s3://benchmarking.neo4j.com/datasets/ldbc/db/"${new_tar}" --no-progress
     rm -rf "${old_db_path}"
