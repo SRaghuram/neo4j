@@ -131,28 +131,12 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV1() throws Exception
+    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAway() throws Exception
     {
         // when
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-
-        // when
-        txPuller.tick().get();
-
-        // then
-        assertEquals( STORE_COPYING, txPuller.state() );
-    }
-
-    @Test
-    void nextStateShouldBeStoreCopyingIfRequestedTransactionHasBeenPrunedAwayV2() throws Exception
-    {
-        // given
-        when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
-        txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when
         txPuller.tick().get();
@@ -168,7 +152,6 @@ class CatchupPollingProcessTest
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when
         txPuller.tick().get();
@@ -184,37 +167,12 @@ class CatchupPollingProcessTest
     }
 
     @Test
-    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV1() throws Throwable
+    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopy() throws Throwable
     {
         // given
         when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
         clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
         txPuller.start();
-
-        // when (tx pull)
-        txPuller.tick().get();
-        // when (store copy)
-        txPuller.tick().get();
-
-        // then
-        verify( databaseContext ).stopForStoreCopy();
-        verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
-        verify( storeCopyHandle ).release();
-        verify( txApplier ).refreshFromNewStore();
-        verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
-
-        // then
-        assertEquals( TX_PULLING, txPuller.state() );
-    }
-
-    @Test
-    void nextStateShouldBeTxPullingAfterASuccessfulStoreCopyV2() throws Throwable
-    {
-        // given
-        when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
-        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
-        txPuller.start();
-        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_3_0 );
 
         // when (tx pull)
         txPuller.tick().get();
