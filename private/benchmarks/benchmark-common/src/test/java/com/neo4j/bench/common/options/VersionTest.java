@@ -20,6 +20,7 @@ public class VersionTest
         assertThat( "3", equalTo( version.mainVersion() ) );
         assertThat( "3.4", equalTo( version.minorVersion() ) );
         assertThat( "3.4.0", equalTo( version.patchVersion() ) );
+        assertThat( "3.4.0", equalTo( version.fullVersion() ) );
     }
 
     @Test
@@ -27,7 +28,7 @@ public class VersionTest
     {
         BenchmarkUtil.assertException( IllegalArgumentException.class,
                                        () -> {
-                                           new Version( "3.4.0.0" );
+                                           new Version( "3.4.0.0.0" );
                                        } );
     }
 
@@ -46,6 +47,25 @@ public class VersionTest
         BenchmarkUtil.assertException( IllegalArgumentException.class,
                                        () -> {
                                            new Version( "a.0.0" );
+                                       } );
+    }
+
+    @Test
+    public void shouldAllowToVersionsThatBetasAndAlphas() throws Exception
+    {
+        Version version = new Version( "4.0.0-beta" );
+        assertThat( "4", equalTo( version.mainVersion() ) );
+        assertThat( "4.0", equalTo( version.minorVersion() ) );
+        assertThat( "4.0.0", equalTo( version.patchVersion() ) );
+        assertThat( "4.0.0-beta", equalTo( version.fullVersion() ) );
+    }
+
+    @Test
+    public void shouldNotAllowToVersionsThatWrongSeparators() throws Exception
+    {
+        BenchmarkUtil.assertException( IllegalArgumentException.class,
+                                       () -> {
+                                           new Version( "0-0.0" );
                                        } );
     }
 }

@@ -45,6 +45,7 @@ import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
@@ -830,7 +831,7 @@ public class RunExportCommand implements Runnable
     {
         TestRun testRun = new TestRun( finishTime - startTime, startTime, build, parentBuild, triggeredBy );
         BenchmarkConfig benchmarkConfig = new BenchmarkConfig( ldbcConfig.asMap() );
-        neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
+        neo4jVersion = Version.toSanitizeVersion( neo4jVersion );
         if ( !BranchAndVersion.isPersonalBranch( Repository.NEO4J, neo4jBranchOwner ) )
         {
             BranchAndVersion.assertBranchEqualsSeries( neo4jVersion, neo4jBranch );

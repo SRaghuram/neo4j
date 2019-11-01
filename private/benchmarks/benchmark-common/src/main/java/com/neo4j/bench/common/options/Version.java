@@ -10,24 +10,39 @@ public class Version
     private String mainVersion;
     private String minorVersion;
     private String patchVersion;
+    private String preReleaseBranch;
 
     public Version( String versionString )
     {
         String[] split = versionString.split( "\\." );
+
         if ( split.length != 3 )
         {
             throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
         }
-        for ( String s : split )
+
+        String[] patchAndPreReleaseBranch = split[2].split( "-" );
+        if ( patchAndPreReleaseBranch.length != 1 && patchAndPreReleaseBranch.length != 2 )
         {
-            if ( !s.matches( "[0-9]+" ) )
-            {
-                throw new IllegalArgumentException( String.format( "Neo4j version should be numbers, but found %s", s ) );
-            }
+            throw new IllegalArgumentException( String.format( "Neo4j version have always been on the form x.y.z , but this version is %s", versionString ) );
         }
-        mainVersion = split[0];
-        minorVersion = split[1];
-        patchVersion = split[2];
+
+        mainVersion = ensureValidVersionNumber( split[0] );
+        minorVersion = ensureValidVersionNumber( split[1] );
+        patchVersion = ensureValidVersionNumber( patchAndPreReleaseBranch[0] );
+        if ( patchAndPreReleaseBranch.length > 1 )
+        {
+            preReleaseBranch = patchAndPreReleaseBranch[1];
+        }
+    }
+
+    private String ensureValidVersionNumber( String current )
+    {
+        if ( !current.matches( "[0-9]+" ) )
+        {
+            throw new IllegalArgumentException( String.format( "Neo4j version should be numbers, but found %s", current ) );
+        }
+        return current;
     }
 
     public String mainVersion()
@@ -45,9 +60,23 @@ public class Version
         return String.format( "%s.%s.%s", mainVersion, minorVersion, patchVersion );
     }
 
+    public String fullVersion()
+    {
+        if ( preReleaseBranch == null )
+        {
+            return patchVersion();
+        }
+        return String.format( "%s.%s.%s-%s", mainVersion, minorVersion, patchVersion, preReleaseBranch );
+    }
+
+    public static String toSanitizeVersion( String version )
+    {
+        return new Version( version ).patchVersion();
+    }
+
     @Override
     public String toString()
     {
-        return patchVersion();
+        return fullVersion();
     }
 }

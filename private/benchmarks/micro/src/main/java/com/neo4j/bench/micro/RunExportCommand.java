@@ -16,7 +16,6 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.model.BenchmarkConfig;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.BenchmarkTool;
-import com.neo4j.bench.common.model.BranchAndVersion;
 import com.neo4j.bench.common.model.Environment;
 import com.neo4j.bench.common.model.Java;
 import com.neo4j.bench.common.model.Neo4j;
@@ -25,6 +24,7 @@ import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
@@ -234,7 +234,7 @@ public class RunExportCommand implements Runnable
         }
 
         // trim anything like '-M01' from end of Neo4j version string
-        neo4jVersion = BranchAndVersion.toSanitizeVersion( Repository.NEO4J, neo4jVersion );
+        neo4jVersion = Version.toSanitizeVersion( neo4jVersion );
 
         Neo4jConfig baseNeo4jConfig = Neo4jConfigBuilder.withDefaults()
                                                         .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
