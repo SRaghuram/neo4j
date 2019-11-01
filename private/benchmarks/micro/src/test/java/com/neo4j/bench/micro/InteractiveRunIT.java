@@ -70,8 +70,8 @@ class InteractiveRunIT extends AnnotationsFixture
         Class benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
-        // parameters DO NOT affect store content, in this benchmark
-        int expectedStoreCount = 1;
+        // parameters affect store content, in this benchmark
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) );
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
     }
 
