@@ -111,7 +111,7 @@ class TxPuller
         }
         catch ( CatchupAddressResolutionException e )
         {
-            log.info( "Unable to find a suitable address to pull transactions from" );
+            log.info( "Unable to find a suitable address to pull transactions from [Message: %s]", e.getMessage());
             return Result.TRANSIENT_ERROR;
         }
     }

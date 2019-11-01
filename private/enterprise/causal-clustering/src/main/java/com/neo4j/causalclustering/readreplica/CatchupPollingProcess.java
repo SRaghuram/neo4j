@@ -173,7 +173,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
         catch ( CatchupAddressResolutionException e )
         {
-            log.warn( "Could not find upstream database from which to pull.", e );
+            log.warn( "Could not find upstream database from which to pull. [Message: %s].", e.getMessage() );
             return;
         }
 

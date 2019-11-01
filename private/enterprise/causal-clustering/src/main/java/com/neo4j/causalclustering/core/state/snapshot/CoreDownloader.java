@@ -89,7 +89,7 @@ public class CoreDownloader
         }
         catch ( CatchupAddressResolutionException e )
         {
-            log.warn( "Store copy failed, as we're unable to find the target catchup address", e );
+            log.warn( "Store copy failed, as we're unable to find the target catchup address. [Message: %s]", e.getMessage() );
             return Optional.empty();
         }
     }
