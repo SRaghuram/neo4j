@@ -58,14 +58,14 @@ public class RotatableCsvReporter extends ScheduledReporter
     }
 
     @Override
-    public void stop()
+    public synchronized void stop()
     {
         super.stop();
         writers.values().forEach( CsvRotatableWriter::close );
     }
 
     @Override
-    public void report( SortedMap<String,Gauge> gauges, SortedMap<String,Counter> counters,
+    public synchronized void report( SortedMap<String,Gauge> gauges, SortedMap<String,Counter> counters,
             SortedMap<String,Histogram> histograms, SortedMap<String,Meter> meters, SortedMap<String,Timer> timers )
     {
         final long timestamp = TimeUnit.MILLISECONDS.toSeconds( clock.getTime() );
@@ -274,7 +274,7 @@ public class RotatableCsvReporter extends ScheduledReporter
             IOUtils.closeAllSilently( printWriter, streamSupplier );
         }
 
-        synchronized void writeValues( Locale locale, long timestamp, String line, Object[] values )
+        void writeValues( Locale locale, long timestamp, String line, Object[] values )
         {
             streamSupplier.get();
             printWriter.printf( locale, String.format( locale, "%d,%s%n", timestamp, line ), values );
