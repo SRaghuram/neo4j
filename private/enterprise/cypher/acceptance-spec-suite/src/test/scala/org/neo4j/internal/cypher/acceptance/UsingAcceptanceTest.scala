@@ -825,8 +825,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |RETURN count(*) as c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-      plan should includeSomewhere.nTimes(3, aPlan("NodeHashJoin"))
-    }, expectPlansToFail = Configs.Version2_3 + Configs.Version3_1))
+      plan should includeSomewhere.nTimes(1, aPlan("NodeHashJoin"))
+    }, expectPlansToFail = Configs.RulePlanner + Configs.Version3_4 ))
 
     result.toList should equal (List(Map("c" -> 4)))
   }
