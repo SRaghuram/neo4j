@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.compatibility.v3_5.runtime
 
-import org.neo4j.cypher.internal.compatibility.v3_5.runtime.PhysicalPlanningAttributes.{ArgumentSizes, SlotConfigurations}
+import org.neo4j.cypher.internal.compatibility.v3_5.runtime.PhysicalPlanningAttributes.{ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.compatibility.v3_5.runtime.SlotConfiguration.Size
 import org.neo4j.cypher.internal.ir.v3_5.{HasHeaders, NoHeaders, ShortestPathPattern}
-import org.neo4j.cypher.internal.v3_5.logical.plans._
 import org.neo4j.cypher.internal.v3_5.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v3_5.expressions._
+import org.neo4j.cypher.internal.v3_5.logical.plans._
 import org.neo4j.cypher.internal.v3_5.util.attribution.Id
 import org.neo4j.cypher.internal.v3_5.util.symbols._
 import org.neo4j.cypher.internal.v3_5.util.{Foldable, InternalException, UnNamedNameGenerator}
@@ -39,7 +39,8 @@ object SlotAllocation {
   case class SlotsAndArgument(slotConfiguration: SlotConfiguration, argumentSize: Size)
 
   case class PhysicalPlan(slotConfigurations: SlotConfigurations,
-                          argumentSizes: ArgumentSizes)
+                          argumentSizes: ArgumentSizes,
+                          nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations)
 
   /**
     * Allocate slot for every operator in the logical plan tree `lp`.
@@ -50,8 +51,9 @@ object SlotAllocation {
   def allocateSlots(lp: LogicalPlan,
                     semanticTable: SemanticTable,
                     initialSlotsAndArgument: Option[SlotsAndArgument] = None,
-                   allocations: SlotConfigurations = new SlotConfigurations,
-                   arguments: ArgumentSizes = new ArgumentSizes): PhysicalPlan = {
+                    allocations: SlotConfigurations = new SlotConfigurations,
+                    arguments: ArgumentSizes = new ArgumentSizes,
+                    nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations = new NestedPlanArgumentConfigurations): PhysicalPlan = {
 
     val planStack = new mutable.Stack[(Boolean, LogicalPlan)]()
     val resultStack = new mutable.Stack[SlotConfiguration]()
@@ -91,7 +93,7 @@ object SlotAllocation {
           val argument = if (argumentStack.isEmpty) NO_ARGUMENT()
                          else argumentStack.top
           recordArgument(current, argument)
-          val slotsIncludingExpressions = allocateExpressions(current, nullable, argument.slotConfiguration.copy(), allocations, arguments)(semanticTable)
+          val slotsIncludingExpressions = allocateExpressions(current, nullable, argument.slotConfiguration.copy(), allocations, arguments, nestedPlanArgumentConfigurations)(semanticTable)
           val result = allocate(current, nullable, slotsIncludingExpressions)
           allocations.set(current.id, result)
           resultStack.push(result)
@@ -100,7 +102,7 @@ object SlotAllocation {
           val sourceSlots = resultStack.pop()
           val argument = if (argumentStack.isEmpty) NO_ARGUMENT()
                          else argumentStack.top
-          val slotsIncludingExpressions = allocateExpressions(current, nullable, sourceSlots, allocations, arguments)(semanticTable)
+          val slotsIncludingExpressions = allocateExpressions(current, nullable, sourceSlots, allocations, arguments, nestedPlanArgumentConfigurations)(semanticTable)
           val result = allocate(current, nullable, slotsIncludingExpressions, recordArgument(_, argument), argument.slotConfiguration)
           allocations.set(current.id, result)
           resultStack.push(result)
@@ -123,8 +125,8 @@ object SlotAllocation {
                          else argumentStack.top
           // NOTE: If we introduce a two sourced logical plan with an expression that needs to be evaluated in a
           //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressions.
-          val lhsSlotsIncludingExpressions = allocateExpressions(current, nullable, lhsSlots, allocations, arguments, shouldAllocateLhs = true)(semanticTable)
-          val rhsSlotsIncludingExpressions = allocateExpressions(current, nullable, rhsSlots, allocations, arguments, shouldAllocateLhs = false)(semanticTable)
+          val lhsSlotsIncludingExpressions = allocateExpressions(current, nullable, lhsSlots, allocations, arguments, nestedPlanArgumentConfigurations, shouldAllocateLhs = true)(semanticTable)
+          val rhsSlotsIncludingExpressions = allocateExpressions(current, nullable, rhsSlots, allocations, arguments, nestedPlanArgumentConfigurations, shouldAllocateLhs = false)(semanticTable)
           val result = allocate(current, nullable, lhsSlotsIncludingExpressions, rhsSlotsIncludingExpressions, recordArgument(_, argument))
           allocations.set(current.id, result)
           if (isAnApplyPlan(current))
@@ -135,21 +137,23 @@ object SlotAllocation {
       comingFrom = current
     }
 
-    PhysicalPlan(allocations, arguments)
+    PhysicalPlan(allocations, arguments, nestedPlanArgumentConfigurations)
   }
 
   // NOTE: If we find a NestedPlanExpression within the given LogicalPlan, the slotConfigurations and argumentSizes maps will be updated
   private def allocateExpressions(lp: LogicalPlan, nullable: Boolean, slots: SlotConfiguration,
                                   slotConfigurations: SlotConfigurations,
                                   argumentSizes: ArgumentSizes,
+                                  nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations,
                                   shouldAllocateLhs: Boolean = true)
                                  (semanticTable: SemanticTable): SlotConfiguration = {
-    allocateExpressionsInternal(lp, nullable, slots, slotConfigurations, argumentSizes, shouldAllocateLhs, lp.id)(semanticTable)
+    allocateExpressionsInternal(lp, nullable, slots, slotConfigurations, argumentSizes, nestedPlanArgumentConfigurations, shouldAllocateLhs, lp.id)(semanticTable)
   }
 
   private def allocateExpressionsInternal(p: Foldable, nullable: Boolean, slots: SlotConfiguration,
                                           slotConfigurations: SlotConfigurations,
                                           argumentSizes: ArgumentSizes,
+                                          nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations,
                                           shouldAllocateLhs: Boolean = true,
                                           planId: Id)
                                  (semanticTable: SemanticTable): SlotConfiguration = {
@@ -209,7 +213,8 @@ object SlotAllocation {
             (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
           else {
             val argumentSlotConfiguration = slots.copy()
-            val slotsAndArgument = SlotsAndArgument(argumentSlotConfiguration, Size(slots.numberOfLongs, slots.numberOfReferences))
+            nestedPlanArgumentConfigurations.set(e.plan.id, argumentSlotConfiguration)
+            val slotsAndArgument = SlotsAndArgument(argumentSlotConfiguration.copy(), Size(slots.numberOfLongs, slots.numberOfReferences))
 
             // Allocate slots for nested plan
             // Pass in mutable attributes to be modified by recursive call
@@ -218,7 +223,7 @@ object SlotAllocation {
             // Allocate slots for the projection expression, based on the resulting slot configuration
             // from the inner plan
             val nestedSlots = nestedPhysicalPlan.slotConfigurations(e.plan.id)
-            allocateExpressionsInternal(e.projection, nullable, nestedSlots, slotConfigurations, argumentSizes, shouldAllocateLhs, planId)(semanticTable)
+            allocateExpressionsInternal(e.projection, nullable, nestedSlots, slotConfigurations, argumentSizes, nestedPlanArgumentConfigurations, shouldAllocateLhs, planId)(semanticTable)
 
             // Since we did allocation for nested plan and projection explicitly we do not need to traverse into children
             // The inner slot configuration does not need to affect the accumulated result of the outer plan

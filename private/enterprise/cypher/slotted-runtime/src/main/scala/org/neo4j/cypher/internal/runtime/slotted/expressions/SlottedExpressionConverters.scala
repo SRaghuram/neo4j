@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.compatibility.v3_5.runtime.{ast => runtimeAst}
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
 import org.neo4j.cypher.internal.v3_5.expressions._
@@ -74,6 +75,10 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(toCommandProjectedPath(id, e, self))
       case runtimeAst.IsPrimitiveNull(offset) =>
         Some(runtimeExpression.IsPrimitiveNull(offset))
+      case e: NestedPipeExpression =>
+        Some(runtimeExpression.NestedPipeSlottedExpression(e.pipe,
+          self.toCommandExpression(id, e.projection),
+          physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id)))
       case _ =>
         None
     }
