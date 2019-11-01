@@ -145,7 +145,7 @@ public class RotatableCsvReporter extends ScheduledReporter
     {
         File file = new File( directory, name + ".csv" );
         CsvRotatableWriter csvRotatableWriter = writers.computeIfAbsent( file,
-                new RotatingCsvWriterSupplier( header, fileSupplierStreamCreator, writers ) );
+                new RotatingCsvWriterSupplier( header, fileSupplierStreamCreator ) );
         csvRotatableWriter.writeValues( locale, timestamp, line, values );
     }
 
@@ -211,15 +211,12 @@ public class RotatableCsvReporter extends ScheduledReporter
     {
         private final String header;
         private final BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
-        private final Map<File,CsvRotatableWriter> writers;
 
         RotatingCsvWriterSupplier( String header,
-                BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator,
-                Map<File,CsvRotatableWriter> writers )
+                BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
         {
             this.header = header;
             this.fileSupplierStreamCreator = fileSupplierStreamCreator;
-            this.writers = writers;
         }
 
         @Override
