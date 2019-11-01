@@ -6,7 +6,6 @@
 package com.neo4j.kernel.builtinprocs;
 
 import com.neo4j.test.extension.ImpermanentEnterpriseDbmsExtension;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -118,10 +117,10 @@ class IndexProceduresIT
         assertNoIndexes();
     }
 
-    @Test
-    void shouldCreateIndexWithConfig()
+    @ParameterizedTest
+    @ValueSource( strings = {CREATE_INDEX_FORMAT, CREATE_UNIQUE_PROPERTY_CONSTRAINT_FORMAT, CREATE_NODE_KEY_CONSTRAINT_FORMAT} )
+    void shouldCreateIndexWithConfig( String procedure )
     {
-        // todo parameterize this test when unique property constraint and node key constraint procedures also can handle index config
         // Given no indexes initially
         assertNoIndexes();
 
@@ -132,7 +131,7 @@ class IndexProceduresIT
         try ( Transaction tx = db.beginTx() )
         {
             String configString = asConfigString( expectedIndexConfiguration );
-            tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ).close();
+            tx.execute( asProcedureCall( procedure, "some name", configString ) ).close();
             tx.commit();
         }
         awaitIndexesOnline();
@@ -157,15 +156,15 @@ class IndexProceduresIT
         }
     }
 
-    @Test
-    void shouldNotCreateIndexWithNonExistingSetting()
+    @ParameterizedTest
+    @ValueSource( strings = {CREATE_INDEX_FORMAT, CREATE_UNIQUE_PROPERTY_CONSTRAINT_FORMAT, CREATE_NODE_KEY_CONSTRAINT_FORMAT} )
+    void shouldNotCreateIndexWithNonExistingSetting( String procedure )
     {
-        // todo parameterize this test when unique property constraint and node key constraint procedures also can handle index config
         try ( Transaction tx = db.beginTx() )
         {
             String configString = "{non_existing_setting: 5}";
             final QueryExecutionException e =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( procedure, "some name", configString ) ) );
             final Throwable rootCause = getRootCause( e );
             assertThat( rootCause, instanceOf( IllegalArgumentException.class ) );
             assertThat( rootCause.getMessage(),
@@ -174,17 +173,17 @@ class IndexProceduresIT
         assertNoIndexes();
     }
 
-    @Test
-    void shouldNotCreateIndexWithSettingWithWrongValueType()
+    @ParameterizedTest
+    @ValueSource( strings = {CREATE_INDEX_FORMAT, CREATE_UNIQUE_PROPERTY_CONSTRAINT_FORMAT, CREATE_NODE_KEY_CONSTRAINT_FORMAT} )
+    void shouldNotCreateIndexWithSettingWithWrongValueType( String procedure )
     {
-        // todo parameterize this test when unique property constraint and node key constraint procedures also can handle index config
         try ( Transaction tx = db.beginTx() )
         {
             Map<IndexSetting,Object> config = new HashMap<>();
             config.put( IndexSetting.SPATIAL_WGS84_MAX, "'not_applicable_type'" );
             final String configString = asConfigString( config );
             final QueryExecutionException e =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( procedure, "some name", configString ) ) );
             final String asString = Exceptions.stringify( e );
             assertThat( asString,
                     containsString( "Caused by: java.lang.IllegalArgumentException: Could not parse value 'not_applicable_type' as double[]." ) );
@@ -192,17 +191,17 @@ class IndexProceduresIT
         assertNoIndexes();
     }
 
-    @Test
-    void shouldNotCreateIndexWithSettingWithNullValue()
+    @ParameterizedTest
+    @ValueSource( strings = {CREATE_INDEX_FORMAT, CREATE_UNIQUE_PROPERTY_CONSTRAINT_FORMAT, CREATE_NODE_KEY_CONSTRAINT_FORMAT} )
+    void shouldNotCreateIndexWithSettingWithNullValue( String procedure )
     {
-        // todo parameterize this test when unique property constraint and node key constraint procedures also can handle index config
         try ( Transaction tx = db.beginTx() )
         {
             Map<IndexSetting,Object> config = new HashMap<>();
             config.put( IndexSetting.SPATIAL_WGS84_MAX, null );
             final String configString = asConfigString( config );
             final QueryExecutionException e =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( CREATE_INDEX_FORMAT, "some name", configString ) ) );
+                    assertThrows( QueryExecutionException.class, () -> tx.execute( asProcedureCall( procedure, "some name", configString ) ) );
             final Throwable rootCause = getRootCause( e );
             assertThat( rootCause, instanceOf( NullPointerException.class ) );
             assertThat( rootCause.getMessage(), containsString( "Index setting value can not be null." ) );
