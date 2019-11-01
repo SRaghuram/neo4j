@@ -17,7 +17,6 @@ import com.neo4j.bench.common.model.BenchmarkConfig;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.BenchmarkPlan;
 import com.neo4j.bench.common.model.BenchmarkTool;
-import com.neo4j.bench.common.model.BranchAndVersion;
 import com.neo4j.bench.common.model.Environment;
 import com.neo4j.bench.common.model.Java;
 import com.neo4j.bench.common.model.Neo4j;
@@ -231,7 +230,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                     testRun,
                     benchmarkConfig,
                     Sets.newHashSet( new Neo4j( params.neo4jCommit(),
-                                                BranchAndVersion.toSanitizeVersion( Repository.NEO4J, params.neo4jVersion().patchVersion() ),
+                                                params.neo4jVersion().patchVersion(),
                                                 params.neo4jEdition(),
                                                 params.neo4jBranch(),
                                                 params.neo4jBranchOwner() ) ),
