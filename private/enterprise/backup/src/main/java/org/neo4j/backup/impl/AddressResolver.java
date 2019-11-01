@@ -7,6 +7,7 @@ package org.neo4j.backup.impl;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
+import org.neo4j.helpers.SocketAddressParser;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
@@ -39,6 +40,7 @@ class AddressResolver
 
     private AdvertisedSocketAddress asAdvertised( HostnamePort listenSocketAddress )
     {
-        return new AdvertisedSocketAddress( listenSocketAddress.getHost(), listenSocketAddress.getPort() );
+        HostnamePort addressWithoutPortRange = new HostnamePort( listenSocketAddress.getHost(), listenSocketAddress.getPort() );
+        return SocketAddressParser.socketAddress( addressWithoutPortRange.toString(), AdvertisedSocketAddress::new );
     }
 }

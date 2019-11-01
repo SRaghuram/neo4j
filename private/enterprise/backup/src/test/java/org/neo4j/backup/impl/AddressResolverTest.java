@@ -8,6 +8,8 @@ package org.neo4j.backup.impl;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Optional;
+
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.Config;
@@ -66,5 +68,33 @@ public class AddressResolverTest
 
         // then
         assertEquals( resolved.getPort(), portIsSupplied.intValue() );
+    }
+
+    @Test
+    public void shouldHandleDefaultIPv6Address()
+    {
+        Config config = Config.builder()
+                .withSetting( OnlineBackupSettings.online_backup_server, "[fd00:ce10::2]:6362" )
+                .build();
+
+        AdvertisedSocketAddress resolved = subject.resolveCorrectCCAddress( config,
+                new OptionalHostnamePort( "fd00:ce10::2", 6362, null ) );
+
+        assertEquals( "fd00:ce10::2", resolved.getHostname() );
+        assertEquals( 6362, resolved.getPort() );
+    }
+
+    @Test
+    public void shouldIgnorePortRanges()
+    {
+        Config config = Config.builder()
+                .withSetting( OnlineBackupSettings.online_backup_server, "[fd00:ce10::2]:6000-7000" )
+                .build();
+
+        AdvertisedSocketAddress resolved = subject.resolveCorrectCCAddress( config,
+                new OptionalHostnamePort( Optional.empty(), Optional.empty(), Optional.empty() ) );
+
+        assertEquals( "fd00:ce10::2", resolved.getHostname() );
+        assertEquals( 6000, resolved.getPort() );
     }
 }

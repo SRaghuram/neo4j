@@ -305,8 +305,7 @@ public class OnlineBackupCommandCcIT
                 .builder()
                 .withSetting( GraphDatabaseSettings.logical_log_rotation_threshold, "1m" )
                 .build();
-        File configOverrideFile = testDirectory.file( "neo4j-backup.conf" );
-        OnlineBackupCommandBuilder.writeConfigToFile( config, configOverrideFile );
+        File configOverrideFile = writeBackupConfigFile( config );
 
         // and we have a full backup
         final String backupName = "backupName" + recordFormat;
@@ -406,6 +405,40 @@ public class OnlineBackupCommandCcIT
                     "--from", customAddress,
                     "--protocol=catchup",
                     "--cc-report-dir=" + backupStoreDir, "--backup-dir=" + backupStoreDir, "--name=" + backupName, arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+
+            // then
+            assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupStoreDir ) );
+        }
+        finally
+        {
+            cluster.shutdown();
+        }
+    }
+
+    @Test
+    public void ipv6EnabledWithConfigFile() throws Exception
+    {
+        // given
+        Cluster<?> cluster = startIpv6Cluster();
+        try
+        {
+            int port = clusterLeader( cluster ).config().get( CausalClusteringSettings.transaction_listen_address ).getPort();
+            String customAddress = String.format( "[%s]:%d", IpFamily.IPV6.localhostAddress(), port );
+            String backupName = "backup_" + recordFormat;
+
+            Config config = Config.builder().withSetting( online_backup_server, customAddress ).build();
+            File configOverrideFile = writeBackupConfigFile( config );
+
+            createSomeData( cluster );
+
+            // when
+            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode(
+                    "--from", customAddress,
+                    "--protocol=catchup",
+                    "--cc-report-dir=" + backupStoreDir,
+                    "--backup-dir=" + backupStoreDir,
+                    "--additional-config=" + configOverrideFile,
+                    "--name=" + backupName ) );
 
             // then
             assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupStoreDir ) );
@@ -579,9 +612,11 @@ public class OnlineBackupCommandCcIT
         return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( testDirectory.absolutePath(), args );
     }
 
-    private int runBackupToolFromSameJvm( String... args ) throws Exception
+    private File writeBackupConfigFile( Config config ) throws IOException
     {
-        return runBackupToolFromSameJvmToGetExitCode( testDirectory.absolutePath(), testDirectory.absolutePath().getName(), args );
+        File configOverrideFile = testDirectory.file( "neo4j-backup.conf" );
+        OnlineBackupCommandBuilder.writeConfigToFile( config, configOverrideFile );
+        return configOverrideFile;
     }
 
     /**
