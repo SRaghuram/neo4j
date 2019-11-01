@@ -20,9 +20,7 @@ dbs=(
  "db_sf100_p064_dense1_utc_day_${neo4j_version}ee"
 )
 
-working_dir=$(pwd)
 for i in "${dbs[@]}"; do
-
     # shellcheck disable=SC2206
     arr=(${i//;/ })
     db_name=${arr[0]}
