@@ -30,7 +30,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 
 import static java.lang.String.format;
-import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
 
 /**
@@ -103,10 +102,11 @@ public class TransactionLogAnalyzer
         ReadAheadLogChannel channel;
         LogEntryReader entryReader;
         LogPositionMarker positionMarker;
+        LogFiles logFiles;
         if ( storeDirOrLogFile.isDirectory() )
         {
             // Use natural log version bridging if a directory is supplied
-            final LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem ).build();
+            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem ).build();
             bridge = new ReaderLogVersionBridge( logFiles )
             {
                 @Override
@@ -133,12 +133,12 @@ public class TransactionLogAnalyzer
         {
             // Use no bridging, simply reading this single log file if a file is supplied
             firstFile = storeDirOrLogFile;
-            final LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem ).build();
+            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem ).build();
             monitor.logFile( firstFile, logFiles.getLogVersion( firstFile ) );
             bridge = NO_MORE_CHANNELS;
         }
 
-        channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile ), bridge );
+        channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile, logFiles.getChannelNativeAccessor() ), bridge );
         entryReader = new VersionAwareLogEntryReader();
         positionMarker = new LogPositionMarker();
         try ( TransactionLogEntryCursor cursor = new TransactionLogEntryCursor( new LogEntryCursor( entryReader, channel ) ) )

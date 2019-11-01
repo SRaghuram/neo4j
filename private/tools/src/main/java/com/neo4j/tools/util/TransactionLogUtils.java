@@ -10,7 +10,6 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
@@ -20,9 +19,11 @@ import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.ReaderLogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 
 import static java.util.Objects.requireNonNull;
+import static org.neo4j.io.memory.ByteBuffers.allocate;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
@@ -38,7 +39,7 @@ public class TransactionLogUtils
             throws IOException
     {
         File firstFile = logFiles.getLogFileForVersion( logFiles.getLowestLogVersion() );
-        return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFiles ) );
+        return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFiles ), logFiles.getChannelNativeAccessor() );
     }
 
     /**
@@ -49,9 +50,9 @@ public class TransactionLogUtils
      * @param readerLogVersionBridge log version bridge to use
      */
     public static LogEntryCursor openLogEntryCursor( FileSystemAbstraction fileSystem, File file,
-            LogVersionBridge readerLogVersionBridge ) throws IOException
+            LogVersionBridge readerLogVersionBridge, ChannelNativeAccessor nativeAccessor ) throws IOException
     {
-        LogVersionedStoreChannel channel = openVersionedChannel( fileSystem, file );
+        LogVersionedStoreChannel channel = openVersionedChannel( fileSystem, file, nativeAccessor );
         ReadableLogChannel logChannel = new ReadAheadLogChannel( channel, readerLogVersionBridge );
         return new LogEntryCursor( new VersionAwareLogEntryReader(), logChannel );
     }
@@ -64,11 +65,12 @@ public class TransactionLogUtils
      * @return {@link LogVersionedStoreChannel} for the file. Its version is determined by its log header.
      * @throws IOException on I/O error.
      */
-    public static PhysicalLogVersionedStoreChannel openVersionedChannel( FileSystemAbstraction fileSystem, File file ) throws IOException
+    public static PhysicalLogVersionedStoreChannel openVersionedChannel( FileSystemAbstraction fileSystem, File file,
+            ChannelNativeAccessor nativeAccessor ) throws IOException
     {
         StoreChannel fileChannel = fileSystem.read( file );
-        LogHeader logHeader = readLogHeader( ByteBuffers.allocate( CURRENT_FORMAT_LOG_HEADER_SIZE ), fileChannel, true, file );
+        LogHeader logHeader = readLogHeader( allocate( CURRENT_FORMAT_LOG_HEADER_SIZE ), fileChannel, true, file );
         requireNonNull( logHeader, "There is no log header in log file '" + file + "', so it is likely a pre-allocated empty log file." );
-        return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.getLogVersion(), logHeader.getLogFormatVersion(), file );
+        return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.getLogVersion(), logHeader.getLogFormatVersion(), file, nativeAccessor );
     }
 }
