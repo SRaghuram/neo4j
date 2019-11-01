@@ -272,7 +272,8 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         var currentLeaderInfo = getLocalLeader( databaseId );
         if ( currentLeaderInfo.term() < newLeaderInfo.term() )
         {
-            log.info( "Leader %s updating leader info for database %s and term %s", memberId(), databaseId.name(), newLeaderInfo.term() );
+            log.info( "I am member %s. Updating leader info to member %s database %s and term %s", memberId(), newLeaderInfo.memberId(), databaseId.name(),
+                    newLeaderInfo.term() );
             localLeadersByDatabaseId.put( databaseId, newLeaderInfo );
             sendLeaderInfoIfNeeded( newLeaderInfo, databaseId );
         }
