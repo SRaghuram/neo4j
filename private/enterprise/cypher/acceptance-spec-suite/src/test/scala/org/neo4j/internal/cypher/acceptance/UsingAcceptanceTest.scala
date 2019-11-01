@@ -1001,7 +1001,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |RETURN count(*) as c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-      plan should includeSomewhere.nTimes(3, aPlan("NodeHashJoin"))
+      plan should includeSomewhere.nTimes(1, aPlan("NodeHashJoin"))
     }))
 
     result.toList should equal (List(Map("c" -> 4)))
