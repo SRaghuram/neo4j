@@ -115,7 +115,6 @@ public class CoreClusterMember implements ClusterMember
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_formation, clusterSize );
         config.set( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, clusterSize );
-        config.set( CausalClusteringSettings.leader_election_timeout, Duration.ofMillis( 500 ) );
         config.set( CausalClusteringSettings.raft_messages_log_enable, true );
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
