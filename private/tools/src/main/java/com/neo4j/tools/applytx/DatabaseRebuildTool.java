@@ -75,7 +75,7 @@ public class DatabaseRebuildTool
         {
             System.err.println( "Tool for rebuilding database from transaction logs onto a new store" );
             System.err.println( "Example: dbrebuild --from path/to/somedb --to path/to/newdb apply next" );
-            System.err.println( "         dbrebuild --from path/to/somedb --fromTx path/to/tx-logs/somedb --to path/to/new.db -i" );
+            System.err.println( "         dbrebuild --from path/to/somedb --fromTx path/to/transactions/somedb --to path/to/new.db -i" );
             System.err.println( "          --from : source for database for reading transactions" );
             System.err.println( "        --fromTx : source for transaction if they located in separate from store directory for reading transactions" );
             System.err.println( "            --to : where to build the new database" );
