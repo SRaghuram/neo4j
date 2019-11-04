@@ -38,7 +38,7 @@ db_and_workloads=(
  "recommendations;recommendations"
  "socialnetwork;socialnetwork"
  "osmnodes;osmnodes"
- "zero:zero")
+ "zero;zero")
 
 for i in "${db_and_workloads[@]}"; do
 
