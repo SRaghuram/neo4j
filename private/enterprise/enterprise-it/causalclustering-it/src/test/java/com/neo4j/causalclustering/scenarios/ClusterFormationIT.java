@@ -10,16 +10,12 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
@@ -27,60 +23,55 @@ import static com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolv
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @SkipThreadLeakageGuard
 @ClusterExtension
-@TestInstance( PER_METHOD )
+@Execution( CONCURRENT )
 public class ClusterFormationIT
 {
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster cluster;
-
-    @BeforeEach
-    void setup() throws Exception
-    {
-        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 ) );
-        cluster.start();
-    }
-
     @Test
     void shouldBeAbleToAddAndRemoveCoreMembers() throws Exception
     {
+        // given
+        var cluster = startCluster();
+
         // when
-        CoreClusterMember coreMember = getExistingCoreMember();
+        var coreMember = getExistingCoreMember( cluster );
         coreMember.shutdown();
         coreMember.start();
 
         // then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
 
         // when
-        removeCoreMember();
+        removeCoreMember( cluster );
 
         // then
-        verifyNumberOfCoresReportedByTopology( 2 );
+        verifyNumberOfCoresReportedByTopology( 2, cluster );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
     }
 
     @Test
     void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws Exception
     {
         // given
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        GraphDatabaseFacade leader = cluster.awaitLeader().defaultDatabase();
+        var cluster = startCluster();
+        var executorService = Executors.newSingleThreadExecutor();
+        var leader = cluster.awaitLeader().defaultDatabase();
         executorService.submit( () ->
         {
-            try ( Transaction tx = leader.beginTx() )
+            try ( var tx = leader.beginTx() )
             {
                 tx.createNode();
                 tx.commit();
@@ -88,24 +79,24 @@ public class ClusterFormationIT
         } );
 
         // when
-        CoreClusterMember coreMember = getExistingCoreMember();
+        var coreMember = getExistingCoreMember( cluster );
         coreMember.shutdown();
         coreMember.start();
 
         // then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
 
         // when
-        removeCoreMember();
+        removeCoreMember( cluster );
 
         // then
-        verifyNumberOfCoresReportedByTopology( 2 );
+        verifyNumberOfCoresReportedByTopology( 2, cluster );
 
         // when
         cluster.newCoreMember().start();
 
         // then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
 
         executorService.shutdown();
     }
@@ -113,18 +104,21 @@ public class ClusterFormationIT
     @Test
     void shouldBeAbleToRestartTheCluster() throws Exception
     {
+        // given
+        var cluster = startCluster();
+
         // when started then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
 
         // when
         cluster.shutdown();
         cluster.start();
 
         // then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
 
         // when
-        removeCoreMember();
+        removeCoreMember( cluster );
 
         cluster.newCoreMember().start();
         cluster.shutdown();
@@ -132,10 +126,17 @@ public class ClusterFormationIT
         cluster.start();
 
         // then
-        verifyNumberOfCoresReportedByTopology( 3 );
+        verifyNumberOfCoresReportedByTopology( 3, cluster );
     }
 
-    private CoreClusterMember getExistingCoreMember()
+    private Cluster startCluster() throws Exception
+    {
+        var cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 ) );
+        cluster.start();
+        return cluster;
+    }
+
+    private static CoreClusterMember getExistingCoreMember( Cluster cluster )
     {
         // return the core listed last in discovery members
         // never return the first core in discovery members because it might be stopped and then Akka cluster can't bootstrap
@@ -145,13 +146,12 @@ public class ClusterFormationIT
                 .orElseThrow();
     }
 
-    private void removeCoreMember()
+    private static void removeCoreMember( Cluster cluster )
     {
-        var existingCoreMember = getExistingCoreMember();
-        cluster.removeCoreMember( existingCoreMember );
+        cluster.removeCoreMember( getExistingCoreMember( cluster ) );
     }
 
-    private void verifyNumberOfCoresReportedByTopology( int expected ) throws InterruptedException
+    private static void verifyNumberOfCoresReportedByTopology( int expected, Cluster cluster ) throws InterruptedException
     {
         assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), is( expected ), 30, SECONDS );
     }
