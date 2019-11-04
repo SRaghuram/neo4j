@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology;
 
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import org.neo4j.kernel.database.DatabaseId;
@@ -15,12 +16,12 @@ import org.neo4j.kernel.database.DatabaseId;
 public class RaftIdSettingMessage
 {
     private final RaftId raftId;
-    private final DatabaseId database;
+    private final MemberId publisher;
 
-    public RaftIdSettingMessage( RaftId raftId, DatabaseId databaseId )
+    public RaftIdSettingMessage( RaftId raftId, MemberId publisher )
     {
         this.raftId = raftId;
-        this.database = databaseId;
+        this.publisher = publisher;
     }
 
     public RaftId raftId()
@@ -28,8 +29,8 @@ public class RaftIdSettingMessage
         return raftId;
     }
 
-    public DatabaseId database()
+    public MemberId publisher()
     {
-        return database;
+        return publisher;
     }
 }

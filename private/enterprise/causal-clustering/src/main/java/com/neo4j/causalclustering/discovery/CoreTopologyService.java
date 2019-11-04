@@ -26,11 +26,9 @@ public interface CoreTopologyService extends TopologyService
      * Should only succeed to publish if one missing or already the same (CAS logic).
      *
      * @param raftId The Raft ID to publish.
-     * @param databaseId The database ID to publish.
-     *
      * @return True if the raft ID was successfully CAS:ed, otherwise false.
      */
-    boolean setRaftId( RaftId raftId, DatabaseId databaseId ) throws InterruptedException;
+    boolean setRaftId( RaftId raftId ) throws InterruptedException;
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).

@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.monitoring;
 public enum ReplicatedDataIdentifier
 {
     METADATA( "member-data" ),
-    RAFT_ID( "raft-id-per-db-name" ),
+    RAFT_ID( "raft-id-published-by-member" ),
     DIRECTORY( "per-db-leader-name" );
 
     private final String keyName;

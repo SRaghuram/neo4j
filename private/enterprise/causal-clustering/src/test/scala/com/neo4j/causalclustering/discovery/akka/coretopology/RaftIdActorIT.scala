@@ -5,13 +5,14 @@
  */
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
+import java.util.UUID
+
 import akka.actor.ActorRef
 import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.identity.RaftId
-import org.neo4j.kernel.database.DatabaseId
+import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
 
 class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
@@ -21,35 +22,63 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
 
     "update replicator with raft ID from this core server" in new Fixture {
       When("send raft ID locally")
-      val databaseId = randomDatabaseId()
-      replicatedDataActorRef ! new RaftIdSettingMessage(RaftId.from(databaseId), databaseId)
+      val memberId = new MemberId(UUID.randomUUID)
+      replicatedDataActorRef ! new RaftIdSettingMessage(RaftId.from(randomDatabaseId), memberId)
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)
     }
 
-    "send raft ID to core topology actor from replicator" in new Fixture {
+    "send bootstrapped raft IDs to core topology actor from replicator" in new Fixture {
       Given("raft IDs for databases")
-      val db1Id = randomDatabaseId()
-      val db2Id = randomDatabaseId()
-      val db1 = LWWMap.empty.put(cluster, db1Id, RaftId.from(db1Id))
-      val db2 = LWWMap.empty.put(cluster, db2Id, RaftId.from(db2Id))
+      val memberId = new MemberId(UUID.randomUUID)
+      val db1Id = randomDatabaseId
+      val db2Id = randomDatabaseId
+      val bootstrappedRaft1 = LWWMap.empty.put(cluster, RaftId.from(db1Id), memberId)
+      val bootstrappedRaft2 = LWWMap.empty.put(cluster, RaftId.from(db2Id), memberId)
 
       When("raft IDs updated from replicator")
-      replicatedDataActorRef ! Replicator.Changed(dataKey)(db1)
-      replicatedDataActorRef ! Replicator.Changed(dataKey)(db2)
+      replicatedDataActorRef ! Replicator.Changed(dataKey)(bootstrappedRaft1)
+      replicatedDataActorRef ! Replicator.Changed(dataKey)(bootstrappedRaft2)
 
       Then("send updates to core topology actor")
-      coreTopologyProbe.expectMsg(new RaftIdDirectoryMessage(db1))
-      coreTopologyProbe.expectMsg(new RaftIdDirectoryMessage(db1.merge(db2)))
+      coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.getEntries.keySet))
+      coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.merge(bootstrappedRaft2).getEntries.keySet))
+    }
+
+    "refuse to update replicators with additional raft ID" in new Fixture {
+      Given("a raft id and 2 publishers")
+      val databaseId = randomDatabaseId
+      val raftId = RaftId.from(databaseId)
+      val memberId1 = new MemberId(UUID.randomUUID)
+      val memberId2 = new MemberId(UUID.randomUUID)
+
+      When("2 members are both sending both raft IDs")
+      Then("Only the first cluster ID should be persisted")
+      val expected = LWWMap.empty.put(cluster, raftId, memberId1)
+
+      replicatedDataActorRef ! new RaftIdSettingMessage(raftId, memberId1)
+      expectClusterIdReplicatorUpdatesWithOutcome(LWWMap.empty, expected)
+      replicatedDataActorRef ! new RaftIdSettingMessage(raftId, memberId2)
+      expectClusterIdReplicatorUpdatesWithOutcome(expected, expected)
     }
   }
 
-  class Fixture extends ReplicatedDataActorFixture[LWWMap[DatabaseId, RaftId]] {
-    override val dataKey: Key[LWWMap[DatabaseId, RaftId]] = LWWMapKey(ReplicatedDataIdentifier.RAFT_ID.keyName())
-    override val data = LWWMap.empty[DatabaseId, RaftId]
+  class Fixture extends ReplicatedDataActorFixture[LWWMap[RaftId,MemberId]] {
+    override val dataKey: Key[LWWMap[RaftId,MemberId]] = LWWMapKey(ReplicatedDataIdentifier.RAFT_ID.keyName())
+    override val data = LWWMap.empty[RaftId,MemberId]
     val coreTopologyProbe = TestProbe("coreTopologyActor")
     val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
+
+    def expectClusterIdReplicatorUpdatesWithOutcome(initial: LWWMap[RaftId,MemberId], expected: LWWMap[RaftId,MemberId]): Unit =
+    {
+      replicator.fishForSpecificMessage(defaultWaitTime) {
+        case update @ Replicator.Update(`dataKey`, _, _) =>
+          val mapUpdate = update.asInstanceOf[Replicator.Update[LWWMap[RaftId,MemberId]]]
+          val result: java.util.Map[RaftId,MemberId] = mapUpdate.modify(Option(initial)).getEntries()
+          assert(result == expected.getEntries())
+      }
+    }
   }
 }

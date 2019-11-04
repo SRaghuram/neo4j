@@ -190,12 +190,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public boolean setRaftId( RaftId raftId, DatabaseId databaseId )
+    public boolean setRaftId( RaftId raftId )
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
-            coreTopologyActor.tell( new RaftIdSettingMessage( raftId, databaseId ), noSender() );
+            coreTopologyActor.tell( new RaftIdSettingMessage( raftId, myself ), noSender() );
             return true;
         }
         return false;

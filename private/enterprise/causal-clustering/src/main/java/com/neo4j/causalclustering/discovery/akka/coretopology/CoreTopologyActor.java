@@ -19,6 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
+import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Collection;
 import java.util.Set;
@@ -67,7 +68,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
     // Topology component data
     private MetadataMessage memberData;
-    private RaftIdDirectoryMessage raftIdPerDb;
+    private Set<RaftId> bootstrappedRafts;
     private ClusterViewMessage clusterView;
 
     private CoreTopologyActor( DiscoveryMember myself,
@@ -86,7 +87,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.readReplicaTopologyActor = readReplicaTopologyActor;
         this.topologyBuilder = topologyBuilder;
         this.memberData = MetadataMessage.EMPTY;
-        this.raftIdPerDb = RaftIdDirectoryMessage.EMPTY;
+        this.bootstrappedRafts = emptySet();
         this.clusterView = ClusterViewMessage.EMPTY;
         this.myClusterAddress = cluster.selfUniqueAddress();
         this.config = config;
@@ -104,7 +105,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         return receiveBuilder()
                 .match( ClusterViewMessage.class,        this::handleClusterViewMessage)
                 .match( MetadataMessage.class,           this::handleMetadataMessage )
-                .match( RaftIdDirectoryMessage.class,    this::handleRaftIdDirectoryMessage )
+                .match( BootstrappedRaftsMessage.class,    this::handleRaftIdDirectoryMessage )
                 .match( RaftIdSettingMessage.class,      this::handleRaftIdSettingMessage )
                 .match( DatabaseStartedMessage.class,    this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class,    this::handleDatabaseStoppedMessage )
@@ -123,9 +124,9 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         buildTopologies();
     }
 
-    private void handleRaftIdDirectoryMessage( RaftIdDirectoryMessage message )
+    private void handleRaftIdDirectoryMessage( BootstrappedRaftsMessage message )
     {
-        raftIdPerDb = message;
+        bootstrappedRafts = message.bootstrappedRafts();
         buildTopologies();
     }
 
@@ -166,7 +167,11 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
     private void buildTopology( DatabaseId databaseId )
     {
         log().debug( "Building new view of core topology from actor {}, cluster state is: {}, metadata is {}", myClusterAddress, clusterView, memberData );
-        DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, raftIdPerDb.get( databaseId ), clusterView, memberData );
+
+        var raftId = RaftId.from( databaseId );
+        raftId = bootstrappedRafts.contains( raftId ) ? raftId : null;
+
+        DatabaseCoreTopology newCoreTopology = topologyBuilder.buildCoreTopology( databaseId, raftId, clusterView, memberData );
         log().debug( "Returned topology: {}", newCoreTopology );
 
         Collection<Address> akkaMemberAddresses = clusterView.members()

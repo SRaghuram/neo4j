@@ -189,7 +189,7 @@ class RaftBinderTest
         RaftId previouslyBoundRaftId = RaftId.from( SOME_DATABASE_ID );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setRaftId( previouslyBoundRaftId, SOME_DATABASE_ID ) ).thenReturn( true );
+        when( topologyService.setRaftId( previouslyBoundRaftId ) ).thenReturn( true );
 
         InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
@@ -200,7 +200,7 @@ class RaftBinderTest
         binder.bindToRaft( neverAbort() );
 
         // then
-        verify( topologyService ).setRaftId( previouslyBoundRaftId, SOME_DATABASE_ID );
+        verify( topologyService ).setRaftId( previouslyBoundRaftId );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( previouslyBoundRaftId, raftId.get() );
@@ -213,7 +213,7 @@ class RaftBinderTest
         RaftId previouslyBoundRaftId = RaftId.from( SOME_DATABASE_ID );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setRaftId( previouslyBoundRaftId, SOME_DATABASE_ID ) ).thenReturn( false );
+        when( topologyService.setRaftId( previouslyBoundRaftId ) ).thenReturn( false );
 
         InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
@@ -246,7 +246,7 @@ class RaftBinderTest
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( topology );
-        when( topologyService.setRaftId( any(), eq( databaseId ) ) ).thenReturn( true );
+        when( topologyService.setRaftId( any() ) ).thenReturn( true );
         when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
 
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
@@ -263,7 +263,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), databaseId.uuid() );
-        verify( topologyService ).setRaftId( raftId.get(), databaseId );
+        verify( topologyService ).setRaftId( raftId.get() );
         assertTrue( boundState.snapshot().isPresent() );
         assertEquals( snapshot, boundState.snapshot().get() );
     }
@@ -282,7 +282,7 @@ class RaftBinderTest
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( SOME_DATABASE_ID ) ).thenReturn( topology );
-        when( topologyService.setRaftId( any(), eq( SOME_DATABASE_ID ) ) ).thenReturn( true );
+        when( topologyService.setRaftId( any() ) ).thenReturn( true );
         when( topologyService.canBootstrapRaftGroup( SOME_DATABASE_ID ) ).thenReturn( true );
 
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
@@ -299,7 +299,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), SOME_DATABASE_ID.uuid() );
-        verify( topologyService ).setRaftId( raftId.get(), SOME_DATABASE_ID );
+        verify( topologyService ).setRaftId( raftId.get() );
         assertTrue( boundState.snapshot().isPresent() );
         assertEquals( snapshot, boundState.snapshot().get() );
     }

@@ -36,8 +36,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
         "raft id updated" in new Fixture {
           Given("updated raft ID data")
           makeTopologyActorKnowAboutCoreMember()
-          val raftIdData = Map(databaseId -> raftId).asJava
-          val event = new RaftIdDirectoryMessage(raftIdData)
+          val event = new BootstrappedRaftsMessage(Collections.singleton(raftId))
 
           When("data received")
           topologyActorRef ! event
@@ -92,8 +91,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
           makeTopologyActorKnowAboutCoreMember(nullRaftIdTopology)
 
           When("update raft ID")
-          val raftIdData = Map(databaseId -> raftId).asJava
-          val event = new RaftIdDirectoryMessage(raftIdData)
+          val event = new BootstrappedRaftsMessage(Collections.singleton(raftId))
           Mockito.when(topologyBuilder.buildCoreTopology(ArgumentMatchers.eq(databaseId), any(), any(), any()))
             .thenReturn(expectedCoreTopology)
           topologyActorRef ! event
@@ -140,7 +138,7 @@ class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
         "cluster id updated" in new Fixture {
           Given("metadata and cluster ID messages")
           val metadataMessage = newMetadataMessage(databaseId)
-          val raftIdMessage = new RaftIdDirectoryMessage(Map(databaseId -> raftId).asJava)
+          val raftIdMessage = new BootstrappedRaftsMessage(Collections.singleton(raftId))
 
           When("messages received")
           topologyActorRef ! metadataMessage

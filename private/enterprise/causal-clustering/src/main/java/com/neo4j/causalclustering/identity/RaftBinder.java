@@ -231,7 +231,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private void publishRaftId( RaftId localRaftId ) throws BindingException, InterruptedException
     {
-        boolean success = topologyService.setRaftId( localRaftId, databaseId );
+        boolean success = topologyService.setRaftId( localRaftId );
         if ( !success )
         {
             throw new BindingException( "Failed to publish: " + localRaftId );

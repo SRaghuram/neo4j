@@ -13,13 +13,12 @@ import akka.cluster.ddata.LWWMapKey;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-
-import org.neo4j.kernel.database.DatabaseId;
 
 import static com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier.RAFT_ID;
 
-public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,RaftId>>
+public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,MemberId>>
 {
     private final ActorRef coreTopologyActor;
 
@@ -46,15 +45,22 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<DatabaseId,RaftI
         builder.match( RaftIdSettingMessage.class, message ->
                 {
                     log().debug( "Setting RaftId: {}", message );
-                    modifyReplicatedData( key, map -> map.put( cluster, message.database(), message.raftId() ) );
+                    modifyReplicatedData( key, map ->
+                    {
+                        if ( map.contains( message.raftId() ) )
+                        {
+                            return map;
+                        }
+                        return map.put( cluster, message.raftId(), message.publisher() );
+                    } );
                 } );
     }
 
     @Override
-    protected void handleIncomingData( LWWMap<DatabaseId,RaftId> newData )
+    protected void handleIncomingData( LWWMap<RaftId,MemberId> newData )
     {
         data = newData;
-        coreTopologyActor.tell( new RaftIdDirectoryMessage( data ), getSelf() );
+        coreTopologyActor.tell( new BootstrappedRaftsMessage( data.getEntries().keySet() ), getSelf() );
     }
 
     @Override
