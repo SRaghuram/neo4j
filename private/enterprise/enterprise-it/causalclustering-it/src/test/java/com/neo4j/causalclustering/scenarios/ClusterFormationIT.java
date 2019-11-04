@@ -10,10 +10,14 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.test.extension.Inject;
@@ -23,8 +27,12 @@ import static com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolv
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
+import static org.neo4j.internal.helpers.collection.Iterables.last;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @SkipThreadLeakageGuard
@@ -32,8 +40,17 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 @Execution( CONCURRENT )
 public class ClusterFormationIT
 {
+    private static final ExecutorService executor = Executors.newCachedThreadPool( daemon( "thread-" + ClusterFormationIT.class.getSimpleName() ) );
+
     @Inject
     private ClusterFactory clusterFactory;
+
+    @AfterAll
+    static void stopExecutor() throws Exception
+    {
+        executor.shutdownNow();
+        assertTrue( executor.awaitTermination( 30, SECONDS ), () -> "Executor " + executor + " did not shutdown in time" );
+    }
 
     @Test
     void shouldBeAbleToAddAndRemoveCoreMembers() throws Exception
@@ -63,20 +80,12 @@ public class ClusterFormationIT
     }
 
     @Test
-    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws Exception
+    void shouldBeAbleToAddAndRemoveCoreMembersUnderModestLoad() throws Throwable
     {
         // given
         var cluster = startCluster();
-        var executorService = Executors.newSingleThreadExecutor();
-        var leader = cluster.awaitLeader().defaultDatabase();
-        executorService.submit( () ->
-        {
-            try ( var tx = leader.beginTx() )
-            {
-                tx.createNode();
-                tx.commit();
-            }
-        } );
+        var stop = new AtomicBoolean();
+        var loadFuture = executor.submit( () -> applyLoad( cluster, stop ) );
 
         // when
         var coreMember = getExistingCoreMember( cluster );
@@ -98,7 +107,8 @@ public class ClusterFormationIT
         // then
         verifyNumberOfCoresReportedByTopology( 3, cluster );
 
-        executorService.shutdown();
+        stop.set( true );
+        assertNull( loadFuture.get( 30, SECONDS ) );
     }
 
     @Test
@@ -136,14 +146,27 @@ public class ClusterFormationIT
         return cluster;
     }
 
+    private static Void applyLoad( Cluster cluster, AtomicBoolean stop ) throws Exception
+    {
+        while ( !stop.get() )
+        {
+            cluster.coreTx( ( db, tx ) ->
+            {
+                tx.createNode();
+                tx.commit();
+            } );
+            Thread.sleep( 500 );
+        }
+        return null;
+    }
+
     private static CoreClusterMember getExistingCoreMember( Cluster cluster )
     {
         // return the core listed last in discovery members
         // never return the first core in discovery members because it might be stopped and then Akka cluster can't bootstrap
-        return cluster.coreMembers()
-                .stream()
-                .max( ClusterFormationIT::compareDiscoveryAddresses )
-                .orElseThrow();
+        var cores = new ArrayList<>( cluster.coreMembers() );
+        cores.sort( ClusterFormationIT::compareDiscoveryAddresses );
+        return last( cores );
     }
 
     private static void removeCoreMember( Cluster cluster )
