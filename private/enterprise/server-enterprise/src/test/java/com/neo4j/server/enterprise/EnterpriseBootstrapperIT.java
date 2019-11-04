@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     @Override
     protected DatabaseManagementService newEmbeddedDbms( File homeDir )
     {
-        return new EnterpriseDatabaseManagementServiceBuilder( homeDir ).build();
+        return new TestEnterpriseDatabaseManagementServiceBuilder( homeDir ).build();
     }
 
     @Test
