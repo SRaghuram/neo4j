@@ -37,7 +37,8 @@ db_and_workloads=(
  "qmul;qmul_read"
  "recommendations;recommendations"
  "socialnetwork;socialnetwork"
- "osmnodes;osmnodes")
+ "osmnodes;osmnodes"
+ "zero:zero")
 
 for i in "${db_and_workloads[@]}"; do
 
