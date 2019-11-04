@@ -50,6 +50,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
@@ -410,21 +411,9 @@ class EndToEndTest
             tx.success();
         }
 
-        List<Integer> shardIds = r.stream()
-                .map( c -> c.get( "Sid" ).asInt() )
-                .collect( Collectors.toList() );
-
-        List<Node> persons = r.stream()
-                .map( c -> c.get( "Person" ).asNode() )
-                .collect( Collectors.toList() );
-
-        assertThat( shardIds, equalTo( List.of( 0, 0, 1, 1 ) ) );
-
-        assertThat( r.size(), equalTo( 4 ) );
-        verifyPerson( persons, 0, "Anna" );
-        verifyPerson( persons, 1, "Bob" );
-        verifyPerson( persons, 2, "Carrie" );
-        verifyPerson( persons, 3, "Dave" );
+        assertEquals( 4, r.size() );
+        var personToSid = r.stream().collect( Collectors.toMap( e -> e.get( "Person" ).asNode().get( "name" ).asString(), e -> e.get( "Sid" ).asInt() ) );
+        assertEquals( personToSid, Map.of( "Anna", 0, "Bob", 0, "Carrie", 1, "Dave", 1 ) );
     }
 
     @Test
