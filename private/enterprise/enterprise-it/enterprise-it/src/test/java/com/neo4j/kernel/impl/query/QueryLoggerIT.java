@@ -23,6 +23,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,15 +36,11 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -55,8 +52,10 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.lessThan;
@@ -88,11 +87,9 @@ class QueryLoggerIT
 
     private File logsDirectory;
     private File logFilename;
-    private GraphDatabaseFacade db;
     private GraphDatabaseFacade systemDb;
-    private GraphDatabaseService database;
+    private GraphDatabaseFacade database;
     private DatabaseManagementService databaseManagementService;
-    private DatabaseManagementService dbManagementService;
 
     @BeforeEach
     void setUp()
@@ -109,14 +106,46 @@ class QueryLoggerIT
     @AfterEach
     void tearDown()
     {
-        if ( db != null )
-        {
-            dbManagementService.shutdown();
-        }
         if ( database != null )
         {
             databaseManagementService.shutdown();
         }
+    }
+
+    @Test
+    void shouldLogSystemCommandOnlyOnce() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.auth_enabled, true );
+        buildDatabase();
+
+        // WHEN
+        executeSystemCommandSuperUser( "CREATE USER foo SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "CREATE ROLE role IF NOT EXISTS" );
+        executeSystemCommandSuperUser( "GRANT ROLE role TO foo" );
+        executeSystemCommandSuperUser( "GRANT ACCESS ON DATABASE * TO role" );
+        executeSystemCommandSuperUser( "SHOW USERS" );
+        executeSystemCommandSuperUser( "SHOW DATABASES" );
+        executeSystemCommandSuperUser( "DROP USER foo" );
+        executeSystemCommandSuperUser( "DROP ROLE role" );
+
+        databaseManagementService.shutdown();
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        assertThat( logLines.size(), equalTo( 8 ) );
+        String connectionDetails = connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME );
+        assertThat( logLines, contains(
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "CREATE ROLE role IF NOT EXISTS" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "GRANT ROLE role TO foo" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "GRANT ACCESS ON DATABASE * TO role" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "SHOW USERS" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "SHOW DATABASES" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "DROP USER foo" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "DROP ROLE role" ) )
+        ) );
     }
 
     @Test
@@ -126,15 +155,13 @@ class QueryLoggerIT
         databaseBuilder.setConfig( auth_enabled, true )
                        .setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() )
                        .setConfig( log_queries, LogQueryLevel.INFO );
-        dbManagementService = databaseBuilder.build();
-        db = (GraphDatabaseFacade) dbManagementService.database( DEFAULT_DATABASE_NAME );
-        systemDb = (GraphDatabaseFacade) dbManagementService.database( SYSTEM_DATABASE_NAME );
+        buildDatabase();
 
         // create users
-        executeOnSystem( "CREATE USER mats SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
-        executeOnSystem( "CREATE USER andres SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
-        executeOnSystem( "GRANT ROLE architect TO mats" );
-        executeOnSystem( "GRANT ROLE reader TO andres" );
+        executeSystemCommandSuperUser( "CREATE USER mats SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "CREATE USER andres SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "GRANT ROLE architect TO mats" );
+        executeSystemCommandSuperUser( "GRANT ROLE reader TO andres" );
         EnterpriseLoginContext mats = login( "mats", "neo4j" );
 
         // run query
@@ -145,7 +172,7 @@ class QueryLoggerIT
         EnterpriseLoginContext andres = login( "andres", "neo4j" );
         executeQuery( andres, "MATCH (n:Label) RETURN n", emptyMap() );
 
-        dbManagementService.shutdown();
+        databaseManagementService.shutdown();
 
         // THEN
         List<String> logLines = readAllUserQueryLines( logFilename );
@@ -160,20 +187,18 @@ class QueryLoggerIT
     void shouldLogTXMetaDataInQueryLog() throws Throwable
     {
         // turn on query logging
-        databaseBuilder.setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() );
-        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO );
-        databaseBuilder.setConfig( auth_enabled, true );
-        dbManagementService = databaseBuilder.build();
-        db = (GraphDatabaseFacade) dbManagementService.database( DEFAULT_DATABASE_NAME );
-        systemDb = (GraphDatabaseFacade) dbManagementService.database( SYSTEM_DATABASE_NAME );
+        databaseBuilder.setConfig( logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( auth_enabled, true );
+        buildDatabase();
 
-        executeOnSystem( "ALTER USER neo4j SET PASSWORD '123' CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD '123' CHANGE NOT REQUIRED" );
 
         EnterpriseLoginContext subject = login( "neo4j", "123" );
         executeQuery( subject, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap() );
 
         // Set meta data and execute query in transaction
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, subject ) )
+        try ( InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, subject ) )
         {
             tx.execute( "CALL dbms.setTXMetaData( { User: 'Johan' } )", emptyMap() );
             tx.execute( "CALL dbms.procedures() YIELD name RETURN name", emptyMap() ).close();
@@ -183,14 +208,14 @@ class QueryLoggerIT
         }
 
         // Ensure that old meta data is not retained
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, subject ) )
+        try ( InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, subject ) )
         {
             tx.execute( "CALL dbms.setTXMetaData( { Location: 'Sweden' } )", emptyMap() );
             tx.execute( "MATCH ()-[r]-() RETURN count(r)", emptyMap() ).close();
             tx.commit();
         }
 
-        dbManagementService.shutdown();
+        databaseManagementService.shutdown();
 
         // THEN
         List<String> logLines = readAllUserQueryLines( logFilename );
@@ -211,12 +236,13 @@ class QueryLoggerIT
     @Test
     void shouldLogQuerySlowerThanThreshold() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
+        buildDatabase();
 
-        executeQueryAndShutdown( database );
+        executeQuery( QUERY );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
@@ -227,13 +253,13 @@ class QueryLoggerIT
     @Test
     void shouldLogQueryStart() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
-                .build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
+        buildDatabase();
 
-        executeQueryAndShutdown( database );
+        executeQuery( QUERY );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 2, logLines.size() );
@@ -243,14 +269,14 @@ class QueryLoggerIT
     @Test
     void shouldIgnoreThreshold() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
-                .setConfig( GraphDatabaseSettings.log_queries_threshold, Duration.ofSeconds( 6 ) )
-                .build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
+                       .setConfig( GraphDatabaseSettings.log_queries_threshold, Duration.ofSeconds( 6 ) );
+        buildDatabase();
 
-        executeQueryAndShutdown( database );
+        executeQuery( QUERY );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 2, logLines.size() );
@@ -260,15 +286,15 @@ class QueryLoggerIT
     @Test
     void shouldObeyLevelChangeDuringRuntime() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
-                .build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
+        buildDatabase();
 
-        executeQueryAndShutdown( database );
-        executeQueryAndShutdown( database, "call dbms.setConfigValue('" + GraphDatabaseSettings.log_queries.name() + "', 'verbose')", emptyMap() );
-        executeQueryAndShutdown( database );
+        executeQuery( QUERY );
+        executeQuery( "call dbms.setConfigValue('" + GraphDatabaseSettings.log_queries.name() + "', 'verbose')" );
+        executeQuery( QUERY );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.stream().filter( line -> line.contains( "Query started:" ) ).count() );
@@ -277,10 +303,10 @@ class QueryLoggerIT
     @Test
     void shouldLogParametersWhenNestedMap() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true );
+        buildDatabase();
 
         Map<String,Object> props = new LinkedHashMap<>(); // to be sure about ordering in the last assertion
         props.put( "name", "Roland" );
@@ -291,7 +317,7 @@ class QueryLoggerIT
         params.put( "props", props );
 
         String query = "CREATE ($props)";
-        executeQueryAndShutdown( database, query, params );
+        executeQuery( query, params );
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
@@ -306,13 +332,14 @@ class QueryLoggerIT
     @Test
     void shouldLogRuntime() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
+        buildDatabase();
 
         String query = "CYPHER runtime=slotted RETURN 42";
-        executeQueryAndShutdown( database, query, emptyMap() );
+        executeQuery( query );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
@@ -325,14 +352,15 @@ class QueryLoggerIT
     @Test
     void shouldLogParametersWhenList() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+        buildDatabase();
 
         Map<String,Object> params = new HashMap<>();
         params.put( "ids", Arrays.asList( 0, 1, 2 ) );
         String query = "MATCH (n) WHERE id(n) in $ids RETURN n.name";
-        executeQueryAndShutdown( database, query, params );
+        executeQuery( query, params );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
@@ -344,11 +372,12 @@ class QueryLoggerIT
     @Test
     void disabledQueryLogging()
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
-                .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
+                       .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() );
+        buildDatabase();
 
-        executeQueryAndShutdown( database );
+        executeQuery( QUERY );
+        databaseManagementService.shutdown();
 
         assertFalse( fileSystem.fileExists( logFilename ) );
     }
@@ -359,19 +388,15 @@ class QueryLoggerIT
         final File logsDirectory = new File( testDirectory.homeDir(), "logs" );
         final File logFilename = new File( logsDirectory, "query.log" );
         final File shiftedLogFilename1 = new File( logsDirectory, "query.log.1" );
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 0L ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 0L );
+        buildDatabase();
 
         // Logging is done asynchronously, so write many times to make sure we would have rotated something
         for ( int i = 0; i < 100; i++ )
         {
-            try ( Transaction transaction = database.beginTx() )
-            {
-                transaction.execute( QUERY );
-                transaction.commit();
-            }
+            executeQuery( QUERY );
         }
 
         databaseManagementService.shutdown();
@@ -387,22 +412,17 @@ class QueryLoggerIT
     {
         final File logsDirectory = new File( testDirectory.homeDir(), "logs" );
         databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )
-                .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 1L );
-        databaseManagementService = databaseBuilder.build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_max_archives, 100 )
+                       .setConfig( GraphDatabaseSettings.log_queries_rotation_threshold, 1L );
+        buildDatabase();
 
         // Logging is done asynchronously, and it turns out it's really hard to make it all work the same on Linux
         // and on Windows, so just write many times to make sure we rotate several times.
 
         for ( int i = 0; i < 100; i++ )
         {
-            try ( Transaction transaction = database.beginTx() )
-            {
-                transaction.execute( QUERY );
-                transaction.commit();
-            }
+            executeQuery( QUERY );
         }
 
         databaseManagementService.shutdown();
@@ -416,8 +436,7 @@ class QueryLoggerIT
                                            .collect( Collectors.toList() );
         assertThat( "Expected log file to have at least one log entry", loggedQueries, hasSize( 100 ) );
 
-        databaseManagementService = databaseBuilder.build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        buildDatabase();
         try ( Transaction transaction = database.beginTx() )
         {
             // Now modify max_archives and rotation_threshold at runtime, and observe that we end up with fewer larger files
@@ -445,27 +464,15 @@ class QueryLoggerIT
     @Test
     void shouldNotLogPasswordWhenChanging() throws Exception
     {
-        databaseManagementService = databaseBuilder
+        databaseBuilder
                 .setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+                .setConfig( GraphDatabaseSettings.auth_enabled, true );
+        buildDatabase();
 
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        String query = "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc123'";
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( query );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
+        EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
+        executeQueryOnSystem ( neo, "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc123'", Collections.emptyMap() );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
@@ -477,29 +484,17 @@ class QueryLoggerIT
     @Test
     void shouldNotLogPasswordWhenChangedByAdmin() throws Exception
     {
-        databaseManagementService = databaseBuilder
-                .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.auth_enabled, true );
+        buildDatabase();
 
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
         executeSystemCommandSuperUser( "CREATE USER foo SET PASSWORD '123abc'" );
 
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( "ALTER USER foo SET PASSWORD 'abc123'" );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
+        EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
+        executeQueryOnSystem( neo, "ALTER USER foo SET PASSWORD 'abc123'", Collections.emptyMap() );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
@@ -511,29 +506,17 @@ class QueryLoggerIT
     @Test
     void shouldNotLogPasswordWhenChangedByAdminProcedure() throws Exception
     {
-        databaseManagementService = databaseBuilder
-                .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.auth_enabled, true );
+        buildDatabase();
 
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
         executeSystemCommandSuperUser( "CREATE USER foo SET PASSWORD '123abc'" );
 
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( "CALL dbms.security.changeUserPassword('foo', 'abc123')" );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
+        EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
+        executeQueryOnSystem( neo, "CALL dbms.security.changeUserPassword('foo', 'abc123')", Collections.emptyMap() );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
@@ -545,28 +528,16 @@ class QueryLoggerIT
     @Test
     void shouldNotLogPasswordForCreate() throws Exception
     {
-        databaseManagementService = databaseBuilder
-                .setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.auth_enabled, true );
+        buildDatabase();
 
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
 
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( "CREATE USER foo SET PASSWORD \"abc123\"" );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
+        EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
+        executeQueryOnSystem ( neo, "CREATE USER foo SET PASSWORD \"abc123\"", Collections.emptyMap() );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
@@ -578,28 +549,17 @@ class QueryLoggerIT
     @Test
     void shouldNotLogPasswordForCreateWithProcedureOnSystem() throws Exception
     {
-        databaseManagementService = databaseBuilder
+        databaseBuilder
                 .setConfig( log_queries, LogQueryLevel.INFO )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
-        database = databaseManagementService.database( SYSTEM_DATABASE_NAME );
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
+                .setConfig( GraphDatabaseSettings.auth_enabled, true );
+        buildDatabase();
 
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
 
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )
-        {
-            Result res = tx.execute( "CALL dbms.security.createUser('foo', 'abc123')" );
-            res.close();
-            tx.commit();
-        }
-        finally
-        {
-            databaseManagementService.shutdown();
-        }
+        EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
+        executeQueryOnSystem ( neo, "CALL dbms.security.createUser('foo', 'abc123')", Collections.emptyMap() );
+        databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
         var lastEntry = logLines.size() - 1;
@@ -611,9 +571,9 @@ class QueryLoggerIT
     @Test
     void canBeEnabledAndDisabledAtRuntime() throws Exception
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
-                .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.OFF )
+                       .setConfig( log_queries_filename, logFilename.toPath().toAbsolutePath() );
+        buildDatabase();
         List<String> strings;
 
         try
@@ -669,36 +629,24 @@ class QueryLoggerIT
 
     private void executeSingleQueryWithTimeZoneLog()
     {
-        databaseManagementService = databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
-                .setConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
-                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() ).build();
-        database = databaseManagementService.database( DEFAULT_DATABASE_NAME );
-        try ( Transaction transaction = database.beginTx() )
-        {
-            transaction.execute( QUERY ).close();
-            transaction.commit();
-        }
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+        buildDatabase();
+        executeQuery( QUERY );
         databaseManagementService.shutdown();
     }
 
-    private static void executeQueryAndShutdown( GraphDatabaseService database )
+    void buildDatabase()
     {
-        executeQueryAndShutdown( database, QUERY, emptyMap() );
-    }
-
-    private static void executeQueryAndShutdown( GraphDatabaseService database, String query, Map<String,Object> params )
-    {
-        try ( Transaction transaction = database.beginTx() )
-        {
-            Result execute = transaction.execute( query, params );
-            execute.close();
-            transaction.commit();
-        }
+        databaseManagementService = databaseBuilder.build();
+        database = (GraphDatabaseFacade) databaseManagementService.database( DEFAULT_DATABASE_NAME );
+        systemDb = (GraphDatabaseFacade) databaseManagementService.database( SYSTEM_DATABASE_NAME );
     }
 
     private EnterpriseAuthManager getAuthManager()
     {
-        return db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+        return database.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
     }
 
     private static String connectionAndDatabaseDetails()
@@ -756,34 +704,38 @@ class QueryLoggerIT
         return logLines;
     }
 
+    private void executeQuery( String query )
+    {
+        executeQuery( query, Collections.emptyMap() );
+    }
+
+    private void executeQuery( String query, Map<String,Object> params )
+    {
+        executeQuery( EnterpriseLoginContext.AUTH_DISABLED, query, params );
+    }
+
     private void executeQuery( EnterpriseLoginContext loginContext, String call, Map<String,Object> params )
+    {
+        executeQuery( database, loginContext, call, params );
+    }
+
+    private void executeSystemCommandSuperUser( String query )
+    {
+        executeQueryOnSystem( EnterpriseLoginContext.AUTH_DISABLED, query, Collections.emptyMap() );
+    }
+
+    private void executeQueryOnSystem( EnterpriseLoginContext loginContext, String call, Map<String,Object> params )
+    {
+        executeQuery( systemDb, loginContext, call, params );
+    }
+
+    private void executeQuery( GraphDatabaseFacade db, EnterpriseLoginContext loginContext, String query, Map<String,Object> params )
     {
         Consumer<ResourceIterator<Map<String,Object>>> resultConsumer = ResourceIterator::close;
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? emptyMap() : params;
-            resultConsumer.accept( tx.execute( call, p ) );
-            tx.commit();
-        }
-    }
-
-    void executeOnSystem( String query )
-    {
-        try ( Transaction tx = systemDb.beginTx() )
-        {
-            tx.execute( query);
-            tx.commit();
-        }
-    }
-
-    private void executeSystemCommandSuperUser( String query )
-    {
-        GraphDatabaseFacade facade = (GraphDatabaseFacade) databaseManagementService.database( SYSTEM_DATABASE_NAME );
-
-        Consumer<ResourceIterator<Map<String,Object>>> resultConsumer = ResourceIterator::close;
-        try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.implicit, LoginContext.AUTH_DISABLED ) )
-        {
-            resultConsumer.accept( tx.execute( query, emptyMap() ) );
+            resultConsumer.accept( tx.execute( query, p ) );
             tx.commit();
         }
     }
