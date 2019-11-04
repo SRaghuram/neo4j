@@ -37,8 +37,8 @@ db_and_workloads=(
  "qmul;qmul_read"
  "recommendations;recommendations"
  "socialnetwork;socialnetwork"
- "zero:zero")
- 
+ "zero;zero")
+
 for i in "${db_and_workloads[@]}"; do
 
     # shellcheck disable=SC2206
