@@ -36,7 +36,8 @@ db_and_workloads=(
  "pokec;pokec_read"
  "qmul;qmul_read"
  "recommendations;recommendations"
- "socialnetwork;socialnetwork")
+ "socialnetwork;socialnetwork"
+ "zero:zero")
  
 for i in "${db_and_workloads[@]}"; do
 
