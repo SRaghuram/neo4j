@@ -14,10 +14,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +26,8 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.AnalyzerProvider;
+import org.neo4j.graphdb.schema.ConstraintDefinition;
+import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.IndexSetting;
 import org.neo4j.graphdb.schema.IndexType;
@@ -48,10 +48,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.graphdb.schema.ConstraintType.RELATIONSHIP_PROPERTY_EXISTENCE;
 import static org.neo4j.internal.helpers.collection.Iterables.asArray;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
@@ -69,13 +68,19 @@ class IndexProceduresIT
     private static final String SCHEMA_STATEMENTS = "db.schemaStatements()";
     private static final Label label = Label.label( "Label" );
     private static final Label label2 = Label.label( "Label2" );
-    private static final Label labelWhitespace = Label.label( "Label 3" );
+    private static final Label label3 = Label.label( "Label3" );
+    private static final Label labelWhitespace = Label.label( "Label 1" );
+    private static final Label labelWhitespace2 = Label.label( "Label 2" );
+    private static final Label labelWhitespace3 = Label.label( "Label 3" );
     private static final RelationshipType relType = RelationshipType.withName( "relType" );
     private static final RelationshipType relType2 = RelationshipType.withName( "relType2" );
     private static final RelationshipType relTypeWhitespace = RelationshipType.withName( "relType 3" );
     private static final String prop = "prop";
     private static final String prop2 = "prop2";
-    private static final String propWhitespace = "prop 3";
+    private static final String prop3 = "prop3";
+    private static final String propWhitespace = "prop 1";
+    private static final String propWhitespace2 = "prop 2";
+    private static final String propWhitespace3 = "prop 3";
     private static final String labels = "['" + label + "']";
     private static final String properties = "['" + prop + "']";
     private static final String NO_CONFIG = "{}";
@@ -100,7 +105,7 @@ class IndexProceduresIT
     void shouldNotCreateIndexWithFulltextProvider( String procedure )
     {
         // Given no indexes initially
-        assertNoIndexes();
+        assertNoSchemaRules();
 
         // When trying to create index with fulltext provider
         try ( Transaction tx = db.beginTx() )
@@ -116,7 +121,7 @@ class IndexProceduresIT
         }
 
         // Then we should not have any new index
-        assertNoIndexes();
+        assertNoSchemaRules();
     }
 
     @ParameterizedTest
@@ -124,7 +129,7 @@ class IndexProceduresIT
     void shouldNotCreateIndexWithNonExistingProvider( String procedure )
     {
         // Given no indexes initially
-        assertNoIndexes();
+        assertNoSchemaRules();
 
         // When trying to create index with fulltext provider
         try ( Transaction tx = db.beginTx() )
@@ -139,7 +144,7 @@ class IndexProceduresIT
         }
 
         // Then we should not have any new index
-        assertNoIndexes();
+        assertNoSchemaRules();
     }
 
     @ParameterizedTest
@@ -147,7 +152,7 @@ class IndexProceduresIT
     void shouldCreateIndexWithConfig( String procedure )
     {
         // Given no indexes initially
-        assertNoIndexes();
+        assertNoSchemaRules();
 
         // When creating index / constraint with config
         Map<IndexSetting,Object> expectedIndexConfiguration = new HashMap<>();
@@ -195,7 +200,7 @@ class IndexProceduresIT
             assertThat( rootCause.getMessage(),
                     containsString( "Invalid index config key 'non_existing_setting', it was not recognized as an index setting." ) );
         }
-        assertNoIndexes();
+        assertNoSchemaRules();
     }
 
     @ParameterizedTest
@@ -213,7 +218,7 @@ class IndexProceduresIT
             assertThat( asString,
                     containsString( "Caused by: java.lang.IllegalArgumentException: Could not parse value 'not_applicable_type' as double[]." ) );
         }
-        assertNoIndexes();
+        assertNoSchemaRules();
     }
 
     @ParameterizedTest
@@ -231,7 +236,7 @@ class IndexProceduresIT
             assertThat( rootCause, instanceOf( NullPointerException.class ) );
             assertThat( rootCause.getMessage(), containsString( "Index setting value can not be null." ) );
         }
-        assertNoIndexes();
+        assertNoSchemaRules();
     }
 
     @ParameterizedTest
@@ -256,94 +261,150 @@ class IndexProceduresIT
     void schemaStatementsMustDropAndRecreateAllIndexes()
     {
         // Verify that we do not have any indexes initially
-        assertNoIndexes();
+        assertNoSchemaRules();
 
         // Create a bunch of indexes
-        List<UnboundIndexDefinition> allIndexes = new ArrayList<>();
         try ( Transaction tx = db.beginTx() )
         {
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( label ).on( prop )
+            tx.schema().indexFor( label ).on( prop )
                     .withName( "btree" )
                     .withIndexType( IndexType.BTREE )
                     .withIndexConfiguration( randomBtreeSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( label ).on( prop ).on( prop2 )
+                    .create();
+            tx.schema().indexFor( label ).on( prop ).on( prop2 )
                     .withName( "btree composite" )
                     .withIndexType( IndexType.BTREE )
                     .withIndexConfiguration( randomBtreeSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( labelWhitespace ).on( propWhitespace )
+                    .create();
+            tx.schema().indexFor( labelWhitespace ).on( propWhitespace )
                     .withName( "btree whitespace" )
                     .withIndexType( IndexType.BTREE )
                     .withIndexConfiguration( randomBtreeSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( label ).on( prop )
+                    .create();
+            tx.schema().indexFor( label ).on( prop )
                     .withName( "full-text" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( labelWhitespace ).on( propWhitespace )
+                    .create();
+            tx.schema().indexFor( labelWhitespace ).on( propWhitespace )
                     .withName( "full-text whitespace" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( label, label2 ).on( prop )
+                    .create();
+            tx.schema().indexFor( label, label2 ).on( prop )
                     .withName( "full-text multi-label" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( label ).on( prop ).on( prop2 )
+                    .create();
+            tx.schema().indexFor( label ).on( prop ).on( prop2 )
                     .withName( "full-text multi-prop" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( relType ).on( prop )
+                    .create();
+            tx.schema().indexFor( relType ).on( prop )
                     .withName( "relType full-text" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( relTypeWhitespace ).on( propWhitespace )
+                    .create();
+            tx.schema().indexFor( relTypeWhitespace ).on( propWhitespace )
                     .withName( "relType full-text whitespace" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( relType, relType2 ).on( prop )
+                    .create();
+            tx.schema().indexFor( relType, relType2 ).on( prop )
                     .withName( "relType full-text multi-label" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
-            allIndexes.add( new UnboundIndexDefinition( tx.schema().indexFor( relType ).on( prop ).on( prop2 )
+                    .create();
+            tx.schema().indexFor( relType ).on( prop ).on( prop2 )
                     .withName( "relType full-text multi-prop" )
                     .withIndexType( IndexType.FULLTEXT )
                     .withIndexConfiguration( randomFulltextSettings() )
-                    .create() ) );
+                    .create();
             tx.commit();
         }
+        verifyCanDropAndRecreateAllSchemaRulesUsingSchemaStatements();
+    }
 
-        Map<String,Map<String,Object>> indexNameToSchemaStatements = callSchemaStatements();
-        verifySchemaStatementsHasResultForAll( allIndexes, indexNameToSchemaStatements );
-        dropAllFromSchemaStatements( indexNameToSchemaStatements );
-        assertNoIndexes();
-        recreateAllFromSchemaStatements( indexNameToSchemaStatements );
-        verifyHasCopyOfIndexes( allIndexes );
+    @Test
+    void schemaStatementsMustDropAndRecreateAllConstraints()
+    {
+        // Verify that we do not have any schema rules initially
+        assertNoSchemaRules();
+
+        // Create a bunch of constraints
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.schema().constraintFor( label ).assertPropertyIsUnique( prop )
+                    .withName( "unique property" )
+                    .withIndexConfiguration( randomBtreeSettings() )
+                    .create();
+            tx.schema().constraintFor( labelWhitespace ).assertPropertyIsUnique( propWhitespace )
+                    .withName( "unique property whitespace" )
+                    .withIndexConfiguration( randomBtreeSettings() )
+                    .create();
+            tx.schema().constraintFor( label2 ).assertPropertyIsNodeKey( prop2 )
+                    .withName( "node key" )
+                    .withIndexConfiguration( randomBtreeSettings() )
+                    .create();
+            tx.schema().constraintFor( labelWhitespace2 ).assertPropertyIsNodeKey( propWhitespace2 )
+                    .withName( "node key whitespace" )
+                    .withIndexConfiguration( randomBtreeSettings() )
+                    .create();
+            tx.schema().constraintFor( label3 ).assertPropertyExists( prop3 )
+                    .withName( "node prop exists" )
+                    .create();
+            tx.schema().constraintFor( labelWhitespace3 ).assertPropertyExists( propWhitespace3 )
+                    .withName( "node prop exists whitespace" )
+                    .create();
+            tx.schema().constraintFor( relType ).assertPropertyExists( prop )
+                    .withName( "rel prop exists" )
+                    .create();
+            tx.schema().constraintFor( relTypeWhitespace ).assertPropertyExists( propWhitespace )
+                    .withName( "rel prop exists whitespace" )
+                    .create();
+            tx.commit();
+        }
+        verifyCanDropAndRecreateAllSchemaRulesUsingSchemaStatements();
+    }
+
+    private void verifyCanDropAndRecreateAllSchemaRulesUsingSchemaStatements()
+    {
+        List<UnboundIndexDefinition> allIndexes = allIndexes();
+        List<UnboundConstraintDefinition> allConstraints = allConstraints();
+        Map<String,Map<String,Object>> schemaRuleNameToSchemaStatements = callSchemaStatements();
+        dropAllFromSchemaStatements( schemaRuleNameToSchemaStatements );
+        assertNoSchemaRules();
+        recreateAllFromSchemaStatements( schemaRuleNameToSchemaStatements );
+        verifyHasCopyOfSchemaRules( allIndexes, allConstraints );
     }
 
     //todo
-    // schemaStatementsMustDropAndRecreateAllConstraints
-    // schemaStatementsDontListIndexOwnedByConstraint
     // ---Special cases---
     // schemaStatementsOrphanedIndexes
     // schemaStatementsFailedIndexes
     // schemaStatementsPopulatingIndexes
 
-    private void verifySchemaStatementsHasResultForAll( List<UnboundIndexDefinition> allIndexes,
-            Map<String,Map<String,Object>> indexNameToSchemaStatements )
+    private List<UnboundIndexDefinition> allIndexes()
     {
-        final Set<String> indexNames = indexNameToSchemaStatements.keySet();
-        for ( UnboundIndexDefinition index : allIndexes )
+        List<UnboundIndexDefinition> allIndexes = new ArrayList<>();
+        try ( Transaction tx = db.beginTx() )
         {
-            assertTrue( indexNames.contains( index.name ), "Expected schemaStatements to include all indexes but was missing " + index.name );
+            tx.schema().getIndexes().forEach( id -> allIndexes.add( new UnboundIndexDefinition( id ) ) );
+            tx.commit();
         }
+        return allIndexes;
+    }
+
+    private List<UnboundConstraintDefinition> allConstraints()
+    {
+        List<UnboundConstraintDefinition> allConstraints = new ArrayList<>();
+        try ( Transaction tx = db.beginTx() )
+        {
+            tx.schema().getConstraints().forEach( cd -> allConstraints.add( new UnboundConstraintDefinition( cd ) ) );
+            tx.commit();
+        }
+        return allConstraints;
     }
 
     private void dropAllFromSchemaStatements( Map<String,Map<String,Object>> indexNameToSchemaStatements )
@@ -373,25 +434,31 @@ class IndexProceduresIT
         }
     }
 
-    private void verifyHasCopyOfIndexes( List<UnboundIndexDefinition> allIndexes )
+    private void verifyHasCopyOfSchemaRules( List<UnboundIndexDefinition> originalIndexes, List<UnboundConstraintDefinition> originalConstraints )
     {
-        Map<String,UnboundIndexDefinition> recreatedIndexes = new HashMap<>();
-        try ( Transaction tx = db.beginTx() )
+        Map<String,UnboundIndexDefinition> recreatedIndexes = asNameMap( allIndexes() );
+        Map<String,UnboundConstraintDefinition> recreatedConstraints = asNameMap( allConstraints() );
+        for ( UnboundIndexDefinition originalIndex : originalIndexes )
         {
-            Iterable<IndexDefinition> indexes = tx.schema().getIndexes();
-            for ( IndexDefinition index : indexes )
-            {
-                recreatedIndexes.put( index.getName(), new UnboundIndexDefinition( index ) );
-            }
-            tx.commit();
-        }
-        for ( UnboundIndexDefinition originalIndex : allIndexes )
-        {
-            final UnboundIndexDefinition recreatedIndex = recreatedIndexes.remove( originalIndex.name );
+            final UnboundIndexDefinition recreatedIndex = recreatedIndexes.remove( originalIndex.getName() );
             assertNotNull( recreatedIndex );
             assertIndexDefinitionsEqual( originalIndex, recreatedIndex );
         }
+        for ( UnboundConstraintDefinition originalConstraint : originalConstraints )
+        {
+            final UnboundConstraintDefinition recreatedConstraint = recreatedConstraints.remove( originalConstraint.getName() );
+            assertNotNull( recreatedConstraint );
+            assertConstraintDefinitionsEqual( originalConstraint, recreatedConstraint );
+        }
         assertEquals( 0, recreatedIndexes.size() );
+        assertEquals( 0, recreatedConstraints.size() );
+    }
+
+    private <T extends UnboundDefinition> Map<String,T> asNameMap( List<T> schemaRules )
+    {
+        Map<String,T> result = new HashMap<>();
+        schemaRules.forEach( sr -> result.put( sr.getName(), sr ) );
+        return result;
     }
 
     private Map<String,Map<String,Object>> callSchemaStatements()
@@ -411,22 +478,27 @@ class IndexProceduresIT
         return indexNameToSchemaStatements;
     }
 
+    private static void assertDefinitionsEqual( UnboundDefinition expected, UnboundDefinition actual )
+    {
+        assertEquals( expected.getName(), actual.getName() );
+        assertArrayEquals( expected.labels, actual.labels );
+        assertArrayEquals( expected.relationshipTypes, actual.relationshipTypes );
+        assertArrayEquals( expected.propertyKeys, actual.propertyKeys );
+    }
+
     private static void assertIndexDefinitionsEqual( UnboundIndexDefinition expected, UnboundIndexDefinition actual )
     {
-        assertEquals( expected.name, actual.name );
+        assertDefinitionsEqual( expected, actual );
         assertEquals( expected.indexType, actual.indexType );
-        if ( expected.isNodeIndex )
-        {
-            assertTrue( actual.isNodeIndex );
-            assertArrayEquals( expected.labels, actual.labels );
-        }
-        if ( expected.isRelationshipIndex )
-        {
-            assertTrue( actual.isRelationshipIndex );
-            assertArrayEquals( expected.relationshipTypes, actual.relationshipTypes );
-        }
-        assertArrayEquals( expected.propertyKeys, actual.propertyKeys );
+        assertEquals( expected.isNodeIndex, actual.isNodeIndex );
+        assertEquals( expected.isRelationshipIndex, actual.isRelationshipIndex );
         assertEqualConfig( expected, actual );
+    }
+
+    private static void assertConstraintDefinitionsEqual( UnboundConstraintDefinition expected, UnboundConstraintDefinition actual )
+    {
+        assertDefinitionsEqual( expected, actual );
+        assertEquals( expected.constraintType, actual.constraintType );
     }
 
     private static void assertEqualConfig( UnboundIndexDefinition expected, UnboundIndexDefinition actual )
@@ -538,7 +610,7 @@ class IndexProceduresIT
     private void shouldCreateIndexWithName( String procedure, String indexName )
     {
         // Given no indexes initially
-        assertNoIndexes();
+        assertNoSchemaRules();
 
         // When creating index / constraint with name
         try ( Transaction tx = db.beginTx() )
@@ -619,37 +691,65 @@ class IndexProceduresIT
         return joiner.toString();
     }
 
-    private void assertNoIndexes()
+    private void assertNoSchemaRules()
     {
-        try ( Transaction tx = db.beginTx() )
-        {
-            final Iterator<IndexDefinition> indexes = tx.schema().getIndexes().iterator();
-            assertFalse( indexes.hasNext() );
-            tx.commit();
-        }
+        assertEquals( 0, allConstraints().size() );
+        assertEquals( 0, allIndexes().size() );
     }
 
-    private static class UnboundIndexDefinition
+    private static class UnboundDefinition
     {
         private final String name;
-        private final IndexType indexType;
-        private final boolean isNodeIndex;
-        private final boolean isRelationshipIndex;
         private final Label[] labels;
         private final RelationshipType[] relationshipTypes;
         private final String[] propertyKeys;
+
+        UnboundDefinition( String name, Label[] labels, RelationshipType[] relationshipTypes, String[] propertyKeys )
+        {
+            this.name = name;
+            this.labels = labels;
+            this.relationshipTypes = relationshipTypes;
+            this.propertyKeys = propertyKeys;
+        }
+
+        String getName()
+        {
+            return name;
+        }
+    }
+
+    private static class UnboundIndexDefinition extends UnboundDefinition
+    {
+        private final IndexType indexType;
+        private final boolean isNodeIndex;
+        private final boolean isRelationshipIndex;
         private final Map<IndexSetting,Object> config;
 
         private UnboundIndexDefinition( IndexDefinition indexDefinition )
         {
-            this.name = indexDefinition.getName();
+            super( indexDefinition.getName(),
+                    indexDefinition.isNodeIndex() ? asArray( Label.class, indexDefinition.getLabels() ) : null,
+                    indexDefinition.isRelationshipIndex() ? asArray( RelationshipType.class, indexDefinition.getRelationshipTypes() ) : null,
+                    asArray( String.class, indexDefinition.getPropertyKeys() ) );
             this.indexType = indexDefinition.getIndexType();
             this.isNodeIndex = indexDefinition.isNodeIndex();
             this.isRelationshipIndex = indexDefinition.isRelationshipIndex();
-            this.labels = isNodeIndex ? asArray( Label.class, indexDefinition.getLabels() ) : null;
-            this.relationshipTypes = isRelationshipIndex ? asArray( RelationshipType.class, indexDefinition.getRelationshipTypes() ) : null;
-            this.propertyKeys = asArray( String.class, indexDefinition.getPropertyKeys() );
             this.config = indexDefinition.getIndexConfiguration();
+        }
+    }
+
+    private static class UnboundConstraintDefinition extends UnboundDefinition
+    {
+        private final ConstraintType constraintType;
+
+        private UnboundConstraintDefinition( ConstraintDefinition constraintDefinition )
+        {
+            super( constraintDefinition.getName(),
+                    constraintDefinition.isConstraintType( RELATIONSHIP_PROPERTY_EXISTENCE ) ? null : new Label[]{constraintDefinition.getLabel()},
+                    constraintDefinition.isConstraintType( RELATIONSHIP_PROPERTY_EXISTENCE ) ?
+                    new RelationshipType[]{constraintDefinition.getRelationshipType()} : null,
+                    asArray( String.class, constraintDefinition.getPropertyKeys() ) );
+            this.constraintType = constraintDefinition.getConstraintType();
         }
     }
 }
