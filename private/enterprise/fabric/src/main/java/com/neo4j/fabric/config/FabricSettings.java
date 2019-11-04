@@ -26,7 +26,6 @@ import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.DATABASENAME;
 import static org.neo4j.configuration.SettingValueParsers.DURATION;
 import static org.neo4j.configuration.SettingValueParsers.INT;
-import static org.neo4j.configuration.SettingValueParsers.STRING;
 import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 
 @ServiceProvider
@@ -134,16 +133,29 @@ public class FabricSettings implements SettingsDeclaration
     @Description( "Determines which driver API will be used. ASYNC must be used when the remote instance is 3.5" )
     static Setting<DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API, ofEnum(DriverApi.class), DriverApi.RX ).build();
 
+    @Description( "Setting for connection encryption." +
+            "'true' will instruct the driver to use encryption. 'false' means that the communication will be in plaintext" )
     static Setting<Boolean> driverEncrypted = newBuilder( "fabric." + DRIVER_ENCRYPTED, BOOL, false ).build();
+    @Description( "Setting for certificate trust strategy. The supported values are 'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES' and 'TRUST_ALL_CERTIFICATES'.\n" +
+            "'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES' means that the driver will trust certificates signed by CAs trusted by the JVM. There is currently" +
+            "no option to provide a list of trusted certificates or CAs on top of the ones trusted by the JVM" +
+            "'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES' is the default. 'TRUST_ALL_CERTIFICATES' can be used for trusting self-signed certificates" +
+            "in development environments. 'TRUST_ALL_CERTIFICATES' should never be used in production" )
     static Setting<DriverTrustStrategy> driverTrustStrategy =
-            newBuilder( "fabric." + DRIVER_TRUST_STRATEGY, ofEnum( DriverTrustStrategy.class ), null ).build();
+            newBuilder( "fabric." + DRIVER_TRUST_STRATEGY, ofEnum( DriverTrustStrategy.class ), DriverTrustStrategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES )
+                    .build();
 
     @ServiceProvider
     public static class GraphSetting extends GroupSetting
     {
-
+        @Description( "URI of the Neo4j DBMS hosting the database associated to the Fabric graph. Example: neo4j://somewhere:7687" )
         public final Setting<URI> uri = getBuilder( "uri", SettingValueParsers.URI, null ).build();
+
+        @Description( "Name of the database associated to the Fabric graph." )
+        @DocumentedDefaultValue( "The default database on the target DBMS. Typically 'Neo4j'" )
         public final Setting<String> database = getBuilder( "database", SettingValueParsers.STRING, null ).build();
+
+        @Description( "Name assigned to the Fabric graph. The name can be used in Fabric queries." )
         public final Setting<String> name = getBuilder( "name", SettingValueParsers.STRING, null ).build();
 
         public final Setting<Level> driverLoggingLevel = getBuilder( DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();

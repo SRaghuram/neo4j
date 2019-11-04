@@ -17,8 +17,6 @@ import org.neo4j.configuration.Config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.driver.Config.LoadBalancingStrategy.LEAST_CONNECTED;
-import static org.neo4j.driver.Config.LoadBalancingStrategy.ROUND_ROBIN;
 import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES;
 import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES;
 
@@ -121,7 +119,7 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofHours( 1 ).toMillis(), graph0DriverConfig.maxConnectionLifetimeMillis() );
         assertEquals( Duration.ofMinutes( 1 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertFalse( graph0DriverConfig.encrypted() );
-        assertEquals( TRUST_ALL_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
+        assertEquals( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
         assertEquals( Duration.ofSeconds( 5 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
     }
 
