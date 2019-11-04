@@ -58,8 +58,8 @@ import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static com.neo4j.ssl.HostnameVerificationHelper.trust;
 import static com.neo4j.ssl.SslContextFactory.SslParameters.protocols;
 import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.either;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
@@ -336,7 +336,8 @@ public class AkkaDiscoverySSLEngineProviderIT
     {
         serverMsgProbe.expectNoMessage();
         Logging.LogEvent log = clientLogProbe.expectMsgClass( TIMEOUT, Logging.Warning.class );
-        assertThat( log.message().toString(), either( containsString( "SSLHandshakeException" ) ).or( containsString( "SSLException" ) ) );
+        String message = log.message().toString();
+        assertThat( message, anyOf( containsString( "SSLHandshakeException" ), containsString( "SSLException" ), containsString( "StreamTcpException" ) ) );
     }
 
     private static class Forwarder extends AbstractLoggingActor
