@@ -477,8 +477,8 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
     /**
       * {{{
       *   this.cursor = resources.cursorPools.relationshipScanCursorPool.allocate()
-      *   this.idIterator = ((ListValue) <<reldIdsExpr>>)).iterator()
-      *   this.canContinue = idIterator.hasNext
+      *   this.idCursor = IteratorCursor(((ListValue) <<reldIdsExpr>>)).iterator())
+      *   this.canContinue = idCursor.next
       *   this.canContinue
       * }}}
       */
@@ -592,7 +592,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
     /**
       * {{{
       *   while (hasDemand && this.canContinue) {
-      *     val id = if (this.forwardDirection) asId(idIterator.next()) else cursor.relationshipReference()
+      *     val id = if (this.forwardDirection) asId(idCursor.value()) else cursor.relationshipReference()
       *     if (id >= 0) read.singleRelationship(id, cursor)
       *
       *     if (id >= 0 && (!this.forwardDirection || cursor.next())) {
@@ -618,7 +618,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
                          ternary(loadField(forwardDirection),
                                  invokeStatic(asIdMethod, cast[AnyValue](
                                    invoke(loadField(idCursor),
-                                          method[java.util.Iterator[AnyValue], Object]("next")))),
+                                          method[IteratorCursor, AnyValue]("value")))),
                                  invoke(loadField(cursor), method[RelationshipScanCursor, Long]("relationshipReference")))),
         condition(greaterThanOrEqual(load(idVariable), constant(0L))) {
           singleRelationship(load(idVariable), loadField(cursor)) },
