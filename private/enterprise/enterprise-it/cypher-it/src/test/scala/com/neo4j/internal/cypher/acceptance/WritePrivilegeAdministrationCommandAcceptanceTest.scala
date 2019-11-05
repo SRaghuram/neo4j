@@ -7,7 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.{DatabaseAdministrationException, SyntaxException}
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
@@ -123,6 +123,15 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
         } should have message s"This is an administration command and it should be executed against the system database: $grantOrDenyCommand WRITE"
+      }
+
+      test(s"should fail with 'not-supported-yet' message when ${grantOrDeny}ing write privilege with limited scope") {
+        // WHEN
+        val e = the[SyntaxException] thrownBy {
+          execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS A (*) TO role")
+        }
+        // THEN
+        e.getMessage should startWith("The use of ELEMENT, NODE or RELATIONSHIP with the WRITE privilege is not supported in this version.")
       }
 
       // Tests for revoke grant and revoke deny write privileges
