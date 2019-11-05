@@ -24,7 +24,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.common.options.Edition.COMMUNITY;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -37,7 +36,7 @@ public class SerializationTest
     public TestDirectory temporaryFolder;
 
     @Test
-    void shouldSerializeTestRunReport() throws IOException
+    void shouldSerializeTestRunReport()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -104,7 +103,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkPlan() throws IOException
+    void shouldSerializeBenchmarkPlan()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -117,7 +116,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializePlan() throws IOException
+    void shouldSerializePlan()
     {
         // given
         Plan before = testPlan();
@@ -126,7 +125,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializePlanTree() throws IOException
+    void shouldSerializePlanTree()
     {
         // given
         PlanTree before = testPlan().planTree();
@@ -135,7 +134,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkGroupBenchmarkPlans() throws IOException
+    void shouldSerializeBenchmarkGroupBenchmarkPlans()
     {
         // given
         BenchmarkGroupBenchmarkPlans before = new BenchmarkGroupBenchmarkPlans();
@@ -154,7 +153,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmark() throws IOException
+    void shouldSerializeBenchmark()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -165,7 +164,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkWithQuery() throws IOException
+    void shouldSerializeBenchmarkWithQuery()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -176,7 +175,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkConfig() throws IOException
+    void shouldSerializeBenchmarkConfig()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -190,7 +189,7 @@ public class SerializationTest
     void shouldSerializeBenchmarkConfigFromFile() throws IOException
     {
         // given
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.absolutePath();
         try ( FileWriter fileWriter = new FileWriter( benchmarkConfig ) )
         {
             fileWriter.append( "key1=value1" );
@@ -209,7 +208,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkGroup() throws IOException
+    void shouldSerializeBenchmarkGroup()
     {
         // given
         BenchmarkGroup before = new BenchmarkGroup( "name" );
@@ -218,7 +217,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkGroupBenchmark() throws IOException
+    void shouldSerializeBenchmarkGroupBenchmark()
     {
         // given
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "name" );
@@ -231,7 +230,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkGroupBenchmarkMetrics() throws IOException
+    void shouldSerializeBenchmarkGroupBenchmarkMetrics()
     {
         // given
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "name" );
@@ -247,7 +246,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkMetrics() throws IOException
+    void shouldSerializeBenchmarkMetrics()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -264,7 +263,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarks() throws IOException
+    void shouldSerializeBenchmarks()
     {
         // given
         Map<String,String> params = new HashMap<>();
@@ -276,7 +275,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeBenchmarkTool() throws IOException
+    void shouldSerializeBenchmarkTool()
     {
         // given
         BenchmarkTool before = new BenchmarkTool( Repository.LDBC_BENCH, "commit", Repository.LDBC_BENCH.defaultOwner(), "3.2" );
@@ -285,7 +284,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeEnvironment() throws IOException
+    void shouldSerializeEnvironment()
     {
         // given
         Environment before = new Environment( "operating system", "server" );
@@ -294,7 +293,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeMetrics() throws IOException
+    void shouldSerializeMetrics()
     {
         // given
         Metrics before = new Metrics( SECONDS, 1, 10, 5.0, 1.5, 0.1, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
@@ -303,7 +302,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeNeo4j() throws IOException
+    void shouldSerializeNeo4j()
     {
         // given
         Project before = new Project( Repository.NEO4J, "commit", "3.3.3", COMMUNITY, "branch", "owner" );
@@ -312,7 +311,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeNeo4jConfig() throws IOException
+    void shouldSerializeNeo4jConfig()
     {
         // given
         HashMap<String,String> params = new HashMap<>();
@@ -323,7 +322,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializePlanOperator() throws IOException
+    void shouldSerializePlanOperator()
     {
         // given
         Map<String,String> arguments = new HashMap<>();
@@ -336,7 +335,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeJava() throws IOException
+    void shouldSerializeJava()
     {
         // given
         Java before = new Java( "jvm", "version", "jvm args" );
@@ -345,7 +344,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeTestRun() throws IOException
+    void shouldSerializeTestRun()
     {
         // given
         TestRun before = new TestRun( "id", 1, 2, 3, 1, "user" );
@@ -364,7 +363,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeProfiles() throws IOException
+    void shouldSerializeProfiles()
     {
         // given
         ProfilerRecordings profilerRecordings = new ProfilerRecordings()
@@ -378,7 +377,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeProfilesWithParameters() throws IOException
+    void shouldSerializeProfilesWithParameters()
     {
         Map<String,String> parametersMap = new HashMap<>();
         parametersMap.put( "k1", "v1" );
@@ -397,7 +396,7 @@ public class SerializationTest
     }
 
     @Test
-    void shouldSerializeAnnotation() throws IOException
+    void shouldSerializeAnnotation()
     {
         // given
         Annotation before = new Annotation( "Comment", 0, "id", "Robert" );
@@ -405,9 +404,9 @@ public class SerializationTest
         shouldSerializeAndDeserialize( before );
     }
 
-    private Object shouldSerializeAndDeserialize( Object before ) throws IOException
+    private Object shouldSerializeAndDeserialize( Object before )
     {
-        File jsonFile = createTempFile( temporaryFolder.absolutePath() );
+        File jsonFile = temporaryFolder.absolutePath();
         JsonUtil.serializeJson( jsonFile.toPath(), before );
         Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
         assertThat( before, equalTo( after ) );

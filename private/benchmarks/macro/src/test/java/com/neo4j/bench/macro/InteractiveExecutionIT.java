@@ -24,9 +24,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
-
 @TestDirectoryExtension
 class InteractiveExecutionIT
 {
@@ -43,11 +40,11 @@ class InteractiveExecutionIT
 
     private void executeWorkloadInteractively( String workloadName, Neo4jDeployment neo4jDeployment ) throws Exception
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, neo4jDeployment.deployment() );
 
-            Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
+            Path neo4jConfigFile = createTempFilePath( temporaryFolder.createFile(  )absolutePath() );
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
 
             Store store = StoreTestUtil.createEmptyStoreFor( workload,

@@ -24,7 +24,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -44,7 +43,7 @@ class GcProfilerTest
     void setUp() throws Exception
     {
 
-        Path parentDir = createTempDirectoryPath( tempFolder.absolutePath() );
+        Path parentDir = tempFolder.absolutePath().toPath();
 
         benchmarkGroup = new BenchmarkGroup( "group" );
         benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );

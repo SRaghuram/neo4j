@@ -58,7 +58,6 @@ import static com.neo4j.bench.common.profiling.RecordingType.GC_SUMMARY;
 import static com.neo4j.bench.common.profiling.RecordingType.JFR;
 import static com.neo4j.bench.common.profiling.RecordingType.JFR_FLAMEGRAPH;
 import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -73,7 +72,7 @@ public class AddProfilesIT
     @Inject
     public TestDirectory temporaryFolder;
 
-    private static final Map<String,String> PARAMS = new HashMap<String,String>()
+    private static final Map<String,String> PARAMS = new HashMap<>()
     {{
         put( "key", "value" );
     }};
@@ -328,7 +327,7 @@ public class AddProfilesIT
                 Lists.newArrayList( benchmarkPlan1a, benchmarkPlan1b ),
                 Lists.newArrayList( new TestRunError( "group", "name", "an error message\n\n" ) ) );
 
-        File testRunReportJson = createTempFile( temporaryFolder.absolutePath() );
+        File testRunReportJson = temporaryFolder.file( "test-run-report.json" );
         JsonUtil.serializeJson( testRunReportJson.toPath(), testRunReportBefore );
 
         // no profiles should exist yet

@@ -42,8 +42,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static java.lang.String.format;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
@@ -143,7 +141,7 @@ class ConvenientLocalExecutionIT
     @Test
     void executeQuery() throws Exception
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             Workload workload = Workload.fromName( WORKLOAD_NAME, resources, DEPLOYMENT );
             Query query = workload.queries()
@@ -179,7 +177,7 @@ class ConvenientLocalExecutionIT
 
     private Path neo4jConfigFile() throws Exception
     {
-        Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
+        Path neo4jConfigFile = temporaryFolder.file( "neo4j.conf" ).toPath();
         Neo4jConfig neo4jConfig = neo4jConfig();
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return neo4jConfigFile;

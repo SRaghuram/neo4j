@@ -26,7 +26,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.model.Benchmark.Mode;
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -47,9 +46,9 @@ public class DirectoryTest
     public TestDirectory temporaryFolder;
 
     @Test
-    void shouldBeAbleToCreateGroupDirs() throws Exception
+    void shouldBeAbleToCreateGroupDirs()
     {
-        Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path parentDir = temporaryFolder.absolutePath().toPath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
 
         Path groupDirPath = Paths.get( groupDir.toAbsolutePath() );
@@ -60,9 +59,9 @@ public class DirectoryTest
     }
 
     @Test
-    void groupDirShouldCreateBenchDirs() throws Exception
+    void groupDirShouldCreateBenchDirs()
     {
-        Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path parentDir = temporaryFolder.absolutePath().toPath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
 
         BenchmarkDirectory benchDir1 = groupDir.findOrCreate( BENCH_1 );
@@ -92,9 +91,9 @@ public class DirectoryTest
     }
 
     @Test
-    void groupDirShouldBeAbleToOverwriteItself() throws Exception
+    void groupDirShouldBeAbleToOverwriteItself()
     {
-        Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path parentDir = temporaryFolder.absolutePath().toPath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         assertThat( "Should contain no benchmarks", groupDir.benchmarks(), equalTo( Collections.emptyList() ) );
 
@@ -106,9 +105,9 @@ public class DirectoryTest
     }
 
     @Test
-    void benchDirShouldCreateForkDirs() throws Exception
+    void benchDirShouldCreateForkDirs()
     {
-        Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path parentDir = temporaryFolder.absolutePath().toPath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
 
         List<ProfilerType> expectedProfilers1 = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
@@ -141,9 +140,9 @@ public class DirectoryTest
     }
 
     @Test
-    void benchDirShouldOpenExistingForkDirs() throws Exception
+    void benchDirShouldOpenExistingForkDirs()
     {
-        Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path parentDir = temporaryFolder.absolutePath().toPath();
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );
         List<ProfilerType> expectedProfilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
@@ -157,7 +156,7 @@ public class DirectoryTest
     @Test
     void benchDirShouldCreateFilesInForkDir() throws Exception
     {
-        Path parentDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path parentDir = temporaryFolder.absolutePath().toPath();
 
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );

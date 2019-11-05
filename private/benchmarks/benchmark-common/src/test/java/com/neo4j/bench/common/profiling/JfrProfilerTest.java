@@ -13,7 +13,6 @@ import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.JvmVersion;
-import com.neo4j.bench.common.util.TestDirectorySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +42,7 @@ class JfrProfilerTest
     @BeforeEach
     void setUp() throws Exception
     {
-        Path parentDir = TestDirectorySupport.createTempDirectoryPath( tempFolder.absolutePath() );
+        Path parentDir = tempFolder.absolutePath().toPath();
 
         benchmarkGroup = new BenchmarkGroup( "group" );
         benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );

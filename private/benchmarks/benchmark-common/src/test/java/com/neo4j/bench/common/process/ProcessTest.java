@@ -21,8 +21,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -60,11 +58,11 @@ public class ProcessTest
     @Test
     void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
     {
-        Path folder = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path folder = temporaryFolder.absolutePath().toPath();
         Files.createFile( folder.resolve( "file1.txt" ) );
         Files.createFile( folder.resolve( "file2.txt" ) );
 
-        File processOutput = createTempFile( temporaryFolder.absolutePath() );
+        File processOutput = temporaryFolder.file( "processOutput" );
 
         assertThat( "Expected process output to be empty", Files.lines( processOutput.toPath() ).count(), equalTo( 0L ) );
 
