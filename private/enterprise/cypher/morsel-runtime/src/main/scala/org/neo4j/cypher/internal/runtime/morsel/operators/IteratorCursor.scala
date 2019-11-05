@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.values.AnyValue
 
 /**
-  * Helper class that turns an iterator into a curso.
+  * Helper class that turns an iterator into a cursor.
   *
   * @param iterator the iterator over the data
   */
