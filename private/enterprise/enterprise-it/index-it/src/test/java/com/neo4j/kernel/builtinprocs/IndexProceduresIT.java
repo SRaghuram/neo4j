@@ -379,12 +379,6 @@ class IndexProceduresIT
         verifyHasCopyOfSchemaRules( allIndexes, allConstraints );
     }
 
-    //todo
-    // ---Special cases---
-    // schemaStatementsOrphanedIndexes
-    // schemaStatementsFailedIndexes
-    // schemaStatementsPopulatingIndexes
-
     private List<UnboundIndexDefinition> allIndexes()
     {
         List<UnboundIndexDefinition> allIndexes = new ArrayList<>();
