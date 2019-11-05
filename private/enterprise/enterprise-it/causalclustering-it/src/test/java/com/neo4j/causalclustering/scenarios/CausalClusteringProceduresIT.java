@@ -14,6 +14,7 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -39,6 +40,7 @@ import static com.neo4j.causalclustering.common.ClusterOverviewHelper.assertEven
 import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsRole;
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
+import static com.neo4j.causalclustering.discovery.RoleInfo.UNKNOWN;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -75,61 +77,61 @@ class CausalClusteringProceduresIT
     }
 
     @Test
-    void dbmsProceduresShouldBeAvailable()
+    void dbmsProceduresShouldBeAvailable() throws Exception
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsProcedures );
     }
 
     @Test
-    void dbmsListQueriesShouldBeAvailable()
+    void dbmsListQueriesShouldBeAvailable() throws Exception
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsListQueries );
     }
 
     @Test
-    void dbmsClusterOverviewShouldBeAvailable()
+    void dbmsClusterOverviewShouldBeAvailable() throws Exception
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
-    void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase()
+    void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase() throws Exception
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
-    void routingProcedureShouldBeAvailable()
+    void routingProcedureShouldBeAvailable() throws Exception
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
     }
 
     @Test
-    void routingProcedureShouldBeAvailableOnSystemDatabase()
+    void routingProcedureShouldBeAvailableOnSystemDatabase() throws Exception
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
     }
 
     @Test
-    void legacyRoutingProcedureShouldBeAvailable()
+    void legacyRoutingProcedureShouldBeAvailable() throws Exception
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
     }
 
     @Test
-    void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase()
+    void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase() throws Exception
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
     }
 
     @Test
-    void installedProtocolsProcedure()
+    void installedProtocolsProcedure() throws Exception
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
     }
 
     @Test
-    void installedProtocolsProcedureOnSystemDatabase()
+    void installedProtocolsProcedureOnSystemDatabase() throws Exception
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
     }
@@ -214,19 +216,25 @@ class CausalClusteringProceduresIT
     }
 
     private static void verifyProcedureAvailability( String databaseName, Set<? extends ClusterMember> members,
-            Function<Transaction,Result> procedureExecutor )
+            Function<Transaction,Result> procedureExecutor ) throws Exception
     {
         for ( var member : members )
         {
-            var db = member.database( databaseName );
-            try ( var transaction = db.beginTx() )
-            {
-                try ( var result = procedureExecutor.apply( transaction ) )
-                {
-                    var records = Iterators.asList( result );
-                    assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
-                }
-            }
+            assertEventually( () -> execute( member, databaseName, procedureExecutor ), hasSize( greaterThanOrEqualTo( 1 ) ), 1, MINUTES );
+        }
+    }
+
+    private static List<Map<String,Object>> execute( ClusterMember member, String databaseName, Function<Transaction,Result> procedureExecutor )
+    {
+        var db = member.database( databaseName );
+        try ( var transaction = db.beginTx();
+              var result = procedureExecutor.apply( transaction ) )
+        {
+            return Iterators.asList( result );
+        }
+        catch ( Exception e )
+        {
+            return List.of();
         }
     }
 
@@ -260,7 +268,17 @@ class CausalClusteringProceduresIT
 
     private ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, String databaseName )
     {
-        return () -> invokeClusterRoleProcedure( member, databaseName );
+        return () ->
+        {
+            try
+            {
+                return invokeClusterRoleProcedure( member, databaseName );
+            }
+            catch ( Exception e )
+            {
+                return UNKNOWN;
+            }
+        };
     }
 
     private Result invokeDbmsProcedures( Transaction tx )
@@ -297,12 +315,10 @@ class CausalClusteringProceduresIT
     {
         // invoke the procedure in a context of the system database which always exists
         var db = member.systemDatabase();
-        try ( var tx = db.beginTx() )
+        try ( var tx = db.beginTx();
+              var result = tx.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) ) )
         {
-            try ( var result = tx.execute( "CALL dbms.cluster.role($databaseName)", Map.of( "databaseName", databaseName ) ) )
-            {
-                return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
-            }
+            return RoleInfo.valueOf( (String) Iterators.single( result ).get( "role" ) );
         }
     }
 }
