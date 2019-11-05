@@ -21,12 +21,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 
+import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4j;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
@@ -37,6 +40,7 @@ import static java.net.http.HttpResponse.BodySubscribers.mapping;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
@@ -50,9 +54,9 @@ final class CausalClusterRestEndpointHelpers
     {
     }
 
-    static void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster )
+    static void writeSomeData( CausalClusterInProcessBuilder.CausalCluster cluster, String databaseName ) throws TimeoutException
     {
-        GraphDatabaseService db = getLeader( cluster ).defaultDatabaseService();
+        GraphDatabaseService db = awaitLeader( cluster, databaseName ).defaultDatabaseService();
         try ( Transaction tx = db.beginTx() )
         {
             tx.createNode( Label.label( "MyNode" ) );
@@ -91,18 +95,36 @@ final class CausalClusterRestEndpointHelpers
         }
     }
 
-    static Neo4j getLeader( CausalClusterInProcessBuilder.CausalCluster cluster )
+    static Neo4j awaitLeader( CausalClusterInProcessBuilder.CausalCluster cluster, String databaseName ) throws TimeoutException
     {
-        return cluster.getCores()
-                .stream()
-                .filter( core -> Role.LEADER.equals( getCurrentCoreRole( core ) ) )
-                .findAny()
-                .orElseThrow( () -> new IllegalStateException( "Leader does not exist" ) );
+        return Predicates.await( () -> findLeader( cluster, databaseName ), Objects::nonNull, 1, MINUTES );
     }
 
-    private static Role getCurrentCoreRole( Neo4j core )
+    private static Neo4j findLeader( CausalClusterInProcessBuilder.CausalCluster cluster, String databaseName )
     {
-        return ((GraphDatabaseFacade) core.defaultDatabaseService()).getDependencyResolver().resolveDependency( RoleProvider.class ).currentRole();
+        for ( var core : cluster.getCores() )
+        {
+            var currentRole = currentRole( core, databaseName );
+            if ( currentRole == Role.LEADER )
+            {
+                return core;
+            }
+        }
+        return null;
+    }
+
+    private static Role currentRole( Neo4j core, String databaseName )
+    {
+        try
+        {
+            var db = (GraphDatabaseAPI) core.databaseManagementService().database( databaseName );
+            var roleProvider = db.getDependencyResolver().resolveDependency( RoleProvider.class );
+            return roleProvider.currentRole();
+        }
+        catch ( Exception e )
+        {
+            return null;
+        }
     }
 
     static HttpResponse<Map<String,Object>> queryClusterEndpoint( Neo4j server, String databaseName )

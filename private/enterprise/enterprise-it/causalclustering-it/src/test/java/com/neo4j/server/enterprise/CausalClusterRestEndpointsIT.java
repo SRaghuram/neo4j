@@ -19,7 +19,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.getLeader;
+import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.awaitLeader;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryAvailabilityEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryClusterEndpoint;
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryLegacyClusterEndpoint;
@@ -183,13 +183,13 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void writableEndpointsAreReachable()
+    void writableEndpointsAreReachable() throws Exception
     {
         for ( var core : cluster.getCores() )
         {
             var response = queryWritableEndpoint( core, KNOWN_DB );
 
-            if ( core == getLeader( cluster ) )
+            if ( core == awaitLeader( cluster, KNOWN_DB ) )
             {
                 assertEquals( OK.getStatusCode(), response.statusCode() );
                 assertTrue( response.body() );
@@ -221,13 +221,13 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void shouldRedirectWritableEndpoints()
+    void shouldRedirectWritableEndpoints() throws Exception
     {
         for ( var core : cluster.getCores() )
         {
             var response = queryLegacyClusterEndpoint( core, "writable" );
 
-            if ( core == getLeader( cluster ) )
+            if ( core == awaitLeader( cluster, KNOWN_DB ) )
             {
                 assertEquals( OK.getStatusCode(), response.statusCode() );
                 assertTrue( response.body() );
@@ -248,13 +248,13 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void readOnlyEndpointsAreReachable()
+    void readOnlyEndpointsAreReachable() throws Exception
     {
         for ( var core : cluster.getCores() )
         {
             var response = queryReadOnlyEndpoint( core, KNOWN_DB );
 
-            if ( core == getLeader( cluster ) )
+            if ( core == awaitLeader( cluster, KNOWN_DB ) )
             {
                 assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
                 assertFalse( response.body() );
@@ -286,13 +286,13 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void shouldRedirectReadOnlyEndpoints()
+    void shouldRedirectReadOnlyEndpoints() throws Exception
     {
         for ( var core : cluster.getCores() )
         {
             var response = queryLegacyClusterEndpoint( core, "read-only" );
 
-            if ( core == getLeader( cluster ) )
+            if ( core == awaitLeader( cluster, KNOWN_DB ) )
             {
                 assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
                 assertFalse( response.body() );
@@ -327,14 +327,14 @@ class CausalClusterRestEndpointsIT
     void statusEndpointIsReachableAndReadable() throws Exception
     {
         // given there is data
-        writeSomeData( cluster );
+        writeSomeData( cluster, KNOWN_DB );
         assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 0L ) ),
                 3, MINUTES );
 
         // then cores are valid
         for ( var core : cluster.getCores() )
         {
-            writeSomeData( cluster );
+            writeSomeData( cluster, KNOWN_DB );
             assertEventually( statusEndpoint( core, KNOWN_DB ), coreFieldIs( equalTo( true ) ), 1, MINUTES );
             assertEventually( statusEndpoint( core, KNOWN_DB ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, MINUTES );
             assertEventually( statusEndpoint( core, KNOWN_DB ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
@@ -349,7 +349,7 @@ class CausalClusterRestEndpointsIT
         // and replicas are valid
         for ( var replica : cluster.getReadReplicas() )
         {
-            writeSomeData( cluster );
+            writeSomeData( cluster, KNOWN_DB );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), coreFieldIs( equalTo( false ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, MINUTES );
             assertEventually( statusEndpoint( replica, KNOWN_DB ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
@@ -363,7 +363,7 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void shouldRedirectStatusEndpoints() throws Exception
+    void shouldRedirectStatusEndpoints()
     {
         for ( var neo4j : cluster.getCoresAndReadReplicas() )
         {
@@ -376,17 +376,17 @@ class CausalClusterRestEndpointsIT
     void replicasContainTheSameRaftIndexAsCores() throws Exception
     {
         // given starting conditions
-        writeSomeData( cluster );
+        writeSomeData( cluster, KNOWN_DB );
         assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), allValuesEqual(), 1, MINUTES );
         var initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection(
-                statusEndpoint( getLeader( cluster ), KNOWN_DB ) ) ).get()
+                statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ) ) ).get()
                 .stream()
                 .findFirst()
                 .orElseThrow( () -> new RuntimeException( "List is empty" ) );
         assertThat( initialLastAppliedRaftIndex, greaterThan( 0L ) );
 
         // when more data is added
-        writeSomeData( cluster );
+        writeSomeData( cluster, KNOWN_DB );
         assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 1L ) ), 1,
                 MINUTES );
 
@@ -394,9 +394,9 @@ class CausalClusterRestEndpointsIT
         assertEventually( lastAppliedRaftIndex( allStatusEndpointValues( cluster, KNOWN_DB ) ), allValuesEqual(), 1, MINUTES );
 
         // and endpoint last applied raft index has incremented
-        assertEventually( statusEndpoint( getLeader( cluster ), KNOWN_DB ),
-                lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ), 1,
-                MINUTES );
+        assertEventually( statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ),
+                lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ),
+                1, MINUTES );
     }
 
     @Test
@@ -424,9 +424,9 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void throughputIsPositive() throws InterruptedException
+    void throughputIsPositive() throws Exception
     {
-        writeSomeData( cluster );
+        writeSomeData( cluster, KNOWN_DB );
         assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ), everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
                 1, MINUTES );
         assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ), everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ),
