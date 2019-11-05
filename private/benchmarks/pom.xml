@@ -26,8 +26,8 @@
         <license-text.header>build/license-header.txt</license-text.header>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
-		    <neo4j.version>${project.version}</neo4j.version>
-		    <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
+        <neo4j.version>${project.version}</neo4j.version>
+        <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
         <s3mock.version>0.2.4</s3mock.version>
     </properties>
 
