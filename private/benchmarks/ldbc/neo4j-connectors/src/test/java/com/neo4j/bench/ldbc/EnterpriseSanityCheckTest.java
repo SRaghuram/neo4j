@@ -20,8 +20,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -65,7 +63,7 @@ public class EnterpriseSanityCheckTest
 
     private void shouldUseRuntime( Optional<String> maybeRequestedRuntime, String expectedRuntime ) throws Exception
     {
-        File dbDir = createTempDirectory( testFolder.absolutePath() );
+        File dbDir = testFolder.directory( "db" );
         DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile() );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
@@ -85,7 +83,7 @@ public class EnterpriseSanityCheckTest
 
     private File configFile() throws IOException
     {
-        File neo4jConfigFile = createTempFile( testFolder.absolutePath() );
+        File neo4jConfigFile = testFolder.file( "neo4j.conf" );
         Neo4jConfigBuilder.withDefaults()
                           .withSetting( record_format, "high_limit" )
                           .writeToFile( neo4jConfigFile.toPath() );

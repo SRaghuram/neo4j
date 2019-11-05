@@ -71,7 +71,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.ldbc.QueryGraphMaker.date;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -87,7 +86,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query1ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query1GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -411,7 +410,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     public void query2ShouldReturnExpectedResult() throws Exception
     {
 
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query2GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -732,7 +731,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query3ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query3GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -1126,7 +1125,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query4ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query4GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -1192,7 +1191,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query5ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query5GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -1393,7 +1392,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query6ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query6GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -1481,7 +1480,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query7ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query7GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -1878,7 +1877,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query8ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query8GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2047,7 +2046,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query9ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query9GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2230,7 +2229,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query10ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query10GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2355,7 +2354,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query11ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query11GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2441,7 +2440,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query12ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query12GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2540,7 +2539,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query13ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query13GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2618,7 +2617,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void query14ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.Query14GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2839,7 +2838,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery1ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery1GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -2905,7 +2904,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery2ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery2GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -3088,7 +3087,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery3ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery3GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -3140,7 +3139,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery4ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery4GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -3185,7 +3184,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery5ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery5GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -3236,7 +3235,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery6ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery6GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );
@@ -3469,7 +3468,7 @@ public abstract class SnbInteractiveQueryCorrectnessTest<CONNECTION> implements
     @Test
     public void shortQuery7ShouldReturnExpectedResult() throws Exception
     {
-        String dbDir = createTempDirectory( testFolder.absolutePath() ).toString();
+        String dbDir = testFolder.directory( "db" ).toString();
         QueryGraphMaker.createDbFromQueryGraphMaker( new SnbInteractiveTestGraph.ShortQuery7GraphMaker(), dbDir,
                 Neo4jSchema.NEO4J_REGULAR );
         CONNECTION connection = openConnection( dbDir );

@@ -25,7 +25,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Sets.newHashSet;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.micro.TestUtils.map;
 import static java.util.Collections.emptyMap;
@@ -45,11 +44,11 @@ public class ConfigCommandIT extends AnnotationsFixture
 
     @Test
     // Only benchmarks that are enabled by default should be enabled in the configuration file
-    public void shouldWriteDefaultConfig() throws Exception
+    public void shouldWriteDefaultConfig()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         Main.main( new String[]{
                 "config", "default",
                 "--path", benchmarkConfig.getAbsolutePath()
@@ -71,10 +70,10 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldFailToWriteNonExistentGroupConfig() throws Exception
+    public void shouldFailToWriteNonExistentGroupConfig()
     {
         // when
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         try
         {
             Main.main( new String[]{
@@ -91,10 +90,10 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldFailToWriteGroupConfigWhenNoGroupSpecified() throws Exception
+    public void shouldFailToWriteGroupConfigWhenNoGroupSpecified()
     {
         // when
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         try
         {
             Main.main( new String[]{
@@ -110,11 +109,11 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldWriteCoreAPIConfig() throws Exception
+    public void shouldWriteCoreAPIConfig()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -137,11 +136,11 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldWriteGroupConfig() throws Exception
+    public void shouldWriteGroupConfig()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -164,10 +163,10 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldFailToWriteNonExistentBenchmarkConfig() throws Exception
+    public void shouldFailToWriteNonExistentBenchmarkConfig()
     {
         // when
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         try
         {
             Main.main( new String[]{
@@ -184,10 +183,10 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldFailToWriteBenchmarkConfigWhenNoBenchmarkSpecified() throws Exception
+    public void shouldFailToWriteBenchmarkConfigWhenNoBenchmarkSpecified()
     {
         // when
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         try
         {
             Main.main( new String[]{
@@ -203,11 +202,11 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldWriteOnlyEnabledBenchmark() throws Exception
+    public void shouldWriteOnlyEnabledBenchmark()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         String benchmarkName = NoOpBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -240,11 +239,11 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldEnableBenchmarkThatIsDisabledByDefault() throws Exception
+    public void shouldEnableBenchmarkThatIsDisabledByDefault()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         String benchmarkName = DefaultDisabled.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -276,13 +275,13 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldWriteOnlyEnabledBenchmarkWhenVerbose() throws Exception
+    public void shouldWriteOnlyEnabledBenchmarkWhenVerbose()
     {
         // when
         Validation validation = new Validation();
         String benchmarkName1 = ConstantDataConstantAugment.class.getName();
         String benchmarkName2 = NoOpBenchmark.class.getName();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         Main.main( new String[]{
                 "config", "benchmarks",
                 "--verbose",
@@ -330,11 +329,11 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldWriteAllBenchmarksWhenWithDisabled() throws Exception
+    public void shouldWriteAllBenchmarksWhenWithDisabled()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         String benchmarkName = NoOpBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -375,11 +374,11 @@ public class ConfigCommandIT extends AnnotationsFixture
     }
 
     @Test
-    public void shouldWriteEverythingWhenWithDisabledAndVerbose() throws Exception
+    public void shouldWriteEverythingWhenWithDisabledAndVerbose()
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         String benchmarkName = DefaultDisabled.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",

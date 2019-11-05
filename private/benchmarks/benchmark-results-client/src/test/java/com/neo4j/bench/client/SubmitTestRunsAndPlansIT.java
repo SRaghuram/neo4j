@@ -47,9 +47,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -71,7 +69,6 @@ import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.IGNORE;
 import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.client.queries.schema.VerifyStoreSchema.patternCountInStore;
 import static com.neo4j.bench.common.options.Edition.COMMUNITY;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -146,7 +143,7 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
             Benchmark benchmark1 = Benchmark.benchmarkFor( "desc1", "bench1", Benchmark.Mode.LATENCY, emptyMap() );
             Benchmark benchmark2 = Benchmark.benchmarkFor( "desc2", "bench2", Benchmark.Mode.LATENCY, emptyMap() );
-            File testRunResultsJson1 = createTempFile( temporaryFolder.absolutePath() );
+            File testRunResultsJson1 = temporaryFolder.file( "results1.json" );
             TestRunReport testRunReport = createTestRunReportTwoProjects(
                     testRun1,
                     newArrayList(), // no plans
@@ -187,7 +184,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun2 = new TestRun( "id2", 1, 1, 1, 1, "user" );
-            final File testRunResultsJson2 = createTempFile( temporaryFolder.absolutePath() );
+            final File testRunResultsJson2 = temporaryFolder.file( "results2.json" );
             testRunReport = createTestRunReportTwoProjects(
                     testRun2,
                     newArrayList(), // no plans
@@ -263,7 +260,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun3 = new TestRun( "id3", 1, 1, 1, 1, "user" );
-            File testRunResultsJson3 = createTempFile( temporaryFolder.absolutePath() );
+            File testRunResultsJson3 = temporaryFolder.file( "results3.json" );
             testRunReport = createTestRunReportTwoProjects(
                     testRun3,
                     newArrayList(), // no plans
@@ -322,7 +319,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
 
-            File testRunResultsJson1 = createTempFile( temporaryFolder.absolutePath() );
+            File testRunResultsJson1 = temporaryFolder.file( "results1.json" );
             ArrayList<TestRunError> errors = newArrayList();
             TestRunReport testRunReport1 = createTestRunReportTwoProjects(
                     testRun1,
@@ -377,7 +374,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ),
                     new BenchmarkPlan( group, benchmark4, plan( "c" ) ) );
-            File testRunResultsJson2 = createTempFile( temporaryFolder.absolutePath() );
+            File testRunResultsJson2 = temporaryFolder.file( "results2.json" );
             TestRunReport testRunReport2 = createTestRunReport(
                     testRun2,
                     benchmarkPlans2,
@@ -466,7 +463,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
-            File testRunResultsJson = createTempFile( temporaryFolder.absolutePath() );
+            File testRunResultsJson = temporaryFolder.file( "results.json" );
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -563,7 +560,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
-            File testRunResultsJson = createTempFile( temporaryFolder.absolutePath() );
+            File testRunResultsJson = temporaryFolder.file( "results.json" );
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =

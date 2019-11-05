@@ -41,8 +41,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
@@ -228,17 +226,17 @@ class RunWorkloadCommandIT
                                             ArrayList<ProfilerType> profilers,
                                             int minimumExpectedProfilerRecordingCount ) throws Exception
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
-            Path outputDir = createTempDirectoryPath( temporaryFolder.absolutePath() );
+            Path outputDir = Files.createTempDirectory( temporaryFolder.absolutePath().toPath(), "output" );
             Workload workload = Workload.fromName( workloadName, resources, deployment );
-            Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
+            Path neo4jConfigFile = Files.createTempFile(temporaryFolder.absolutePath().toPath(),"neo4j", ".conf" );
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
             Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                             createTempDirectoryPath( temporaryFolder.absolutePath() ), // store
+                                                             Files.createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), // store
                                                              neo4jConfigFile );
 
-            Path resultsJson = createTempFilePath( temporaryFolder.absolutePath() );
+            Path resultsJson = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
             Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
             Files.createDirectories( profilerRecordingsDir );
             boolean skipFlameGraphs = true;

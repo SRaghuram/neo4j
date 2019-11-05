@@ -19,7 +19,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -32,9 +31,9 @@ class ParametersTest
     private TestDirectory temporaryFolder;
 
     @Test
-    void shouldParseParameters() throws IOException
+    void shouldParseParameters()
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/valid_param_types.txt" );
             try ( FileParametersReader reader = new FileParametersReader( parametersFile ) )
@@ -111,9 +110,9 @@ class ParametersTest
     }
 
     @Test
-    void shouldFailToParseParameterFilesWithInvalidParameterTypes() throws IOException
+    void shouldFailToParseParameterFilesWithInvalidParameterTypes()
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/invalid_param_types.txt" );
             BenchmarkUtil.assertException( RuntimeException.class,
@@ -122,9 +121,9 @@ class ParametersTest
     }
 
     @Test
-    void shouldFailToParseParameterFilesWithInvalidColumnCounts() throws IOException
+    void shouldFailToParseParameterFilesWithInvalidColumnCounts()
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             Path parametersFile = resources.getResourceFile( "/test_workloads/test/parameters/invalid_param_column_numbers.txt" );
             try ( FileParametersReader reader = new FileParametersReader( parametersFile ) )

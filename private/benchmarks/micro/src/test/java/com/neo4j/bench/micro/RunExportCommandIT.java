@@ -39,9 +39,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -59,7 +56,7 @@ class RunExportCommandIT
         assertThrows( RuntimeException.class, () ->
         {
             // Create empty Neo4j configuration file
-            File neo4jConfigFile = createTempFile( temporaryFolder.absolutePath() );
+            File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
             try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
                                                       .openStream();
                   OutputStream outputStream = Files.newOutputStream( neo4jConfigFile.toPath() ) )
@@ -68,11 +65,11 @@ class RunExportCommandIT
             }
 
             // Create empty benchmark configuration file
-            File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+            File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
             Files.write( benchmarkConfig.toPath(), Arrays.asList( "# empty config file" ) );
 
-            Path jsonFile = createTempFilePath( temporaryFolder.absolutePath() );
-            Path profileOutputDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
+            Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
+            Path profileOutputDirectory = temporaryFolder.directory( "output" ).toPath();
             Path storesDir = Paths.get( "benchmark_stores" );
 
             List<String> commandArgs = RunExportCommand.argsFor(
@@ -105,7 +102,7 @@ class RunExportCommandIT
     void shouldRunWithMinimalConfigurationWithSingleBenchmarkFromConfigFile() throws Exception
     {
         // Create empty Neo4j configuration file
-        File neo4jConfigFile = createTempFile( temporaryFolder.absolutePath() );
+        File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
         try ( InputStream inputStream = getClass().getResource( "/neo4j.conf" )
                                                   .openStream();
               OutputStream outputStream = Files.newOutputStream( neo4jConfigFile.toPath() ) )
@@ -114,7 +111,7 @@ class RunExportCommandIT
         }
 
         // Create benchmark configuration file with only one benchmark enabled
-        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
 
         Class<?> benchmark = ReadById.class;
         Main.main( new String[]{
@@ -123,8 +120,8 @@ class RunExportCommandIT
                 benchmark.getName()
         } );
 
-        Path jsonFile = createTempFilePath( temporaryFolder.absolutePath() );
-        Path profilerRecordingDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
+        Path profilerRecordingDirectory = temporaryFolder.directory( "output" ).toPath();
         Path storesDir = Paths.get( "benchmark_stores" );
 
         List<String> commandArgs = RunExportCommand.argsFor(

@@ -22,6 +22,7 @@ import com.neo4j.bench.macro.workload.Workload;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,8 +41,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFilePath;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -58,15 +57,15 @@ class PlannerDescriptionIT
     @Test
     void shouldExtractPlans() throws IOException
     {
-        try ( Resources resources = new Resources( createTempDirectoryPath( temporaryFolder.absolutePath() ) ) )
+        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             for ( Workload workload : Workload.all( resources, Deployment.embedded() ) )
             {
                 System.out.println( "Verifying plan extraction on workload: " + workload.name() );
-                Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
+                Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
                 Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
                 try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                                       createTempDirectoryPath( temporaryFolder.absolutePath() ), /* store */
+                                                                       Files.createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), /* store */
                                                                        neo4jConfigFile ) )
                 {
                     try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )

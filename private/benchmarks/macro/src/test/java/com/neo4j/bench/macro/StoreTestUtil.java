@@ -14,9 +14,8 @@ import com.neo4j.common.util.TestSupport;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 
 public class StoreTestUtil
 {
@@ -26,7 +25,7 @@ public class StoreTestUtil
         try
         {
             Schema schema = workload.expectedSchema();
-            Store store = TestSupport.createEmptyStore( createTempDirectoryPath( storePath.toFile() ), neo4jConfigFile );
+            Store store = TestSupport.createEmptyStore( Files.createTempDirectory( storePath, "store" ), neo4jConfigFile );
             EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
             return store;
         }

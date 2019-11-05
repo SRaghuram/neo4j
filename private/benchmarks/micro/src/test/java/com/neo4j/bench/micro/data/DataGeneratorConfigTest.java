@@ -23,7 +23,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
 import static com.neo4j.bench.micro.data.NumberGenerator.ascLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;
@@ -768,10 +767,10 @@ public class DataGeneratorConfigTest
         assertThat( format( "%s\n%s", config1, config2 ),
                     config1.equals( config2 ), equalTo( value ) );
 
-        File config1File = createTempFile( temporaryFolder.absolutePath() );
+        File config1File = temporaryFolder.file( "config1.file" );
         config1.serialize( config1File.toPath() );
 
-        File config2File = createTempFile( temporaryFolder.absolutePath() );
+        File config2File =  temporaryFolder.file( "config2.file" );
         config2.serialize( config2File.toPath() );
 
         DataGeneratorConfig config1After = DataGeneratorConfig.from( config1File.toPath() );

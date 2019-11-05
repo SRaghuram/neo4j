@@ -41,7 +41,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -138,7 +137,7 @@ class IntegrationValidationTest
                 scenario.paramsDir().getAbsolutePath()
         );
 
-        storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        storeDir = temporaryFolder.directory( "store" );
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
@@ -204,7 +203,7 @@ class IntegrationValidationTest
         int threadCount = 4;
         int statusDisplayIntervalAsSeconds = 1;
         TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-        String resultDirPath = createTempDirectory( temporaryFolder.absolutePath() ).toString();
+        String resultDirPath = temporaryFolder.directory( "results" ).toString();
 
         Double timeCompressionRatio = 1.0;
         ConsoleAndFileDriverConfiguration.ConsoleAndFileValidationParamOptions validationCreationParams = null;
@@ -247,7 +246,7 @@ class IntegrationValidationTest
         VALIDATE EMBEDDED API
          */
 
-        File dbDir = createTempDirectory( temporaryFolder.absolutePath() );
+        File dbDir = temporaryFolder.directory( "db" );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()

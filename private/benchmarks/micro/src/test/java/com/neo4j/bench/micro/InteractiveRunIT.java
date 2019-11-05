@@ -38,8 +38,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.jmh.api.config.BenchmarkDescription.of;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -104,8 +102,7 @@ class InteractiveRunIT extends AnnotationsFixture
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
-        int expectedStoreCount = expectedBenchmarkCount;
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
+        runInteractively( benchmark, expectedBenchmarkCount, expectedBenchmarkCount, ErrorPolicy.FAIL );
     }
 
     @Test
@@ -151,8 +148,8 @@ class InteractiveRunIT extends AnnotationsFixture
             ErrorPolicy errorPolicy,
             String... methods ) throws Exception
     {
-        File storesDir = createTempDirectory( temporaryFolder.absolutePath() );
-        Path profilerRecordingDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
+        File storesDir = temporaryFolder.directory( "store" );
+        Path profilerRecordingDirectory = temporaryFolder.directory( "recordings" ).toPath();
         int measurementForks = 1;
         int iterationCount = 1;
         TimeValue iterationDuration = TimeValue.seconds( 1 );

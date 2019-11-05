@@ -47,7 +47,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
@@ -149,7 +148,7 @@ class IntegrationValidationTest
                 MapUtils.loadPropertiesToMap( new File( scenario.updatesDir(), "updateStream.properties" ) );
         configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs( updateStreamConfiguration );
 
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        File storeDir = temporaryFolder.directory( "store" );
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
@@ -281,7 +280,7 @@ class IntegrationValidationTest
         int threadCount = 4;
         int statusDisplayIntervalAsSeconds = 1;
         TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-        String resultDirPath = createTempDirectory( temporaryFolder.absolutePath() ).toString();
+        String resultDirPath = temporaryFolder.directory( "results" ).toString();
         Double timeCompressionRatio = 1.0;
         ConsoleAndFileDriverConfiguration.ConsoleAndFileValidationParamOptions validationCreationParams = null;
         String databaseValidationFilePath = scenario.validationParamsFile().getAbsolutePath();
@@ -326,7 +325,7 @@ class IntegrationValidationTest
         VALIDATE
          */
 
-        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
+        File storeDir = temporaryFolder.directory( "store" );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
