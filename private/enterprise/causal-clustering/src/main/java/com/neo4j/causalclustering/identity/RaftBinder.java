@@ -10,9 +10,8 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.dbms.DatabaseStartAborter;
-import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
+import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -23,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.internal.DatabaseLog;

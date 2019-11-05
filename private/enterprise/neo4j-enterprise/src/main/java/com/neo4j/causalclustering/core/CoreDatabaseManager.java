@@ -7,24 +7,21 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.common.ClusterMonitors;
-import com.neo4j.dbms.database.ClusteredDatabaseContext;
-import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.snapshot.StoreDownloadContext;
-import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
+import com.neo4j.dbms.database.ClusteredDatabaseContext;
+import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseConfig;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.ModularDatabaseCreationContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -43,20 +40,16 @@ import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 {
     protected final CoreEditionModule edition;
-    private final ClusterSystemGraphDbmsModel dbmsModel;
 
     CoreDatabaseManager( GlobalModule globalModule, CoreEditionModule edition, CatchupComponentsFactory catchupComponentsFactory, FileSystemAbstraction fs,
             PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
         super( globalModule, edition, catchupComponentsFactory, fs, pageCache, logProvider, config, clusterStateLayout );
         this.edition = edition;
-        Supplier<GraphDatabaseService> systemDbSupplier = () -> getDatabaseContext( SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
-        this.dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
     }
 
     @Override
@@ -73,7 +66,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, clusteredComponentsLife,
-                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel );
+                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel() );
 
         var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
@@ -89,7 +82,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator() );
 
         var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, clusteredComponentsLife, coreDatabaseMonitors, coreDatabaseDependencies,
-                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator(), databaseStartAborter );
+                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator(), getDatabaseStartAborter() );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
                 storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors );

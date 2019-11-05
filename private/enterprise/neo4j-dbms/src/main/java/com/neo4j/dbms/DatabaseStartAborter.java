@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseStartupController;
 
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
@@ -24,7 +25,7 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
  * the {@link DbmsReconciler}. Instead it is used for bailing out of blocking logic taking place
  * during e.g. {@link Database#start()}.
  */
-public class DatabaseStartAborter
+public class DatabaseStartAborter implements DatabaseStartupController
 {
     private final Duration ttl;
     private final Map<DatabaseId,CachedDatabaseState> databaseStates;
@@ -52,6 +53,7 @@ public class DatabaseStartAborter
      * @param databaseId the database whose desired state we should check in the system db.
      * @return whether the database start should be aborted.
      */
+    @Override
     public boolean shouldAbort( DatabaseId databaseId )
     {
         if ( globalAvailabilityGuard.isShutdown() )

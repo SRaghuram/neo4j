@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
-import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.IOException;
 
@@ -54,7 +54,7 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
                 transactionLogs, internalDbmsOperator() );
 
         ReadReplicaDatabaseLife readReplicaDatabase = edition.readReplicaDatabaseFactory()
-                .createDatabase( databaseContext, internalDbmsOperator(), databaseStartAborter );
+                .createDatabase( databaseContext, internalDbmsOperator(), getDatabaseStartAborter() );
 
         return contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
                 readReplicaDatabase, readReplicaMonitors );

@@ -52,6 +52,7 @@ import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabas
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
@@ -90,6 +91,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
@@ -131,6 +133,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
+    private DatabaseStartAborter startupController;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -305,6 +308,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalModule.getGlobalDependencies().satisfyDependencies( raftServer ); // resolved in tests
         globalLife.add( raftServer );
 
+        startupController = databaseManager.getDatabaseStartAborter();
+
         createCoreServers( globalLife, databaseManager, fileSystem );
         //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
         globalModule.getGlobalLife().add( reconcilerModule );
@@ -362,6 +367,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
+    }
+
+    @Override
+    public DatabaseStartupController getDatabaseStartupController()
+    {
+        return startupController;
     }
 
     private static ClusterStateMigrator createClusterStateMigrator( GlobalModule globalModule, ClusterStateLayout clusterStateLayout,

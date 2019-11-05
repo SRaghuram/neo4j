@@ -24,8 +24,8 @@ import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
-import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
@@ -37,7 +37,6 @@ import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -48,7 +47,6 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
@@ -57,6 +55,7 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -64,8 +63,6 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
-
-import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -86,6 +83,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
+    private DatabaseStartAborter startupController;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
 
@@ -209,6 +207,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         backupServerOptional.ifPresent( globalLife::add );
         globalLife.add( reconcilerModule );
 
+        startupController = databaseManager.getDatabaseStartAborter();
+
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
                 topologyService, myIdentity, catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(),
@@ -240,6 +240,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
+    }
+
+    @Override
+    public DatabaseStartupController getDatabaseStartupController()
+    {
+        return startupController;
     }
 
     @Override

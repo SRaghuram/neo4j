@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
-import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +32,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -122,10 +122,9 @@ class RaftBinderTest
         var binder = raftBinder( new InMemorySimpleStorage<>(), topologyService );
         var aborter = mock( DatabaseStartAborter.class );
         when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( true );
-        var exception = DatabaseStartAbortedException.class;
 
         // when / then
-        assertThrows( exception, () -> binder.bindToRaft( aborter ) );
+        assertThrows( DatabaseStartAbortedException.class, () -> binder.bindToRaft( aborter ) );
     }
 
     @Test

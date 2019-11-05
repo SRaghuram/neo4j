@@ -23,7 +23,6 @@ import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -37,6 +36,7 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -165,10 +165,9 @@ class ReadReplicaDatabaseLifeTest
         when( aborter.shouldAbort( any( DatabaseId.class ) ) ).thenReturn( false, true );
 
         var readReplicaDatabaseLife = createReadReplicaDatabaseLife( topologyService, catchupComponents, databaseContext, catchupProcess, aborter );
-        var exception = DatabaseStartAbortedException.class;
 
         // when / then
-        assertThrows( exception, readReplicaDatabaseLife::start );
+        assertThrows( DatabaseStartAbortedException.class, readReplicaDatabaseLife::start );
         verify( aborter, times( 2 ) ).shouldAbort( databaseA );
     }
 

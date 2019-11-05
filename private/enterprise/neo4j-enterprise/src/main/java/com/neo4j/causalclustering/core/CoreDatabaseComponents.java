@@ -16,6 +16,7 @@ import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.AccessCapabilityFactory;
@@ -106,5 +107,11 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     public AccessCapabilityFactory getAccessCapabilityFactory()
     {
         return kernelComponents.accessCapabilityFactory();
+    }
+
+    @Override
+    public DatabaseStartupController getStartupController()
+    {
+        return editionModule.getDatabaseStartupController();
     }
 }

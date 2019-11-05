@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.EnterpriseSystemGraphDbmsModel;
 import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
@@ -35,6 +36,7 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -66,6 +68,7 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -94,6 +97,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final FabricDatabaseManager fabricDatabaseManager;
     private final FabricServicesBootstrap fabricServicesBootstrap;
+    private DatabaseStartAborter databaseStartAborter;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
     {
@@ -186,6 +190,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
+        this.databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
+                Duration.ofSeconds( 5 ) );
         var reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
@@ -253,6 +259,12 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         }
 
         return new FabricAuthManagerWrapper( (EnterpriseAuthManager) authManager );
+    }
+
+    @Override
+    public DatabaseStartupController getDatabaseStartupController()
+    {
+        return databaseStartAborter;
     }
 
     @Override

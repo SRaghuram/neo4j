@@ -15,7 +15,6 @@ import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
@@ -48,7 +47,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final ClusterStateLayout clusterStateLayout;
     private final ClusterInternalDbmsOperator internalDbmsOperator;
     private final ClusterSystemGraphDbmsModel dbmsModel;
-    protected final DatabaseStartAborter databaseStartAborter;
+    private final DatabaseStartAborter databaseStartAborter;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
@@ -166,5 +165,10 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     public final ClusterInternalDbmsOperator internalDbmsOperator()
     {
         return internalDbmsOperator;
+    }
+
+    public DatabaseStartAborter getDatabaseStartAborter()
+    {
+        return databaseStartAborter;
     }
 }

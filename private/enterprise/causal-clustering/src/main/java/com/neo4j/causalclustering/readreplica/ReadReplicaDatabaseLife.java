@@ -21,7 +21,6 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.DatabaseStartAbortedException;
 import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
@@ -31,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.lifecycle.LifeSupport;

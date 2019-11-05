@@ -10,10 +10,10 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.dbms.DatabaseStartAborter;
-import com.neo4j.dbms.DatabaseStartAbortedException;
 
 import java.io.IOException;
 
+import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreSnapshotService
