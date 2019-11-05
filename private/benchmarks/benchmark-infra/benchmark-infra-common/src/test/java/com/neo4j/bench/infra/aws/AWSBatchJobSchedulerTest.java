@@ -17,16 +17,15 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.commands.BatchJobCommandParameters;
 import com.neo4j.bench.infra.commands.InfraParams;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -80,7 +79,6 @@ public class AWSBatchJobSchedulerTest
                 Runtime.DEFAULT,
                 Planner.DEFAULT,
                 ExecutionMode.EXECUTE,
-                ErrorReporter.ErrorPolicy.FAIL,
                 JvmArgs.from( "-Xms4g", "-Xmx4g" ),
                 false,// recreate schema
                 false, // skip flame graphs
@@ -118,7 +116,8 @@ public class AWSBatchJobSchedulerTest
                 resultsStorePassword,
                 resultsStoreUri,
                 baseArtifactUri,
-                workerArtifactUri );
+                workerArtifactUri,
+                ErrorReportingPolicy.FAIL );
 
         Map<String,String> expectedParams = new HashMap<>();
         expectedParams.putAll( runWorkloadParams.asMap() );

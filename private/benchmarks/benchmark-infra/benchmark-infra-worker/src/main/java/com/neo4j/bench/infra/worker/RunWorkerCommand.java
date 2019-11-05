@@ -156,7 +156,6 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    runWorkloadParams.planner().name(),
                                    runWorkloadParams.runtime().name(),
                                    runWorkloadParams.triggeredBy(),
-                                   runWorkloadParams.errorPolicy().name(),
                                    runWorkloadParams.deployment().parsableValue() );
     }
 }

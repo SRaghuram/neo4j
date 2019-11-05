@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EDITION;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EXECUTION_MODE;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_FORKS;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_JVM_ARGS;
@@ -159,12 +158,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
              title = "Skip FlameGraph generation" )
     private boolean skipFlameGraphs;
 
-    @Option( type = OptionType.COMMAND,
-             name = {CMD_ERROR_POLICY},
-             description = "Specify if execution should terminate on error, or skip and continue",
-             title = "Error handling policy" )
-    private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
-
     // -----------------------------------------------------------------------
     // Result Client Report Results Args
     // -----------------------------------------------------------------------
@@ -270,7 +263,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                                                                  runtime,
                                                                  planner,
                                                                  executionMode,
-                                                                 errorPolicy,
                                                                  jvmArgs,
                                                                  recreateSchema,
                                                                  skipFlameGraphs,

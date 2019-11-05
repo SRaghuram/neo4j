@@ -114,7 +114,6 @@ class ConvenientLocalExecutionIT
                             RUNTIME,
                             PLANNER,
                             EXECUTION_MODE,
-                            ErrorPolicy.FAIL,
                             JVM_ARGS,
                             RECREATE_SCHEMA,
                             SKIP_FLAME_GRAPHS,

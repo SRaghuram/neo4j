@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.infra.commands;
 
+import com.neo4j.bench.common.results.ErrorReportingPolicy;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -50,6 +53,9 @@ public class InfraParams
     public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
     private final URI resultsStoreUri;
 
+    public static final String CMD_ERROR_POLICY = RunWorkloadParams.CMD_ERROR_POLICY;
+    private ErrorReportingPolicy errorPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
+
     public InfraParams( Path workspaceDir,
                         String awsSecret,
                         String awsKey,
@@ -59,7 +65,8 @@ public class InfraParams
                         String resultsStorePassword,
                         URI resultsStoreUri,
                         URI artifactBaseUri,
-                        URI artifactWorkerUri )
+                        URI artifactWorkerUri,
+                        ErrorReportingPolicy errorPolicy )
     {
         this.workspaceDir = workspaceDir;
         this.awsSecret = awsSecret;
@@ -71,6 +78,7 @@ public class InfraParams
         this.resultsStoreUri = resultsStoreUri;
         this.artifactBaseUri = artifactBaseUri;
         this.artifactWorkerUri = artifactWorkerUri;
+        this.errorPolicy = errorPolicy;
     }
 
     public Path workspaceDir()
@@ -128,6 +136,11 @@ public class InfraParams
         return artifactWorkerUri;
     }
 
+    public ErrorReportingPolicy errorReportingPolicy()
+    {
+        return errorPolicy;
+    }
+
     public Map<String,String> asMap()
     {
         Map<String,String> map = new HashMap<>();
@@ -137,6 +150,7 @@ public class InfraParams
         map.put( CMD_DB_NAME, storeName );
         map.put( CMD_RESULTS_STORE_URI, resultsStoreUri.toString() );
         map.put( CMD_RESULTS_STORE_USER, resultsStoreUsername );
+        map.put( CMD_ERROR_POLICY, String.valueOf( errorPolicy ) );
         return map;
     }
 }

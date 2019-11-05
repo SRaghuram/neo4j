@@ -11,7 +11,6 @@ import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.util.ErrorReporter;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -69,7 +68,6 @@ public class RunWorkloadParams
     private final ExecutionMode executionMode;
 
     public static final String CMD_ERROR_POLICY = "--error-policy";
-    private final ErrorReporter.ErrorPolicy errorPolicy;
 
     public static final String CMD_JVM_ARGS = "--jvm-args";
     private final JvmArgs jvmArgs;
@@ -140,7 +138,6 @@ public class RunWorkloadParams
                               Runtime runtime,
                               Planner planner,
                               ExecutionMode executionMode,
-                              ErrorReporter.ErrorPolicy errorPolicy,
                               JvmArgs jvmArgs,
                               boolean recreateSchema,
                               boolean skipFlameGraphs,
@@ -172,7 +169,6 @@ public class RunWorkloadParams
         this.runtime = runtime;
         this.planner = planner;
         this.executionMode = executionMode;
-        this.errorPolicy = errorPolicy;
         this.jvmArgs = jvmArgs;
         this.recreateSchema = recreateSchema;
         this.skipFlameGraphs = skipFlameGraphs;
@@ -255,11 +251,6 @@ public class RunWorkloadParams
     public ExecutionMode executionMode()
     {
         return executionMode;
-    }
-
-    public ErrorReporter.ErrorPolicy errorPolicy()
-    {
-        return errorPolicy;
     }
 
     public JvmArgs jvmArgs()
@@ -377,7 +368,6 @@ public class RunWorkloadParams
         map.put( CMD_RUNTIME, runtime.name() );
         map.put( CMD_PLANNER, planner.name() );
         map.put( CMD_EXECUTION_MODE, executionMode.name() );
-        map.put( CMD_ERROR_POLICY, errorPolicy.name() );
         map.put( CMD_JVM_ARGS, jvmArgs.toArgsString() );
         map.put( CMD_NEO4J_DEPLOYMENT, deployment.parsableValue() );
         map.put( CMD_RECREATE_SCHEMA, Boolean.toString( recreateSchema ) );

@@ -25,7 +25,6 @@ import com.neo4j.bench.common.model.Plan;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -58,6 +57,7 @@ import java.util.Optional;
 import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_DB_PATH;
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_CONFIG;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_PROFILER_RECORDINGS_DIR;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_RESULTS_JSON;
@@ -105,6 +105,12 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
     @Required
     private File profilerRecordingsOutputDir;
 
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_ERROR_POLICY},
+             description = "Specify if execution should terminate on error, or skip and continue",
+             title = "Error handling policy" )
+    private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
+
     protected void doRun( RunWorkloadParams params )
     {
         for ( ProfilerType profiler : params.profilers() )
@@ -149,7 +155,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                 EmbeddedDatabase.verifyStoreFormat( store );
             }
 
-            ErrorReporter errorReporter = new ErrorReporter( params.errorPolicy() );
+            ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
             BenchmarkGroupBenchmarkMetrics results = new BenchmarkGroupBenchmarkMetrics();
             List<BenchmarkPlan> resultPlans = new ArrayList<>();
             BenchmarkGroupBenchmarkMetricsPrinter conciseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( false );

@@ -102,7 +102,8 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
                                                    resultsStorePassword,
                                                    resultsStoreUri,
                                                    artifactBaseUri,
-                                                   artifactWorkerUri );
+                                                   artifactWorkerUri,
+                                                   errorReportingPolicy );
         doRunInfra( runWorkloadParams, infraParams );
     }
 

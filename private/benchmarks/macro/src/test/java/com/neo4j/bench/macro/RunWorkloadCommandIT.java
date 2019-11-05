@@ -283,7 +283,6 @@ class RunWorkloadCommandIT
                             Runtime.DEFAULT,
                             Planner.DEFAULT,
                             ExecutionMode.EXECUTE,
-                            ErrorPolicy.FAIL,
                             JvmArgs.from( "-Xms4g", "-Xmx4g" ),
                             recreateSchema,
                             skipFlameGraphs,
