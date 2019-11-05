@@ -24,7 +24,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.DbRepresentation;
@@ -44,6 +43,7 @@ import static com.neo4j.security.SecurityHelpers.newUser;
 import static com.neo4j.security.SecurityHelpers.userCanLogin;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.NATIVE_REALM_NAME;
 import static org.apache.commons.lang3.RandomStringUtils.random;
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
@@ -208,14 +208,19 @@ class ClusterRestoreIT
         }
     }
 
-    private void randomData( Transaction tx )
+    private static void randomData( Transaction tx )
     {
-        Node node = tx.createNode( label( random( 20 ) ) );
-        node.setProperty( random( 20 ), random( 1024 ) );
+        // tokens can't contain null-bytes or backticks
+        var label = label( randomAlphanumeric( 20 ) );
+        var propertyKey = randomAlphanumeric( 20 );
+        var propertyValue = random( 1024 );
+
+        var node = tx.createNode( label );
+        node.setProperty( propertyKey, propertyValue );
         tx.commit();
     }
 
-    private void populateSnapshots( Cluster cluster, Map<String,DbRepresentation> dbRepresentations, String... databaseNames )
+    private static void populateSnapshots( Cluster cluster, Map<String,DbRepresentation> dbRepresentations, String... databaseNames )
             throws TimeoutException
     {
         for ( String databaseName : databaseNames )
