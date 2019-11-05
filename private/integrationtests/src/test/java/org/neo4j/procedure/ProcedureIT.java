@@ -224,11 +224,11 @@ public class ProcedureIT
         //Expect
         exception.expect( QueryExecutionException.class );
         exception.expectMessage( containsStringIgnoreNewlines(
-                String.format( "Procedure call does not provide the required number of arguments: " +
-                               "got 0 expected at least 1 (total: 1, 0 of which has default values).%n%n" +
-                               "Procedure org.neo4j.procedure.simpleArgument has signature: " +
-                               "org.neo4j.procedure.simpleArgument(name :: INTEGER?) :: someVal :: INTEGER?%n" +
-                               "meaning that it expects at least 1 argument of type INTEGER?" ) ) );
+                "Procedure call does not provide the required number of arguments: " +
+                "got 0 expected at least 1 (total: 1, 0 of which have default values)." +
+                "Procedure org.neo4j.procedure.simpleArgument has signature: " +
+                "org.neo4j.procedure.simpleArgument(name :: INTEGER?) :: someVal :: INTEGER?" +
+                "meaning that it expects at least 1 argument of type INTEGER?" ) );
         // When
         try ( Transaction ignore = db.beginTx() )
         {
@@ -276,12 +276,12 @@ public class ProcedureIT
         //Expect
         exception.expect( QueryExecutionException.class );
         exception.expectMessage( containsStringIgnoreNewlines(
-                String.format(
-                        "Procedure call does not provide the required number of arguments: " +
-                        "got 0 expected at least 2 (total: 3, 1 of which has default values).%n%n" +
-                        "Procedure org.neo4j.procedure.sideEffectWithDefault has signature: org.neo4j.procedure" +
-                        ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
-                        "meaning that it expects at least 2 arguments of types STRING?, STRING?%n (line 1, column 1 (offset: 0))" ) ) );
+                "Procedure call does not provide the required number of arguments: " +
+                "got 0 expected at least 2 (total: 3, 1 of which have default values)." +
+                "Procedure org.neo4j.procedure.sideEffectWithDefault has signature: org.neo4j.procedure" +
+                ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID" +
+                "meaning that it expects at least 2 arguments of types STRING?, STRING?" +
+                "(line 1, column 1 (offset: 0))" ) );
         // When
         try ( Transaction ignore = db.beginTx() )
         {
@@ -295,13 +295,12 @@ public class ProcedureIT
         //Expect
         exception.expect( QueryExecutionException.class );
         exception.expectMessage( containsStringIgnoreNewlines(
-                String.format(
-                        "Procedure call does not provide the required number of arguments: " +
-                        "got 0 expected at least 1 (total: 1, 0 of which has default values).%n%n" +
-                        "Procedure org.neo4j.procedure.nodeWithDescription has signature: " +
-                        "org.neo4j.procedure.nodeWithDescription(node :: NODE?) :: node :: NODE?%n" +
-                        "meaning that it expects at least 1 argument of type NODE?%n" +
-                        "Description: This is a description (line 1, column 1 (offset: 0))" ) ) );
+                "Procedure call does not provide the required number of arguments: " +
+                "got 0 expected at least 1 (total: 1, 0 of which have default values)." +
+                "Procedure org.neo4j.procedure.nodeWithDescription has signature: " +
+                "org.neo4j.procedure.nodeWithDescription(node :: NODE?) :: node :: NODE?" +
+                "meaning that it expects at least 1 argument of type NODE?" +
+                "Description: This is a description (line 1, column 1 (offset: 0))" ) );
         // When
         try ( Transaction ignore = db.beginTx() )
         {
