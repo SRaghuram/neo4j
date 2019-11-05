@@ -13,6 +13,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.model.TestRunError;
 import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
 
 import java.io.File;
@@ -54,16 +55,6 @@ public class ReportCommand implements Runnable
             description = "JSON file containing Test Run results",
             title = "JSON file containing Test Run results" )
     private File testRunResultsJson;
-
-    public enum ErrorReportingPolicy
-    {
-        // report regardless of errors. exit cleanly regardless of errors.
-        IGNORE,
-        // report regardless of errors. exit with error if report contains errors.
-        REPORT_THEN_FAIL,
-        // only report if there are no errors. exit with error if report contains errors.
-        FAIL
-    }
 
     static final String CMD_ERROR_POLICY = "--error-policy";
     @Option( type = OptionType.COMMAND,

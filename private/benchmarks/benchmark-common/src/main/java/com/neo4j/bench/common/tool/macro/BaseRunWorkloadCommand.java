@@ -50,7 +50,6 @@ import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TOOL_OWNER
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TRIGGERED_BY;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WARMUP;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WORKLOAD;
-
 import static java.lang.String.format;
 
 public abstract class BaseRunWorkloadCommand implements Runnable
@@ -135,12 +134,6 @@ public abstract class BaseRunWorkloadCommand implements Runnable
     private ExecutionMode executionMode;
 
     @Option( type = OptionType.COMMAND,
-             name = {CMD_ERROR_POLICY},
-             description = "Specify if execution should terminate on error, or skip and continue",
-             title = "Error handling policy" )
-    private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
-
-    @Option( type = OptionType.COMMAND,
              name = {CMD_JVM_ARGS},
              description = "JVM arguments that benchmark was run with (e.g., '-XX:+UseG1GC -Xms4g -Xmx4g')",
              title = "JVM Args" )
@@ -165,6 +158,12 @@ public abstract class BaseRunWorkloadCommand implements Runnable
              description = "Skip FlameGraph generation",
              title = "Skip FlameGraph generation" )
     private boolean skipFlameGraphs;
+
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_ERROR_POLICY},
+             description = "Specify if execution should terminate on error, or skip and continue",
+             title = "Error handling policy" )
+    private ErrorPolicy errorPolicy = ErrorPolicy.SKIP;
 
     // -----------------------------------------------------------------------
     // Result Client Report Results Args

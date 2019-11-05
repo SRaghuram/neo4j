@@ -8,11 +8,14 @@ package com.neo4j.bench.infra.commands;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 
 import java.io.File;
 import java.net.URI;
+
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
 
 public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
 {
@@ -66,6 +69,12 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
              title = "Store name" )
     @Required
     private String storeName;
+
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_ERROR_POLICY},
+             description = "Specify if execution should terminate on error, or skip and continue",
+             title = "Error handling policy" )
+    private ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.IGNORE;
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_ARTIFACT_BASE_URI,
