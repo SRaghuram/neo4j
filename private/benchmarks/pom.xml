@@ -230,16 +230,6 @@
     </build>
 
     <repositories>
-      <!-- This repository is here for migration purposes, it will go away soon -->
-      <repository>
-        <id>docs-maven-local</id>
-        <name>Docs Maven Local</name>
-        <url>https://neo.jfrog.io/neo/docs-maven-local/</url>
-        <snapshots>
-          <enabled>true</enabled>
-        </snapshots>
-      </repository>
-        <!-- This repository is here to stay -->
       <repository>
         <id>benchmarking-thirdparty</id>
         <name>Benchmarking thirdparty libs</name>
