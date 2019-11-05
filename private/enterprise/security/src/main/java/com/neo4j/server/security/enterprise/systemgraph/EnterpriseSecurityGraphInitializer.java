@@ -172,7 +172,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     {
         String newAdmin = null;
 
-        // Try to import the name of a single admin user as set by the SetDefaultAdmin command
+        // Try to determine who should be admin, by first checking the outcome of the SetDefaultAdmin command
         if ( importOptions.defaultAdminRepositorySupplier != null )
         {
             UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
@@ -369,9 +369,9 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     {
         UserRepository userRepository = startUserRepository( importOptions.migrationUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.migrationRoleRepositorySupplier );
-        doImportUsers( tx, userRepository );
-        boolean importOk = doImportRoles( tx, userRepository, roleRepository );
-        if ( !importOk )
+        doMigrateUsers( tx, userRepository );
+        boolean migrateOk = doMigrateRoles( tx, userRepository, roleRepository );
+        if ( !migrateOk )
         {
             throw new InvalidArgumentsException(
                     "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
@@ -395,13 +395,13 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         roleRepository.shutdown();
     }
 
-    private boolean doImportRoles( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
+    private boolean doMigrateRoles( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
 
-        boolean usersToImport = !users.values().isEmpty();
-        boolean rolesToImport = !roles.values().isEmpty();
+        boolean usersToMigrate = !users.values().isEmpty();
+        boolean rolesToMigrate = !roles.values().isEmpty();
         boolean valid = RoleRepository.validate( users.values(), roles.values() );
 
         if ( !valid )
@@ -409,7 +409,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             return false;
         }
 
-        if ( rolesToImport )
+        if ( rolesToMigrate )
         {
             setUpDefaultPrivileges( tx );
             for ( RoleRecord roleRecord : roles.values() )
@@ -428,21 +428,21 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                     addRoleToUser( tx, role, username );
                 }
             }
-            assert validateImportSucceeded( tx, userRepository, roleRepository );
+            assert validateMigrationSucceeded( tx, userRepository, roleRepository );
         }
 
-        if ( usersToImport || rolesToImport )
+        if ( usersToMigrate || rolesToMigrate )
         {
             // Log what happened to the security log
             String roleString = roles.values().size() == 1 ? "role" : "roles";
-            log.info( "Completed import of %s %s into system graph.", Integer.toString( roles.values().size() ), roleString );
+            log.info( "Completed migration of %s %s into system graph.", Integer.toString( roles.values().size() ), roleString );
         }
         return true;
     }
 
-    private boolean validateImportSucceeded( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
+    private boolean validateMigrationSucceeded( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
-        // Take a new snapshot of the import repositories
+        // Take a new snapshot of the migration repositories
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
 
@@ -450,14 +450,14 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         List<String> repoUsernames = users.values().stream().map( User::name ).collect( Collectors.toList() );
         if ( !systemGraphUsers.containsAll( repoUsernames ) )
         {
-            throw new IOException( "Users were not imported correctly" );
+            throw new IOException( "Users were not migrated correctly" );
         }
 
         List<String> repoRoleNames = roles.values().stream().map( RoleRecord::name ).collect( Collectors.toList() );
         Set<String> systemGraphRoles = getAllNames( tx, ROLE_LABEL );
         if ( !systemGraphRoles.containsAll( repoRoleNames ) )
         {
-            throw new IOException( "Roles were not imported correctly" );
+            throw new IOException( "Roles were not migrated correctly" );
         }
 
         for ( RoleRecord role : roles.values() )
@@ -465,7 +465,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             Set<String> usernamesForRole = getUsernamesForRole( tx, role.name() );
             if ( !usernamesForRole.containsAll( role.users() ) )
             {
-                throw new IOException( "Role assignments were not imported correctly" );
+                throw new IOException( "Role assignments were not migrated correctly" );
             }
         }
 

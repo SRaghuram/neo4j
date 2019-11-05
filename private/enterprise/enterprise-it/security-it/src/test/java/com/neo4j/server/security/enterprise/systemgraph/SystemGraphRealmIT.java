@@ -99,8 +99,8 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realm, "alice" );
         assertAuthenticationSucceeds( realm, "bob" );
         log.assertExactly(
-                info( "Completed import of %s %s into system graph.", "2", "users" ),
-                info( "Completed import of %s %s into system graph.", "2", "roles" )
+                info( "Completed migration of %s %s into system graph.", "2", "users" ),
+                info( "Completed migration of %s %s into system graph.", "2", "roles" )
         );
     }
 
@@ -223,8 +223,8 @@ class SystemGraphRealmIT
         assertTrue( dbManager.userHasRole( "jane", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, "jane" );
         log.assertExactly(
-                info( "Completed import of %s %s into system graph.", "1", "user" ),
-                info( "Completed import of %s %s into system graph.", "0", "roles" ),
+                info( "Completed migration of %s %s into system graph.", "1", "user" ),
+                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" )
         );
     }
@@ -252,8 +252,8 @@ class SystemGraphRealmIT
         assertTrue( dbManager.userHasRole( "neo4j", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realm, "jane" );
         log.assertExactly(
-                info( "Completed import of %s %s into system graph.", "3", "users" ),
-                info( "Completed import of %s %s into system graph.", "0", "roles" ),
+                info( "Completed migration of %s %s into system graph.", "3", "users" ),
+                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" )
         );
     }
@@ -278,8 +278,8 @@ class SystemGraphRealmIT
         // Then
         assertTrue( dbManager.userHasRole( "trinity", PredefinedRoles.ADMIN ) );
         log.assertExactly(
-                info( "Completed import of %s %s into system graph.", "3", "users" ),
-                info( "Completed import of %s %s into system graph.", "0", "roles" ),
+                info( "Completed migration of %s %s into system graph.", "3", "users" ),
+                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "trinity" )
         );
     }
