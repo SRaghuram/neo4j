@@ -1,4 +1,35 @@
-# building Docker image
+# Architecture overview
+
+![Benchmarking infrastructure overview](benchmarking-infrastrcture.svg)
+
+[Draw.io diagram source](https://www.draw.io/?page-id=d8cSnnHiEe-P8-4SL6Jb&scale=auto#G1Z5smRPEfWNSEWeidfOiFIAJdWb6HpEZg)
+
+## Build pipeline
+
+* TeamCity runs a build on a small instance, once artifacts are built, it pushes them to S3 (macro.jar, for example)
+* Then it runs a process which schedules benchmarking runs to an AWS batch queue and afterwards, it just sits and watches the progress of scheduled benchmark runs
+* Execution environment picks up a job from the queue, finds the right EC2 instance to run this job (based on job spec)
+* On the EC2 instance, we need a small “bootstrap” to be run, with following steps
+    * Pull macro.jar (or any other artifact), this should pull artifact which was built in the first step (we need to version these things)
+    * Pulls the right data set (based on  job spec)
+    * And from now on the process runs “as it used to be”,
+    * Once the benchmark is done we push results to store and recordings and logs to S3
+
+## Components
+
+* maven modules
+    * `benchmark-infra-common`, contains shared code, mainly components interacting with AWS
+    * `benchmark-infra-scheduler`, component responsible for uploading artifacts to S3 and scheduling benchmarking run
+    * `benchmark-infra-worker`, component responsible for downloading artifacts, running benchmark and uploading results
+* infrastucture,
+    * `src/main/ami/benchmark-run-batch-worker/template.json`, Packer template which creates new AMI instance
+    * `src/main/stack/aws-batch-formation.json`, CloudFormation stack which creates necessary components in AWS
+    * `src/main/infra-build/Dockerfile`, docker image used to run infra builds
+    * `benchmark-infra-worker/src/main/docker/`, docker images in which workers are run
+
+# Development guidelines
+
+## Building Docker image
 
 This is a docker image which contains profilers, plus small worker bootstrap
 script. This is used in AWS batch job definition in CloudFormation stack down
@@ -9,7 +40,7 @@ You can buid it in two simple steps.
 	docker build benchmark-infra-worker -t 065531048259.dkr.ecr.eu-west-1.amazonaws.com/benchmarks-worker:latest
 	docker push 065531048259.dkr.ecr.eu-west-1.amazonaws.com/benchmarks-worker:latest
 
-# building AWS Batch AMI
+## Building AWS Batch AMI
 
 Default AMI used by AWS Batch has limitations on available storage space (10G).
 Which is not enough for benchmarking workloads. In order to overcome this limitation we
@@ -27,13 +58,13 @@ In order to build a new AMI image, you should invoke the following command:
 This will build new AMI and push it to EC2. Then you will have to use new AMI id
 in AWS Batch computing environment configuration.
 
-# deploy AWS Batch stack
+## Deploy AWS Batch stack
 
 AWS Batch is deployed using CloudFormation. Here is easy one liner to deploy/update stack.
 
 	aws --region eu-north-1 cloudformation deploy --stack-name benchmarking --template-file src/main/stack/aws-batch-formation.json
 
-# get logs of batch job
+## Get logs of batch job
 
 Scheduler will output log stream name when job is scheduled, later on you can use it
 in AWS console (go to CloudWatch->Logs) or through AWS CLI, with little bit of
@@ -41,7 +72,7 @@ magic from `jq`:
 
        aws logs get-log-events --log-group-name "/aws/batch/job" --log-stream-name [log-stream-name] --query "events[].message"  | jq -r 'join("\n")'
 
-# working locally with worker
+## Working locally with worker
 
 The best way to develop and debug worker is to do it through docker container
 
